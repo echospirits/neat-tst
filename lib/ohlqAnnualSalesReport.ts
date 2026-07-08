@@ -22,8 +22,10 @@ const MICROSOFT_SIGN_IN_TIMEOUT_MS = 150_000;
 const POWER_BI_REPORT_FRAME_TIMEOUT_MS = 180_000;
 const POWER_BI_REPORT_FRAME_RELOAD_AFTER_MS = 75_000;
 const MICROSOFT_INPUT_ACTION_TIMEOUT_MS = 5_000;
+const OHLQ_LOGIN_TIMEOUT_MS = 60_000;
 const OHLQ_NAVIGATION_RETRY_ATTEMPTS = 3;
 const OHLQ_NAVIGATION_RETRY_DELAY_MS = 5_000;
+const OHLQ_INVALID_LOGIN_TEXT = /incorrect username or password|try resetting your password|further assistance/i;
 const BROWSER_COMPATIBILITY_LAUNCH_ARGS = ['--disable-blink-features=AutomationControlled'];
 const MICROSOFT_LOGOUT_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/logout';
 const MICROSOFT_AUTH_RESET_DOMAINS = [
@@ -446,6 +448,45 @@ async function getMicrosoftPageSummary(page: Page) {
   return text.replace(/\s+/g, ' ').trim().slice(0, 500);
 }
 
+function sanitizeOhlqUrl(url: string) {
+  return url.replace(/\/passwordReset\/[^/]+\/[^/?#]+/i, '/passwordReset/[redacted]');
+}
+
+async function getPageSummary(page: Page) {
+  const text = await page
+    .locator('body')
+    .innerText({ timeout: 2_000 })
+    .catch(() => '');
+
+  return text.replace(/\s+/g, ' ').trim().slice(0, 500);
+}
+
+async function throwOhlqLoginFailure(page: Page, message: string) {
+  const pageSummary = await getPageSummary(page);
+  throw new Error(
+    `${message} Check OHLQ_OPS_USERNAME and OHLQ_OPS_PASSWORD. Page: ${
+      pageSummary || sanitizeOhlqUrl(page.url())
+    }`,
+  );
+}
+
+async function waitForOhlqPartnerLogin(page: Page) {
+  const invalidLoginMessage = page.getByText(OHLQ_INVALID_LOGIN_TEXT).first();
+  const outcome = await Promise.race([
+    page.waitForURL(/https:\/\/ops\.ohlq\.com\/partner/, { timeout: OHLQ_LOGIN_TIMEOUT_MS }).then(() => 'partner' as const),
+    page.waitForURL(/https:\/\/ops\.ohlq\.com\/passwordReset\//, { timeout: OHLQ_LOGIN_TIMEOUT_MS }).then(() => 'passwordReset' as const),
+    invalidLoginMessage.waitFor({ state: 'visible', timeout: OHLQ_LOGIN_TIMEOUT_MS }).then(() => 'invalid' as const),
+  ]);
+
+  if (outcome === 'partner') return;
+
+  if (outcome === 'passwordReset') {
+    await throwOhlqLoginFailure(page, 'OHLQ OPS redirected to password reset during login.');
+  }
+
+  await throwOhlqLoginFailure(page, 'OHLQ OPS rejected the configured login credentials.');
+}
+
 async function getFrameDebugSummary(page: Page) {
   const summaries: string[] = [];
 
@@ -864,10 +905,8 @@ async function signInToOhlqPartner(page: Page) {
   if (!page.url().includes('/partner')) {
     await page.getByPlaceholder('username or email').fill(ohlqUsername);
     await page.getByPlaceholder('please enter your password').fill(ohlqPassword);
-    await Promise.all([
-      page.waitForURL(/https:\/\/ops\.ohlq\.com\/partner/, { timeout: 60_000 }),
-      page.getByRole('button', { name: 'Log In' }).click(),
-    ]);
+    await page.getByRole('button', { name: 'Log In' }).click();
+    await waitForOhlqPartnerLogin(page);
   }
 }
 
