@@ -23,6 +23,8 @@ const POWER_BI_REPORT_FRAME_TIMEOUT_MS = 180_000;
 const POWER_BI_REPORT_FRAME_RELOAD_AFTER_MS = 75_000;
 const MICROSOFT_INPUT_ACTION_TIMEOUT_MS = 5_000;
 const OHLQ_LOGIN_TIMEOUT_MS = 60_000;
+const OHLQ_REPORT_REDIRECT_TIMEOUT_MS = 120_000;
+const OHLQ_REPORT_REDIRECT_ATTEMPTS = 2;
 const OHLQ_NAVIGATION_RETRY_ATTEMPTS = 3;
 const OHLQ_NAVIGATION_RETRY_DELAY_MS = 5_000;
 const OHLQ_INVALID_LOGIN_TEXT = /incorrect username or password|try resetting your password|further assistance/i;
@@ -910,6 +912,59 @@ async function signInToOhlqPartner(page: Page) {
   }
 }
 
+function isOhlqOpsLoginUrl(rawUrl: string) {
+  try {
+    const url = new URL(rawUrl);
+    return url.hostname === 'ops.ohlq.com' && url.pathname.startsWith('/login');
+  } catch {
+    return rawUrl.includes('ops.ohlq.com/login');
+  }
+}
+
+function isPowerBiReportUrl(rawUrl: string, report: OhlqPowerBiReportConfig) {
+  return rawUrl.includes(`/rdlreports/${report.reportId}`);
+}
+
+async function waitForPowerBiReportUrlOrOhlqLogin(page: Page, report: OhlqPowerBiReportConfig) {
+  if (isPowerBiReportUrl(page.url(), report)) return 'report' as const;
+  if (isOhlqOpsLoginUrl(page.url())) return 'ohlqLogin' as const;
+
+  return Promise.race([
+    page
+      .waitForURL((url) => isPowerBiReportUrl(url.href, report), {
+        timeout: OHLQ_REPORT_REDIRECT_TIMEOUT_MS,
+      })
+      .then(() => 'report' as const),
+    page
+      .waitForURL((url) => isOhlqOpsLoginUrl(url.href), {
+        timeout: OHLQ_REPORT_REDIRECT_TIMEOUT_MS,
+      })
+      .then(() => 'ohlqLogin' as const),
+  ]);
+}
+
+async function openOhlqPowerBiReportWithSessionRetry(
+  page: Page,
+  report: OhlqPowerBiReportConfig,
+  runtime: OhlqDownloadRuntime,
+  ohlqReportRedirectUrl: string,
+) {
+  for (let attempt = 1; attempt <= OHLQ_REPORT_REDIRECT_ATTEMPTS; attempt += 1) {
+    await gotoWithRetry(page, ohlqReportRedirectUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await handleMicrosoftSignIn(page, runtime.debugDir, ohlqReportRedirectUrl);
+
+    const outcome = await waitForPowerBiReportUrlOrOhlqLogin(page, report);
+    if (outcome === 'report') return;
+
+    runtime.logger.log(
+      `OHLQ OPS returned to login while opening ${report.fileSlug}; re-authenticating before retry ${attempt + 1}.`,
+    );
+    await signInToOhlqPartner(page);
+  }
+
+  throw new Error(`OHLQ OPS returned to login while opening ${report.fileSlug}; report redirect did not complete.`);
+}
+
 async function downloadOhlqPowerBiReportFromPage(
   page: Page,
   report: OhlqPowerBiReportConfig,
@@ -922,11 +977,7 @@ async function downloadOhlqPowerBiReportFromPage(
 
   logger.log(`Using report date ${reportDate.display} (${reportDate.iso}).`);
 
-  await gotoWithRetry(page, ohlqReportRedirectUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-  await handleMicrosoftSignIn(page, debugDir, ohlqReportRedirectUrl);
-  await page.waitForURL((url) => url.href.includes(`/rdlreports/${report.reportId}`), {
-    timeout: 120_000,
-  });
+  await openOhlqPowerBiReportWithSessionRetry(page, report, runtime, ohlqReportRedirectUrl);
 
   const frame = await waitForPowerBiReportFrame(page, report, debugDir, ohlqReportRedirectUrl);
   await setDate(frame, 'From date', reportDate);
