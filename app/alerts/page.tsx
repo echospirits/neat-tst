@@ -26,6 +26,7 @@ const statusLabels: Record<WorklistStatus, string> = {
 const sourceLabels: Record<WorklistSource, string> = {
   [WorklistSource.MANUAL]: 'Manual',
   [WorklistSource.OHLQ_WHOLESALE_REACTIVATION]: 'OHLQ wholesale reactivation',
+  [WorklistSource.TARGET_ACCOUNT_INTELLIGENCE]: 'Target account intelligence',
   [WorklistSource.VISIT_FOLLOW_UP]: 'Visit follow-up',
 };
 

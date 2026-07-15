@@ -1311,6 +1311,203 @@ fieldset {
   margin-top: 5px;
 }
 
+.admin-import-panel,
+.import-detail-card,
+.warning-list-card,
+.target-intelligence-section {
+  margin-bottom: 16px;
+}
+
+.target-import-form {
+  max-width: none;
+}
+
+.segmented-submit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mapping-grid,
+.target-card-list,
+.target-opportunity-list,
+.target-alert-list,
+.tier-bar-list {
+  display: grid;
+  gap: 12px;
+}
+
+.mapping-card {
+  align-content: start;
+}
+
+.mapping-table td:first-child {
+  font-weight: 740;
+}
+
+.plain-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--muted-2);
+}
+
+.plain-list li + li {
+  margin-top: 4px;
+}
+
+.target-filter-panel {
+  margin-bottom: 18px;
+}
+
+.target-filter-form {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  max-width: none;
+  align-items: end;
+}
+
+.target-checkbox {
+  align-self: end;
+}
+
+.target-card {
+  display: grid;
+  gap: 13px;
+}
+
+.target-card-main,
+.target-card-grid,
+.target-next-action,
+.target-opportunity-card,
+.target-alert-card,
+.tier-bar-row {
+  display: grid;
+  gap: 10px;
+}
+
+.target-card-main {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.target-card h2 {
+  margin: 8px 0 3px;
+  font-size: 22px;
+}
+
+.target-card h2 a {
+  color: #ffffff;
+  text-decoration-color: #93c5fd66;
+  text-underline-offset: 4px;
+}
+
+.target-score {
+  min-width: 96px;
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  padding: 10px;
+  background: #101014;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.target-score span,
+.target-next-action span,
+.target-card-grid span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 740;
+}
+
+.target-score strong {
+  color: #ffffff;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.target-reason {
+  margin: 0;
+  color: #e2e8f0;
+}
+
+.target-card-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.target-card-grid div,
+.target-next-action {
+  min-width: 0;
+}
+
+.target-card-grid strong,
+.target-next-action strong,
+.target-next-action-card strong {
+  color: #ffffff;
+  overflow-wrap: anywhere;
+}
+
+.target-next-action {
+  padding: 11px;
+  background: #101014;
+  border: 1px solid #2f3d5f;
+  border-radius: 8px;
+}
+
+.target-next-action-card {
+  display: grid;
+  gap: 10px;
+}
+
+.target-detail-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.target-opportunity-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.target-opportunity-card h3 {
+  margin: 8px 0 4px;
+}
+
+.target-opportunity-card > strong {
+  justify-self: end;
+  color: #ffffff;
+  font-size: 24px;
+}
+
+.target-opportunity-card .plain-list {
+  grid-column: 1 / -1;
+}
+
+.target-alert-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.target-alert-card p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.tier-bar-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+
+.tier-bar-row:first-child {
+  border-top: 0;
+}
+
+.success-text {
+  color: #bbf7d0;
+}
+
 .danger-pill {
   border-color: #7f1d1d;
   color: #fecaca;
@@ -2037,8 +2234,18 @@ legend {
   .quick-task-form,
   .worklist-tools,
   .inline-suggestion-form,
-  .digest-control-form {
+  .digest-control-form,
+  .target-filter-form,
+  .target-card-main,
+  .target-opportunity-card,
+  .target-alert-card {
     grid-template-columns: 1fr;
+  }
+
+  .target-score,
+  .target-opportunity-card > strong {
+    justify-items: start;
+    justify-self: start;
   }
 
   .desktop-admin-panel {
@@ -2162,7 +2369,7 @@ legend {
     left: 10px;
     z-index: 1900;
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 6px;
     padding: 7px;
     background: #08080af2;

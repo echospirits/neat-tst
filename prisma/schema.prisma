@@ -47,6 +47,7 @@ enum WorklistSource {
   MANUAL
   VISIT_FOLLOW_UP
   OHLQ_WHOLESALE_REACTIVATION
+  TARGET_ACCOUNT_INTELLIGENCE
 }
 
 enum WorklistCategory {
@@ -109,37 +110,68 @@ enum OhlqReportRunStatus {
   ERRORED
 }
 
+enum TargetImportStatus {
+  DRY_RUN
+  COMPLETED
+  FAILED
+}
+
+enum TargetOpportunityType {
+  NEW_PLACEMENT
+  EXISTING_ACCOUNT_EXPANSION
+  VELOCITY_IMPROVEMENT
+  RETENTION_RISK
+  RESEARCH_REQUIRED
+  CHAIN_EXPANSION
+}
+
+enum TargetOpportunityStatus {
+  OPEN
+  IN_PROGRESS
+  WON
+  LOST
+  DISMISSED
+}
+
+enum TargetPlacementStatus {
+  UNKNOWN
+  NOT_PLACED
+  PLACED
+}
+
 model User {
-  id                       String             @id @default(cuid())
-  email                    String             @unique
-  firstName                String?
-  lastName                 String?
-  name                     String?
-  phone                    String?
-  passwordHash             String?
-  role                     UserRole           @default(USER)
-  isActive                 Boolean            @default(true)
-  image                    String?
-  createdAt                DateTime           @default(now())
-  updatedAt                DateTime           @updatedAt
-  sessions                 UserSession[]
-  createdWholesaleAccounts WholesaleAccount[] @relation("WholesaleAccountCreatedBy")
-  createdLocationContacts  LocationContact[]  @relation("LocationContactCreatedBy")
-  createdLoggedVisits      LoggedVisit[]      @relation("LoggedVisitCreatedBy")
-  createdVisitPhotos       VisitPhoto[]       @relation("VisitPhotoCreatedBy")
-  createdWorklistItems     WorklistItem[]     @relation("WorklistItemCreatedBy")
-  createdTags              Tag[]              @relation("TagCreatedBy")
-  createdLocationTags      LocationTag[]      @relation("LocationTagCreatedBy")
-  createdRecipes           Recipe[]           @relation("RecipeCreatedBy")
-  updatedRecipes           Recipe[]           @relation("RecipeUpdatedBy")
-  createdRecipeSuggestions RecipeSuggestion[] @relation("RecipeSuggestionCreatedBy")
-  assignedMenuPlacements   MenuPlacement[]    @relation("MenuPlacementAssignedTo")
-  createdMenuPlacements    MenuPlacement[]    @relation("MenuPlacementCreatedBy")
-  updatedMenuPlacements    MenuPlacement[]    @relation("MenuPlacementUpdatedBy")
-  weeklyDigestLogs         WeeklyDigestLog[]  @relation("WeeklyDigestRecipient")
-  assignedWorklistItems    WorklistItem[]     @relation("WorklistItemAssignedTo")
-  completedWorklistItems   WorklistItem[]     @relation("WorklistItemCompletedBy")
-  cancelledWorklistItems   WorklistItem[]     @relation("WorklistItemCancelledBy")
+  id                          String                 @id @default(cuid())
+  email                       String                 @unique
+  firstName                   String?
+  lastName                    String?
+  name                        String?
+  phone                       String?
+  passwordHash                String?
+  role                        UserRole               @default(USER)
+  isActive                    Boolean                @default(true)
+  image                       String?
+  createdAt                   DateTime               @default(now())
+  updatedAt                   DateTime               @updatedAt
+  sessions                    UserSession[]
+  createdWholesaleAccounts    WholesaleAccount[]     @relation("WholesaleAccountCreatedBy")
+  createdLocationContacts     LocationContact[]      @relation("LocationContactCreatedBy")
+  createdLoggedVisits         LoggedVisit[]          @relation("LoggedVisitCreatedBy")
+  createdVisitPhotos          VisitPhoto[]           @relation("VisitPhotoCreatedBy")
+  createdWorklistItems        WorklistItem[]         @relation("WorklistItemCreatedBy")
+  createdTags                 Tag[]                  @relation("TagCreatedBy")
+  createdLocationTags         LocationTag[]          @relation("LocationTagCreatedBy")
+  createdRecipes              Recipe[]               @relation("RecipeCreatedBy")
+  updatedRecipes              Recipe[]               @relation("RecipeUpdatedBy")
+  createdRecipeSuggestions    RecipeSuggestion[]     @relation("RecipeSuggestionCreatedBy")
+  assignedMenuPlacements      MenuPlacement[]        @relation("MenuPlacementAssignedTo")
+  createdMenuPlacements       MenuPlacement[]        @relation("MenuPlacementCreatedBy")
+  updatedMenuPlacements       MenuPlacement[]        @relation("MenuPlacementUpdatedBy")
+  weeklyDigestLogs            WeeklyDigestLog[]      @relation("WeeklyDigestRecipient")
+  assignedWorklistItems       WorklistItem[]         @relation("WorklistItemAssignedTo")
+  completedWorklistItems      WorklistItem[]         @relation("WorklistItemCompletedBy")
+  cancelledWorklistItems      WorklistItem[]         @relation("WorklistItemCancelledBy")
+  assignedTargetProfiles      TargetAccountProfile[] @relation("TargetAccountAssignedTo")
+  ownedTargetSkuOpportunities TargetSkuOpportunity[] @relation("TargetSkuOpportunityOwner")
 
   @@index([role])
   @@index([isActive])
@@ -578,40 +610,320 @@ model Agency {
 }
 
 model WholesaleAccount {
-  id                String             @id @default(cuid())
-  licenseeId        String             @unique
-  officialAccountId String?            @unique
-  isActive          Boolean            @default(true)
-  agencyId          String?
-  ownership         String?
-  name              String
-  address           String?
-  city              String?
-  county            String?
-  state             String?            @default("OH")
-  zip               String?
-  districtId        String?
-  deliveryDay       String?
-  phone             String?
-  ohlqLastEchoPurchaseDate      DateTime? @db.Date
+  id                            String                      @id @default(cuid())
+  licenseeId                    String                      @unique
+  officialAccountId             String?                     @unique
+  isActive                      Boolean                     @default(true)
+  agencyId                      String?
+  ownership                     String?
+  name                          String
+  address                       String?
+  city                          String?
+  county                        String?
+  state                         String?                     @default("OH")
+  zip                           String?
+  districtId                    String?
+  deliveryDay                   String?
+  phone                         String?
+  ohlqLastEchoPurchaseDate      DateTime?                   @db.Date
   ohlqLastEchoPurchaseItemCode  String?
   ohlqLastEchoPurchaseItemName  String?
-  ohlqLastEchoPurchaseBottles   Int       @default(0)
+  ohlqLastEchoPurchaseBottles   Int                         @default(0)
   ohlqLastEchoPurchaseUpdatedAt DateTime?
-  createdByUserId   String?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  createdByUser     User?              @relation("WholesaleAccountCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  officialAccount   Account?           @relation("OfficialWholesaleAccount", fields: [officialAccountId], references: [id], onDelete: SetNull)
-  licenseeIds       WholesaleLicenseeId[]
-  tags              LocationTag[]      @relation("WholesaleLocationTags")
-  recipeSuggestions RecipeSuggestion[]
-  menuPlacements    MenuPlacement[]
+  createdByUserId               String?
+  createdAt                     DateTime                    @default(now())
+  updatedAt                     DateTime                    @updatedAt
+  createdByUser                 User?                       @relation("WholesaleAccountCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  officialAccount               Account?                    @relation("OfficialWholesaleAccount", fields: [officialAccountId], references: [id], onDelete: SetNull)
+  licenseeIds                   WholesaleLicenseeId[]
+  tags                          LocationTag[]               @relation("WholesaleLocationTags")
+  recipeSuggestions             RecipeSuggestion[]
+  menuPlacements                MenuPlacement[]
+  targetProfile                 TargetAccountProfile?
+  targetScores                  TargetAccountScoreHistory[]
+  targetMetrics                 TargetAccountMetric[]
+  targetPublicResearch          TargetPublicResearch?
+  targetSkuOpportunities        TargetSkuOpportunity[]
+  targetHeatLossAlerts          TargetHeatLossAlert[]
+  targetChainMemberships        TargetChainMembership[]
 
   @@index([createdByUserId])
   @@index([isActive])
   @@index([officialAccountId])
   @@index([ohlqLastEchoPurchaseDate])
+}
+
+model TargetModelImport {
+  id                 String                      @id @default(cuid())
+  sourceFilename     String
+  sourceWorkbookHash String?
+  modelVersion       String
+  status             TargetImportStatus          @default(DRY_RUN)
+  importedByUserId   String?
+  importDate         DateTime                    @default(now())
+  committedAt        DateTime?
+  accountRows        Int                         @default(0)
+  scoreRows          Int                         @default(0)
+  metricRows         Int                         @default(0)
+  opportunityRows    Int                         @default(0)
+  chainRows          Int                         @default(0)
+  insertedRows       Int                         @default(0)
+  updatedRows        Int                         @default(0)
+  skippedRows        Int                         @default(0)
+  failedRows         Int                         @default(0)
+  warnings           Json                        @default("[]")
+  failedRowDetails   Json                        @default("[]")
+  sheetMappings      Json                        @default("{}")
+  workbookSummary    Json                        @default("{}")
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+  targetProfiles     TargetAccountProfile[]
+  scoreHistory       TargetAccountScoreHistory[]
+  metrics            TargetAccountMetric[]
+  researchRows       TargetPublicResearch[]
+  skuOpportunities   TargetSkuOpportunity[]
+  heatLossAlerts     TargetHeatLossAlert[]
+  ownershipGroups    TargetOwnershipGroup[]
+
+  @@index([status])
+  @@index([modelVersion])
+  @@index([sourceWorkbookHash])
+  @@index([importDate])
+}
+
+model TargetOwnershipGroup {
+  id                          String                  @id @default(cuid())
+  name                        String                  @unique
+  parentOrganization          String?
+  sourceImportId              String?
+  totalLocations              Int                     @default(0)
+  servedLocations             Int                     @default(0)
+  unservedLocations           Int                     @default(0)
+  currentEtohioLocations      Int                     @default(0)
+  aggregateVolume9L           Decimal                 @default(0)
+  currentEtohioVolume9L       Decimal                 @default(0)
+  opportunityScore            Decimal?
+  currentEtohioPenetration    Decimal?
+  bestEntryWholesaleAccountId String?
+  strategicNote               String?
+  suggestedRolloutSequence    Json                    @default("[]")
+  createdAt                   DateTime                @default(now())
+  updatedAt                   DateTime                @updatedAt
+  sourceImport                TargetModelImport?      @relation(fields: [sourceImportId], references: [id], onDelete: SetNull)
+  targetProfiles              TargetAccountProfile[]
+  memberships                 TargetChainMembership[]
+
+  @@index([sourceImportId])
+  @@index([opportunityScore])
+}
+
+model TargetAccountProfile {
+  id                      String                @id @default(cuid())
+  wholesaleAccountId      String                @unique
+  ownershipGroupId        String?
+  sourceImportId          String?
+  ohlqIdentifier          String
+  accountType             String?
+  assignedUserId          String?
+  researchStatus          String?
+  currentPriorityTier     String?
+  currentScore            Decimal?
+  currentRank             Int?
+  primaryOpportunity      String?
+  recommendedSku          String?
+  recommendedNextAction   String?
+  reason                  String?
+  existingBuyer           Boolean               @default(false)
+  currentEtohioVolume9L   Decimal               @default(0)
+  currentEtohioCategories Json                  @default("[]")
+  missingCategories       Json                  @default("[]")
+  strongestNextCategory   String?
+  expansionScore          Decimal?
+  lastScoredAt            DateTime?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  wholesaleAccount        WholesaleAccount      @relation(fields: [wholesaleAccountId], references: [id], onDelete: Cascade)
+  ownershipGroup          TargetOwnershipGroup? @relation(fields: [ownershipGroupId], references: [id], onDelete: SetNull)
+  sourceImport            TargetModelImport?    @relation(fields: [sourceImportId], references: [id], onDelete: SetNull)
+  assignedUser            User?                 @relation("TargetAccountAssignedTo", fields: [assignedUserId], references: [id], onDelete: SetNull)
+
+  @@index([ownershipGroupId])
+  @@index([sourceImportId])
+  @@index([assignedUserId])
+  @@index([currentPriorityTier])
+  @@index([currentScore])
+  @@index([currentRank])
+  @@index([researchStatus])
+  @@index([existingBuyer])
+}
+
+model TargetAccountScoreHistory {
+  id                 String             @id @default(cuid())
+  wholesaleAccountId String
+  sourceImportId     String?
+  scoringDate        DateTime           @db.Date
+  dataScore          Decimal?
+  publicFitScore     Decimal?
+  blendedScore       Decimal?
+  priorityTier       String?
+  baselineRank       Int?
+  momentumScore      Decimal?
+  expansionScore     Decimal?
+  componentScores    Json               @default("{}")
+  explanation        String?
+  modelVersion       String
+  sourceRowHash      String
+  createdAt          DateTime           @default(now())
+  wholesaleAccount   WholesaleAccount   @relation(fields: [wholesaleAccountId], references: [id], onDelete: Cascade)
+  sourceImport       TargetModelImport? @relation(fields: [sourceImportId], references: [id], onDelete: SetNull)
+
+  @@unique([wholesaleAccountId, scoringDate, modelVersion, sourceRowHash])
+  @@index([sourceImportId])
+  @@index([scoringDate])
+  @@index([priorityTier])
+  @@index([blendedScore])
+}
+
+model TargetAccountMetric {
+  id                   String             @id @default(cuid())
+  wholesaleAccountId   String
+  sourceImportId       String?
+  periodStart          DateTime           @db.Date
+  periodEnd            DateTime           @db.Date
+  modelVersion         String
+  total9LCases         Decimal            @default(0)
+  avgMonthly9L         Decimal            @default(0)
+  monthsActive         Int                @default(0)
+  americanWhiskey9L    Decimal            @default(0)
+  rum9L                Decimal            @default(0)
+  vodka9L              Decimal            @default(0)
+  cordial9L            Decimal            @default(0)
+  otherCategoryVolumes Json               @default("{}")
+  priceFit9L           Decimal            @default(0)
+  priceFitPercent      Decimal            @default(0)
+  portfolioPriceMedian Decimal?
+  premiumBottleShare   Decimal            @default(0)
+  ohioCraft9L          Decimal            @default(0)
+  ohioCraftAffinity    Decimal?
+  purchaseConsistency  Decimal?
+  momentumScore        Decimal?
+  etohioVolume9L       Decimal            @default(0)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  wholesaleAccount     WholesaleAccount   @relation(fields: [wholesaleAccountId], references: [id], onDelete: Cascade)
+  sourceImport         TargetModelImport? @relation(fields: [sourceImportId], references: [id], onDelete: SetNull)
+
+  @@unique([wholesaleAccountId, periodStart, periodEnd, modelVersion])
+  @@index([sourceImportId])
+  @@index([periodStart, periodEnd])
+}
+
+model TargetPublicResearch {
+  id                    String             @id @default(cuid())
+  wholesaleAccountId    String             @unique
+  sourceImportId        String?
+  researchStatus        String?
+  patioOutdoor          String?
+  cocktailProgram       String?
+  events                String?
+  privateDining         String?
+  popularitySignal      String?
+  openStatus            String?
+  ownershipVerification String?
+  buyerStructure        String?
+  notes                 String?
+  sourceUrls            Json               @default("[]")
+  completedAt           DateTime?
+  researcher            String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  wholesaleAccount      WholesaleAccount   @relation(fields: [wholesaleAccountId], references: [id], onDelete: Cascade)
+  sourceImport          TargetModelImport? @relation(fields: [sourceImportId], references: [id], onDelete: SetNull)
+
+  @@index([sourceImportId])
+  @@index([researchStatus])
+}
+
+model TargetSkuOpportunity {
+  id                        String                  @id @default(cuid())
+  wholesaleAccountId        String
+  sourceImportId            String?
+  productName               String
+  itemCode                  String?
+  category                  String?
+  opportunityType           TargetOpportunityType
+  score                     Decimal?
+  confidence                String?
+  supportingReasons         Json                    @default("[]")
+  placementStatus           TargetPlacementStatus   @default(UNKNOWN)
+  currentCategoryVolume9L   Decimal                 @default(0)
+  estimatedMonthlyPotential Decimal?
+  recommendedNextAction     String?
+  status                    TargetOpportunityStatus @default(OPEN)
+  ownerUserId               String?
+  modelVersion              String
+  sourceRowHash             String
+  createdAt                 DateTime                @default(now())
+  updatedAt                 DateTime                @updatedAt
+  wholesaleAccount          WholesaleAccount        @relation(fields: [wholesaleAccountId], references: [id], onDelete: Cascade)
+  sourceImport              TargetModelImport?      @relation(fields: [sourceImportId], references: [id], onDelete: SetNull)
+  ownerUser                 User?                   @relation("TargetSkuOpportunityOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+
+  @@unique([wholesaleAccountId, productName, opportunityType, modelVersion])
+  @@index([sourceImportId])
+  @@index([ownerUserId])
+  @@index([opportunityType])
+  @@index([status])
+  @@index([score])
+}
+
+model TargetHeatLossAlert {
+  id                 String             @id @default(cuid())
+  wholesaleAccountId String
+  sourceImportId     String?
+  type               String
+  title              String
+  detail             String?
+  severity           String             @default("medium")
+  status             AlertStatus        @default(OPEN)
+  thresholdValue     String?
+  dueDate            DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  wholesaleAccount   WholesaleAccount   @relation(fields: [wholesaleAccountId], references: [id], onDelete: Cascade)
+  sourceImport       TargetModelImport? @relation(fields: [sourceImportId], references: [id], onDelete: SetNull)
+
+  @@unique([wholesaleAccountId, type])
+  @@index([sourceImportId])
+  @@index([status])
+  @@index([severity])
+  @@index([dueDate])
+}
+
+model TargetScoringConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model TargetChainMembership {
+  id                 String               @id @default(cuid())
+  ownershipGroupId   String
+  wholesaleAccountId String
+  isServed           Boolean              @default(false)
+  sequenceRank       Int?
+  role               String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  ownershipGroup     TargetOwnershipGroup @relation(fields: [ownershipGroupId], references: [id], onDelete: Cascade)
+  wholesaleAccount   WholesaleAccount     @relation(fields: [wholesaleAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([ownershipGroupId, wholesaleAccountId])
+  @@index([wholesaleAccountId])
+  @@index([sequenceRank])
 }
 
 model WholesaleLicenseeId {

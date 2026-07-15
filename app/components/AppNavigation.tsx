@@ -11,6 +11,7 @@ type NavItem = {
 const fieldNavItems: NavItem[] = [
   { href: '/', label: 'Dashboard' },
   { href: '/visits/new', isPrimary: true, label: 'Log Visit' },
+  { href: '/targets', label: 'Targets' },
   { href: '/alerts', label: 'Worklist' },
   { href: '/agencies', label: 'Agencies' },
   { href: '/wholesale', label: 'Wholesale' },
@@ -25,6 +26,7 @@ const secondaryNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   { href: '/users', label: 'Users' },
+  { href: '/admin/target-import', label: 'Target Import' },
   { href: '/admin/data-status', label: 'Data Status' },
   { href: '/admin/weekly-digest', label: 'Weekly Digest' },
 ];
