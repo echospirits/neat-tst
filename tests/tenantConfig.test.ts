@@ -7,7 +7,7 @@ import {
 
 describe('tenant product configuration', () => {
   it('defaults to the current Echo vendor with configured exclusions', () => {
-    const config = getTenantConfig({} as NodeJS.ProcessEnv);
+    const config = getTenantConfig({} as unknown as NodeJS.ProcessEnv);
 
     assert.equal(config.entityName, 'Echo Spirits Distilling Co.');
     assert.equal(matchesTenantProduct({ config, vendor: 'Z90399001', itemCode: '0100A' }), true);
@@ -21,7 +21,7 @@ describe('tenant product configuration', () => {
       TENANT_EXCLUDED_ITEM_CODES: 'SKIP1; skip2',
       TENANT_PRODUCT_LABEL: 'Acme',
       TENANT_PRODUCT_PLURAL_LABEL: 'Acme items',
-    } as NodeJS.ProcessEnv);
+    } as unknown as NodeJS.ProcessEnv);
 
     assert.equal(config.productLabel, 'Acme');
     assert.equal(matchesTenantProduct({ config, vendor: 'vendor2', itemCode: 'KEEP1' }), true);
@@ -34,7 +34,7 @@ describe('tenant product configuration', () => {
       TENANT_PRODUCT_FILTER_MODE: 'item-list',
       TENANT_ITEM_CODES: '0100A\n0200B',
       TENANT_OHLQ_VENDOR_IDS: '',
-    } as NodeJS.ProcessEnv);
+    } as unknown as NodeJS.ProcessEnv);
 
     assert.equal(matchesTenantProduct({ config, vendor: 'OTHER', itemCode: '0100A' }), true);
     assert.equal(matchesTenantProduct({ config, vendor: 'Z90399001', itemCode: '0300C' }), false);

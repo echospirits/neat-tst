@@ -4,6 +4,7 @@ export const maxDuration = 300;
 
 import { OhlqReportDataSource, OhlqReportRunStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { requireAdminSession } from '../../../lib/auth';
 import { EASTERN_TIME_ZONE, formatEasternDateTime } from '../../../lib/dateTime';
@@ -15,6 +16,7 @@ import {
 } from '../../../lib/ohlqDataStatus';
 import { getLatestManualOhlqReportDate } from '../../../lib/ohlqManualImport';
 import { prisma } from '../../../lib/prisma';
+import { uploadTargetAccountWorkbook } from '../target-import/actions';
 
 const statusTimeZone = EASTERN_TIME_ZONE;
 const visibleDays = 14;
@@ -131,6 +133,15 @@ const brandMasterStatusMessage = (params: {
   return null;
 };
 
+const targetImportStatusMessage = (status?: string) => {
+  if (status === 'completed') return 'Target account model imported and account intelligence updated.';
+  if (status === 'dry_run') return 'Target account model dry run completed. Review the import details before committing.';
+  if (status === 'failed') return 'Target account model validation failed. Review the import details before committing.';
+  if (status === 'invalid-file') return 'Upload an .xlsx target account workbook.';
+  if (status === 'missing-file') return 'Choose a target account workbook before running the import.';
+  return null;
+};
+
 const redirectWithDataStatus = (status: string, params?: Record<string, string | number>): never => {
   const query = new URLSearchParams({ status });
 
@@ -179,6 +190,8 @@ export default async function DataStatusPage({
     status?: string;
     annualRows?: string;
     date?: string;
+    targetImportId?: string;
+    targetStatus?: string;
     wholesaleRows?: string;
   }>;
 }) {
@@ -200,6 +213,7 @@ export default async function DataStatusPage({
     wholesaleTotalRows,
     brandMasterRows,
     latestBrandMasterRow,
+    latestTargetImport,
   ] = await Promise.all([
     prisma.ohlqAnnualSalesRow.groupBy({
       by: ['reportDate'],
@@ -224,6 +238,9 @@ export default async function DataStatusPage({
       orderBy: { updatedAt: 'desc' },
       select: { updatedAt: true },
     }),
+    params.targetImportId
+      ? prisma.targetModelImport.findUnique({ where: { id: params.targetImportId } })
+      : prisma.targetModelImport.findFirst({ orderBy: { importDate: 'desc' } }),
   ]);
 
   const countsBySource = {
@@ -273,6 +290,9 @@ export default async function DataStatusPage({
       <h1>Data Status</h1>
       <p className="muted">OHLQ report health by report date, newest first.</p>
       {brandMasterStatusMessage(params) ? <p className="pill">{brandMasterStatusMessage(params)}</p> : null}
+      {targetImportStatusMessage(params.targetStatus) ? (
+        <p className="pill">{targetImportStatusMessage(params.targetStatus)}</p>
+      ) : null}
 
       <details className="card compact-details admin-panel" open>
         <summary>Run OHLQ Sales Import</summary>
@@ -295,6 +315,29 @@ export default async function DataStatusPage({
               ? 'Add GITHUB_ACTIONS_DISPATCH_TOKEN in Vercel before production can queue the cloud runner.'
               : 'Queues both OHLQ sales reports for the selected From/To date. Existing rows for that date are replaced during import, so this can refresh a completed day or recover a missed one.'}
           </p>
+        </form>
+      </details>
+
+      <details className="card compact-details admin-panel" open>
+        <summary>Upload Target Account Model Workbook</summary>
+        <form action={uploadTargetAccountWorkbook} encType="multipart/form-data" className="target-import-form">
+          <input type="hidden" name="returnTo" value="data-status" />
+          <input name="workbook" type="file" accept=".xlsx" required />
+          <div className="segmented-submit">
+            <button name="mode" value="dry-run" type="submit">
+              Dry run
+            </button>
+            <button name="mode" value="commit" type="submit">
+              Import to tst data
+            </button>
+          </div>
+          <p className="muted data-status-form-note">
+            Dry run checks workbook sheets, column mappings, row counts, warnings, and failed rows. Import commits the
+            validated target scores, account profiles, opportunities, worklist actions, and alerts.
+          </p>
+          <Link className="table-link" href="/admin/target-import">
+            View target import history and details
+          </Link>
         </form>
       </details>
 
@@ -323,6 +366,18 @@ export default async function DataStatusPage({
           <div className="data-source-meta">
             <span>Most recent refresh</span>
             <strong>{formatRunTime(latestBrandMasterRow?.updatedAt)}</strong>
+          </div>
+        </article>
+        <article className="card data-source-summary">
+          <div>
+            <h2>Target Account Model</h2>
+            <p className="muted">TargetModelImport</p>
+          </div>
+          <p className="metric-value">{numberFormatter.format(latestTargetImport?.accountRows ?? 0)}</p>
+          <p className="muted metric-caption">Latest workbook account rows</p>
+          <div className="data-source-meta">
+            <span>Most recent import</span>
+            <strong>{formatRunTime(latestTargetImport?.importDate)}</strong>
           </div>
         </article>
       </section>

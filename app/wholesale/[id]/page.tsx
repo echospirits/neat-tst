@@ -11,6 +11,7 @@ import { prisma } from '../../../lib/prisma';
 import { formatWholesaleLicenseeIds, getWholesaleLicenseeIdValues } from '../../../lib/wholesaleAccounts';
 import { MenuPlacementPanel } from '../../menu-placements/MenuPlacementPanel';
 import { AccountTagPanel } from '../../tags/AccountTagPanel';
+import { TargetIntelligencePanel } from '../../targets/TargetIntelligencePanel';
 import { TagBadges } from '../../tags/TagBadges';
 import { VisitActivityTable } from '../../visits/VisitActivityTable';
 import { WholesaleRecentPurchasesCard } from '../WholesaleRecentPurchasesCard';
@@ -260,6 +261,8 @@ export default async function WholesaleActivityPage({
       />
 
       <WholesaleRecentPurchasesCard purchases={purchases} />
+
+      <TargetIntelligencePanel wholesaleAccountId={account.id} />
 
       <section className="dashboard-section">
         <div className="section-heading">
