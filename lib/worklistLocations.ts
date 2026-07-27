@@ -1,8 +1,7 @@
 import type { PrismaClient, WorklistCategory } from '@prisma/client';
 import { prisma } from './prisma';
 
-type WorklistLocationItem = {
-  id: string;
+type WorklistLocationReferenceItem = {
   category: WorklistCategory;
   agencyId: string | null;
   wholesaleAccountId: string | null;
@@ -11,6 +10,11 @@ type WorklistLocationItem = {
     agencyId: string | null;
     wholesaleAccountId: string | null;
   } | null;
+};
+
+type WorklistLocationItem = WorklistLocationReferenceItem & {
+  id: string;
+  title: string;
 };
 
 export type WorklistLocationReference = {
@@ -23,8 +27,28 @@ export type WorklistLocation = WorklistLocationReference & {
   name: string;
 };
 
+export function getWorklistCategoryForLocationSelection(
+  requestedCategory: WorklistCategory,
+  agencyId: string | null,
+  wholesaleAccountId: string | null,
+): WorklistCategory {
+  if (requestedCategory !== 'GENERAL') {
+    return requestedCategory;
+  }
+
+  if (agencyId && !wholesaleAccountId) {
+    return 'AGENCY';
+  }
+
+  if (wholesaleAccountId && !agencyId) {
+    return 'WHOLESALE';
+  }
+
+  return requestedCategory;
+}
+
 export function getWorklistLocationReference(
-  item: Omit<WorklistLocationItem, 'id'>,
+  item: WorklistLocationReferenceItem,
 ): WorklistLocationReference | null {
   if (item.category === 'AGENCY' && item.agencyId) {
     return { id: item.agencyId, type: 'agency' };
@@ -59,6 +83,20 @@ export function getWorklistLocationReference(
   }
 
   return null;
+}
+
+export function getWorklistLocationFallbackLabel(
+  item: WorklistLocationReferenceItem & { title: string },
+): string {
+  if (getWorklistLocationReference(item)) {
+    return 'Location unavailable';
+  }
+
+  if (item.category === 'GENERAL' && item.title.trim()) {
+    return item.title.trim();
+  }
+
+  return 'No location';
 }
 
 export async function getWorklistLocations(

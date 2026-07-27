@@ -9,7 +9,7 @@ import { EASTERN_TIME_ZONE, formatDateOnly } from '../../lib/dateTime';
 import { splitReactivationPurchasedAgainDetail } from '../../lib/ohlqWholesaleReactivation';
 import { prisma } from '../../lib/prisma';
 import { getAgenciesForVisitPicker, getWholesaleAccountsForVisitPicker } from '../../lib/visitPickerOptions';
-import { getWorklistLocationReference, getWorklistLocations } from '../../lib/worklistLocations';
+import { getWorklistLocationFallbackLabel, getWorklistLocations } from '../../lib/worklistLocations';
 import { createVisit } from '../visits/actions';
 import { WorklistActions } from '../alerts/WorklistActions';
 import { WorklistDetail } from '../alerts/WorklistDetail';
@@ -279,7 +279,6 @@ export default async function MyWeekPage() {
                   {group.items.map((item) => {
                     const parsedDetail = splitReactivationPurchasedAgainDetail(item.detail);
                     const location = worklistLocations.get(item.id);
-                    const locationReference = getWorklistLocationReference(item);
 
                     return (
                       <tr key={item.id}>
@@ -303,7 +302,7 @@ export default async function MyWeekPage() {
                               {location.name}
                             </Link>
                           ) : (
-                            <strong>{locationReference ? 'Location unavailable' : 'No location'}</strong>
+                            <strong>{getWorklistLocationFallbackLabel(item)}</strong>
                           )}
                           <div className="muted">{formatDateOnly(item.dueDate) || 'No due date'}</div>
                         </td>

@@ -10,7 +10,11 @@ import { formatDateOnly } from '../../lib/dateTime';
 import { splitReactivationPurchasedAgainDetail } from '../../lib/ohlqWholesaleReactivation';
 import { prisma } from '../../lib/prisma';
 import { getAgenciesForVisitPicker, getWholesaleAccountsForVisitPicker } from '../../lib/visitPickerOptions';
-import { getWorklistLocationReference, getWorklistLocations } from '../../lib/worklistLocations';
+import {
+  getWorklistCategoryForLocationSelection,
+  getWorklistLocationFallbackLabel,
+  getWorklistLocations,
+} from '../../lib/worklistLocations';
 import { DatePickerField } from '../components/DatePickerField';
 import { LiveFilterForm } from '../components/LiveFilterForm';
 import { createVisit } from '../visits/actions';
@@ -84,7 +88,14 @@ async function createWorklistItem(formData: FormData) {
 
   const currentUser = await requireUser();
   const title = toOptional(formData.get('title'));
-  const category = toWorklistCategory(formData.get('category'));
+  const requestedCategory = toWorklistCategory(formData.get('category'));
+  const agencyId = toOptional(formData.get('agencyId'));
+  const wholesaleAccountId = toOptional(formData.get('wholesaleAccountId'));
+  const category = getWorklistCategoryForLocationSelection(
+    requestedCategory,
+    agencyId,
+    wholesaleAccountId,
+  );
   const assignedToUserId = toOptional(formData.get('assignedToUserId'));
 
   if (!title) {
@@ -102,9 +113,9 @@ async function createWorklistItem(formData: FormData) {
       status: WorklistStatus.OPEN,
       source: WorklistSource.MANUAL,
       category,
-      agencyId: category === WorklistCategory.AGENCY ? toOptional(formData.get('agencyId')) : null,
+      agencyId: category === WorklistCategory.AGENCY ? agencyId : null,
       wholesaleAccountId:
-        category === WorklistCategory.WHOLESALE ? toOptional(formData.get('wholesaleAccountId')) : null,
+        category === WorklistCategory.WHOLESALE ? wholesaleAccountId : null,
       dueDate: toDate(formData.get('dueDate')),
       assignedTo: assignedUser ? getUserDisplayName(assignedUser) : null,
       assignedToUserId: assignedUser?.id,
@@ -367,7 +378,6 @@ export default async function Alerts({
                 {group.items.map((item) => {
                   const parsedDetail = splitReactivationPurchasedAgainDetail(item.detail);
                   const location = worklistLocations.get(item.id);
-                  const locationReference = getWorklistLocationReference(item);
 
                   return (
                     <tr key={item.id}>
@@ -390,7 +400,7 @@ export default async function Alerts({
                             {location.name}
                           </Link>
                         ) : (
-                          <strong>{locationReference ? 'Location unavailable' : 'No location'}</strong>
+                          <strong>{getWorklistLocationFallbackLabel(item)}</strong>
                         )}
                         <div className="muted">{formatDateOnly(item.dueDate) || 'No due date'}</div>
                       </td>
