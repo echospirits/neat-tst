@@ -998,16 +998,6 @@ export const calculateMissingCategories = (row: TargetAccountImportRow, portfoli
   return portfolioCategories.filter((category) => !current.has(normalizeHeader(category)));
 };
 
-const pickSkuForCategory = (category: string | null, portfolioSkus: PortfolioSku[]) => {
-  if (!category) return portfolioSkus[0] ?? null;
-
-  return (
-    portfolioSkus.find((sku) => normalizeHeader(sku.category) === normalizeHeader(category)) ??
-    portfolioSkus[0] ??
-    null
-  );
-};
-
 export const buildTargetRecommendation = (
   row: TargetAccountImportRow,
   portfolioSkus: PortfolioSku[],
@@ -1021,8 +1011,7 @@ export const buildTargetRecommendation = (
     missingCategoryVolumes[0]?.category ??
     Array.from(categoryVolumes.entries()).sort((left, right) => right[1] - left[1])[0]?.[0] ??
     null;
-  const sku = pickSkuForCategory(strongestCategory, portfolioSkus);
-  const productName = sku?.brandSearchName ?? (strongestCategory ? `${strongestCategory} portfolio SKU` : 'ETOHIO portfolio SKU');
+  const productName = strongestCategory ? `${strongestCategory} opportunity` : 'Portfolio opportunity';
   const score = row.existingBuyer ? row.expansionScore ?? row.blendedScore ?? row.dataScore ?? 0 : row.blendedScore ?? row.dataScore ?? 0;
   const currentCategoryVolume9L = strongestCategory ? categoryVolumes.get(strongestCategory) ?? 0 : row.portfolioCategory9L;
   const opportunityType = row.existingBuyer
@@ -1032,10 +1021,10 @@ export const buildTargetRecommendation = (
       : TargetOpportunityType.NEW_PLACEMENT;
   const recommendedNextAction =
     opportunityType === TargetOpportunityType.RESEARCH_REQUIRED
-      ? 'Complete public-fit research before pitching.'
+      ? 'Complete public-fit research before choosing an account plan.'
       : row.existingBuyer
-        ? `Pitch ${productName} as the next ${strongestCategory ?? 'portfolio'} expansion.`
-        : `Pitch ${productName} for an opening placement.`;
+        ? `Review ${strongestCategory ?? 'portfolio'} expansion potential and choose the product during account planning.`
+        : `Review ${strongestCategory ?? 'portfolio'} opening potential and choose the product during account planning.`;
   const reasons = [
     currentCategoryVolume9L > 0 ? `${strongestCategory ?? 'Target category'} volume is ${currentCategoryVolume9L.toFixed(1)} 9L.` : null,
     row.priceFitPercent > 0 ? `Price-fit share is ${row.priceFitPercent.toFixed(1)}%.` : null,
@@ -1049,7 +1038,7 @@ export const buildTargetRecommendation = (
     confidence: score >= 90 ? 'High' : score >= 75 ? 'Medium' : 'Low',
     currentCategoryVolume9L,
     estimatedMonthlyPotential: Math.max(currentCategoryVolume9L / Math.max(row.monthsActive || 6, 1), 0),
-    itemCode: sku?.itemCode ?? null,
+    itemCode: null,
     opportunityType,
     productName,
     recommendedNextAction,
