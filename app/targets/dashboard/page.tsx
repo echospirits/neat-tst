@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-import { AlertStatus, MenuPlacementStatus, TargetOpportunityStatus, WorklistSource, WorklistStatus } from '@prisma/client';
+import { AlertStatus, MenuPlacementStatus, TargetOpportunityStatus, WorklistStatus } from '@prisma/client';
 import Link from 'next/link';
 import { requireUser } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
@@ -21,8 +21,6 @@ export default async function TargetAccountabilityDashboard() {
     openOpportunities,
     wonOpportunities,
     openHeatLossAlerts,
-    completedFollowUps,
-    openFollowUps,
     livePlacements,
     stalePlacements,
   ] = await Promise.all([
@@ -45,19 +43,6 @@ export default async function TargetAccountabilityDashboard() {
     }),
     prisma.targetSkuOpportunity.count({ where: { status: TargetOpportunityStatus.WON } }),
     prisma.targetHeatLossAlert.count({ where: { status: AlertStatus.OPEN } }),
-    prisma.worklistItem.count({
-      where: {
-        source: WorklistSource.TARGET_ACCOUNT_INTELLIGENCE,
-        status: WorklistStatus.COMPLETED,
-        completedAt: { gte: last30Days },
-      },
-    }),
-    prisma.worklistItem.count({
-      where: {
-        source: WorklistSource.TARGET_ACCOUNT_INTELLIGENCE,
-        status: { in: activeStatuses },
-      },
-    }),
     prisma.menuPlacement.count({ where: { status: MenuPlacementStatus.LIVE } }),
     prisma.menuPlacement.count({
       where: {
@@ -97,6 +82,22 @@ export default async function TargetAccountabilityDashboard() {
   const highScoreProspects = targetProfiles.filter(
     (profile) => !profile.existingBuyer && toNumber(profile.currentScore) >= 90,
   ).length;
+  const targetAccountIds = targetProfiles.map((profile) => profile.wholesaleAccountId);
+  const [completedFollowUps, openFollowUps] = await Promise.all([
+    prisma.worklistItem.count({
+      where: {
+        wholesaleAccountId: { in: targetAccountIds },
+        status: WorklistStatus.COMPLETED,
+        completedAt: { gte: last30Days },
+      },
+    }),
+    prisma.worklistItem.count({
+      where: {
+        wholesaleAccountId: { in: targetAccountIds },
+        status: { in: activeStatuses },
+      },
+    }),
+  ]);
 
   return (
     <>
@@ -145,7 +146,7 @@ export default async function TargetAccountabilityDashboard() {
           <p className="metric-value">
             {completedFollowUps}/{completedFollowUps + openFollowUps}
           </p>
-          <p className="muted metric-caption">Target worklist items completed in last 30 days vs active</p>
+          <p className="muted metric-caption">Real target-account worklist items completed in last 30 days vs active</p>
         </div>
         <div className="card metric-card">
           <h3>Heat-loss alerts</h3>

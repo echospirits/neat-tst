@@ -272,6 +272,9 @@ describe('target recommendations and alerts', () => {
 
     assert.equal(recommendation.opportunityType, TargetOpportunityType.EXISTING_ACCOUNT_EXPANSION);
     assert.equal(recommendation.category, 'American Whiskey');
+    assert.equal(recommendation.itemCode, null);
+    assert.equal(recommendation.productName, 'American Whiskey opportunity');
+    assert.doesNotMatch(recommendation.recommendedNextAction, /pitch/i);
     assert.ok(recommendation.reasons.some((reason) => reason.includes('Missing portfolio categories')));
   });
 

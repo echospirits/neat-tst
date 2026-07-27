@@ -105,8 +105,8 @@ export async function TargetIntelligencePanel({ wholesaleAccountId }: { wholesal
             <span>{profile.reason}</span>
           </p>
           <p>
-            <strong>Recommended SKU</strong>
-            <span>{profile.recommendedSku ?? primaryOpportunity?.productName}</span>
+            <strong>Opportunity focus</strong>
+            <span>{profile.primaryOpportunity ?? primaryOpportunity?.category ?? 'Review account fit'}</span>
           </p>
           <p>
             <strong>Primary opportunity</strong>
@@ -194,7 +194,7 @@ export async function TargetIntelligencePanel({ wholesaleAccountId }: { wholesal
 
       <section className="dashboard-section">
         <div className="section-heading">
-          <h2>SKU Recommendations</h2>
+          <h2>Opportunity Evidence</h2>
           <span className="pill">{opportunities.length}</span>
         </div>
         <div className="target-opportunity-list">
@@ -205,7 +205,7 @@ export async function TargetIntelligencePanel({ wholesaleAccountId }: { wholesal
                   <span className="pill">{opportunity.opportunityType.replace(/_/g, ' ')}</span>
                   <span className="pill">{opportunity.confidence ?? 'Confidence n/a'}</span>
                 </div>
-                <h3>{opportunity.productName}</h3>
+                <h3>{opportunity.category ?? opportunity.productName}</h3>
                 <p className="muted">{opportunity.recommendedNextAction}</p>
               </div>
               <strong>{opportunity.score ? toNumber(opportunity.score).toFixed(1) : 'n/a'}</strong>

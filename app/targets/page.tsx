@@ -58,10 +58,7 @@ export default async function TargetQueuePage({
   if (params.opportunity) {
     wholesaleWhere.targetSkuOpportunities = {
       some: {
-        OR: [
-          { productName: { contains: params.opportunity, mode: 'insensitive' } },
-          { category: { contains: params.opportunity, mode: 'insensitive' } },
-        ],
+        category: { contains: params.opportunity, mode: 'insensitive' },
       },
     };
   }
@@ -230,8 +227,8 @@ export default async function TargetQueuePage({
           <input name="zip" defaultValue={params.zip ?? ''} placeholder="43215" />
           <label>Research status</label>
           <input name="researchStatus" defaultValue={params.researchStatus ?? ''} placeholder="Researched" />
-          <label>Product opportunity</label>
-          <input name="opportunity" defaultValue={params.opportunity ?? ''} placeholder="Rum, Vodka, Echo" />
+          <label>Opportunity focus</label>
+          <input name="opportunity" defaultValue={params.opportunity ?? ''} placeholder="Rum, Vodka, Whiskey" />
           <label>Days since last activity</label>
           <input name="daysSinceLastActivity" defaultValue={params.daysSinceLastActivity ?? ''} inputMode="numeric" />
           <label className="quick-chip target-checkbox">
@@ -283,8 +280,8 @@ export default async function TargetQueuePage({
                   <strong>{profile.primaryOpportunity ?? opportunity?.category ?? 'Review account'}</strong>
                 </div>
                 <div>
-                  <span className="muted">Recommended SKU</span>
-                  <strong>{profile.recommendedSku ?? opportunity?.productName ?? 'Portfolio review'}</strong>
+                  <span className="muted">Opportunity focus</span>
+                  <strong>{profile.primaryOpportunity ?? opportunity?.category ?? 'Review account'}</strong>
                 </div>
                 <div>
                   <span className="muted">Last activity</span>

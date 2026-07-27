@@ -3,8 +3,6 @@ import {
   AlertStatus,
   TargetOpportunityStatus,
   TargetImportStatus,
-  WorklistCategory,
-  WorklistSource,
   WorklistStatus,
   type Prisma,
   type PrismaClient,
@@ -75,16 +73,6 @@ const buildComponentScores = (row: TargetAccountImportRow) => ({
 
 const getPrimaryScore = (row: TargetAccountImportRow) =>
   row.existingBuyer ? row.expansionScore ?? row.blendedScore ?? row.dataScore : row.blendedScore ?? row.dataScore;
-
-const buildWorklistDetail = (row: TargetAccountImportRow, recommendation: ReturnType<typeof buildTargetRecommendation>) =>
-  [
-    buildScoreExplanation(row),
-    recommendation.reasons.length > 0 ? `Reasons: ${recommendation.reasons.join(' ')}` : null,
-    `Recommended SKU: ${recommendation.productName}`,
-    row.mapsSearchUrl ? `Map: ${row.mapsSearchUrl}` : null,
-  ]
-    .filter(Boolean)
-    .join('\n');
 
 const upsertOwnershipGroup = async ({
   name,
@@ -230,7 +218,7 @@ const upsertTargetRowsForAccount = async ({
       currentScore: toDecimal(getPrimaryScore(row)),
       currentRank: row.baselineRank,
       primaryOpportunity: recommendation.category,
-      recommendedSku: recommendation.productName,
+      recommendedSku: null,
       recommendedNextAction: recommendation.recommendedNextAction,
       reason: explanation,
       existingBuyer: row.existingBuyer,
@@ -251,7 +239,7 @@ const upsertTargetRowsForAccount = async ({
       currentScore: toDecimal(getPrimaryScore(row)),
       currentRank: row.baselineRank,
       primaryOpportunity: recommendation.category,
-      recommendedSku: recommendation.productName,
+      recommendedSku: null,
       recommendedNextAction: recommendation.recommendedNextAction,
       reason: explanation,
       existingBuyer: row.existingBuyer,
@@ -423,33 +411,6 @@ const upsertTargetRowsForAccount = async ({
       sourceRowHash: row.sourceRowHash,
     },
   });
-
-  const existingWorklistItem = await tx.worklistItem.findFirst({
-    where: {
-      source: WorklistSource.TARGET_ACCOUNT_INTELLIGENCE,
-      wholesaleAccountId,
-      ...activeWorklistWhere,
-    },
-    select: { id: true },
-  });
-  const worklistData = {
-    title: recommendation.recommendedNextAction.slice(0, 180),
-    detail: buildWorklistDetail(row, recommendation),
-    category: WorklistCategory.WHOLESALE,
-    dueDate: row.priorityTier === 'A' ? new Date('2026-07-21T00:00:00.000Z') : null,
-    source: WorklistSource.TARGET_ACCOUNT_INTELLIGENCE,
-    status: WorklistStatus.OPEN,
-    wholesaleAccountId,
-  };
-
-  if (existingWorklistItem) {
-    await tx.worklistItem.update({
-      where: { id: existingWorklistItem.id },
-      data: worklistData,
-    });
-  } else {
-    await tx.worklistItem.create({ data: worklistData });
-  }
 
   const heatAlerts = buildHeatLossRules({
     hasActiveOpportunity: false,
@@ -754,7 +715,8 @@ export const getTargetAccountBriefing = async ({
     nextAction: profile?.recommendedNextAction ?? openWorklistItems[0]?.title ?? null,
     openOpportunities: account.targetSkuOpportunities,
     recentActivities,
-    recommendedSku: profile?.recommendedSku ?? primaryOpportunity?.productName ?? null,
+    opportunityFocus: profile?.primaryOpportunity ?? primaryOpportunity?.category ?? null,
+    recommendedSku: null,
     relationshipHistory: {
       recentActivities,
       worklistItems: openWorklistItems,
