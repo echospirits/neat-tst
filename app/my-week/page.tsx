@@ -9,6 +9,7 @@ import { EASTERN_TIME_ZONE, formatDateOnly } from '../../lib/dateTime';
 import { splitReactivationPurchasedAgainDetail } from '../../lib/ohlqWholesaleReactivation';
 import { prisma } from '../../lib/prisma';
 import { getAgenciesForVisitPicker, getWholesaleAccountsForVisitPicker } from '../../lib/visitPickerOptions';
+import { getWorklistLocationReference, getWorklistLocations } from '../../lib/worklistLocations';
 import { createVisit } from '../visits/actions';
 import { WorklistActions } from '../alerts/WorklistActions';
 import { WorklistDetail } from '../alerts/WorklistDetail';
@@ -186,6 +187,13 @@ export default async function MyWeekPage() {
         cancelledByUser: true,
         completedByUser: true,
         createdByUser: true,
+        loggedVisit: {
+          select: {
+            locationType: true,
+            agencyId: true,
+            wholesaleAccountId: true,
+          },
+        },
       },
       orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
     }),
@@ -214,8 +222,7 @@ export default async function MyWeekPage() {
     }),
   ]);
 
-  const agencyMap = Object.fromEntries(agencyOptions.map((agency) => [agency.id, agency.name]));
-  const wholesaleMap = Object.fromEntries(wholesaleOptions.map((account) => [account.id, account.name]));
+  const worklistLocations = await getWorklistLocations(items);
   const dueThisWeek = items.filter((item) => item.dueDate);
   const noDate = items.filter((item) => !item.dueDate);
   const groups = [
@@ -271,18 +278,8 @@ export default async function MyWeekPage() {
                 <tbody>
                   {group.items.map((item) => {
                     const parsedDetail = splitReactivationPurchasedAgainDetail(item.detail);
-                    const location =
-                      item.category === WorklistCategory.AGENCY
-                        ? agencyMap[item.agencyId ?? '']
-                        : item.category === WorklistCategory.WHOLESALE
-                          ? wholesaleMap[item.wholesaleAccountId ?? '']
-                          : '';
-                    const locationHref =
-                      item.category === WorklistCategory.AGENCY && item.agencyId
-                        ? `/agencies/${item.agencyId}`
-                        : item.category === WorklistCategory.WHOLESALE && item.wholesaleAccountId
-                          ? `/wholesale/${item.wholesaleAccountId}`
-                          : null;
+                    const location = worklistLocations.get(item.id);
+                    const locationReference = getWorklistLocationReference(item);
 
                     return (
                       <tr key={item.id}>
@@ -301,12 +298,12 @@ export default async function MyWeekPage() {
                           </div>
                         </td>
                         <td data-label="Location / Due">
-                          {locationHref ? (
-                            <Link className="table-link" href={locationHref}>
-                              {location || 'Open account'}
+                          {location ? (
+                            <Link className="table-link" href={location.href}>
+                              {location.name}
                             </Link>
                           ) : (
-                            <strong>{location || 'General'}</strong>
+                            <strong>{locationReference ? 'Location unavailable' : 'No location'}</strong>
                           )}
                           <div className="muted">{formatDateOnly(item.dueDate) || 'No due date'}</div>
                         </td>
