@@ -1930,6 +1930,44 @@ legend {
   min-height: 48px;
 }
 
+.visit-confirmation {
+  width: min(620px, 100%);
+  margin: clamp(20px, 8vh, 90px) auto 0;
+  padding: clamp(24px, 5vw, 48px);
+  text-align: center;
+}
+
+.visit-confirmation h1 {
+  margin-bottom: 10px;
+}
+
+.visit-confirmation p {
+  margin: 0 auto 24px;
+  color: #cbd5e1;
+  font-size: 17px;
+}
+
+.visit-confirmation-icon {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 18px;
+  place-items: center;
+  color: #dcfce7;
+  background: #052e1a;
+  border: 2px solid #22c55e;
+  border-radius: 50%;
+  font-size: 36px;
+  font-weight: 800;
+}
+
+.visit-confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
 .inline-meta {
   display: flex;
   flex-wrap: wrap;

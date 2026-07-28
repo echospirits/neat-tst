@@ -9,6 +9,7 @@ import { getSignedInHomePath } from '../../lib/userAccess';
 const statusMessages: Record<string, string> = {
   'invalid-credentials': 'Email or password is incorrect.',
   'missing-credentials': 'Email and password are required.',
+  'invite-accepted': 'Your password was created. Sign in to continue.',
   locked: 'Too many failed sign-in attempts. Wait 15 minutes and try again.',
 };
 

@@ -83,31 +83,18 @@ const redirectVisitWithStatus = (formOrigin: FormOrigin, status: string, locatio
   );
 };
 
-const getVisitSummaryPath = (visit: {
-  agencyId: string | null;
-  locationType: string;
-  wholesaleAccountId: string | null;
-}) => {
-  if (visit.locationType === 'wholesale' && visit.wholesaleAccountId) {
-    return `/wholesale/${visit.wholesaleAccountId}`;
-  }
-
-  if (visit.locationType === 'agency' && visit.agencyId) {
-    return `/agencies/${visit.agencyId}`;
-  }
-
-  return '/visits';
-};
-
-const redirectToVisitSummary = (
-  visit: {
-    agencyId: string | null;
-    locationType: string;
-    wholesaleAccountId: string | null;
-  },
-  status = 'visit-logged',
+const redirectToVisitConfirmation = (
+  visitId: string,
+  formOrigin: FormOrigin,
+  status = 'success',
 ): never => {
-  redirect(`${getVisitSummaryPath(visit)}?status=${status}`);
+  const params = new URLSearchParams({
+    visitId,
+    origin: formOrigin,
+    status,
+  });
+
+  redirect(`/visits/confirmed?${params.toString()}`);
 };
 
 function collectPhotos(formData: FormData, formOrigin: FormOrigin, locationType: string) {
@@ -504,7 +491,7 @@ export async function createVisit(formData: FormData) {
 
       await prisma.visitPhoto.createMany({ data: photos });
     } catch {
-      redirectToVisitSummary(visit, 'visit-logged-photo-upload-failed');
+      redirectToVisitConfirmation(visit.id, formOrigin, 'photo-upload-failed');
     }
   }
 
@@ -522,9 +509,5 @@ export async function createVisit(formData: FormData) {
   if (visit.wholesaleAccountId) {
     revalidatePath(`/wholesale/${visit.wholesaleAccountId}`);
   }
-  if (isTaster) {
-    redirectVisitWithStatus(formOrigin, 'visit-logged', locationType);
-  }
-
-  redirectToVisitSummary(visit, worklistItemId ? 'visit-logged-worklist-completed' : 'visit-logged');
+  redirectToVisitConfirmation(visit.id, formOrigin);
 }

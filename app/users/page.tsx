@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import { getUserDisplayName, requireAdminSession } from '../../lib/auth';
 import { hashPassword } from '../../lib/password';
 import { prisma } from '../../lib/prisma';
+import { createUserInvitationToken, sendUserInvitationEmail } from '../../lib/userInvitations';
 
 const toOptional = (value: FormDataEntryValue | null | undefined) => {
   const trimmed = String(value ?? '').trim();
@@ -60,15 +61,10 @@ async function inviteUser(formData: FormData) {
   const firstName = toOptional(formData.get('firstName'));
   const lastName = toOptional(formData.get('lastName'));
   const phone = toOptional(formData.get('phone'));
-  const password = String(formData.get('password') ?? '');
   const role = toRole(formData.get('role'));
 
-  if (!email || !firstName || !lastName || !password) {
+  if (!email || !firstName || !lastName) {
     redirect('/users?status=invalid');
-  }
-
-  if (password.length < 10) {
-    redirect('/users?status=password-too-short');
   }
 
   const name = [firstName, lastName].filter(Boolean).join(' ');
@@ -77,45 +73,104 @@ async function inviteUser(formData: FormData) {
     select: { id: true },
   });
 
-  if (existingUser) {
-    await prisma.user.update({
-      where: { id: existingUser.id },
-      data: {
-        firstName,
-        lastName,
-        name,
-        phone,
-        passwordHash: hashPassword(password),
-        role,
-        isActive: true,
-      },
-    });
-
-    await prisma.userSession.deleteMany({
-      where: {
-        userId: existingUser.id,
-        tokenHash: existingUser.id === adminSession.user.id ? { not: adminSession.tokenHash } : undefined,
-      },
-    });
-    revalidatePath('/users');
-    redirect('/users?status=updated-existing');
+  if (existingUser?.id === adminSession.user.id && role !== UserRole.ADMIN) {
+    redirect('/users?status=self-role');
   }
 
-  await prisma.user.create({
-    data: {
-      email,
-      firstName,
-      lastName,
-      name,
-      phone,
-      passwordHash: hashPassword(password),
-      role,
-      isActive: true,
-    },
+  if (existingUser && role !== UserRole.ADMIN && !(await canRemoveAdminAccess(existingUser.id))) {
+    redirect('/users?status=last-admin');
+  }
+
+  const invitationToken = createUserInvitationToken();
+  const { invitation, user } = await prisma.$transaction(async (tx) => {
+    const user = existingUser
+      ? await tx.user.update({
+          where: { id: existingUser.id },
+          data: {
+            firstName,
+            lastName,
+            name,
+            phone,
+            role,
+          },
+        })
+      : await tx.user.create({
+          data: {
+            email,
+            firstName,
+            lastName,
+            name,
+            phone,
+            passwordHash: null,
+            role,
+            isActive: false,
+          },
+        });
+    const invitation = await tx.userInvitation.create({
+      data: {
+        userId: user.id,
+        tokenHash: invitationToken.tokenHash,
+        expiresAt: invitationToken.expiresAt,
+      },
+    });
+
+    return { invitation, user };
   });
 
+  let providerMessageId: string | undefined;
+
+  try {
+    const result = await sendUserInvitationEmail({
+      invitationId: invitation.id,
+      recipientEmail: user.email,
+      recipientName: getUserDisplayName(user),
+      token: invitationToken.token,
+    });
+    providerMessageId = result.providerMessageId;
+  } catch (error) {
+    console.error('[users/invite] invitation email failed', {
+      invitationId: invitation.id,
+      message: error instanceof Error ? error.message : String(error),
+      userId: user.id,
+    });
+    await prisma.userInvitation.deleteMany({ where: { id: invitation.id } });
+
+    if (!existingUser) {
+      await prisma.user.deleteMany({
+        where: {
+          id: user.id,
+          passwordHash: null,
+        },
+      });
+    }
+
+    redirect('/users?status=invite-email-failed');
+  }
+
+  try {
+    await prisma.$transaction([
+      prisma.userInvitation.update({
+        where: { id: invitation.id },
+        data: { providerMessageId },
+      }),
+      prisma.userInvitation.deleteMany({
+        where: {
+          userId: user.id,
+          id: { not: invitation.id },
+          acceptedAt: null,
+        },
+      }),
+    ]);
+  } catch (error) {
+    console.error('[users/invite] invitation bookkeeping failed after email delivery', {
+      invitationId: invitation.id,
+      message: error instanceof Error ? error.message : String(error),
+      userId: user.id,
+    });
+  }
+
   revalidatePath('/users');
-  redirect('/users?status=invited');
+  redirect(`/users?status=${existingUser ? 'invitation-resent' : 'invited'}`);
 }
 
 async function updateUserRole(formData: FormData) {
@@ -213,9 +268,10 @@ async function resetUserPassword(formData: FormData) {
 }
 
 const statusMessages: Record<string, string> = {
-  invited: 'User invited.',
-  'updated-existing': 'Existing user updated with new credentials.',
-  invalid: 'Email, first name, last name, and password are required.',
+  invited: 'Invitation email sent. The user can now create their password.',
+  'invitation-resent': 'A new invitation email was sent to the existing user.',
+  'invite-email-failed': 'The user was not invited because the email could not be sent. Try again.',
+  invalid: 'Email, first name, and last name are required.',
   'invalid-user': 'Select a valid user.',
   'password-too-short': 'Password must be at least 10 characters.',
   'role-updated': 'User permission updated.',
@@ -235,6 +291,16 @@ export default async function UsersPage({
   await requireAdminSession();
   const params = (await searchParams) ?? {};
   const users = await prisma.user.findMany({
+    include: {
+      invitations: {
+        where: {
+          acceptedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      },
+    },
     orderBy: [{ role: 'asc' }, { lastName: 'asc' }, { firstName: 'asc' }, { email: 'asc' }],
   });
 
@@ -263,10 +329,6 @@ export default async function UsersPage({
             <label>
               Phone
               <input autoComplete="tel" name="phone" />
-            </label>
-            <label>
-              Password
-              <input autoComplete="new-password" minLength={10} name="password" type="password" required />
             </label>
             <label>
               Permission
@@ -299,7 +361,15 @@ export default async function UsersPage({
               <td data-label="Email">{user.email}</td>
               <td data-label="Phone">{user.phone}</td>
               <td data-label="Permission">{roleLabels[user.role]}</td>
-              <td data-label="Status">{user.isActive ? 'Active' : 'Inactive'}</td>
+              <td data-label="Status">
+                {user.invitations.length > 0
+                  ? user.isActive
+                    ? 'Active · invitation pending'
+                    : 'Pending invitation'
+                  : user.isActive
+                    ? 'Active'
+                    : 'Inactive'}
+              </td>
               <td data-label="Admin controls">
                 <div className="user-admin-actions">
                   <form action={updateUserRole} className="inline-control-form">

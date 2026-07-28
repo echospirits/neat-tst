@@ -5,6 +5,7 @@ import { addEasternCalendarDays, EASTERN_TIME_ZONE } from '../../lib/dateTime';
 import type { VisitLocationType } from '../../lib/visitPickerOptions';
 import { DatePickerField } from '../components/DatePickerField';
 import { VoiceVisitNotePanel } from './VoiceVisitNotePanel';
+import { VisitSubmitButton } from './VisitSubmitButton';
 import { getVisitOutcomePrompts } from './visitPrompts';
 
 const photoTypes = [
@@ -523,7 +524,7 @@ export function LogVisitForm({
       </fieldset>
 
       <div className="visit-submit-bar">
-        <button type="submit">{submitLabel}</button>
+        <VisitSubmitButton label={submitLabel} />
       </div>
     </form>
   );

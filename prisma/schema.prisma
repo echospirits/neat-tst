@@ -154,6 +154,7 @@ model User {
   createdAt                   DateTime               @default(now())
   updatedAt                   DateTime               @updatedAt
   sessions                    UserSession[]
+  invitations                 UserInvitation[]
   createdWholesaleAccounts    WholesaleAccount[]     @relation("WholesaleAccountCreatedBy")
   createdLocationContacts     LocationContact[]      @relation("LocationContactCreatedBy")
   createdLoggedVisits         LoggedVisit[]          @relation("LoggedVisitCreatedBy")
@@ -216,6 +217,21 @@ model UserSession {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model UserInvitation {
+  id                String    @id @default(cuid())
+  userId            String
+  tokenHash         String    @unique
+  expiresAt         DateTime
+  acceptedAt        DateTime?
+  providerMessageId String?
+  createdAt         DateTime  @default(now())
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([acceptedAt])
 }
 
 model LoginThrottle {
