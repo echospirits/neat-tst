@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { VisitFormAgencyOption } from './LogVisitForm';
+import { VisitSubmitButton } from './VisitSubmitButton';
 
 type TasterVisitFormProps = {
   action: (formData: FormData) => void | Promise<void>;
@@ -87,9 +88,7 @@ export function TasterVisitForm({ action, agencies }: TasterVisitFormProps) {
       </fieldset>
 
       <div className="visit-submit-bar">
-        <button disabled={!selectedAgency} type="submit">
-          Log agency visit
-        </button>
+        <VisitSubmitButton disabled={!selectedAgency} label="Log agency visit" />
       </div>
     </form>
   );
