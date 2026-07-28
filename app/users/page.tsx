@@ -13,8 +13,19 @@ const toOptional = (value: FormDataEntryValue | null | undefined) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
-const toRole = (value: FormDataEntryValue | null | undefined) =>
-  String(value ?? '') === UserRole.ADMIN ? UserRole.ADMIN : UserRole.USER;
+const toRole = (value: FormDataEntryValue | null | undefined) => {
+  const role = String(value ?? '');
+
+  if (role === UserRole.ADMIN) return UserRole.ADMIN;
+  if (role === UserRole.TASTER) return UserRole.TASTER;
+  return UserRole.USER;
+};
+
+const roleLabels: Record<UserRole, string> = {
+  [UserRole.ADMIN]: 'Admin',
+  [UserRole.TASTER]: 'Taster',
+  [UserRole.USER]: 'User',
+};
 
 const getActiveAdminCount = () =>
   prisma.user.count({
@@ -261,6 +272,7 @@ export default async function UsersPage({
               Permission
               <select name="role" defaultValue={UserRole.USER}>
                 <option value={UserRole.USER}>User</option>
+                <option value={UserRole.TASTER}>Taster</option>
                 <option value={UserRole.ADMIN}>Admin</option>
               </select>
             </label>
@@ -286,7 +298,7 @@ export default async function UsersPage({
               <td data-label="Name">{getUserDisplayName(user)}</td>
               <td data-label="Email">{user.email}</td>
               <td data-label="Phone">{user.phone}</td>
-              <td data-label="Permission">{user.role === UserRole.ADMIN ? 'Admin' : 'User'}</td>
+              <td data-label="Permission">{roleLabels[user.role]}</td>
               <td data-label="Status">{user.isActive ? 'Active' : 'Inactive'}</td>
               <td data-label="Admin controls">
                 <div className="user-admin-actions">
@@ -294,6 +306,7 @@ export default async function UsersPage({
                     <input name="userId" type="hidden" value={user.id} />
                     <select aria-label={`Permission for ${getUserDisplayName(user)}`} name="role" defaultValue={user.role}>
                       <option value={UserRole.USER}>User</option>
+                      <option value={UserRole.TASTER}>Taster</option>
                       <option value={UserRole.ADMIN}>Admin</option>
                     </select>
                     <button className="compact-btn secondary" type="submit">

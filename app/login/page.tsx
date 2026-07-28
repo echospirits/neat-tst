@@ -4,6 +4,7 @@ export const runtime = 'nodejs';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '../../lib/auth';
 import { getTenantConfig } from '../../lib/tenantConfig';
+import { getSignedInHomePath } from '../../lib/userAccess';
 
 const statusMessages: Record<string, string> = {
   'invalid-credentials': 'Email or password is incorrect.',
@@ -20,7 +21,7 @@ export default async function LoginPage({
   const [params, user] = await Promise.all([(await searchParams) ?? {}, getCurrentUser()]);
 
   if (user) {
-    redirect('/');
+    redirect(getSignedInHomePath(user.role));
   }
 
   return (

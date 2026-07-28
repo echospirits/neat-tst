@@ -3,6 +3,7 @@ import { UserRole } from '@prisma/client';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { prisma } from './prisma';
+import { isTasterRole } from './userAccess';
 
 export const SESSION_COOKIE = 'echo_session';
 
@@ -65,18 +66,26 @@ export async function getCurrentSession() {
   });
 }
 
-export async function requireUserSession() {
+type UserAccessOptions = {
+  allowTaster?: boolean;
+};
+
+export async function requireUserSession({ allowTaster = false }: UserAccessOptions = {}) {
   const session = await getCurrentSession();
 
   if (!session) {
     redirect('/login');
   }
 
+  if (isTasterRole(session.user.role) && !allowTaster) {
+    redirect('/visits/new');
+  }
+
   return session;
 }
 
-export async function requireUser() {
-  const { user } = await requireUserSession();
+export async function requireUser(options?: UserAccessOptions) {
+  const { user } = await requireUserSession(options);
 
   return user;
 }

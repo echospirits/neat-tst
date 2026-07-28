@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+import { UserRole } from '@prisma/client';
 import { getUserDisplayName, requireUser } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 import {
@@ -13,6 +14,7 @@ import {
 } from '../../../lib/visitPickerOptions';
 import { createVisit } from '../actions';
 import { LogVisitForm } from '../LogVisitForm';
+import { TasterVisitForm } from '../TasterVisitForm';
 
 const statusMessages: Record<string, string> = {
   'invalid-agency': 'Select an agency before logging an agency visit.',
@@ -21,7 +23,10 @@ const statusMessages: Record<string, string> = {
   'invalid-photo': 'Photos must be image files.',
   'photo-too-large': 'Each uploaded photo must be 5 MB or smaller.',
   'storage-not-configured': 'Photo object storage is not configured yet.',
-  'photo-upload-failed': 'The visit was saved, but one or more photos could not be uploaded.',
+  'photo-upload-failed': 'The picture could not be uploaded, so the visit was not saved. Try again.',
+  'comments-required': 'Enter comments before logging the visit.',
+  'photo-required': 'Add one picture before logging the visit.',
+  'visit-logged': 'Agency visit logged.',
 };
 
 export default async function NewVisitPage({
@@ -35,9 +40,38 @@ export default async function NewVisitPage({
     voice?: string;
   }>;
 }) {
-  const [params, user, agencyOptions, wholesaleAccountOptions, contacts, tags] = await Promise.all([
-    (await searchParams) ?? {},
-    requireUser(),
+  const [params, user] = await Promise.all([(await searchParams) ?? {}, requireUser({ allowTaster: true })]);
+
+  if (user.role === UserRole.TASTER) {
+    const agencies = (
+      await prisma.agency.findMany({
+        orderBy: { name: 'asc' },
+        take: 750,
+        select: {
+          agencyId: true,
+          city: true,
+          county: true,
+          id: true,
+          name: true,
+          phone: true,
+        },
+      })
+    ).map((agency) => ({ ...agency, lastVisitAt: null }));
+
+    return (
+      <>
+        <h1>Log Agency Visit</h1>
+        <p className="muted">Choose the agency, leave your comments, and add one picture.</p>
+        {params.status ? <p className="pill">{statusMessages[params.status] ?? params.status}</p> : null}
+
+        <div className="card">
+          <TasterVisitForm action={createVisit} agencies={agencies} />
+        </div>
+      </>
+    );
+  }
+
+  const [agencyOptions, wholesaleAccountOptions, contacts, tags] = await Promise.all([
     getAgenciesForVisitPicker(),
     getWholesaleAccountsForVisitPicker(),
     prisma.locationContact.findMany({
