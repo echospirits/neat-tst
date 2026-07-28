@@ -1,10 +1,10 @@
 'use server';
 
-import { AccountType, PhotoType, WorklistCategory, WorklistSource, WorklistStatus } from '@prisma/client';
+import { AccountType, PhotoType, UserRole, WorklistCategory, WorklistSource, WorklistStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getUserDisplayName, requireUser } from '../../lib/auth';
-import { uploadVisitPhoto, validateVisitPhotoFile } from '../../lib/blob';
+import { deleteStoredPhoto, uploadVisitPhoto, validateVisitPhotoFile } from '../../lib/blob';
 import { prisma } from '../../lib/prisma';
 import { getSelectedVoiceFollowUps } from '../../lib/voiceVisitNoteShared';
 import {
@@ -149,20 +149,25 @@ function collectPhotos(formData: FormData, formOrigin: FormOrigin, locationType:
 }
 
 export async function createVisit(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireUser({ allowTaster: true });
+  const isTaster = user.role === UserRole.TASTER;
   const actorName = getUserDisplayName(user);
-  const formOrigin = getFormOrigin(formData);
-  const worklistItemId = toOptional(formData.get('worklistItemId'));
-  const locationType = String(formData.get('locationType') ?? 'wholesale') === 'agency' ? 'agency' : 'wholesale';
+  const formOrigin = isTaster ? 'visits' : getFormOrigin(formData);
+  const worklistItemId = isTaster ? null : toOptional(formData.get('worklistItemId'));
+  const locationType = isTaster
+    ? 'agency'
+    : String(formData.get('locationType') ?? 'wholesale') === 'agency'
+      ? 'agency'
+      : 'wholesale';
   const agencyId = toOptional(formData.get('agencyId'));
-  const selectedWholesaleAccountId = toOptional(formData.get('wholesaleAccountId'));
-  const newWholesaleLicenseeId = toOptional(formData.get('newWholesaleLicenseeId'));
-  const newWholesaleName = toOptional(formData.get('newWholesaleName'));
-  const newContactName = toOptional(formData.get('newContactName'));
-  const newContactPhone = toOptional(formData.get('newContactPhone'));
+  const selectedWholesaleAccountId = isTaster ? null : toOptional(formData.get('wholesaleAccountId'));
+  const newWholesaleLicenseeId = isTaster ? null : toOptional(formData.get('newWholesaleLicenseeId'));
+  const newWholesaleName = isTaster ? null : toOptional(formData.get('newWholesaleName'));
+  const newContactName = isTaster ? null : toOptional(formData.get('newContactName'));
+  const newContactPhone = isTaster ? null : toOptional(formData.get('newContactPhone'));
   const summary = toOptional(formData.get('summary'));
-  const quickOutcomes = getQuickOutcomes(formData);
-  const typedOutcomes = toOptional(formData.get('outcomes'));
+  const quickOutcomes = isTaster ? [] : getQuickOutcomes(formData);
+  const typedOutcomes = isTaster ? null : toOptional(formData.get('outcomes'));
   const outcomes =
     [
       quickOutcomes.length > 0 ? `Quick outcomes: ${quickOutcomes.join(', ')}` : null,
@@ -170,13 +175,36 @@ export async function createVisit(formData: FormData) {
     ]
       .filter(Boolean)
       .join('\n') || null;
-  const nextStep = toOptional(formData.get('nextStep'));
-  const followUpDate = toDate(formData.get('followUpDate'));
-  const selectedVoiceFollowUps = getSelectedVoiceFollowUps(formData);
-  const selectedTagIds = getSelectedTagIds(formData);
-  const pendingPhotos = collectPhotos(formData, formOrigin, locationType);
+  const nextStep = isTaster ? null : toOptional(formData.get('nextStep'));
+  const followUpDate = isTaster ? null : toDate(formData.get('followUpDate'));
+  const selectedVoiceFollowUps = isTaster ? [] : getSelectedVoiceFollowUps(formData);
+  const selectedTagIds = isTaster ? [] : getSelectedTagIds(formData);
+  const collectedPhotos = collectPhotos(formData, formOrigin, locationType);
+
+  if (isTaster && !summary) {
+    redirectVisitWithStatus(formOrigin, 'comments-required', locationType);
+  }
+
+  if (isTaster && (collectedPhotos.length !== 1 || !collectedPhotos[0]?.file)) {
+    redirectVisitWithStatus(formOrigin, 'photo-required', locationType);
+  }
+
+  const pendingPhotos = isTaster
+    ? collectedPhotos.map((photo) => ({ ...photo, type: PhotoType.OTHER, caption: null }))
+    : collectedPhotos;
 
   if (locationType === 'agency' && !agencyId) {
+    redirectVisitWithStatus(formOrigin, 'invalid-agency', locationType);
+  }
+
+  if (
+    isTaster &&
+    agencyId &&
+    !(await prisma.agency.findUnique({
+      where: { id: agencyId },
+      select: { id: true },
+    }))
+  ) {
     redirectVisitWithStatus(formOrigin, 'invalid-agency', locationType);
   }
 
@@ -281,7 +309,7 @@ export async function createVisit(formData: FormData) {
       });
     }
 
-    let contactId = toOptional(formData.get('contactId'));
+    let contactId = isTaster ? null : toOptional(formData.get('contactId'));
 
     if (contactId) {
       const contact = await tx.locationContact.findUnique({
@@ -417,7 +445,32 @@ export async function createVisit(formData: FormData) {
     return loggedVisit;
   });
 
-  if (pendingPhotos.length > 0) {
+  if (isTaster) {
+    const photo = pendingPhotos[0]!;
+    let uploadedPhoto: Awaited<ReturnType<typeof uploadVisitPhoto>> | null = null;
+
+    try {
+      uploadedPhoto = await uploadVisitPhoto(photo.file!, visit.id, user.id, 0);
+      await prisma.visitPhoto.create({
+        data: {
+          loggedVisitId: visit.id,
+          type: PhotoType.OTHER,
+          url: uploadedPhoto.url,
+          storageKey: uploadedPhoto.storageKey,
+          contentType: uploadedPhoto.contentType,
+          sizeBytes: uploadedPhoto.sizeBytes,
+          caption: null,
+          createdByUserId: user.id,
+        },
+      });
+    } catch {
+      await Promise.allSettled([
+        uploadedPhoto ? deleteStoredPhoto(uploadedPhoto.storageKey) : Promise.resolve(),
+        prisma.loggedVisit.delete({ where: { id: visit.id } }),
+      ]);
+      redirectVisitWithStatus(formOrigin, 'photo-upload-failed', locationType);
+    }
+  } else if (pendingPhotos.length > 0) {
     try {
       const photos = await Promise.all(
         pendingPhotos.map(async (photo, index) => {
@@ -469,5 +522,9 @@ export async function createVisit(formData: FormData) {
   if (visit.wholesaleAccountId) {
     revalidatePath(`/wholesale/${visit.wholesaleAccountId}`);
   }
+  if (isTaster) {
+    redirectVisitWithStatus(formOrigin, 'visit-logged', locationType);
+  }
+
   redirectToVisitSummary(visit, worklistItemId ? 'visit-logged-worklist-completed' : 'visit-logged');
 }

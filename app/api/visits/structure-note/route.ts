@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+import { UserRole } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { getCurrentSession, getUserDisplayName, SESSION_COOKIE } from '../../../../lib/auth';
 import {
@@ -23,6 +24,10 @@ export async function POST(request: Request) {
 
   if (!session) {
     return unauthorized();
+  }
+
+  if (session.user.role === UserRole.TASTER) {
+    return NextResponse.json({ error: 'Taster accounts can only log agency visit comments and a picture.' }, { status: 403 });
   }
 
   let payload: unknown;

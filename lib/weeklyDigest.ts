@@ -579,7 +579,10 @@ const workItemToDigestItem = (
 
 export async function getActiveDigestRecipients() {
   return prisma.user.findMany({
-    where: { isActive: true },
+    where: {
+      isActive: true,
+      role: { not: UserRole.TASTER },
+    },
     orderBy: [{ role: 'asc' }, { lastName: 'asc' }, { firstName: 'asc' }, { email: 'asc' }],
     select: {
       id: true,

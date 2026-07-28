@@ -58,6 +58,7 @@ enum WorklistCategory {
 
 enum UserRole {
   ADMIN
+  TASTER
   USER
 }
 

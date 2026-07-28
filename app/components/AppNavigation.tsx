@@ -31,6 +31,10 @@ const adminNavItems: NavItem[] = [
   { href: '/admin/weekly-digest', label: 'Weekly Digest' },
 ];
 
+const tasterNavItems: NavItem[] = [
+  { href: '/visits/new', isPrimary: true, label: 'Log Visit' },
+];
+
 const isActivePath = (pathname: string, href: string) => {
   if (href === '/') return pathname === '/';
   if (href === '/visits/new') return pathname === href;
@@ -64,9 +68,9 @@ function NavLink({
   );
 }
 
-export function AppSidebarNavigation({ isAdmin }: { isAdmin: boolean }) {
+export function AppSidebarNavigation({ isAdmin, isTaster }: { isAdmin: boolean; isTaster: boolean }) {
   const pathname = usePathname();
-  const items = [...fieldNavItems, ...secondaryNavItems, ...(isAdmin ? adminNavItems : [])];
+  const items = isTaster ? tasterNavItems : [...fieldNavItems, ...secondaryNavItems, ...(isAdmin ? adminNavItems : [])];
 
   return (
     <nav aria-label="Primary navigation" className="app-sidebar-nav">
@@ -77,12 +81,13 @@ export function AppSidebarNavigation({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
-export function MobileTabbar() {
+export function MobileTabbar({ isTaster }: { isTaster: boolean }) {
   const pathname = usePathname();
+  const items = isTaster ? tasterNavItems : fieldNavItems;
 
   return (
     <nav className="mobile-tabbar" aria-label="Quick field actions">
-      {fieldNavItems.map((item) => (
+      {items.map((item) => (
         <NavLink item={item} key={item.href} pathname={pathname} />
       ))}
     </nav>

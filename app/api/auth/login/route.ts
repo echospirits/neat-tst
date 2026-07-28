@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { SESSION_COOKIE, createUserSession, getSessionCookieOptions } from '../../../../lib/auth';
 import { verifyPassword } from '../../../../lib/password';
 import { prisma } from '../../../../lib/prisma';
+import { getSignedInHomePath } from '../../../../lib/userAccess';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
 
   await prisma.loginThrottle.deleteMany({ where: { identifier: email } });
   const { expiresAt, sessionToken } = await createUserSession(user.id);
-  const response = NextResponse.redirect(new URL('/', request.url));
+  const response = NextResponse.redirect(new URL(getSignedInHomePath(user.role), request.url));
   response.cookies.set(SESSION_COOKIE, sessionToken, getSessionCookieOptions(expiresAt));
 
   return response;
