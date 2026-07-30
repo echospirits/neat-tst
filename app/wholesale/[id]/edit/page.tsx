@@ -130,6 +130,7 @@ async function updateWholesaleAccount(formData: FormData) {
       id: true,
       licenseeId: true,
       licenseeIds: { select: { licenseeId: true } },
+      mergedIntoId: true,
       name: true,
       officialAccountId: true,
       ownership: true,
@@ -141,6 +142,9 @@ async function updateWholesaleAccount(formData: FormData) {
 
   if (!existingAccount) {
     notFound();
+  }
+  if (existingAccount.mergedIntoId) {
+    redirect(`/wholesale/${existingAccount.mergedIntoId}`);
   }
 
   const existingLicenseeIds = getWholesaleLicenseeIdValues(existingAccount);
@@ -278,6 +282,9 @@ export default async function EditWholesaleAccountPage({
 
   if (!account) {
     notFound();
+  }
+  if (account.mergedIntoId) {
+    redirect(`/wholesale/${account.mergedIntoId}`);
   }
 
   return (

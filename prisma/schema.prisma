@@ -156,6 +156,7 @@ model User {
   sessions                    UserSession[]
   invitations                 UserInvitation[]
   createdWholesaleAccounts    WholesaleAccount[]     @relation("WholesaleAccountCreatedBy")
+  mergedWholesaleAccounts     WholesaleAccount[]     @relation("WholesaleAccountMergedBy")
   createdLocationContacts     LocationContact[]      @relation("LocationContactCreatedBy")
   createdLoggedVisits         LoggedVisit[]          @relation("LoggedVisitCreatedBy")
   createdVisitPhotos          VisitPhoto[]           @relation("VisitPhotoCreatedBy")
@@ -648,9 +649,16 @@ model WholesaleAccount {
   ohlqLastEchoPurchaseBottles   Int                         @default(0)
   ohlqLastEchoPurchaseUpdatedAt DateTime?
   createdByUserId               String?
+  mergedIntoId                  String?
+  mergedAt                      DateTime?
+  mergedByUserId                String?
+  mergeSnapshot                 Json?
   createdAt                     DateTime                    @default(now())
   updatedAt                     DateTime                    @updatedAt
   createdByUser                 User?                       @relation("WholesaleAccountCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  mergedByUser                  User?                       @relation("WholesaleAccountMergedBy", fields: [mergedByUserId], references: [id], onDelete: SetNull)
+  mergedInto                    WholesaleAccount?           @relation("WholesaleAccountMerge", fields: [mergedIntoId], references: [id], onDelete: Restrict)
+  mergedSources                 WholesaleAccount[]          @relation("WholesaleAccountMerge")
   officialAccount               Account?                    @relation("OfficialWholesaleAccount", fields: [officialAccountId], references: [id], onDelete: SetNull)
   licenseeIds                   WholesaleLicenseeId[]
   tags                          LocationTag[]               @relation("WholesaleLocationTags")
@@ -665,6 +673,8 @@ model WholesaleAccount {
   targetChainMemberships        TargetChainMembership[]
 
   @@index([createdByUserId])
+  @@index([mergedByUserId])
+  @@index([mergedIntoId])
   @@index([isActive])
   @@index([officialAccountId])
   @@index([ohlqLastEchoPurchaseDate])
