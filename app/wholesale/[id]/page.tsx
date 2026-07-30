@@ -2,8 +2,8 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { MenuPlacementStatus, MenuPlacementType, Prisma } from '@prisma/client';
+import { notFound, redirect } from 'next/navigation';
+import { MenuPlacementStatus, MenuPlacementType, Prisma, UserRole } from '@prisma/client';
 import { requireUser } from '../../../lib/auth';
 import { formatEasternDate } from '../../../lib/dateTime';
 import { getWholesaleRecentPurchases } from '../../../lib/ohlqSalesData';
@@ -25,6 +25,7 @@ const tagStatusMessages: Record<string, string> = {
 const statusMessages: Record<string, string> = {
   updated: 'Wholesale account updated.',
   activated: 'Account activated.',
+  merged: 'Accounts merged successfully. Activity from the manual account is now shown here.',
   'visit-logged': 'Visit logged.',
   'visit-logged-photo-upload-failed': 'Visit logged, but one or more photos could not be uploaded.',
   'visit-logged-worklist-completed': 'Visit logged and worklist item completed.',
@@ -53,7 +54,7 @@ export default async function WholesaleActivityPage({
     placementTypeFilter?: string;
   }>;
 }) {
-  await requireUser();
+  const user = await requireUser();
   const { id } = await params;
   const query = (await searchParams) ?? {};
 
@@ -76,6 +77,9 @@ export default async function WholesaleActivityPage({
 
   if (!account) {
     notFound();
+  }
+  if (account.mergedIntoId) {
+    redirect(`/wholesale/${account.mergedIntoId}`);
   }
 
   const accountLicenseeIds = getWholesaleLicenseeIdValues(account);
@@ -193,6 +197,11 @@ export default async function WholesaleActivityPage({
         <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/edit`}>
           Edit
         </Link>
+        {user.role === UserRole.ADMIN && !account.officialAccountId ? (
+          <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/merge`}>
+            Merge account
+          </Link>
+        ) : null}
       </div>
 
       <h1>{account.name}</h1>
