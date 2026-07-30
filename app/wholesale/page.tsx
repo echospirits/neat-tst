@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { AccountType, Prisma, TargetOpportunityStatus } from '@prisma/client';
+import { AccountType, Prisma } from '@prisma/client';
 import { requireUser } from '../../lib/auth';
 import { formatEasternDate } from '../../lib/dateTime';
 import { prisma } from '../../lib/prisma';
@@ -20,33 +20,21 @@ import {
   syncWholesaleAccountLicenseeIds,
 } from '../../lib/wholesaleAccounts';
 import { LiveFilterForm } from '../components/LiveFilterForm';
-import { TagBadges } from '../tags/TagBadges';
 import { activateOfficialWholesaleAccount } from './actions';
 
 type SortDirection = 'asc' | 'desc';
 
 type WholesaleSortKey =
   | 'actions'
-  | 'status'
   | 'licenseeIds'
   | 'name'
   | 'agencyId'
   | 'address'
   | 'city'
-  | 'phone'
-  | 'tags'
-  | 'menuPlacements'
-  | 'loggedVisits'
   | 'mostRecentVisit'
   | 'targetTier'
   | 'opportunityScore'
-  | 'targetRank'
-  | 'opportunityFocus'
-  | 'buyerType'
-  | 'researchStatus'
-  | 'avgMonthly9L'
-  | 'priceFitPercent'
-  | 'etohioVolume9L';
+  | 'targetRank';
 
 type WholesalePageParams = {
   dir?: string;
@@ -61,26 +49,14 @@ type WholesaleTableRow = {
   actionLabel: string;
   address: string | null;
   agencyId: string | null;
-  avgMonthly9L: number | null;
-  buyerType: string | null;
   city: string | null;
-  etohioVolume9L: number | null;
   id: string;
   isOfficialCandidate: boolean;
   licenseeIdsText: string | null;
-  loggedVisits: number;
-  menuPlacements: number;
   mostRecentVisit: Date | null;
   name: string;
   nameHref: string | null;
-  opportunityFocus: string | null;
   opportunityScore: number | null;
-  phone: string | null;
-  priceFitPercent: number | null;
-  researchStatus: string | null;
-  statusLabel: string;
-  tagText: string;
-  tags: Array<{ color: string | null; id: string; name: string }>;
   targetRank: number | null;
   targetTier: string | null;
 };
@@ -90,47 +66,26 @@ const WHOLESALE_PAGE_SIZE = 300;
 
 const wholesaleSortColumns: Array<{ key: WholesaleSortKey; label: string }> = [
   { key: 'actions', label: 'Actions' },
-  { key: 'status', label: 'Status' },
   { key: 'licenseeIds', label: 'Licensee IDs' },
   { key: 'name', label: 'Name' },
   { key: 'agencyId', label: 'Agency ID' },
   { key: 'address', label: 'Address' },
   { key: 'city', label: 'City' },
-  { key: 'phone', label: 'Phone' },
-  { key: 'tags', label: 'Tags' },
-  { key: 'menuPlacements', label: 'Menu Placements' },
-  { key: 'loggedVisits', label: 'Logged Visits' },
   { key: 'mostRecentVisit', label: 'Most Recent Visit' },
   { key: 'targetTier', label: 'Target Tier' },
   { key: 'opportunityScore', label: 'Opportunity Score' },
   { key: 'targetRank', label: 'Target Rank' },
-  { key: 'opportunityFocus', label: 'Opportunity Focus' },
-  { key: 'buyerType', label: 'Buyer Type' },
-  { key: 'researchStatus', label: 'Research Status' },
-  { key: 'avgMonthly9L', label: 'Avg 9L/Month' },
-  { key: 'priceFitPercent', label: 'Price-Fit %' },
-  { key: 'etohioVolume9L', label: 'ETOHIO 9L' },
 ];
 
 const numericSortKeys = new Set<WholesaleSortKey>([
-  'avgMonthly9L',
-  'etohioVolume9L',
-  'loggedVisits',
-  'menuPlacements',
   'opportunityScore',
-  'priceFitPercent',
   'targetRank',
   'targetTier',
 ]);
 
 const descendingDefaultSortKeys = new Set<WholesaleSortKey>([
-  'avgMonthly9L',
-  'etohioVolume9L',
-  'loggedVisits',
-  'menuPlacements',
   'mostRecentVisit',
   'opportunityScore',
-  'priceFitPercent',
 ]);
 
 const targetTierRanks: Record<string, number> = {
@@ -283,18 +238,8 @@ const compareDate = (left: Date | null, right: Date | null, direction: SortDirec
 
 const getSortNumberValue = (row: WholesaleTableRow, sortKey: WholesaleSortKey) => {
   switch (sortKey) {
-    case 'avgMonthly9L':
-      return row.avgMonthly9L;
-    case 'etohioVolume9L':
-      return row.etohioVolume9L;
-    case 'loggedVisits':
-      return row.loggedVisits;
-    case 'menuPlacements':
-      return row.menuPlacements;
     case 'opportunityScore':
       return row.opportunityScore;
-    case 'priceFitPercent':
-      return row.priceFitPercent;
     case 'targetRank':
       return row.targetRank;
     case 'targetTier':
@@ -312,24 +257,12 @@ const getSortTextValue = (row: WholesaleTableRow, sortKey: WholesaleSortKey) => 
       return row.agencyId;
     case 'address':
       return row.address;
-    case 'buyerType':
-      return row.buyerType;
     case 'city':
       return row.city;
     case 'licenseeIds':
       return row.licenseeIdsText;
     case 'name':
       return row.name;
-    case 'opportunityFocus':
-      return row.opportunityFocus;
-    case 'phone':
-      return row.phone;
-    case 'researchStatus':
-      return row.researchStatus;
-    case 'status':
-      return row.statusLabel;
-    case 'tags':
-      return row.tagText;
     default:
       return null;
   }
@@ -509,13 +442,6 @@ export default async function WholesalePage({
           orderBy: [{ isPrimary: 'desc' }, { licenseeId: 'asc' }],
           select: { licenseeId: true },
         },
-        tags: {
-          include: { tag: true },
-          orderBy: { createdAt: 'desc' },
-        },
-        _count: {
-          select: { menuPlacements: true },
-        },
       },
       orderBy: [{ name: 'asc' }, { licenseeId: 'asc' }],
     }),
@@ -532,7 +458,6 @@ export default async function WholesalePage({
             name: true,
             address: true,
             city: true,
-            phone: true,
           },
         })
       : [],
@@ -573,7 +498,7 @@ export default async function WholesalePage({
     return licenseeId && !linkedLicenseeIds.has(licenseeId);
   });
   const accountIds = accounts.map((account) => account.id);
-  const [visitStats, targetProfiles, targetMetrics, targetOpportunities] =
+  const [visitStats, targetProfiles] =
     accountIds.length > 0
       ? await Promise.all([
           prisma.loggedVisit.groupBy({
@@ -582,7 +507,6 @@ export default async function WholesalePage({
               locationType: 'wholesale',
               wholesaleAccountId: { in: accountIds },
             },
-            _count: { _all: true },
             _max: { visitAt: true },
           }),
           prisma.targetAccountProfile.findMany({
@@ -591,90 +515,35 @@ export default async function WholesalePage({
               currentPriorityTier: true,
               currentRank: true,
               currentScore: true,
-              existingBuyer: true,
-              primaryOpportunity: true,
-              researchStatus: true,
-              wholesaleAccountId: true,
-            },
-          }),
-          prisma.targetAccountMetric.findMany({
-            where: { wholesaleAccountId: { in: accountIds } },
-            orderBy: [{ wholesaleAccountId: 'asc' }, { periodEnd: 'desc' }],
-            select: {
-              avgMonthly9L: true,
-              etohioVolume9L: true,
-              priceFitPercent: true,
-              wholesaleAccountId: true,
-            },
-          }),
-          prisma.targetSkuOpportunity.findMany({
-            where: {
-              status: { in: [TargetOpportunityStatus.OPEN, TargetOpportunityStatus.IN_PROGRESS] },
-              wholesaleAccountId: { in: accountIds },
-            },
-            orderBy: [{ wholesaleAccountId: 'asc' }, { score: 'desc' }, { updatedAt: 'desc' }],
-            select: {
-              category: true,
-              score: true,
               wholesaleAccountId: true,
             },
           }),
         ])
-      : [[], [], [], []];
+      : [[], []];
   const visitStatMap = Object.fromEntries(
     visitStats.map((stat) => [
       stat.wholesaleAccountId ?? '',
-      {
-        count: stat._count._all,
-        lastVisitAt: stat._max.visitAt,
-      },
+      stat._max.visitAt,
     ]),
   );
   const targetProfileMap = new Map(targetProfiles.map((profile) => [profile.wholesaleAccountId, profile]));
-  const latestMetricMap = new Map<string, (typeof targetMetrics)[number]>();
-  targetMetrics.forEach((metric) => {
-    if (!latestMetricMap.has(metric.wholesaleAccountId)) {
-      latestMetricMap.set(metric.wholesaleAccountId, metric);
-    }
-  });
-  const topOpportunityMap = new Map<string, (typeof targetOpportunities)[number]>();
-  targetOpportunities.forEach((opportunity) => {
-    if (!topOpportunityMap.has(opportunity.wholesaleAccountId)) {
-      topOpportunityMap.set(opportunity.wholesaleAccountId, opportunity);
-    }
-  });
   const activeRows: WholesaleTableRow[] = accounts.map((account) => {
-    const stats = visitStatMap[account.id] ?? { count: 0, lastVisitAt: null };
-    const metric = latestMetricMap.get(account.id) ?? null;
-    const opportunity = topOpportunityMap.get(account.id) ?? null;
+    const lastVisitAt = visitStatMap[account.id] ?? null;
     const profile = targetProfileMap.get(account.id) ?? null;
-    const tags = account.tags.map((assignment) => assignment.tag);
 
     return {
       actionHref: `/visits/new?type=wholesale&wholesaleAccountId=${account.id}`,
       actionLabel: 'Log visit',
       address: account.address,
       agencyId: account.agencyId,
-      avgMonthly9L: toNullableNumber(metric?.avgMonthly9L),
-      buyerType: profile ? (profile.existingBuyer ? 'Existing buyer' : 'Prospect') : null,
       city: account.city,
-      etohioVolume9L: toNullableNumber(metric?.etohioVolume9L),
       id: account.id,
       isOfficialCandidate: false,
       licenseeIdsText: formatWholesaleLicenseeIds(account),
-      loggedVisits: stats.count,
-      menuPlacements: account._count.menuPlacements,
-      mostRecentVisit: stats.lastVisitAt,
+      mostRecentVisit: lastVisitAt,
       name: account.name,
       nameHref: `/wholesale/${account.id}`,
-      opportunityFocus: profile?.primaryOpportunity ?? opportunity?.category ?? null,
-      opportunityScore: toNullableNumber(profile?.currentScore ?? opportunity?.score),
-      phone: account.phone,
-      priceFitPercent: toNullableNumber(metric?.priceFitPercent),
-      researchStatus: profile?.researchStatus ?? null,
-      statusLabel: 'Active',
-      tagText: tags.map((tag) => tag.name).join(', '),
-      tags,
+      opportunityScore: toNullableNumber(profile?.currentScore),
       targetRank: profile?.currentRank ?? null,
       targetTier: profile?.currentPriorityTier ?? null,
     };
@@ -684,26 +553,14 @@ export default async function WholesalePage({
     actionLabel: 'Activate',
     address: account.address,
     agencyId: account.agencyRefId,
-    avgMonthly9L: null,
-    buyerType: null,
     city: account.city,
-    etohioVolume9L: null,
     id: account.id,
     isOfficialCandidate: true,
     licenseeIdsText: account.licenseeId,
-    loggedVisits: 0,
-    menuPlacements: 0,
     mostRecentVisit: null,
     name: account.name,
     nameHref: null,
-    opportunityFocus: null,
     opportunityScore: null,
-    phone: account.phone,
-    priceFitPercent: null,
-    researchStatus: null,
-    statusLabel: 'Official record - inactive',
-    tagText: '',
-    tags: [],
     targetRank: null,
     targetTier: null,
   }));
@@ -824,10 +681,6 @@ export default async function WholesalePage({
                     </form>
                   )}
                 </td>
-                <td data-label="Status">
-                  <span className="pill">{row.statusLabel}</span>
-                  {row.isOfficialCandidate ? <span className="muted tap-to-activate">Tap to activate</span> : null}
-                </td>
                 <td data-label="Licensee IDs">{row.licenseeIdsText}</td>
                 <td data-label="Name">
                   {row.nameHref ? (
@@ -846,24 +699,12 @@ export default async function WholesalePage({
                 <td data-label="Agency ID">{row.agencyId}</td>
                 <td data-label="Address">{row.address}</td>
                 <td data-label="City">{row.city}</td>
-                <td data-label="Phone">{row.phone}</td>
-                <td data-label="Tags">
-                  <TagBadges tags={row.tags} emptyLabel={row.isOfficialCandidate ? 'Activate to tag' : 'No tags'} />
-                </td>
-                <td data-label="Menu Placements">{row.menuPlacements}</td>
-                <td data-label="Logged Visits">{row.loggedVisits}</td>
                 <td data-label="Most Recent Visit">{formatEasternDate(row.mostRecentVisit)}</td>
                 <td data-label="Target Tier">
                   {row.targetTier ? <span className="pill">{row.targetTier}</span> : <span className="muted">Not scored</span>}
                 </td>
                 <td data-label="Opportunity Score">{formatMetric(row.opportunityScore)}</td>
                 <td data-label="Target Rank">{row.targetRank ?? 'n/a'}</td>
-                <td data-label="Opportunity Focus">{row.opportunityFocus ?? 'n/a'}</td>
-                <td data-label="Buyer Type">{row.buyerType ?? 'n/a'}</td>
-                <td data-label="Research Status">{row.researchStatus ?? 'n/a'}</td>
-                <td data-label="Avg 9L/Month">{formatMetric(row.avgMonthly9L)}</td>
-                <td data-label="Price-Fit %">{formatMetric(row.priceFitPercent, '%')}</td>
-                <td data-label="ETOHIO 9L">{formatMetric(row.etohioVolume9L)}</td>
               </tr>
             ))}
           </tbody>

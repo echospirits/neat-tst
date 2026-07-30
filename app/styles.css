@@ -598,7 +598,43 @@ th {
 }
 
 .wholesale-table-scroll > table {
-  min-width: 2100px;
+  min-width: 1080px;
+}
+
+.wholesale-table-scroll th,
+.wholesale-table-scroll td {
+  padding: 7px 8px;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.wholesale-table-scroll th {
+  font-size: 11px;
+}
+
+.wholesale-table-scroll .sort-link {
+  gap: 4px;
+  min-height: 22px;
+}
+
+.wholesale-table-scroll .compact-btn {
+  min-height: 28px;
+  padding: 5px 7px;
+  font-size: 12px;
+}
+
+.wholesale-table-scroll .pill {
+  padding: 3px 6px;
+  font-size: 11px;
+}
+
+.wholesale-table-scroll .table-link {
+  gap: 4px;
+  font-weight: 720;
+}
+
+.wholesale-table-scroll .table-link::after {
+  font-size: 10px;
 }
 
 .sort-link {
