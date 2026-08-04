@@ -165,7 +165,7 @@ export default async function TargetQueuePage({
 
   return (
     <>
-      <header className="page-heading">
+      <header className="page-heading page-header">
         <div>
           <span className="page-eyebrow">Accounts</span>
           <h1>Target Account Queue</h1>

@@ -8,6 +8,7 @@ import { prisma } from '../../lib/prisma';
 import { createTag, deleteTag } from './actions';
 import { TagBadges } from './TagBadges';
 import { AccountViewNavigation } from '../components/AccountViewNavigation';
+import { EmptyState, PageHeader, SectionHeading } from '../components/PageChrome';
 
 const statusMessages: Record<string, string> = {
   saved: 'Tag saved.',
@@ -36,15 +37,13 @@ export default async function TagsPage({
 
   return (
     <>
-      <header className="page-heading">
-        <div>
-          <span className="page-eyebrow">Accounts</span>
-          <h1>Tags</h1>
-          <p className="muted">Create reusable account tags, choose their colors, and audit where they are applied.</p>
-        </div>
-      </header>
+      <PageHeader
+        description="Create reusable account tags, choose their colors, and audit where they are applied."
+        eyebrow="Accounts"
+        title="Tags"
+      />
       <AccountViewNavigation active="tags" />
-      {params.status ? <p className="pill">{statusMessages[params.status] ?? params.status}</p> : null}
+      {params.status ? <p className="toast-notice page-status">{statusMessages[params.status] ?? params.status}</p> : null}
 
       <div className="grid">
         <div className="card">
@@ -76,7 +75,9 @@ export default async function TagsPage({
         </div>
       </div>
 
-      <table className="responsive-table">
+      <section className="content-section">
+      <SectionHeading count={tags.length} description="Reusable labels available across agency and wholesale workspaces." title="Tag library" />
+      {tags.length > 0 ? <div className="table-scroll"><table className="responsive-table">
         <thead>
           <tr>
             <th>Tag</th>
@@ -117,7 +118,8 @@ export default async function TagsPage({
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div> : <EmptyState description="Create a tag above to start organizing accounts around shared priorities." title="No tags created" />}
+      </section>
     </>
   );
 }

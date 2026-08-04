@@ -7,6 +7,7 @@ import { getUserDisplayName, requireUser } from '../../../lib/auth';
 import { formatEasternDateTime } from '../../../lib/dateTime';
 import { prisma } from '../../../lib/prisma';
 import { TagBadges } from '../TagBadges';
+import { EmptyState, PageHeader, SectionHeading } from '../../components/PageChrome';
 
 export default async function TagDetailPage({
   params,
@@ -37,13 +38,12 @@ export default async function TagDetailPage({
 
   return (
     <>
-      <div className="page-actions">
-        <Link href="/tags">Back to tags</Link>
-      </div>
-
-      <h1>Tagged Accounts</h1>
-      <TagBadges tags={[tag]} />
-      {tag.description ? <p className="muted">{tag.description}</p> : null}
+      <PageHeader
+        actions={<Link className="btn secondary" href="/tags">Back to tags</Link>}
+        description={tag.description || 'Accounts currently carrying this tag.'}
+        eyebrow="Account organization"
+        title={<><TagBadges tags={[tag]} /> accounts</>}
+      />
 
       <div className="grid account-summary-grid">
         <div className="card metric-card">
@@ -59,10 +59,12 @@ export default async function TagDetailPage({
         </div>
       </div>
 
+      <section className="content-section">
+      <SectionHeading count={tag.locationTags.length} title="Tagged accounts" />
       {tag.locationTags.length === 0 ? (
-        <p className="muted activity-empty">No accounts have this tag yet.</p>
+        <EmptyState description="Apply this tag from an agency or wholesale account workspace." title="No accounts have this tag" />
       ) : (
-        <table className="responsive-table">
+        <div className="table-scroll"><table className="responsive-table">
           <thead>
             <tr>
               <th>Account</th>
@@ -103,8 +105,9 @@ export default async function TagDetailPage({
               );
             })}
           </tbody>
-        </table>
+        </table></div>
       )}
+      </section>
     </>
   );
 }

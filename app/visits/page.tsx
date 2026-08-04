@@ -6,6 +6,7 @@ import { getUserDisplayName, requireUser } from '../../lib/auth';
 import { formatDateOnly, formatEasternDateTime } from '../../lib/dateTime';
 import { prisma } from '../../lib/prisma';
 import { LiveFilterForm } from '../components/LiveFilterForm';
+import { EmptyState, PageHeader, SectionHeading } from '../components/PageChrome';
 import { VisitPhotoGallery } from './VisitPhotoGallery';
 
 export default async function VisitsPage({
@@ -49,15 +50,17 @@ export default async function VisitsPage({
     orderBy: [{ visitAt: 'desc' }],
   });
 
-  const agencies = await prisma.agency.findMany({
-    where: { id: { in: visits.map((visit) => visit.agencyId).filter(Boolean) as string[] } },
-  });
-  const wholesale = await prisma.wholesaleAccount.findMany({
-    where: { id: { in: visits.map((visit) => visit.wholesaleAccountId).filter(Boolean) as string[] } },
-  });
-  const contacts = await prisma.locationContact.findMany({
-    where: { id: { in: visits.map((visit) => visit.contactId).filter(Boolean) as string[] } },
-  });
+  const [agencies, wholesale, contacts] = await Promise.all([
+    prisma.agency.findMany({
+      where: { id: { in: visits.map((visit) => visit.agencyId).filter(Boolean) as string[] } },
+    }),
+    prisma.wholesaleAccount.findMany({
+      where: { id: { in: visits.map((visit) => visit.wholesaleAccountId).filter(Boolean) as string[] } },
+    }),
+    prisma.locationContact.findMany({
+      where: { id: { in: visits.map((visit) => visit.contactId).filter(Boolean) as string[] } },
+    }),
+  ]);
 
   const agencyMap = Object.fromEntries(agencies.map((agency) => [agency.id, agency.name]));
   const wholesaleMap = Object.fromEntries(wholesale.map((account) => [account.id, account.name]));
@@ -65,8 +68,13 @@ export default async function VisitsPage({
 
   return (
     <>
-      <h1>Visits</h1>
-      {params.status === 'logged' ? <p className="pill">Visit logged.</p> : null}
+      <PageHeader
+        actions={<Link className="btn" href="/visits/new">Log visit</Link>}
+        description="Review field activity, outcomes, follow-ups, and supporting photos across every account."
+        eyebrow="Activity"
+        title="Visits"
+      />
+      {params.status === 'logged' ? <p className="toast-notice page-status">Visit logged.</p> : null}
 
       <LiveFilterForm className="card filter-form visit-filter" label="Filter visits">
         <input name="q" defaultValue={q} placeholder="Filter summary, outcomes, next steps, rep" />
@@ -77,7 +85,14 @@ export default async function VisitsPage({
         </select>
       </LiveFilterForm>
 
-      <table className="responsive-table">
+      <section className="content-section">
+        <SectionHeading
+          count={visits.length}
+          description={q || type ? 'Filtered to the current search.' : 'Most recent activity, newest first.'}
+          title="Visit history"
+        />
+      {visits.length > 0 ? <div className="table-scroll">
+        <table className="responsive-table">
         <thead>
           <tr>
             <th>Date</th>
@@ -129,7 +144,15 @@ export default async function VisitsPage({
             );
           })}
         </tbody>
-      </table>
+        </table>
+      </div> : (
+        <EmptyState
+          action={<Link className="btn" href="/visits/new">Log a visit</Link>}
+          description="Adjust the filters or capture the first visit for this view."
+          title="No visits match"
+        />
+      )}
+      </section>
     </>
   );
 }

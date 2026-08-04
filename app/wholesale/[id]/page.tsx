@@ -187,7 +187,7 @@ export default async function WholesaleActivityPage({
 
   return (
     <>
-      <header className="page-heading account-workspace-heading">
+      <header className="page-heading page-header account-workspace-heading">
         <div>
           <span className="page-eyebrow">Licensee IDs {formatWholesaleLicenseeIds(account)}</span>
           <h1>{account.name}</h1>

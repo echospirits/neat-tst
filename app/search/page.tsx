@@ -79,7 +79,7 @@ export default async function SearchPage({ searchParams }: { searchParams?: Prom
 
   return (
     <>
-      <header className="page-heading search-heading">
+      <header className="page-heading page-header search-heading">
         <div>
           <span className="page-eyebrow">Universal search</span>
           <h1>Find accounts and work</h1>

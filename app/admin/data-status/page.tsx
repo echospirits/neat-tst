@@ -17,6 +17,7 @@ import {
 import { getLatestManualOhlqReportDate } from '../../../lib/ohlqManualImport';
 import { prisma } from '../../../lib/prisma';
 import { uploadTargetAccountWorkbook } from '../target-import/actions';
+import { PageHeader, SectionHeading } from '../../components/PageChrome';
 
 const statusTimeZone = EASTERN_TIME_ZONE;
 const visibleDays = 14;
@@ -287,11 +288,14 @@ export default async function DataStatusPage({
 
   return (
     <>
-      <h1>Data Status</h1>
-      <p className="muted">OHLQ report health by report date, newest first.</p>
-      {brandMasterStatusMessage(params) ? <p className="pill">{brandMasterStatusMessage(params)}</p> : null}
+      <PageHeader
+        description="Monitor OHLQ report health, source freshness, and import coverage by report date."
+        eyebrow="Administration"
+        title="Data Status"
+      />
+      {brandMasterStatusMessage(params) ? <p className="toast-notice page-status">{brandMasterStatusMessage(params)}</p> : null}
       {targetImportStatusMessage(params.targetStatus) ? (
-        <p className="pill">{targetImportStatusMessage(params.targetStatus)}</p>
+        <p className="toast-notice page-status">{targetImportStatusMessage(params.targetStatus)}</p>
       ) : null}
 
       <details className="card compact-details admin-panel" open>
@@ -395,12 +399,9 @@ export default async function DataStatusPage({
       </details>
 
       <section className="dashboard-section">
-        <div className="section-heading">
-          <h2>Daily Row Counts</h2>
-          <span className="pill">Last {visibleDays} report dates</span>
-        </div>
+        <SectionHeading actions={<span className="pill">Last {visibleDays} report dates</span>} description="Row presence and run status by source and reporting day." title="Daily Row Counts" />
 
-        <table className="responsive-table data-status-table">
+        <div className="table-scroll"><table className="responsive-table data-status-table">
           <thead>
             <tr>
               <th>Report date</th>
@@ -432,7 +433,7 @@ export default async function DataStatusPage({
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </section>
     </>
   );
