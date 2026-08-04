@@ -2242,6 +2242,38 @@ legend {
   display: none;
 }
 
+@media (min-width: 901px) {
+  aside {
+    padding: 14px 16px;
+  }
+
+  aside h2 {
+    margin: 4px 4px 12px;
+    font-size: 15px;
+  }
+
+  .app-sidebar-nav {
+    gap: 2px;
+  }
+
+  aside a {
+    margin: 1px 0;
+    padding: 5px 9px;
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .user-card {
+    gap: 6px;
+    margin-top: 14px;
+    padding-top: 10px;
+  }
+
+  .user-card strong {
+    font-size: 12px;
+  }
+}
+
 @media (max-width: 900px) {
   body {
     display: block;
