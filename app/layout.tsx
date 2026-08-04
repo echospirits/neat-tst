@@ -1,7 +1,8 @@
 import { getCurrentUser, getUserDisplayName } from '../lib/auth';
 import { getTenantConfig } from '../lib/tenantConfig';
 import { isTasterRole } from '../lib/userAccess';
-import { AppSidebarNavigation, MobileTabbar } from './components/AppNavigation';
+import Link from 'next/link';
+import { AppBreadcrumbs, AppSidebarNavigation, MobileTabbar } from './components/AppNavigation';
 import './styles.css';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -21,6 +22,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <span className="muted">Signed in as</span>
                 <strong>{getUserDisplayName(user)}</strong>
                 <span className="pill">{user.role === 'ADMIN' ? 'Admin' : isTaster ? 'Taster' : 'User'}</span>
+                <Link className="user-card-profile" href="/profile">Profile &amp; preferences</Link>
                 <form action="/api/auth/logout" method="post">
                   <button className="secondary" type="submit">
                     Sign out
@@ -28,11 +30,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </form>
               </div>
             </aside>
-            <main>{children}</main>
-            <a className="fab" href="/visits/new" aria-label="Log Visit">
+            <main>
+              <AppBreadcrumbs isTaster={isTaster} />
+              {children}
+            </main>
+            <Link className="fab" href="/visits/new" aria-label="Log Visit">
               +
-            </a>
-            <MobileTabbar isTaster={isTaster} />
+            </Link>
+            <MobileTabbar isAdmin={user.role === 'ADMIN'} isTaster={isTaster} />
           </>
         ) : (
           <main className="public-main">{children}</main>

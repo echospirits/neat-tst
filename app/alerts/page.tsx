@@ -17,6 +17,7 @@ import {
 } from '../../lib/worklistLocations';
 import { DatePickerField } from '../components/DatePickerField';
 import { LiveFilterForm } from '../components/LiveFilterForm';
+import { WorkViewNavigation } from '../components/WorkViewNavigation';
 import { createVisit } from '../visits/actions';
 import { WorklistActions } from './WorklistActions';
 import { WorklistDetail } from './WorklistDetail';
@@ -255,10 +256,16 @@ export default async function Alerts({
 
   return (
     <>
-      <h1>Worklist</h1>
-      <p className="muted">
-        Follow-ups from visits, data signals, and manually assigned tasks. Completed and cancelled items are hidden by default.
-      </p>
+      <header className="page-heading">
+        <div>
+          <span className="page-eyebrow">My work</span>
+          <h1>Worklist</h1>
+          <p className="muted">
+            Follow-ups from visits, data signals, and manually assigned tasks. Completed and cancelled items are hidden by default.
+          </p>
+        </div>
+      </header>
+      <WorkViewNavigation active="all" />
 
       {params.created === '1' ? <p className="pill">Worklist item created.</p> : null}
       {params.created === 'invalid' ? <p className="pill">A title is required.</p> : null}
