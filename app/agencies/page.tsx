@@ -167,7 +167,7 @@ export default async function AgenciesPage({
 
   return (
     <>
-      <header className="page-heading">
+      <header className="page-heading page-header">
         <div>
           <span className="page-eyebrow">Accounts</span>
           <h1>Liquor Agencies</h1>
@@ -188,7 +188,7 @@ export default async function AgenciesPage({
         </form>
       </details>
 
-      <table className="responsive-table">
+      <div className="table-scroll"><table className="responsive-table">
         <thead>
           <tr>
             <th>Actions</th>
@@ -235,7 +235,7 @@ export default async function AgenciesPage({
             );
           })}
         </tbody>
-      </table>
+      </table></div>
     </>
   );
 }

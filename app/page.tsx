@@ -257,7 +257,7 @@ export default async function Dashboard() {
   const scheduledVisitTotal = scheduledAgencyVisits + scheduledWholesaleVisits;
   return (
     <>
-      <header className="page-heading dashboard-heading">
+      <header className="page-heading page-header dashboard-heading">
         <div>
           <span className="page-eyebrow">Daily workspace</span>
           <h1>What needs attention today?</h1>

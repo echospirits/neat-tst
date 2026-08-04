@@ -575,7 +575,7 @@ export default async function WholesalePage({
 
   return (
     <>
-      <header className="page-heading">
+      <header className="page-heading page-header">
         <div>
           <span className="page-eyebrow">Accounts</span>
           <h1>Wholesale Accounts</h1>

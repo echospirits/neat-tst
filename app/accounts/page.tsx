@@ -34,7 +34,7 @@ export default async function AccountsPage() {
 
   return (
     <>
-      <header className="page-heading">
+      <header className="page-heading page-header">
         <div>
           <span className="page-eyebrow">Accounts</span>
           <h1>Find the right account</h1>

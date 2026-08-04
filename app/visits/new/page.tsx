@@ -4,6 +4,7 @@ export const runtime = 'nodejs';
 import { UserRole } from '@prisma/client';
 import { getUserDisplayName, requireUser } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
+import { PageHeader } from '../../components/PageChrome';
 import {
   getAgenciesForVisitPicker,
   getAgencyVisitPickerOptionById,
@@ -60,13 +61,16 @@ export default async function NewVisitPage({
 
     return (
       <>
-        <h1>Log Agency Visit</h1>
-        <p className="muted">Choose the agency, leave your comments, and add one picture.</p>
-        {params.status ? <p className="pill">{statusMessages[params.status] ?? params.status}</p> : null}
+        <PageHeader
+          description="Choose the agency, leave your comments, and add one picture."
+          eyebrow="Field activity"
+          title="Log Agency Visit"
+        />
+        {params.status ? <p className="toast-notice page-status">{statusMessages[params.status] ?? params.status}</p> : null}
 
-        <div className="card">
+        <div className="workflow-shell"><div className="card">
           <TasterVisitForm action={createVisit} agencies={agencies} />
-        </div>
+        </div></div>
       </>
     );
   }
@@ -119,10 +123,14 @@ export default async function NewVisitPage({
 
   return (
     <>
-      <h1>Log Visit</h1>
-      {params.status ? <p className="pill">{statusMessages[params.status] ?? params.status}</p> : null}
+      <PageHeader
+        description="Capture the account, conversation, outcome, and next commitment in one guided workflow."
+        eyebrow="Field activity"
+        title="Log Visit"
+      />
+      {params.status ? <p className="toast-notice page-status">{statusMessages[params.status] ?? params.status}</p> : null}
 
-      <div className="card">
+      <div className="workflow-shell"><div className="card">
         <LogVisitForm
           action={createVisit}
           actorName={getUserDisplayName(user)}
@@ -137,7 +145,7 @@ export default async function NewVisitPage({
           tags={tags}
           wholesaleAccounts={wholesaleAccounts}
         />
-      </div>
+      </div></div>
     </>
   );
 }

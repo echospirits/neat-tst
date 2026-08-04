@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { getUserDisplayName, requireUserSession } from '../../lib/auth';
 import { hashPassword, verifyPassword } from '../../lib/password';
 import { prisma } from '../../lib/prisma';
+import { PageHeader } from '../components/PageChrome';
 
 const toOptional = (value: FormDataEntryValue | null | undefined) => {
   const trimmed = String(value ?? '').trim();
@@ -72,11 +73,14 @@ export default async function ProfilePage({
 
   return (
     <>
-      <h1>Profile</h1>
-      <p className="muted">Manage your phone number and password.</p>
-      {params.status ? <p className="pill">{statusMessages[params.status] ?? params.status}</p> : null}
+      <PageHeader
+        description="Keep your contact information current and secure your account."
+        eyebrow="Account"
+        title="Profile"
+      />
+      {params.status ? <p className="toast-notice page-status">{statusMessages[params.status] ?? params.status}</p> : null}
 
-      <div className="card admin-panel">
+      <div className="workflow-shell"><div className="card admin-panel">
         <form action={updateProfile}>
           <div className="form-grid">
             <label>
@@ -111,7 +115,7 @@ export default async function ProfilePage({
           </details>
           <button type="submit">Save profile</button>
         </form>
-      </div>
+      </div></div>
     </>
   );
 }

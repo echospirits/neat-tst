@@ -6,6 +6,7 @@ import { requireAdmin } from '../../../lib/auth';
 import { formatEasternDateTime } from '../../../lib/dateTime';
 import { prisma } from '../../../lib/prisma';
 import { uploadTargetAccountWorkbook } from './actions';
+import { PageHeader, SectionHeading } from '../../components/PageChrome';
 
 type MappingRow = {
   sheetName: string;
@@ -53,15 +54,12 @@ export default async function TargetImportPage({
 
   return (
     <>
-      <div className="page-actions">
-        <Link href="/targets">Target queue</Link>
-        <Link href="/targets/dashboard">Accountability dashboard</Link>
-      </div>
-
-      <h1>Target Account Model Import</h1>
-      <p className="muted">
-        Upload the Central Ohio workbook, validate mappings, and commit the scored model into the `tst` CRM data model.
-      </p>
+      <PageHeader
+        actions={<><Link className="btn secondary" href="/targets">Target queue</Link><Link className="btn secondary" href="/targets/dashboard">Accountability</Link></>}
+        description="Upload the Central Ohio workbook, validate mappings, and commit the scored model into the tst CRM data model."
+        eyebrow="Administration"
+        title="Target Model Import"
+      />
 
       {params.status ? <p className="toast-notice">{statusMessages[params.status] ?? params.status}</p> : null}
 
@@ -149,10 +147,7 @@ export default async function TargetImportPage({
           ) : null}
 
           <section className="dashboard-section">
-            <div className="section-heading">
-              <h2>Sheet and column mappings</h2>
-              <span className="pill">{mappings.length}</span>
-            </div>
+            <SectionHeading count={mappings.length} description="How workbook columns resolve into CRM target fields." title="Sheet and column mappings" />
             <div className="mapping-grid">
               {mappings.map((mapping) => (
                 <details className="card compact-details mapping-card" key={mapping.sheetName}>
@@ -191,10 +186,8 @@ export default async function TargetImportPage({
       ) : null}
 
       <section className="dashboard-section">
-        <div className="section-heading">
-          <h2>Recent imports</h2>
-        </div>
-        <table className="responsive-table">
+        <SectionHeading count={latestImports.length} description="Audit prior dry runs and committed workbook imports." title="Recent imports" />
+        <div className="table-scroll"><table className="responsive-table">
           <thead>
             <tr>
               <th>File</th>
@@ -217,7 +210,7 @@ export default async function TargetImportPage({
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </section>
     </>
   );

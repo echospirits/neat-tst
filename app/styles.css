@@ -337,12 +337,117 @@ textarea:focus-visible {
   margin: 0;
 }
 
+.page-header {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
 .page-heading-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 7px;
   flex-wrap: wrap;
+}
+
+.content-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 28px 0 12px;
+}
+
+.content-section-heading h2,
+.content-section-heading p {
+  margin: 0;
+}
+
+.content-section-heading p {
+  margin-top: 4px;
+}
+
+.content-section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.result-count {
+  min-width: 24px;
+  padding: 3px 7px;
+  color: #cbd5e1;
+  text-align: center;
+  background: #1b1b1f;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.content-section-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.content-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
+}
+
+.empty-state {
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 28px;
+  text-align: left;
+  background: linear-gradient(135deg, #2458ff0d, transparent 55%), var(--panel);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+}
+
+.empty-state-mark {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  color: #9bb5ff;
+  background: #2458ff20;
+  border: 1px solid #557dff66;
+  border-radius: 50%;
+  font-size: 22px;
+}
+
+.empty-state h3,
+.empty-state p {
+  margin: 0;
+}
+
+.empty-state p {
+  margin-top: 4px;
+}
+
+.empty-state-action {
+  margin-left: auto;
+}
+
+.workflow-shell {
+  max-width: 980px;
+}
+
+.workflow-shell > .card + .card,
+.workflow-shell > .card + .content-section,
+.workflow-shell > .content-section + .card {
+  margin-top: 16px;
+}
+
+.page-status {
+  margin-bottom: 16px;
 }
 
 .account-workspace-nav {
@@ -1058,6 +1163,18 @@ th {
   font-size: 12px;
   font-weight: 750;
   letter-spacing: 0;
+}
+
+tbody tr {
+  transition: background-color 120ms ease;
+}
+
+tbody tr:hover td {
+  background: #ffffff04;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 .table-scroll {
@@ -3105,6 +3222,23 @@ legend {
   .page-heading,
   .account-support-card {
     display: grid;
+  }
+
+  .content-section-heading,
+  .empty-state {
+    display: grid;
+    align-items: start;
+  }
+
+  .content-section-heading-actions,
+  .empty-state-action {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .content-section-heading-actions .btn,
+  .empty-state-action .btn {
+    width: 100%;
   }
 
   .page-heading-actions {

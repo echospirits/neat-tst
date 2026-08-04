@@ -5,6 +5,7 @@ import { AlertStatus, MenuPlacementStatus, TargetOpportunityStatus, WorklistStat
 import Link from 'next/link';
 import { requireUser } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
+import { PageHeader, SectionHeading } from '../../components/PageChrome';
 
 const toNumber = (value: unknown) => Number(value ?? 0);
 
@@ -101,14 +102,12 @@ export default async function TargetAccountabilityDashboard() {
 
   return (
     <>
-      <div className="page-actions">
-        <Link href="/targets">Back to target queue</Link>
-      </div>
-
-      <h1>Target Accountability Dashboard</h1>
-      <p className="muted">
-        Performance view for target-account progress, expansion, follow-through, and heat-loss risk.
-      </p>
+      <PageHeader
+        actions={<Link className="btn secondary" href="/targets">Target queue</Link>}
+        description="Performance view for target-account progress, expansion, follow-through, and heat-loss risk."
+        eyebrow="Sales intelligence"
+        title="Target Accountability"
+      />
 
       <div className="grid performance-grid">
         <div className="card metric-card">
@@ -163,9 +162,7 @@ export default async function TargetAccountabilityDashboard() {
       </div>
 
       <section className="dashboard-section">
-        <div className="section-heading">
-          <h2>Activity by Priority Tier</h2>
-        </div>
+        <SectionHeading description="Distribution of modeled target accounts by priority." title="Activity by Priority Tier" />
         <div className="card">
           <div className="tier-bar-list">
             {Object.entries(tierCounts)

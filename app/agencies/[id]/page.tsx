@@ -79,7 +79,7 @@ export default async function AgencyActivityPage({
 
   return (
     <>
-      <header className="page-heading account-workspace-heading">
+      <header className="page-heading page-header account-workspace-heading">
         <div>
           <span className="page-eyebrow">Agency {agency.agencyId}</span>
           <h1>{agency.name}</h1>

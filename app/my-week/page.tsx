@@ -233,7 +233,7 @@ export default async function MyWeekPage() {
 
   return (
     <>
-      <header className="page-heading">
+      <header className="page-heading page-header">
         <div>
           <span className="page-eyebrow">My work</span>
           <h1>My Week</h1>
@@ -273,7 +273,7 @@ export default async function MyWeekPage() {
             {group.items.length === 0 ? (
               <p className="muted">No matching items.</p>
             ) : (
-              <table className="responsive-table">
+              <div className="table-scroll"><table className="responsive-table">
                 <thead>
                   <tr>
                     <th>Item</th>
@@ -338,7 +338,7 @@ export default async function MyWeekPage() {
                     );
                   })}
                 </tbody>
-              </table>
+              </table></div>
             )}
           </section>
         ))

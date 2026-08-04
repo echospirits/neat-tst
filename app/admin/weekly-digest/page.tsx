@@ -14,6 +14,7 @@ import {
   renderUserWeeklyDigestEmail,
 } from '../../../lib/weeklyDigest';
 import { sendWeeklyDigestManualAction, sendWeeklyDigestTestAction } from './actions';
+import { PageHeader, SectionHeading } from '../../components/PageChrome';
 
 const statusMessages: Record<string, string> = {
   'test-sent': 'Test digest sent to your email.',
@@ -72,13 +73,14 @@ export default async function WeeklyDigestAdminPage({
 
   return (
     <>
-      <h1>Weekly Digest</h1>
-      <p className="muted">
-        Admin-only preview and send controls for the Friday 8:00 AM Eastern {tenantConfig.digestName} weekly email.
-      </p>
+      <PageHeader
+        description={<>Preview and send controls for the Friday 8:00 AM Eastern {tenantConfig.digestName} weekly email.</>}
+        eyebrow="Administration"
+        title="Weekly Digest"
+      />
 
       {params.status ? (
-        <p className="pill">
+        <p className="toast-notice page-status">
           {statusMessages[params.status] ?? params.status}
           {params.attempted
             ? ` Attempted ${params.attempted}, sent ${params.sent ?? 0}, skipped ${params.skipped ?? 0}, failed ${
@@ -90,10 +92,7 @@ export default async function WeeklyDigestAdminPage({
       ) : null}
 
       <section className="dashboard-section">
-        <div className="section-heading">
-          <h2>Preview</h2>
-          <span className="pill">{previewMode === 'admin' ? 'Team digest' : 'User digest'}</span>
-        </div>
+        <SectionHeading actions={<span className="pill">{previewMode === 'admin' ? 'Team digest' : 'User digest'}</span>} description="Validate content with live CRM data before sending." title="Preview" />
 
         <div className="card admin-panel digest-admin-panel">
           <form className="digest-control-form">
@@ -145,11 +144,8 @@ export default async function WeeklyDigestAdminPage({
       </section>
 
       <section className="dashboard-section">
-        <div className="section-heading">
-          <h2>Recent digest logs</h2>
-          <span className="pill">{recentLogs.length}</span>
-        </div>
-        <table className="responsive-table">
+        <SectionHeading count={recentLogs.length} description="Recipient-level outcomes from recent digest runs." title="Recent digest logs" />
+        <div className="table-scroll"><table className="responsive-table">
           <thead>
             <tr>
               <th>Recipient</th>
@@ -181,7 +177,7 @@ export default async function WeeklyDigestAdminPage({
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </section>
     </>
   );

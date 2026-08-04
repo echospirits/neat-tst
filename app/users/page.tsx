@@ -8,6 +8,7 @@ import { getUserDisplayName, requireAdminSession } from '../../lib/auth';
 import { hashPassword } from '../../lib/password';
 import { prisma } from '../../lib/prisma';
 import { createUserInvitationToken, sendUserInvitationEmail } from '../../lib/userInvitations';
+import { PageHeader, SectionHeading } from '../components/PageChrome';
 
 const toOptional = (value: FormDataEntryValue | null | undefined) => {
   const trimmed = String(value ?? '').trim();
@@ -306,9 +307,12 @@ export default async function UsersPage({
 
   return (
     <>
-      <h1>Users</h1>
-      <p className="muted">Only admins can invite user accounts.</p>
-      {params.status ? <p className="pill">{statusMessages[params.status] ?? params.status}</p> : null}
+      <PageHeader
+        description="Invite teammates, manage access levels, and keep inactive accounts out of field workflows."
+        eyebrow="Administration"
+        title="Users"
+      />
+      {params.status ? <p className="toast-notice page-status">{statusMessages[params.status] ?? params.status}</p> : null}
 
       <details className="card compact-details admin-panel" open>
         <summary>Invite user</summary>
@@ -343,7 +347,13 @@ export default async function UsersPage({
         </form>
       </details>
 
-      <table className="responsive-table">
+      <section className="content-section">
+      <SectionHeading
+        count={users.length}
+        description={`${users.filter((user) => user.isActive).length} active · ${users.filter((user) => user.invitations.length > 0).length} awaiting acceptance`}
+        title="Team access"
+      />
+      <div className="table-scroll"><table className="responsive-table">
         <thead>
           <tr>
             <th>Name</th>
@@ -415,7 +425,8 @@ export default async function UsersPage({
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
+      </section>
     </>
   );
 }

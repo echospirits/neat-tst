@@ -256,7 +256,7 @@ export default async function Alerts({
 
   return (
     <>
-      <header className="page-heading">
+      <header className="page-heading page-header">
         <div>
           <span className="page-eyebrow">My work</span>
           <h1>Worklist</h1>

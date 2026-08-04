@@ -7,6 +7,7 @@ import { notFound, redirect } from 'next/navigation';
 import { AccountType } from '@prisma/client';
 import { requireUser } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
+import { PageHeader } from '../../../components/PageChrome';
 import {
   chooseWholesaleOfficialAccountCandidate,
   getWholesaleOfficialAccountSearchConditions,
@@ -289,15 +290,15 @@ export default async function EditWholesaleAccountPage({
 
   return (
     <>
-      <div className="page-actions">
-        <Link href={`/wholesale/${account.id}`}>Back to account</Link>
-      </div>
+      <PageHeader
+        actions={<Link className="btn secondary" href={`/wholesale/${account.id}`}>Back to account</Link>}
+        description={account.name}
+        eyebrow="Wholesale account"
+        title="Edit account"
+      />
+      {query.status ? <p className="toast-notice page-status">{statusMessages[query.status] ?? query.status}</p> : null}
 
-      <h1>Edit Wholesale Account</h1>
-      <p className="muted">{account.name}</p>
-      {query.status ? <p className="pill">{statusMessages[query.status] ?? query.status}</p> : null}
-
-      <div className="card admin-panel">
+      <div className="workflow-shell"><div className="card admin-panel">
         <form action={updateWholesaleAccount}>
           <input name="id" type="hidden" value={account.id} />
           <div className="form-grid">
@@ -359,7 +360,7 @@ export default async function EditWholesaleAccountPage({
           </div>
           <button type="submit">Save wholesale account</button>
         </form>
-      </div>
+      </div></div>
     </>
   );
 }

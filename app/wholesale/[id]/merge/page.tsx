@@ -11,6 +11,7 @@ import {
 } from '../../../../lib/wholesaleAccountMerge';
 import { formatWholesaleLicenseeIds } from '../../../../lib/wholesaleAccounts';
 import { mergeWholesaleAccountAction } from './actions';
+import { PageHeader } from '../../../components/PageChrome';
 
 const statusMessages: Record<string, string> = {
   'already-merged': 'This manual account has already been merged.',
@@ -99,15 +100,12 @@ export default async function MergeWholesaleAccountPage({
 
   return (
     <>
-      <div className="page-actions">
-        <Link href={`/wholesale/${sourceId}`}>Back to account</Link>
-      </div>
-
-      <h1>Merge wholesale account</h1>
-      <p className="muted">
-        Move activity from a manually created account into its official OHLQ account. The manual record will become
-        an inactive redirect.
-      </p>
+      <PageHeader
+        actions={<Link className="btn secondary" href={`/wholesale/${sourceId}`}>Back to account</Link>}
+        description="Move activity from a manually created account into its official OHLQ account. The manual record will become an inactive redirect."
+        eyebrow="Administrative workflow"
+        title="Merge wholesale account"
+      />
 
       {query.status ? (
         <p className="toast-notice" role="status">
@@ -116,7 +114,7 @@ export default async function MergeWholesaleAccountPage({
       ) : null}
       {previewError ? <p className="danger-text">{previewError}</p> : null}
 
-      <div className="card account-detail-list">
+      <div className="workflow-shell"><div className="card account-detail-list">
         <h2>Manual source account</h2>
         <p>
           <strong>Name</strong>
@@ -271,6 +269,7 @@ export default async function MergeWholesaleAccountPage({
           ) : null}
         </>
       ) : null}
+      </div>
     </>
   );
 }
