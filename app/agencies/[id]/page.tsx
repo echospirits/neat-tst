@@ -11,6 +11,7 @@ import { AgencyRecentSalesCard } from '../AgencyRecentSalesCard';
 import { AccountTagPanel } from '../../tags/AccountTagPanel';
 import { TagBadges } from '../../tags/TagBadges';
 import { VisitActivityTable } from '../../visits/VisitActivityTable';
+import { AccountWorkspaceNavigation } from '../../components/AccountWorkspaceNavigation';
 
 const formatVisitDate = (date: Date | null | undefined) => formatEasternDate(date) || 'No visits yet';
 const tagStatusMessages: Record<string, string> = {
@@ -78,23 +79,26 @@ export default async function AgencyActivityPage({
 
   return (
     <>
-      <div className="page-actions">
-        <Link href="/agencies">Back to agencies</Link>
-        <Link className="btn compact-btn" href={`/visits/new?type=agency&agencyId=${agency.id}`}>
-          Log visit
-        </Link>
-        <Link className="btn compact-btn secondary" href={`/visits/new?type=agency&agencyId=${agency.id}&voice=1`}>
-          Voice note
-        </Link>
-      </div>
-
-      <h1>{agency.name}</h1>
-      <p className="muted">Agency {agency.agencyId}</p>
+      <header className="page-heading account-workspace-heading">
+        <div>
+          <span className="page-eyebrow">Agency {agency.agencyId}</span>
+          <h1>{agency.name}</h1>
+          <TagBadges tags={agency.tags.map((assignment) => assignment.tag)} />
+        </div>
+        <div className="page-heading-actions">
+          <Link className="btn compact-btn" href={`/visits/new?type=agency&agencyId=${agency.id}`}>Log visit</Link>
+          <Link className="btn compact-btn secondary" href={`/visits/new?type=agency&agencyId=${agency.id}&voice=1`}>Voice note</Link>
+        </div>
+      </header>
       {query.status ? <p className="toast-notice" role="status">{statusMessages[query.status] ?? query.status}</p> : null}
       {query.tagStatus ? <p className="pill">{tagStatusMessages[query.tagStatus] ?? query.tagStatus}</p> : null}
-      <TagBadges tags={agency.tags.map((assignment) => assignment.tag)} />
+      <AccountWorkspaceNavigation sections={[
+        { href: '#overview', label: 'Overview' },
+        { href: '#sales', label: 'Sales' },
+        { href: '#activity', label: 'Activity' },
+      ]} />
 
-      <div className="grid account-summary-grid">
+      <div className="grid account-summary-grid account-workspace-section" id="overview">
         <div className="card metric-card">
           <h3>Logged visits</h3>
           <p className="metric-value">{visits.length}</p>
@@ -131,9 +135,11 @@ export default async function AgencyActivityPage({
         />
       </div>
 
-      <AgencyRecentSalesCard salesWindows={salesWindows} />
+      <div className="account-workspace-section" id="sales">
+        <AgencyRecentSalesCard salesWindows={salesWindows} />
+      </div>
 
-      <section className="dashboard-section">
+      <section className="dashboard-section account-workspace-section" id="activity">
         <div className="section-heading">
           <h2>Logged Visit Activity</h2>
           <span className="pill">{visits.length}</span>

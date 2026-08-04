@@ -9,6 +9,7 @@ import { requireUser } from '../../lib/auth';
 import { formatEasternDate } from '../../lib/dateTime';
 import { prisma } from '../../lib/prisma';
 import { LiveFilterForm } from '../components/LiveFilterForm';
+import { AccountViewNavigation } from '../components/AccountViewNavigation';
 import { TagBadges } from '../tags/TagBadges';
 
 type CsvRow = Record<string, string | undefined>;
@@ -166,7 +167,14 @@ export default async function AgenciesPage({
 
   return (
     <>
-      <h1>Liquor Agencies</h1>
+      <header className="page-heading">
+        <div>
+          <span className="page-eyebrow">Accounts</span>
+          <h1>Liquor Agencies</h1>
+          <p className="muted">Find retail agencies, review account context, and start a visit.</p>
+        </div>
+      </header>
+      <AccountViewNavigation active="agencies" />
       <LiveFilterForm className="filter-form narrow-filter" label="Filter agencies">
         <input name="q" defaultValue={q} placeholder="Filter name, agency ID, address, contact, phone" />
       </LiveFilterForm>

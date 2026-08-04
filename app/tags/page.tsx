@@ -7,6 +7,7 @@ import { formatEasternDate } from '../../lib/dateTime';
 import { prisma } from '../../lib/prisma';
 import { createTag, deleteTag } from './actions';
 import { TagBadges } from './TagBadges';
+import { AccountViewNavigation } from '../components/AccountViewNavigation';
 
 const statusMessages: Record<string, string> = {
   saved: 'Tag saved.',
@@ -35,8 +36,14 @@ export default async function TagsPage({
 
   return (
     <>
-      <h1>Tags</h1>
-      <p className="muted">Create reusable account tags, choose their colors, and audit where they are applied.</p>
+      <header className="page-heading">
+        <div>
+          <span className="page-eyebrow">Accounts</span>
+          <h1>Tags</h1>
+          <p className="muted">Create reusable account tags, choose their colors, and audit where they are applied.</p>
+        </div>
+      </header>
+      <AccountViewNavigation active="tags" />
       {params.status ? <p className="pill">{statusMessages[params.status] ?? params.status}</p> : null}
 
       <div className="grid">

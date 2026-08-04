@@ -15,6 +15,7 @@ import { TargetIntelligencePanel } from '../../targets/TargetIntelligencePanel';
 import { TagBadges } from '../../tags/TagBadges';
 import { VisitActivityTable } from '../../visits/VisitActivityTable';
 import { WholesaleRecentPurchasesCard } from '../WholesaleRecentPurchasesCard';
+import { AccountWorkspaceNavigation } from '../../components/AccountWorkspaceNavigation';
 
 const formatVisitDate = (date: Date | null | undefined) => formatEasternDate(date) || 'No visits yet';
 const tagStatusMessages: Record<string, string> = {
@@ -186,35 +187,36 @@ export default async function WholesaleActivityPage({
 
   return (
     <>
-      <div className="page-actions">
-        <Link href="/wholesale">Back to wholesale accounts</Link>
-        <Link className="btn compact-btn" href={`/visits/new?type=wholesale&wholesaleAccountId=${account.id}`}>
-          Log visit
-        </Link>
-        <Link className="btn compact-btn secondary" href={`/visits/new?type=wholesale&wholesaleAccountId=${account.id}&voice=1`}>
-          Voice note
-        </Link>
-        <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/edit`}>
-          Edit
-        </Link>
-        {user.role === UserRole.ADMIN && !account.officialAccountId ? (
-          <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/merge`}>
-            Merge account
-          </Link>
-        ) : null}
-      </div>
-
-      <h1>{account.name}</h1>
-      <p className="muted">Licensee IDs {formatWholesaleLicenseeIds(account)}</p>
+      <header className="page-heading account-workspace-heading">
+        <div>
+          <span className="page-eyebrow">Licensee IDs {formatWholesaleLicenseeIds(account)}</span>
+          <h1>{account.name}</h1>
+          <TagBadges tags={account.tags.map((assignment) => assignment.tag)} />
+        </div>
+        <div className="page-heading-actions">
+          <Link className="btn compact-btn" href={`/visits/new?type=wholesale&wholesaleAccountId=${account.id}`}>Log visit</Link>
+          <Link className="btn compact-btn secondary" href={`/visits/new?type=wholesale&wholesaleAccountId=${account.id}&voice=1`}>Voice note</Link>
+          <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/edit`}>Edit</Link>
+          {user.role === UserRole.ADMIN && !account.officialAccountId ? (
+            <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/merge`}>Merge account</Link>
+          ) : null}
+        </div>
+      </header>
       {!account.isActive ? <p className="pill">Inactive</p> : null}
       {query.status ? <p className="toast-notice" role="status">{statusMessages[query.status] ?? query.status}</p> : null}
       {query.tagStatus ? <p className="pill">{tagStatusMessages[query.tagStatus] ?? query.tagStatus}</p> : null}
       {query.placementStatus ? (
         <p className="pill">{menuPlacementStatusMessages[query.placementStatus] ?? query.placementStatus}</p>
       ) : null}
-      <TagBadges tags={account.tags.map((assignment) => assignment.tag)} />
+      <AccountWorkspaceNavigation sections={[
+        { href: '#overview', label: 'Overview' },
+        { href: '#placements', label: 'Placements' },
+        { href: '#purchases', label: 'Purchases' },
+        { href: '#intelligence', label: 'Intelligence' },
+        { href: '#activity', label: 'Activity' },
+      ]} />
 
-      <div className="grid account-summary-grid">
+      <div className="grid account-summary-grid account-workspace-section" id="overview">
         <div className="card metric-card">
           <h3>Logged visits</h3>
           <p className="metric-value">{visits.length}</p>
@@ -255,25 +257,31 @@ export default async function WholesaleActivityPage({
         />
       </div>
 
-      <MenuPlacementPanel
-        accountId={backingAccount?.id ?? null}
-        filters={{
-          q: placementQ,
-          status: placementStatusFilter,
-          placementType: placementTypeFilter,
-        }}
-        placements={menuPlacements}
-        returnTo={`/wholesale/${account.id}`}
-        users={users}
-        visits={legacyVisits}
-        wholesaleAccountId={account.id}
-      />
+      <div className="account-workspace-section" id="placements">
+        <MenuPlacementPanel
+          accountId={backingAccount?.id ?? null}
+          filters={{
+            q: placementQ,
+            status: placementStatusFilter,
+            placementType: placementTypeFilter,
+          }}
+          placements={menuPlacements}
+          returnTo={`/wholesale/${account.id}`}
+          users={users}
+          visits={legacyVisits}
+          wholesaleAccountId={account.id}
+        />
+      </div>
 
-      <WholesaleRecentPurchasesCard purchases={purchases} />
+      <div className="account-workspace-section" id="purchases">
+        <WholesaleRecentPurchasesCard purchases={purchases} />
+      </div>
 
-      <TargetIntelligencePanel wholesaleAccountId={account.id} />
+      <div className="account-workspace-section" id="intelligence">
+        <TargetIntelligencePanel wholesaleAccountId={account.id} />
+      </div>
 
-      <section className="dashboard-section">
+      <section className="dashboard-section account-workspace-section" id="activity">
         <div className="section-heading">
           <h2>Logged Visit Activity</h2>
           <span className="pill">{visits.length}</span>

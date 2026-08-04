@@ -2,59 +2,44 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-type NavItem = {
-  href: string;
-  label: string;
-  matchAccountSection?: boolean;
-};
+import {
+  getMobileNavigationItems,
+  getMoreNavigationItems,
+  getNavigationItems,
+  type NavigationItem,
+} from './navigationConfig';
 
 type NavGroup = {
-  items: NavItem[];
+  items: NavigationItem[];
   label: string;
 };
 
-const workItems: NavItem[] = [
-  { href: '/', label: 'Home' },
-  { href: '/alerts', label: 'Worklist' },
-  { href: '/my-week', label: 'My Week' },
-  { href: '/visits', label: 'Visit History' },
-];
+const workItems = getNavigationItems('work');
+const accountItems = getNavigationItems('accounts');
+const adminItems = getNavigationItems('admin');
+const mobileItems = getMobileNavigationItems();
 
-const accountItems: NavItem[] = [
-  { href: '/accounts', label: 'Accounts Overview' },
-  { href: '/agencies', label: 'Agencies' },
-  { href: '/wholesale', label: 'Wholesale' },
-  { href: '/targets', label: 'Target Queue' },
-];
-
-const adminItems: NavItem[] = [
-  { href: '/users', label: 'Users' },
-  { href: '/admin/target-import', label: 'Target Import' },
-  { href: '/admin/data-status', label: 'Data Health' },
-  { href: '/admin/weekly-digest', label: 'Weekly Digest' },
-];
-
-const mobileItems: NavItem[] = [
-  { href: '/', label: 'Home' },
-  { href: '/alerts', label: 'Work' },
-  { href: '/accounts', label: 'Accounts', matchAccountSection: true },
-  { href: '/visits', label: 'Visits' },
-];
-
-const isActivePath = (pathname: string, item: NavItem) => {
+const isActivePath = (pathname: string, item: NavigationItem, useSectionMatch = false) => {
   if (item.href === '/') return pathname === '/';
   if (item.href === '/visits') return pathname === item.href;
-  if (item.matchAccountSection) {
-    return ['/accounts', '/agencies', '/wholesale', '/targets', '/tags'].some(
+  if (useSectionMatch && item.matchPrefixes) {
+    return item.matchPrefixes.some(
       (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
     );
   }
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 };
 
-function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
-  const isActive = isActivePath(pathname, item);
+function NavLink({
+  item,
+  pathname,
+  useSectionMatch = false,
+}: {
+  item: NavigationItem;
+  pathname: string;
+  useSectionMatch?: boolean;
+}) {
+  const isActive = isActivePath(pathname, item, useSectionMatch);
 
   return (
     <Link
@@ -62,7 +47,7 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
       className={isActive ? 'app-nav-link is-active' : 'app-nav-link'}
       href={item.href}
     >
-      {item.label}
+      {useSectionMatch ? item.mobileLabel ?? item.label : item.label}
     </Link>
   );
 }
@@ -122,11 +107,13 @@ export function AppSidebarNavigation({ isAdmin, isTaster }: { isAdmin: boolean; 
   );
 }
 
-const getBreadcrumbs = (pathname: string): NavItem[] => {
+type BreadcrumbItem = { href: string; label: string };
+
+const getBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
   if (pathname === '/') return [];
 
   const home = { href: '/', label: 'Home' };
-  const routeMap: Array<{ prefix: string; crumbs: NavItem[] }> = [
+  const routeMap: Array<{ prefix: string; crumbs: BreadcrumbItem[] }> = [
     { prefix: '/visits/new', crumbs: [{ href: '/visits/new', label: 'Log Visit' }] },
     { prefix: '/visits/confirmed', crumbs: [{ href: '/visits', label: 'Visits' }, { href: pathname, label: 'Confirmed' }] },
     { prefix: '/visits', crumbs: [{ href: '/visits', label: 'Visit History' }] },
@@ -138,6 +125,7 @@ const getBreadcrumbs = (pathname: string): NavItem[] => {
     { prefix: '/wholesale', crumbs: [{ href: '/accounts', label: 'Accounts' }, { href: '/wholesale', label: 'Wholesale' }] },
     { prefix: '/targets', crumbs: [{ href: '/accounts', label: 'Accounts' }, { href: '/targets', label: 'Target Queue' }] },
     { prefix: '/tags', crumbs: [{ href: '/accounts', label: 'Accounts' }, { href: '/tags', label: 'Tags' }] },
+    { prefix: '/search', crumbs: [{ href: '/search', label: 'Search' }] },
     { prefix: '/accounts', crumbs: [{ href: '/accounts', label: 'Accounts' }] },
     { prefix: '/users', crumbs: [{ href: '/users', label: 'Administration' }, { href: '/users', label: 'Users' }] },
     { prefix: '/admin/target-import', crumbs: [{ href: '/users', label: 'Administration' }, { href: pathname, label: 'Target Import' }] },
@@ -173,24 +161,21 @@ export function AppBreadcrumbs({ isTaster }: { isTaster: boolean }) {
 
 export function MobileTabbar({ isAdmin, isTaster }: { isAdmin: boolean; isTaster: boolean }) {
   const pathname = usePathname();
+  const moreItems = getMoreNavigationItems(isAdmin);
 
   if (isTaster) return null;
 
   return (
     <nav className="mobile-tabbar" aria-label="Quick field actions">
       {mobileItems.map((item) => (
-        <NavLink item={item} key={item.href} pathname={pathname} />
+        <NavLink item={item} key={item.href} pathname={pathname} useSectionMatch />
       ))}
       <details className="mobile-more">
         <summary>More</summary>
         <div className="mobile-more-menu">
-          <NavLink item={{ href: '/my-week', label: 'My Week' }} pathname={pathname} />
-          <NavLink item={{ href: '/agencies', label: 'Agencies' }} pathname={pathname} />
-          <NavLink item={{ href: '/wholesale', label: 'Wholesale' }} pathname={pathname} />
-          <NavLink item={{ href: '/targets', label: 'Target Queue' }} pathname={pathname} />
-          <NavLink item={{ href: '/tags', label: 'Tags' }} pathname={pathname} />
-          <NavLink item={{ href: '/profile', label: 'Profile' }} pathname={pathname} />
-          {isAdmin ? <NavLink item={{ href: '/users', label: 'Administration' }} pathname={pathname} /> : null}
+          {moreItems.map((item) => (
+            <NavLink item={item} key={item.key} pathname={pathname} />
+          ))}
         </div>
       </details>
     </nav>

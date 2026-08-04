@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { requireUser } from '../../lib/auth';
 import { isTasterRole } from '../../lib/userAccess';
+import { AccountViewNavigation } from '../components/AccountViewNavigation';
 
 const accountAreas = [
   {
@@ -41,6 +42,7 @@ export default async function AccountsPage() {
         </div>
         <Link className="btn" href="/visits/new">Log Visit</Link>
       </header>
+      <AccountViewNavigation active="overview" />
 
       <section className="account-area-grid" aria-label="Account areas">
         {accountAreas.map((area) => (

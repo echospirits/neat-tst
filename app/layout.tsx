@@ -3,6 +3,7 @@ import { getTenantConfig } from '../lib/tenantConfig';
 import { isTasterRole } from '../lib/userAccess';
 import Link from 'next/link';
 import { AppBreadcrumbs, AppSidebarNavigation, MobileTabbar } from './components/AppNavigation';
+import { GlobalSearchForm } from './components/GlobalSearchForm';
 import './styles.css';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -17,6 +18,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <>
             <aside>
               <h2>{tenantConfig.entityName}</h2>
+              {!isTaster ? <GlobalSearchForm compact /> : null}
               <AppSidebarNavigation isAdmin={user.role === 'ADMIN'} isTaster={isTaster} />
               <div className="user-card">
                 <span className="muted">Signed in as</span>
