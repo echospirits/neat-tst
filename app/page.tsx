@@ -3,28 +3,20 @@ export const runtime = 'nodejs';
 
 import {
   MenuPlacementStatus,
-  OhlqReportDataSource,
-  OhlqReportRunStatus,
-  UserRole,
   WorklistCategory,
   WorklistSource,
   WorklistStatus,
 } from '@prisma/client';
 import Link from 'next/link';
 import { getUserDisplayName, requireUser } from '../lib/auth';
-import { EASTERN_TIME_ZONE, formatEasternDateTime } from '../lib/dateTime';
-import {
-  formatOhlqDate,
-  OHLQ_DATA_SOURCE_CONFIGS,
-  toOhlqDateOnlyUtc,
-} from '../lib/ohlqDataStatus';
+import { EASTERN_TIME_ZONE } from '../lib/dateTime';
+import { formatOhlqDate } from '../lib/ohlqDataStatus';
 import { getOhlqWholesaleReactivationDashboardSummary } from '../lib/ohlqWholesaleReactivation';
 import { prisma } from '../lib/prisma';
 import { getTenantConfig } from '../lib/tenantConfig';
 
 const dashboardTimeZone = EASTERN_TIME_ZONE;
 const inactiveWorklistStatuses = [WorklistStatus.COMPLETED, WorklistStatus.CANCELLED];
-const dashboardDataStatusDays = 7;
 
 type DateParts = {
   year: number;
@@ -132,38 +124,6 @@ const getDashboardRanges = () => {
 const formatDateRange = (start: Date, end: Date) =>
   `${shortDateFormatter.format(start)} - ${shortDateFormatter.format(end)}`;
 
-const formatReportDateLabel = (isoDate: string) =>
-  shortDateFormatter.format(new Date(`${isoDate}T12:00:00.000Z`));
-
-const formatRunTime = (date: Date | null | undefined) => formatEasternDateTime(date) || 'No success yet';
-
-const getRecentReportDates = (days: number) => {
-  const today = getDateParts(new Date());
-
-  return Array.from({ length: days }, (_, index) => {
-    const offset = days - index;
-    const date = addLocalDays(today.year, today.month, today.day, -offset);
-    return formatOhlqDate(new Date(Date.UTC(date.year, date.month - 1, date.day, 12)));
-  });
-};
-
-const buildCountMap = (counts: Array<{ reportDate: Date; _count: { _all: number } }>) =>
-  new Map(counts.map((item) => [formatOhlqDate(item.reportDate), item._count._all]));
-
-const getPipelineStatusLabel = (status: OhlqReportRunStatus | undefined, count: number) => {
-  if (status === OhlqReportRunStatus.ERRORED) return 'Errored';
-  if (status === OhlqReportRunStatus.RUNNING) return 'Running';
-  if (status === OhlqReportRunStatus.COMPLETED || count > 0) return 'Completed';
-  return 'Not Yet Run';
-};
-
-const statusClassName = (status: string) => {
-  if (status === 'Completed') return 'status-pill status-completed';
-  if (status === 'Errored') return 'status-pill status-errored';
-  if (status === 'Running') return 'status-pill status-running';
-  return 'status-pill status-muted';
-};
-
 const getVisitCounts = (visits: VisitRecord[]) => ({
   total: visits.length,
   agency: visits.filter((visit) => visit.locationType === 'agency').length,
@@ -209,14 +169,11 @@ function MetricSplits({ agency, wholesale }: { agency: number; wholesale: number
 }
 
 export default async function Dashboard() {
-  const user = await requireUser();
+  await requireUser();
   const tenantConfig = getTenantConfig();
 
   const ranges = getDashboardRanges();
   const visitQueryStart = ranges.weekStart < ranges.monthStart ? ranges.weekStart : ranges.monthStart;
-  const reportDates = getRecentReportDates(dashboardDataStatusDays);
-  const reportStartDate = toOhlqDateOnlyUtc(reportDates[0]);
-  const reportEndDate = toOhlqDateOnlyUtc(reportDates[reportDates.length - 1]);
 
   const [
     activeWorklistItems,
@@ -226,11 +183,6 @@ export default async function Dashboard() {
     liveMenuPlacements,
     promisedMenuPlacementsWithoutProof,
     staleMenuPlacements,
-    annualDataCounts,
-    wholesaleDataCounts,
-    pipelineStatusRows,
-    brandMasterRows,
-    latestBrandMasterRow,
     wholesaleReactivationSummary,
   ] = await Promise.all([
     prisma.worklistItem.count({
@@ -290,27 +242,6 @@ export default async function Dashboard() {
         OR: [{ lastVerifiedAt: null }, { lastVerifiedAt: { lt: ranges.stalePlacementCutoff } }],
       },
     }),
-    prisma.ohlqAnnualSalesRow.groupBy({
-      by: ['reportDate'],
-      where: { reportDate: { gte: reportStartDate, lte: reportEndDate } },
-      _count: { _all: true },
-      orderBy: { reportDate: 'asc' },
-    }),
-    prisma.ohlqAnnualSalesByWholesaleRow.groupBy({
-      by: ['reportDate'],
-      where: { reportDate: { gte: reportStartDate, lte: reportEndDate } },
-      _count: { _all: true },
-      orderBy: { reportDate: 'asc' },
-    }),
-    prisma.ohlqReportImportStatus.findMany({
-      where: { reportDate: { gte: reportStartDate, lte: reportEndDate } },
-      orderBy: [{ reportDate: 'asc' }, { dataSource: 'asc' }],
-    }),
-    prisma.ohlqBrandMasterItem.count(),
-    prisma.ohlqBrandMasterItem.findFirst({
-      orderBy: { updatedAt: 'desc' },
-      select: { updatedAt: true },
-    }),
     getOhlqWholesaleReactivationDashboardSummary({ runAt: ranges.now }),
   ]);
 
@@ -324,42 +255,16 @@ export default async function Dashboard() {
   const scheduledWholesaleVisits =
     scheduledWorklistItems.find((item) => item.category === WorklistCategory.WHOLESALE)?._count._all ?? 0;
   const scheduledVisitTotal = scheduledAgencyVisits + scheduledWholesaleVisits;
-  const countsBySource = {
-    [OhlqReportDataSource.ANNUAL_SALES_SUMMARY]: buildCountMap(annualDataCounts),
-    [OhlqReportDataSource.ANNUAL_SALES_SUMMARY_BY_WHOLESALE]: buildCountMap(wholesaleDataCounts),
-  };
-  const statusBySourceDate = new Map(
-    pipelineStatusRows.map((row) => [`${row.dataSource}:${formatOhlqDate(row.reportDate)}`, row]),
-  );
-  const latestReportDate = reportDates[reportDates.length - 1];
-  const pipelineSummaries = OHLQ_DATA_SOURCE_CONFIGS.map((config) => {
-    const counts = countsBySource[config.source];
-    const latestCount = counts.get(latestReportDate) ?? 0;
-    const latestStatusRow = statusBySourceDate.get(`${config.source}:${latestReportDate}`);
-    const dayStatuses = reportDates.map((date) => {
-      const count = counts.get(date) ?? 0;
-      const statusRow = statusBySourceDate.get(`${config.source}:${date}`);
-      return getPipelineStatusLabel(statusRow?.status, count);
-    });
-    const lastSuccessfulAt = pipelineStatusRows
-      .filter((row) => row.dataSource === config.source && row.lastSuccessfulAt)
-      .sort((a, b) => Number(b.lastSuccessfulAt) - Number(a.lastSuccessfulAt))[0]?.lastSuccessfulAt;
-
-    return {
-      completedDays: dayStatuses.filter((status) => status === 'Completed').length,
-      config,
-      erroredDays: dayStatuses.filter((status) => status === 'Errored').length,
-      latestCount,
-      latestReportDate,
-      latestStatus: getPipelineStatusLabel(latestStatusRow?.status, latestCount),
-      lastSuccessfulAt,
-      missingDays: dayStatuses.filter((status) => status === 'Not Yet Run').length,
-    };
-  });
-
   return (
     <>
-      <h1>Daily Operating Dashboard</h1>
+      <header className="page-heading dashboard-heading">
+        <div>
+          <span className="page-eyebrow">Daily workspace</span>
+          <h1>What needs attention today?</h1>
+          <p className="muted">Start a visit, work the next follow-up, or find the right account without hunting through the app.</p>
+        </div>
+        <Link className="btn secondary" href="/my-week">View My Week</Link>
+      </header>
 
       <section className="quick-action-panel">
         <Link className="quick-action-card quick-action-primary" href="/visits/new">
@@ -370,15 +275,23 @@ export default async function Dashboard() {
           <strong>Worklist</strong>
           <span>{activeWorklistItems} active</span>
         </Link>
-        <Link className="quick-action-card" href="/agencies">
-          <strong>Find agency</strong>
-          <span>Search and log</span>
+        <Link className="quick-action-card" href="/accounts">
+          <strong>Find account</strong>
+          <span>Agency, wholesale, or target</span>
         </Link>
-        <Link className="quick-action-card" href="/wholesale">
-          <strong>Find wholesale</strong>
-          <span>Search or create</span>
+        <Link className="quick-action-card" href="/my-week">
+          <strong>My Week</strong>
+          <span>{scheduledVisitTotal} scheduled in 7 days</span>
         </Link>
       </section>
+
+      <div className="section-heading dashboard-attention-heading">
+        <div>
+          <span className="page-eyebrow">My work</span>
+          <h2>Current priorities</h2>
+        </div>
+        <Link className="btn secondary compact-btn" href="/alerts">Open full worklist</Link>
+      </div>
 
       <div className="grid">
         <div className="card metric-card">
@@ -449,13 +362,16 @@ export default async function Dashboard() {
         </div>
       </div>
 
-      <section className="dashboard-section">
-        <div className="section-heading">
-          <h2>Performance</h2>
+      <details className="dashboard-section dashboard-details">
+        <summary>
+          <span>
+            <strong>Team activity and performance</strong>
+            <small>Visits, scheduling, photos, and menu placement signals</small>
+          </span>
           <span className="pill">Week starts Monday</span>
-        </div>
+        </summary>
 
-        <div className="grid performance-grid">
+        <div className="grid performance-grid dashboard-details-content">
           <div className="card metric-card">
             <h3>Visits this week</h3>
             <p className="metric-value">{weekCounts.total}</p>
@@ -518,56 +434,7 @@ export default async function Dashboard() {
             <p className="muted metric-caption">Live, not verified in 30 days</p>
           </div>
         </div>
-      </section>
-
-      <section className="dashboard-section data-pipeline-section">
-        <div className="section-heading">
-          <h2>Data Pipeline</h2>
-          <span className="pill">Latest report date {formatReportDateLabel(latestReportDate)}</span>
-          {user.role === UserRole.ADMIN ? (
-            <Link className="btn secondary compact-btn" href="/admin/data-status">
-              Open Data Status
-            </Link>
-          ) : null}
-        </div>
-
-        <div className="grid data-pipeline-grid">
-          {pipelineSummaries.map((summary) => (
-            <div className="card metric-card data-pipeline-card" key={summary.config.source}>
-              <div className="data-pipeline-title">
-                <h3>{summary.config.label}</h3>
-                <span className={statusClassName(summary.latestStatus)}>{summary.latestStatus}</span>
-              </div>
-              <p className="metric-value">{summary.latestCount.toLocaleString('en-US')}</p>
-              <p className="muted metric-caption">Rows for {formatReportDateLabel(summary.latestReportDate)}</p>
-              <div className="metric-splits">
-                <div className="metric-split">
-                  <span>Completed days</span>
-                  <strong>{summary.completedDays}/{dashboardDataStatusDays}</strong>
-                </div>
-                <div className="metric-split">
-                  <span>Errored / not yet run</span>
-                  <strong>
-                    {summary.erroredDays} / {summary.missingDays}
-                  </strong>
-                </div>
-              </div>
-              <p className="muted metric-caption">Last success: {formatRunTime(summary.lastSuccessfulAt)}</p>
-            </div>
-          ))}
-          <div className="card metric-card data-pipeline-card">
-            <div className="data-pipeline-title">
-              <h3>Brand Master Lookup</h3>
-              <span className={statusClassName(brandMasterRows > 0 ? 'Completed' : 'Not Yet Run')}>
-                {brandMasterRows > 0 ? 'Loaded' : 'Not Loaded'}
-              </span>
-            </div>
-            <p className="metric-value">{brandMasterRows.toLocaleString('en-US')}</p>
-            <p className="muted metric-caption">SKU/item lookup rows</p>
-            <p className="muted metric-caption">Last refresh: {formatRunTime(latestBrandMasterRow?.updatedAt)}</p>
-          </div>
-        </div>
-      </section>
+      </details>
     </>
   );
 }

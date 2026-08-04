@@ -12,6 +12,7 @@ import { getAgenciesForVisitPicker, getWholesaleAccountsForVisitPicker } from '.
 import { getWorklistLocationFallbackLabel, getWorklistLocations } from '../../lib/worklistLocations';
 import { createVisit } from '../visits/actions';
 import { WorklistActions } from '../alerts/WorklistActions';
+import { WorkViewNavigation } from '../components/WorkViewNavigation';
 import { WorklistDetail } from '../alerts/WorklistDetail';
 
 const dashboardTimeZone = EASTERN_TIME_ZONE;
@@ -232,11 +233,17 @@ export default async function MyWeekPage() {
 
   return (
     <>
-      <h1>My Week</h1>
-      <p className="muted">
-        Assigned to {actorName} for {weekLabelFormatter.format(ranges.weekStart)} -{' '}
-        {weekLabelFormatter.format(ranges.weekEnd)}
-      </p>
+      <header className="page-heading">
+        <div>
+          <span className="page-eyebrow">My work</span>
+          <h1>My Week</h1>
+          <p className="muted">
+            Assigned to {actorName} for {weekLabelFormatter.format(ranges.weekStart)} -{' '}
+            {weekLabelFormatter.format(ranges.weekEnd)}
+          </p>
+        </div>
+      </header>
+      <WorkViewNavigation active="week" />
 
       <div className="grid account-summary-grid">
         <div className="card metric-card">

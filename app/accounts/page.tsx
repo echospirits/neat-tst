@@ -1,0 +1,66 @@
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { requireUser } from '../../lib/auth';
+import { isTasterRole } from '../../lib/userAccess';
+
+const accountAreas = [
+  {
+    href: '/agencies',
+    title: 'Liquor Agencies',
+    description: 'Find retail agencies, review recent activity, and log account visits.',
+    action: 'Browse agencies',
+  },
+  {
+    href: '/wholesale',
+    title: 'Wholesale Accounts',
+    description: 'Manage on-premise accounts, sales signals, contacts, and follow-up history.',
+    action: 'Browse wholesale',
+  },
+  {
+    href: '/targets',
+    title: 'Target Queue',
+    description: 'Prioritize researched prospects and turn account intelligence into action.',
+    action: 'Open target queue',
+  },
+];
+
+export default async function AccountsPage() {
+  const user = await requireUser();
+  if (isTasterRole(user.role)) redirect('/visits/new');
+
+  return (
+    <>
+      <header className="page-heading">
+        <div>
+          <span className="page-eyebrow">Accounts</span>
+          <h1>Find the right account</h1>
+          <p className="muted">Start with the account type or open the target queue for prioritized opportunities.</p>
+        </div>
+        <Link className="btn" href="/visits/new">Log Visit</Link>
+      </header>
+
+      <section className="account-area-grid" aria-label="Account areas">
+        {accountAreas.map((area) => (
+          <Link className="account-area-card" href={area.href} key={area.href}>
+            <span className="account-area-kicker">Account workspace</span>
+            <h2>{area.title}</h2>
+            <p>{area.description}</p>
+            <strong>{area.action} <span aria-hidden="true">→</span></strong>
+          </Link>
+        ))}
+      </section>
+
+      <section className="card account-support-card">
+        <div>
+          <span className="page-eyebrow">Supporting tools</span>
+          <h2>Account organization</h2>
+          <p className="muted">Manage reusable tags that help the team group and find locations.</p>
+        </div>
+        <Link className="btn secondary" href="/tags">Manage tags</Link>
+      </section>
+    </>
+  );
+}
