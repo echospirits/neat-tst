@@ -20,6 +20,7 @@ import {
   syncWholesaleAccountLicenseeIds,
 } from '../../lib/wholesaleAccounts';
 import { LiveFilterForm } from '../components/LiveFilterForm';
+import { AccountViewNavigation } from '../components/AccountViewNavigation';
 import { activateOfficialWholesaleAccount } from './actions';
 
 type SortDirection = 'asc' | 'desc';
@@ -574,8 +575,14 @@ export default async function WholesalePage({
 
   return (
     <>
-      <h1>Wholesale Accounts</h1>
-      <p className="muted">Active accounts by default. Search also checks inactive official OHLQ records.</p>
+      <header className="page-heading">
+        <div>
+          <span className="page-eyebrow">Accounts</span>
+          <h1>Wholesale Accounts</h1>
+          <p className="muted">Active accounts by default. Search also checks inactive official OHLQ records.</p>
+        </div>
+      </header>
+      <AccountViewNavigation active="wholesale" />
 
       <LiveFilterForm className="filter-form narrow-filter" label="Filter wholesale accounts">
         <input name="q" defaultValue={q} placeholder="Filter name, licensee ID, menu placement, phone" />

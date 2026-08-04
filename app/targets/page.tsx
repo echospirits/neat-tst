@@ -7,6 +7,7 @@ import { getUserDisplayName, requireUser } from '../../lib/auth';
 import { formatEasternDate } from '../../lib/dateTime';
 import { prisma } from '../../lib/prisma';
 import { LiveFilterForm } from '../components/LiveFilterForm';
+import { AccountViewNavigation } from '../components/AccountViewNavigation';
 
 const toNumber = (value: unknown) => Number(value ?? 0);
 
@@ -164,16 +165,19 @@ export default async function TargetQueuePage({
 
   return (
     <>
-      <div className="page-actions">
+      <header className="page-heading">
+        <div>
+          <span className="page-eyebrow">Accounts</span>
+          <h1>Target Account Queue</h1>
+          <p className="muted">
+            Prioritized field queue from the Central Ohio scoring model, current CRM next actions, and account activity.
+          </p>
+        </div>
         <Link className="btn compact-btn" href="/targets/dashboard">
           Accountability dashboard
         </Link>
-      </div>
-
-      <h1>Target Account Queue</h1>
-      <p className="muted">
-        Prioritized field queue from the Central Ohio scoring model, current CRM next actions, and account activity.
-      </p>
+      </header>
+      <AccountViewNavigation active="targets" />
 
       <details className="card compact-details filter-panel target-filter-panel">
         <summary>Filters</summary>
