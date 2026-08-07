@@ -328,6 +328,9 @@ export default async function MyWeekPage() {
                               category: item.category,
                               agencyId: item.agencyId,
                               wholesaleAccountId: item.wholesaleAccountId,
+                              location: location
+                                ? { id: location.id, name: location.name, type: location.type }
+                                : null,
                             }}
                             tags={tags}
                             updateStatusAction={updateWorklistStatus}
