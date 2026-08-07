@@ -21,6 +21,11 @@ type WorklistActionItem = {
   category: WorklistCategory;
   agencyId: string | null;
   wholesaleAccountId: string | null;
+  location: {
+    id: string;
+    name: string;
+    type: VisitLocationType;
+  } | null;
 };
 
 type WorklistActionsProps = {
@@ -35,6 +40,10 @@ type WorklistActionsProps = {
 };
 
 const getInitialLocationType = (item: WorklistActionItem): VisitLocationType => {
+  if (item.location) {
+    return item.location.type;
+  }
+
   if (item.category === 'WHOLESALE' || item.wholesaleAccountId) {
     return 'wholesale';
   }
@@ -100,8 +109,10 @@ export function WorklistActions({
               formOrigin="worklist"
               initialValues={{
                 locationType: getInitialLocationType(item),
-                agencyId: item.agencyId,
-                wholesaleAccountId: item.wholesaleAccountId,
+                locationName: item.location?.name,
+                agencyId: item.location?.type === 'agency' ? item.location.id : item.agencyId,
+                wholesaleAccountId:
+                  item.location?.type === 'wholesale' ? item.location.id : item.wholesaleAccountId,
                 summary: initialSummary,
               }}
               submitLabel="Log visit and complete item"

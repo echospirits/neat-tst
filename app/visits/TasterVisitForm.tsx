@@ -80,7 +80,7 @@ export function TasterVisitForm({ action, agencies }: TasterVisitFormProps) {
       <fieldset className="visit-step">
         <legend>3. Add a picture</legend>
         <label htmlFor="taster-photo">Visit picture</label>
-        <input id="taster-photo" name="photoFile" type="file" accept="image/*" capture="environment" required />
+        <input id="taster-photo" name="photoFile" type="file" accept="image/*" required />
         <input name="photoType" readOnly type="hidden" value="OTHER" />
         <input name="photoUrl" readOnly type="hidden" value="" />
         <input name="photoCaption" readOnly type="hidden" value="" />

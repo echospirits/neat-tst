@@ -154,7 +154,8 @@ export async function getWorklistLocations(
       const agency = agencyByReference.get(reference.id);
       if (agency) {
         locations.set(itemId, {
-          ...reference,
+          id: agency.id,
+          type: 'agency',
           href: `/agencies/${agency.id}`,
           name: agency.name,
         });
@@ -165,7 +166,8 @@ export async function getWorklistLocations(
     const account = wholesaleById.get(reference.id);
     if (account) {
       locations.set(itemId, {
-        ...reference,
+        id: account.id,
+        type: 'wholesale',
         href: `/wholesale/${account.id}`,
         name: account.name,
       });

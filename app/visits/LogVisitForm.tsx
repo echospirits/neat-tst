@@ -63,6 +63,7 @@ export type VisitFormTagOption = {
 
 type VisitFormInitialValues = {
   locationType?: VisitLocationType;
+  locationName?: string | null;
   agencyId?: string | null;
   wholesaleAccountId?: string | null;
   summary?: string | null;
@@ -143,8 +144,33 @@ export function LogVisitForm({
   const agencySearchText = normalize(agencySearch);
   const wholesaleSearchText = normalize(wholesaleSearch);
   const contactSearchText = normalize(contactSearch);
-  const selectedAgency = agencies.find((agency) => agency.id === agencyId);
-  const selectedWholesaleAccount = wholesaleAccounts.find((account) => account.id === wholesaleAccountId);
+  const selectedAgency =
+    agencies.find((agency) => agency.id === agencyId) ??
+    (locationType === 'agency' && agencyId && initialValues?.locationName
+      ? {
+          id: agencyId,
+          agencyId: '',
+          lastVisitAt: null,
+          name: initialValues.locationName,
+          city: null,
+          county: null,
+          phone: null,
+        }
+      : undefined);
+  const selectedWholesaleAccount =
+    wholesaleAccounts.find((account) => account.id === wholesaleAccountId) ??
+    (locationType === 'wholesale' && wholesaleAccountId && initialValues?.locationName
+      ? {
+          id: wholesaleAccountId,
+          licenseeId: '',
+          lastVisitAt: null,
+          name: initialValues.locationName,
+          agencyId: null,
+          city: null,
+          county: null,
+          phone: null,
+        }
+      : undefined);
   const selectedContact = contacts.find((contact) => contact.id === contactId);
   const voiceAccountContext =
     locationType === 'agency' && selectedAgency
@@ -498,7 +524,7 @@ export function LogVisitForm({
               </option>
             ))}
           </select>
-          <input name="photoFile" type="file" accept="image/*" capture="environment" />
+          <input name="photoFile" type="file" accept="image/*" />
           <input name="photoUrl" readOnly type="hidden" value="" />
           <input name="photoCaption" placeholder="Caption" />
         </div>
@@ -515,7 +541,7 @@ export function LogVisitForm({
                   </option>
                 ))}
               </select>
-              <input name="photoFile" type="file" accept="image/*" capture="environment" />
+              <input name="photoFile" type="file" accept="image/*" />
               <input name="photoUrl" type="url" placeholder="Or paste existing photo URL" />
               <input name="photoCaption" placeholder="Caption or note" />
             </div>
