@@ -6,6 +6,7 @@ import type { VisitLocationType } from '../../lib/visitPickerOptions';
 import { DatePickerField } from '../components/DatePickerField';
 import { VoiceVisitNotePanel } from './VoiceVisitNotePanel';
 import { VisitSubmitButton } from './VisitSubmitButton';
+import { useVisitPhotoFormAction } from './clientPhotoUpload';
 import { getVisitOutcomePrompts } from './visitPrompts';
 
 const photoTypes = [
@@ -140,6 +141,7 @@ export function LogVisitForm({
   const [outcomes, setOutcomes] = useState(initialValues?.outcomes ?? '');
   const [nextStep, setNextStep] = useState(initialValues?.nextStep ?? '');
   const [isVoiceNoteOpen, setIsVoiceNoteOpen] = useState(initialValues?.startVoiceNote ?? false);
+  const { formAction, photoUploadError } = useVisitPhotoFormAction(action);
 
   const agencySearchText = normalize(agencySearch);
   const wholesaleSearchText = normalize(wholesaleSearch);
@@ -256,7 +258,7 @@ export function LogVisitForm({
   };
 
   return (
-    <form action={action} className="visit-form field-visit-form" encType="multipart/form-data">
+    <form action={formAction} className="visit-form field-visit-form">
       <input name="formOrigin" readOnly type="hidden" value={formOrigin} />
       <input name="locationType" readOnly type="hidden" value={locationType} />
       <input name="agencyId" readOnly type="hidden" value={locationType === 'agency' ? agencyId : ''} />
@@ -268,6 +270,7 @@ export function LogVisitForm({
       />
       <input name="contactId" readOnly type="hidden" value={contactId} />
       {worklistItemId ? <input name="worklistItemId" readOnly type="hidden" value={worklistItemId} /> : null}
+      {photoUploadError ? <p className="toast-notice page-status" role="alert">{photoUploadError}</p> : null}
 
       <fieldset className="visit-step">
         <legend>1. Pick the location</legend>

@@ -25,6 +25,7 @@ const statusMessages: Record<string, string> = {
   'photo-too-large': 'Each uploaded photo must be 5 MB or smaller.',
   'storage-not-configured': 'Photo object storage is not configured yet.',
   'photo-upload-failed': 'The picture could not be uploaded, so the visit was not saved. Try again.',
+  'photo-verification-failed': 'The picture could not be verified, so the visit was not saved. Try uploading it again.',
   'comments-required': 'Enter comments before logging the visit.',
   'photo-required': 'Add one picture before logging the visit.',
   'visit-logged': 'Agency visit logged.',

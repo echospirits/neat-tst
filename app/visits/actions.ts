@@ -4,7 +4,12 @@ import { AccountType, PhotoType, UserRole, WorklistCategory, WorklistSource, Wor
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getUserDisplayName, requireUser } from '../../lib/auth';
-import { deleteStoredPhoto, uploadVisitPhoto, validateVisitPhotoFile } from '../../lib/blob';
+import {
+  deleteStoredPhoto,
+  uploadVisitPhoto,
+  validateVisitPhotoFile,
+  verifyClientUploadedVisitPhoto,
+} from '../../lib/blob';
 import { prisma } from '../../lib/prisma';
 import { getSelectedVoiceFollowUps } from '../../lib/voiceVisitNoteShared';
 import {
@@ -23,8 +28,14 @@ type PendingPhoto = {
   type: PhotoType;
   file: File | null;
   url: string | null;
+  storageKey: string | null;
+  contentType: string | null;
+  sizeBytes: number | null;
   caption: string | null;
 };
+
+const getErrorLogDetails = (error: unknown) =>
+  error instanceof Error ? { message: error.message, name: error.name } : { message: String(error), name: 'UnknownError' };
 
 const toOptional = (value: FormDataEntryValue | null | undefined) => {
   const trimmed = String(value ?? '').trim();
@@ -101,8 +112,19 @@ function collectPhotos(formData: FormData, formOrigin: FormOrigin, locationType:
   const types = formData.getAll('photoType');
   const files = formData.getAll('photoFile');
   const urls = formData.getAll('photoUrl');
+  const storageKeys = formData.getAll('photoStorageKey');
+  const contentTypes = formData.getAll('photoContentType');
+  const sizes = formData.getAll('photoSizeBytes');
   const captions = formData.getAll('photoCaption');
-  const photoCount = Math.max(types.length, files.length, urls.length, captions.length);
+  const photoCount = Math.max(
+    types.length,
+    files.length,
+    urls.length,
+    storageKeys.length,
+    contentTypes.length,
+    sizes.length,
+    captions.length,
+  );
   const photos: PendingPhoto[] = [];
 
   for (let index = 0; index < photoCount; index += 1) {
@@ -120,13 +142,20 @@ function collectPhotos(formData: FormData, formOrigin: FormOrigin, locationType:
         type: toPhotoType(types[index]),
         file,
         url: null,
+        storageKey: null,
+        contentType: file.type,
+        sizeBytes: file.size,
         caption: toOptional(captions[index]),
       });
     } else if (url) {
+      const requestedSize = Number(toOptional(sizes[index]));
       photos.push({
         type: toPhotoType(types[index]),
         file: null,
         url,
+        storageKey: toOptional(storageKeys[index]),
+        contentType: toOptional(contentTypes[index]),
+        sizeBytes: Number.isFinite(requestedSize) && requestedSize > 0 ? requestedSize : null,
         caption: toOptional(captions[index]),
       });
     }
@@ -167,16 +196,17 @@ export async function createVisit(formData: FormData) {
   const selectedVoiceFollowUps = isTaster ? [] : getSelectedVoiceFollowUps(formData);
   const selectedTagIds = isTaster ? [] : getSelectedTagIds(formData);
   const collectedPhotos = collectPhotos(formData, formOrigin, locationType);
+  const photoUploadSessionId = toOptional(formData.get('photoUploadSessionId'));
 
   if (isTaster && !summary) {
     redirectVisitWithStatus(formOrigin, 'comments-required', locationType);
   }
 
-  if (isTaster && (collectedPhotos.length !== 1 || !collectedPhotos[0]?.file)) {
+  if (isTaster && (collectedPhotos.length !== 1 || (!collectedPhotos[0]?.file && !collectedPhotos[0]?.storageKey))) {
     redirectVisitWithStatus(formOrigin, 'photo-required', locationType);
   }
 
-  const pendingPhotos = isTaster
+  let pendingPhotos = isTaster
     ? collectedPhotos.map((photo) => ({ ...photo, type: PhotoType.OTHER, caption: null }))
     : collectedPhotos;
 
@@ -197,6 +227,33 @@ export async function createVisit(formData: FormData) {
 
   if (locationType === 'wholesale' && !selectedWholesaleAccountId && !newWholesaleName && !newWholesaleLicenseeId) {
     redirectVisitWithStatus(formOrigin, 'invalid-wholesale', locationType);
+  }
+
+  try {
+    pendingPhotos = await Promise.all(
+      pendingPhotos.map(async (photo) => {
+        if (!photo.storageKey) return photo;
+        if (!photo.url || !photoUploadSessionId) {
+          throw new Error('Client-uploaded visit photo is missing its upload session.');
+        }
+
+        const verifiedPhoto = await verifyClientUploadedVisitPhoto({
+          sessionId: photoUploadSessionId,
+          storageKey: photo.storageKey,
+          url: photo.url,
+        });
+
+        return { ...photo, ...verifiedPhoto };
+      }),
+    );
+  } catch (error) {
+    console.error('Visit photo verification failed', {
+      error: getErrorLogDetails(error),
+      formOrigin,
+      locationType,
+      userId: user.id,
+    });
+    redirectVisitWithStatus(formOrigin, 'photo-verification-failed', locationType);
   }
 
   const visit = await prisma.$transaction(async (tx) => {
@@ -437,22 +494,27 @@ export async function createVisit(formData: FormData) {
     let uploadedPhoto: Awaited<ReturnType<typeof uploadVisitPhoto>> | null = null;
 
     try {
-      uploadedPhoto = await uploadVisitPhoto(photo.file!, visit.id, user.id, 0);
+      uploadedPhoto = photo.file ? await uploadVisitPhoto(photo.file, visit.id, user.id, 0) : null;
       await prisma.visitPhoto.create({
         data: {
           loggedVisitId: visit.id,
           type: PhotoType.OTHER,
-          url: uploadedPhoto.url,
-          storageKey: uploadedPhoto.storageKey,
-          contentType: uploadedPhoto.contentType,
-          sizeBytes: uploadedPhoto.sizeBytes,
+          url: uploadedPhoto?.url ?? photo.url!,
+          storageKey: uploadedPhoto?.storageKey ?? photo.storageKey,
+          contentType: uploadedPhoto?.contentType ?? photo.contentType,
+          sizeBytes: uploadedPhoto?.sizeBytes ?? photo.sizeBytes,
           caption: null,
           createdByUserId: user.id,
         },
       });
-    } catch {
+    } catch (error) {
+      console.error('Taster visit photo persistence failed', {
+        error: getErrorLogDetails(error),
+        userId: user.id,
+        visitId: visit.id,
+      });
       await Promise.allSettled([
-        uploadedPhoto ? deleteStoredPhoto(uploadedPhoto.storageKey) : Promise.resolve(),
+        deleteStoredPhoto(uploadedPhoto?.storageKey ?? photo.storageKey),
         prisma.loggedVisit.delete({ where: { id: visit.id } }),
       ]);
       redirectVisitWithStatus(formOrigin, 'photo-upload-failed', locationType);
@@ -476,6 +538,19 @@ export async function createVisit(formData: FormData) {
             };
           }
 
+          if (photo.storageKey) {
+            return {
+              loggedVisitId: visit.id,
+              type: photo.type,
+              url: photo.url ?? '',
+              storageKey: photo.storageKey,
+              contentType: photo.contentType,
+              sizeBytes: photo.sizeBytes,
+              caption: photo.caption,
+              createdByUserId: user.id,
+            };
+          }
+
           return {
             loggedVisitId: visit.id,
             type: photo.type,
@@ -490,7 +565,13 @@ export async function createVisit(formData: FormData) {
       );
 
       await prisma.visitPhoto.createMany({ data: photos });
-    } catch {
+    } catch (error) {
+      console.error('Visit photo persistence failed', {
+        error: getErrorLogDetails(error),
+        formOrigin,
+        userId: user.id,
+        visitId: visit.id,
+      });
       redirectToVisitConfirmation(visit.id, formOrigin, 'photo-upload-failed');
     }
   }

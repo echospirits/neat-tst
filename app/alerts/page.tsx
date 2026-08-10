@@ -51,6 +51,7 @@ const noticeMessages: Record<string, string> = {
   'photo-too-large': 'Each uploaded photo must be 5 MB or smaller.',
   'storage-not-configured': 'Photo object storage is not configured yet.',
   'photo-upload-failed': 'The visit was saved, but one or more photos could not be uploaded.',
+  'photo-verification-failed': 'The photo could not be verified, so the visit and worklist update were not saved.',
 };
 
 const toOptional = (value: FormDataEntryValue | null | undefined) => {
