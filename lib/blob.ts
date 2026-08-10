@@ -1,6 +1,7 @@
-import { del, put } from '@vercel/blob';
+import { del, head, put } from '@vercel/blob';
+import { isVisitPhotoPathForSession, MAX_VISIT_PHOTO_BYTES } from './visitPhotoUploadShared';
 
-const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+const MAX_PHOTO_BYTES = MAX_VISIT_PHOTO_BYTES;
 
 const extensionByContentType: Record<string, string> = {
   'image/gif': 'gif',
@@ -49,10 +50,36 @@ export async function uploadVisitPhoto(file: File, visitId: string, userId: stri
 
   return {
     url: blob.url,
-    storageKey,
+    storageKey: blob.pathname,
     contentType: file.type,
     sizeBytes: file.size,
   } satisfies UploadedVisitPhoto;
+}
+
+export async function verifyClientUploadedVisitPhoto({
+  sessionId,
+  storageKey,
+  url,
+}: {
+  sessionId: string;
+  storageKey: string;
+  url: string;
+}) {
+  if (!isVisitPhotoPathForSession(storageKey, sessionId)) {
+    throw new Error('Visit photo pathname does not match its upload session.');
+  }
+
+  const blob = await head(url);
+  if (blob.pathname !== storageKey || !blob.contentType.startsWith('image/') || blob.size > MAX_PHOTO_BYTES) {
+    throw new Error('Visit photo Blob metadata is invalid.');
+  }
+
+  return {
+    contentType: blob.contentType,
+    sizeBytes: blob.size,
+    storageKey: blob.pathname,
+    url: blob.url,
+  };
 }
 
 export async function uploadRecipePhoto(file: File, recipeId: string, userId: string) {

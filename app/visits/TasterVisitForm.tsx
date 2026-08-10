@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { VisitFormAgencyOption } from './LogVisitForm';
 import { VisitSubmitButton } from './VisitSubmitButton';
+import { useVisitPhotoFormAction } from './clientPhotoUpload';
 
 type TasterVisitFormProps = {
   action: (formData: FormData) => void | Promise<void>;
@@ -19,6 +20,7 @@ export function TasterVisitForm({ action, agencies }: TasterVisitFormProps) {
   const [agencySearch, setAgencySearch] = useState('');
   const searchText = normalize(agencySearch);
   const selectedAgency = agencies.find((agency) => agency.id === agencyId);
+  const { formAction, photoUploadError } = useVisitPhotoFormAction(action);
   const visibleAgencies = useMemo(
     () =>
       agencies
@@ -32,9 +34,10 @@ export function TasterVisitForm({ action, agencies }: TasterVisitFormProps) {
   );
 
   return (
-    <form action={action} className="visit-form field-visit-form" encType="multipart/form-data">
+    <form action={formAction} className="visit-form field-visit-form">
       <input name="locationType" readOnly type="hidden" value="agency" />
       <input name="agencyId" readOnly type="hidden" value={agencyId} />
+      {photoUploadError ? <p className="toast-notice page-status" role="alert">{photoUploadError}</p> : null}
 
       <fieldset className="visit-step">
         <legend>1. Choose the retail liquor agency</legend>
