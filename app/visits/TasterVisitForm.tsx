@@ -87,7 +87,7 @@ export function TasterVisitForm({ action, agencies }: TasterVisitFormProps) {
         <input name="photoType" readOnly type="hidden" value="OTHER" />
         <input name="photoUrl" readOnly type="hidden" value="" />
         <input name="photoCaption" readOnly type="hidden" value="" />
-        <p className="field-note">Take a new picture or choose one from your device. Maximum size: 5 MB.</p>
+        <p className="field-note">Take a new picture or choose one from your device. Photos are reduced before upload.</p>
       </fieldset>
 
       <div className="visit-submit-bar">
