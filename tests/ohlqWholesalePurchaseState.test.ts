@@ -163,4 +163,50 @@ describe('syncWholesaleAccountEchoPurchaseState', () => {
     assert.equal(result.updatedAccounts, 1);
     assert.equal(updates.length, 1);
   });
+
+  it('updates inactive non-merged official accounts so reactivation can flag them', async () => {
+    const updates: unknown[] = [];
+    let firstWholesaleWhere: Record<string, unknown> | null = null;
+    const db = {
+      account: {
+        findMany: async () => [],
+      },
+      ohlqBrandMasterItem: {
+        findMany: async () => [{ itemCode: '0100A', name: 'Echo Vodka' }],
+      },
+      wholesaleAccount: {
+        findMany: async (args: { where: Record<string, unknown> }) => {
+          firstWholesaleWhere ??= args.where;
+          return [
+            {
+              address: '123 N Main St',
+              city: 'Columbus',
+              id: 'wholesale-inactive',
+              licenseeId: '72045',
+              licenseeIds: [],
+              name: 'Inactive Official Buyer',
+              officialAccountId: 'official-1',
+              state: 'OH',
+              zip: '43215',
+            },
+          ];
+        },
+        updateMany: async ({ data }: { data: unknown }) => {
+          updates.push(data);
+          return { count: 1 };
+        },
+      },
+    } as unknown as PrismaClient;
+
+    const result = await syncWholesaleAccountEchoPurchaseState({
+      db,
+      rows: [purchaseRow()],
+    });
+
+    assert.equal(firstWholesaleWhere?.isActive, undefined);
+    assert.equal(firstWholesaleWhere?.mergedIntoId, null);
+    assert.equal(result.matchedPermitNumbers, 1);
+    assert.equal(result.updatedAccounts, 1);
+    assert.equal(updates.length, 1);
+  });
 });

@@ -176,6 +176,81 @@ describe('findOhlqWholesaleReactivationCandidates', () => {
     assert.equal(result.recentBuyerLicenseeIds.has('77777'), true);
     assert.deepEqual(result.unmatchedLicenseeIds, []);
   });
+
+  it('considers inactive non-merged official accounts for reactivation', async () => {
+    let lapsedWhere: Record<string, unknown> | null = null;
+    const db = {
+      wholesaleAccount: {
+        findMany: async (args: { where: Record<string, unknown> }) => {
+          lapsedWhere ??= args.where;
+          return lapsedWhere === args.where
+            ? [
+                {
+                  id: 'inactive-official',
+                  licenseeId: '02831291-1',
+                  licenseeIds: [],
+                  name: 'Inactive Official Buyer',
+                  ohlqLastEchoPurchaseBottles: 8,
+                  ohlqLastEchoPurchaseDate: new Date('2026-04-01T00:00:00.000Z'),
+                  ohlqLastEchoPurchaseItemCode: '0100A',
+                  ohlqLastEchoPurchaseItemName: 'Echo Vodka',
+                },
+              ]
+            : [];
+        },
+      },
+    };
+
+    const result = await findOhlqWholesaleReactivationCandidates({
+      db: db as unknown as PrismaClient,
+      runAt,
+    });
+
+    assert.equal(lapsedWhere?.isActive, undefined);
+    assert.equal(lapsedWhere?.mergedIntoId, null);
+    assert.equal(result.candidates.length, 1);
+    assert.equal(result.candidates[0].wholesaleAccountId, 'inactive-official');
+    assert.equal(result.candidates[0].licenseeId, '02831291-1');
+  });
+
+  it('does not flag a lapsed duplicate when a related Licensee ID purchased recently', async () => {
+    let findManyCalls = 0;
+    const db = {
+      wholesaleAccount: {
+        findMany: async () => {
+          findManyCalls += 1;
+          return findManyCalls === 1
+            ? [
+                {
+                  id: 'inactive-duplicate',
+                  licenseeId: '3253033',
+                  licenseeIds: [],
+                  name: 'Inactive Duplicate',
+                  ohlqLastEchoPurchaseBottles: 2,
+                  ohlqLastEchoPurchaseDate: new Date('2026-04-01T00:00:00.000Z'),
+                  ohlqLastEchoPurchaseItemCode: '0100A',
+                  ohlqLastEchoPurchaseItemName: 'Echo Vodka',
+                },
+              ]
+            : [
+                {
+                  licenseeId: '03253033-1',
+                  licenseeIds: [],
+                  ohlqLastEchoPurchaseDate: new Date('2026-05-06T00:00:00.000Z'),
+                },
+              ];
+        },
+      },
+    };
+
+    const result = await findOhlqWholesaleReactivationCandidates({
+      db: db as unknown as PrismaClient,
+      runAt,
+    });
+
+    assert.equal(result.candidates.length, 0);
+    assert.equal(result.recentBuyerLicenseeIds.has('3253033'), true);
+  });
 });
 
 describe('getOhlqWholesaleReactivationDashboardSummary', () => {
