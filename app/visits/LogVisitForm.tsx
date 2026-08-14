@@ -2,9 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { addEasternCalendarDays, EASTERN_TIME_ZONE } from '../../lib/dateTime';
+import { formatDistanceMiles } from '../../lib/location/distance';
+import type { NearbyAccount } from '../../lib/location/nearbyAccounts';
 import type { VisitLocationType } from '../../lib/visitPickerOptions';
 import { getVisitOutcomes, type VisitFollowUpMode } from '../../lib/visitWorkflow';
 import { DatePickerField } from '../components/DatePickerField';
+import { useCurrentLocation } from '../components/useCurrentLocation';
 import { VoiceVisitNotePanel } from './VoiceVisitNotePanel';
 import { VisitSubmitButton } from './VisitSubmitButton';
 import { useVisitPhotoFormAction } from './clientPhotoUpload';
@@ -21,6 +24,7 @@ export type VisitFormAgencyOption = {
   city: string | null;
   county: string | null;
   phone: string | null;
+  distanceMiles?: number;
 };
 
 export type VisitFormWholesaleOption = {
@@ -32,6 +36,7 @@ export type VisitFormWholesaleOption = {
   city: string | null;
   county: string | null;
   phone: string | null;
+  distanceMiles?: number;
 };
 
 export type VisitFormContactOption = {
@@ -136,6 +141,9 @@ export function LogVisitForm({
   const [resolvedLocationSearch, setResolvedLocationSearch] = useState('');
   const [isLocationSearching, setIsLocationSearching] = useState(false);
   const [locationSearchError, setLocationSearchError] = useState<string | null>(null);
+  const [nearbyAgencies, setNearbyAgencies] = useState<VisitFormAgencyOption[]>([]);
+  const [nearbyWholesaleAccounts, setNearbyWholesaleAccounts] = useState<VisitFormWholesaleOption[]>([]);
+  const { location: currentLocation, requestLocation, status: locationStatus } = useCurrentLocation();
   const { formAction, photoUploadError } = useVisitPhotoFormAction(action);
 
   useEffect(() => {
@@ -159,8 +167,13 @@ export function LogVisitForm({
       setLocationSearchError(null);
 
       try {
+        const params = new URLSearchParams({ q: query, type: locationType });
+        if (currentLocation) {
+          params.set('latitude', String(currentLocation.latitude));
+          params.set('longitude', String(currentLocation.longitude));
+        }
         const response = await fetch(
-          `/api/visits/account-search?type=${locationType}&q=${encodeURIComponent(query)}`,
+          `/api/visits/account-search?${params}`,
           { signal: controller.signal },
         );
         if (!response.ok) throw new Error(`Account search failed with status ${response.status}.`);
@@ -184,17 +197,50 @@ export function LogVisitForm({
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [locationSearch, locationType]);
+  }, [currentLocation, locationSearch, locationType]);
+
+  useEffect(() => {
+    if (!currentLocation) return;
+    const controller = new AbortController();
+    const params = new URLSearchParams({
+      latitude: String(currentLocation.latitude),
+      longitude: String(currentLocation.longitude),
+      type: locationType,
+    });
+    fetch(`/api/accounts/nearby?${params}`, { signal: controller.signal })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error(`Nearby lookup failed: ${response.status}`)))
+      .then((data: { results: NearbyAccount[] }) => {
+        if (locationType === 'agency') {
+          setNearbyAgencies(data.results.map((account) => ({
+            agencyId: account.agencyId ?? '', city: account.city, county: account.county,
+            distanceMiles: account.distanceMiles, id: account.id, lastVisitAt: account.lastVisitAt,
+            name: account.name, phone: account.phone,
+          })));
+        } else {
+          setNearbyWholesaleAccounts(data.results.map((account) => ({
+            agencyId: account.agencyId, city: account.city, county: account.county,
+            distanceMiles: account.distanceMiles, id: account.id, lastVisitAt: account.lastVisitAt,
+            licenseeId: account.licenseeId ?? '', name: account.name, phone: account.phone,
+          })));
+        }
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) console.error(error);
+      });
+    return () => controller.abort();
+  }, [currentLocation, locationType]);
 
   const searchText = normalize(locationSearch);
   const contactSearchText = normalize(contactSearch);
   const selectedAgency =
+    nearbyAgencies.find((agency) => agency.id === agencyId) ??
     agencySearchResults.find((agency) => agency.id === agencyId) ??
     agencies.find((agency) => agency.id === agencyId) ??
     (locationType === 'agency' && agencyId && initialValues?.locationName
       ? { id: agencyId, agencyId: '', lastVisitAt: null, name: initialValues.locationName, city: null, county: null, phone: null }
       : undefined);
   const selectedWholesaleAccount =
+    nearbyWholesaleAccounts.find((account) => account.id === wholesaleAccountId) ??
     wholesaleSearchResults.find((account) => account.id === wholesaleAccountId) ??
     wholesaleAccounts.find((account) => account.id === wholesaleAccountId) ??
     (locationType === 'wholesale' && wholesaleAccountId && initialValues?.locationName
@@ -213,8 +259,11 @@ export function LogVisitForm({
         : []
       : initialOptions.slice(0, 5);
 
+    const nearbyIds = new Set(
+      (locationType === 'agency' ? nearbyAgencies : nearbyWholesaleAccounts).map((item) => item.id),
+    );
     return withSelected(
-      options,
+      searchText.length >= 2 ? options : options.filter((item) => !nearbyIds.has(item.id)),
       selectedLocation,
     );
   }, [
@@ -222,11 +271,20 @@ export function LogVisitForm({
     agencySearchResults,
     hasResolvedLocationSearch,
     locationType,
+    nearbyAgencies,
+    nearbyWholesaleAccounts,
     searchText,
     selectedLocation,
     wholesaleAccounts,
     wholesaleSearchResults,
   ]);
+  const nearbyLocations = locationType === 'agency' ? nearbyAgencies : nearbyWholesaleAccounts;
+  const selectLocation = (location: VisitFormAgencyOption | VisitFormWholesaleOption) => {
+    if (locationType === 'agency') setAgencyId(location.id);
+    else setWholesaleAccountId(location.id);
+    setContactId('');
+    setIsChangingLocation(false);
+  };
   const visibleContacts = useMemo(() => {
     const agencyKeys = new Set([selectedAgency?.id, selectedAgency?.agencyId, agencyId].filter(Boolean));
     const scopedContacts = contacts.filter((contact) =>
@@ -328,18 +386,41 @@ export function LogVisitForm({
               {searchText.length >= 2 && hasResolvedLocationSearch && visibleLocations.length === 0 ? (
                 <p className="field-note">No {locationType} accounts match “{locationSearch.trim()}”.</p>
               ) : null}
+              {!searchText && locationStatus !== 'ready' ? (
+                <div className="nearby-location-control visit-nearby-control">
+                  <button className="secondary compact-btn" disabled={locationStatus === 'loading'} onClick={requestLocation} type="button">
+                    {locationStatus === 'loading' ? 'Finding nearby accounts…' : 'Use my location to show nearby accounts'}
+                  </button>
+                  {locationStatus === 'denied' || locationStatus === 'unavailable' ? (
+                    <span className="field-note">Location unavailable. Recent accounts are shown instead.</span>
+                  ) : null}
+                </div>
+              ) : null}
+              {!searchText && nearbyLocations.length > 0 ? (
+                <>
+                  <div className="quick-picker-section-label">Nearby</div>
+                  <div className="quick-picker-list nearby-picker-list">
+                    {nearbyLocations.map((location) => (
+                      <button className="quick-picker" key={`nearby-${location.id}`} type="button" onClick={() => selectLocation(location)}>
+                        <strong>{location.name}</strong>
+                        <span>{'licenseeId' in location ? getWholesaleMeta(location) : getAgencyMeta(location)}</span>
+                        <span className="quick-picker-last">
+                          {location.distanceMiles === undefined ? '' : `${currentLocation && currentLocation.accuracy > 1609 ? `${Math.round(location.distanceMiles)} mi` : formatDistanceMiles(location.distanceMiles)} • `}
+                          {getLastVisitLabel(location.lastVisitAt)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="quick-picker-section-label">Recent</div>
+                </>
+              ) : null}
               <div className="quick-picker-list">
                 {visibleLocations.map((location) => (
                   <button
                     className={location.id === selectedLocation?.id ? 'quick-picker is-selected' : 'quick-picker'}
                     key={location.id}
                     type="button"
-                    onClick={() => {
-                      if (locationType === 'agency') setAgencyId(location.id);
-                      else setWholesaleAccountId(location.id);
-                      setContactId('');
-                      setIsChangingLocation(false);
-                    }}
+                    onClick={() => selectLocation(location)}
                   >
                     <strong>{location.name}</strong>
                     <span>{'licenseeId' in location ? getWholesaleMeta(location) : getAgencyMeta(location)}</span>

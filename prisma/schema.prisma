@@ -62,6 +62,12 @@ enum UserRole {
   USER
 }
 
+enum GeocodeStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
 enum WeeklyDigestType {
   USER_WEEKLY
   ADMIN_WEEKLY
@@ -605,26 +611,35 @@ model RecipeSuggestion {
 }
 
 model Agency {
-  id                  String        @id @default(cuid())
-  agencyId            String        @unique
-  name                String
-  address             String?
-  city                String?
-  county              String?
-  state               String?       @default("OH")
-  zip                 String?
-  phone               String?
-  d8Permit            Boolean       @default(false)
-  warehouse           String?
-  orderDay            String?
-  orderWeek           String?
-  deliveryDay         String?
-  primaryContact      String?
-  primaryContactPhone String?
-  wholesaleStatus     String?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  tags                LocationTag[] @relation("AgencyLocationTags")
+  id                       String        @id @default(cuid())
+  agencyId                 String        @unique
+  name                     String
+  address                  String?
+  city                     String?
+  county                   String?
+  state                    String?       @default("OH")
+  zip                      String?
+  phone                    String?
+  d8Permit                 Boolean       @default(false)
+  warehouse                String?
+  orderDay                 String?
+  orderWeek                String?
+  deliveryDay              String?
+  primaryContact           String?
+  primaryContactPhone      String?
+  wholesaleStatus          String?
+  latitude                 Float?
+  longitude                Float?
+  geocodedAt               DateTime?
+  geocodeStatus            GeocodeStatus @default(PENDING)
+  normalizedGeocodeAddress String?
+  geocodeError             String?
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
+  tags                     LocationTag[] @relation("AgencyLocationTags")
+
+  @@index([latitude, longitude])
+  @@index([geocodeStatus])
 }
 
 model WholesaleAccount {
@@ -643,6 +658,12 @@ model WholesaleAccount {
   districtId                    String?
   deliveryDay                   String?
   phone                         String?
+  latitude                      Float?
+  longitude                     Float?
+  geocodedAt                    DateTime?
+  geocodeStatus                 GeocodeStatus               @default(PENDING)
+  normalizedGeocodeAddress      String?
+  geocodeError                  String?
   ohlqLastEchoPurchaseDate      DateTime?                   @db.Date
   ohlqLastEchoPurchaseItemCode  String?
   ohlqLastEchoPurchaseItemName  String?
@@ -678,6 +699,8 @@ model WholesaleAccount {
   @@index([isActive])
   @@index([officialAccountId])
   @@index([ohlqLastEchoPurchaseDate])
+  @@index([latitude, longitude])
+  @@index([geocodeStatus])
 }
 
 model TargetModelImport {

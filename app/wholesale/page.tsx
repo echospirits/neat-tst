@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import { AccountType, Prisma } from '@prisma/client';
 import { requireUser } from '../../lib/auth';
 import { formatEasternDate } from '../../lib/dateTime';
+import { getGeocodeResetForAddressChange } from '../../lib/location/geocode';
 import { prisma } from '../../lib/prisma';
 import {
   formatWholesaleLicenseeIds,
@@ -21,6 +22,7 @@ import {
 } from '../../lib/wholesaleAccounts';
 import { LiveFilterForm } from '../components/LiveFilterForm';
 import { AccountViewNavigation } from '../components/AccountViewNavigation';
+import { NearbyAccountsSection } from '../components/NearbyAccountsSection';
 import { activateOfficialWholesaleAccount } from './actions';
 
 type SortDirection = 'asc' | 'desc';
@@ -312,7 +314,7 @@ async function createWholesale(formData: FormData) {
   const tagIds = getSelectedTagIds(formData);
   const matchingAccounts = await prisma.wholesaleAccount.findMany({
     where: getWholesaleLicenseeIdConflictWhere(licenseeIds),
-    select: { id: true },
+    select: { id: true, address: true, city: true, state: true, zip: true },
     take: 2,
   });
   const matchingAccountIds = Array.from(new Set(matchingAccounts.map((account) => account.id)));
@@ -346,10 +348,17 @@ async function createWholesale(formData: FormData) {
     const existingAccountId = matchingAccountIds[0];
 
     if (existingAccountId) {
+      const existingAccount = matchingAccounts.find((candidate) => candidate.id === existingAccountId);
       const updatedAccount = await tx.wholesaleAccount.update({
         where: { id: existingAccountId },
         data: {
           ...accountData,
+          ...getGeocodeResetForAddressChange(existingAccount, {
+            address: accountData.address,
+            city: accountData.city,
+            state: 'OH',
+            zip: accountData.zip,
+          }),
           licenseeId,
         },
         select: { id: true },
@@ -583,6 +592,7 @@ export default async function WholesalePage({
         </div>
       </header>
       <AccountViewNavigation active="wholesale" />
+      {!q ? <NearbyAccountsSection type="wholesale" /> : null}
 
       <LiveFilterForm className="filter-form narrow-filter" label="Filter wholesale accounts">
         <input name="q" defaultValue={q} placeholder="Filter name, licensee ID, menu placement, phone" />

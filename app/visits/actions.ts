@@ -11,6 +11,7 @@ import {
   verifyClientUploadedVisitPhoto,
 } from '../../lib/blob';
 import { prisma } from '../../lib/prisma';
+import { getGeocodeResetForAddressChange } from '../../lib/location/geocode';
 import { getSelectedVoiceFollowUps } from '../../lib/voiceVisitNoteShared';
 import {
   getOutcomeLabels,
@@ -297,6 +298,10 @@ export async function createVisit(formData: FormData) {
               id: true,
               licenseeId: true,
               licenseeIds: { select: { licenseeId: true } },
+              address: true,
+              city: true,
+              state: true,
+              zip: true,
             },
           })
         : await tx.wholesaleAccount.findFirst({
@@ -305,6 +310,10 @@ export async function createVisit(formData: FormData) {
               id: true,
               licenseeId: true,
               licenseeIds: { select: { licenseeId: true } },
+              address: true,
+              city: true,
+              state: true,
+              zip: true,
             },
           });
 
@@ -331,6 +340,12 @@ export async function createVisit(formData: FormData) {
           });
 
       if (existingAccount) {
+        const nextAddress = {
+          address: toOptional(formData.get('newWholesaleAddress')) ?? existingAccount.address,
+          city: toOptional(formData.get('newWholesaleCity')) ?? existingAccount.city,
+          state: existingAccount.state ?? 'OH',
+          zip: toOptional(formData.get('newWholesaleZip')) ?? existingAccount.zip,
+        };
         await tx.wholesaleAccount.update({
           where: { id: existingAccount.id },
           data: {
@@ -346,6 +361,7 @@ export async function createVisit(formData: FormData) {
             ownership: toOptional(formData.get('newWholesaleOwnership')) ?? undefined,
             districtId: toOptional(formData.get('newWholesaleDistrictId')) ?? undefined,
             deliveryDay: toOptional(formData.get('newWholesaleDeliveryDay')) ?? undefined,
+            ...getGeocodeResetForAddressChange(existingAccount, nextAddress),
           },
         });
         if (newWholesaleLicenseeId) {

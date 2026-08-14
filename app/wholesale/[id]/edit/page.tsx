@@ -7,6 +7,7 @@ import { notFound, redirect } from 'next/navigation';
 import { AccountType } from '@prisma/client';
 import { requireUser } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
+import { getGeocodeResetForAddressChange } from '../../../../lib/location/geocode';
 import { PageHeader } from '../../../components/PageChrome';
 import {
   chooseWholesaleOfficialAccountCandidate,
@@ -241,6 +242,7 @@ async function updateWholesaleAccount(formData: FormData) {
         districtId: accountValues.districtId,
         deliveryDay: accountValues.deliveryDay,
         phone: accountValues.phone,
+        ...getGeocodeResetForAddressChange(existingValues, accountValues),
       },
     });
     await syncWholesaleAccountLicenseeIds(tx, id, licenseeIds);
