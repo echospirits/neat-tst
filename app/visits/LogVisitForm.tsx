@@ -131,44 +131,102 @@ export function LogVisitForm({
   const [isVoiceNoteOpen, setIsVoiceNoteOpen] = useState(initialValues?.startVoiceNote ?? false);
   const [submissionKey, setSubmissionKey] = useState('');
   const [newWholesaleName, setNewWholesaleName] = useState('');
+  const [agencySearchResults, setAgencySearchResults] = useState<VisitFormAgencyOption[]>([]);
+  const [wholesaleSearchResults, setWholesaleSearchResults] = useState<VisitFormWholesaleOption[]>([]);
+  const [resolvedLocationSearch, setResolvedLocationSearch] = useState('');
+  const [isLocationSearching, setIsLocationSearching] = useState(false);
+  const [locationSearchError, setLocationSearchError] = useState<string | null>(null);
   const { formAction, photoUploadError } = useVisitPhotoFormAction(action);
 
   useEffect(() => {
     setSubmissionKey(globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`);
   }, []);
 
+  useEffect(() => {
+    const query = locationSearch.trim();
+    const searchKey = `${locationType}:${normalize(query)}`;
+
+    if (query.length < 2) {
+      setIsLocationSearching(false);
+      setLocationSearchError(null);
+      setResolvedLocationSearch('');
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      setIsLocationSearching(true);
+      setLocationSearchError(null);
+
+      try {
+        const response = await fetch(
+          `/api/visits/account-search?type=${locationType}&q=${encodeURIComponent(query)}`,
+          { signal: controller.signal },
+        );
+        if (!response.ok) throw new Error(`Account search failed with status ${response.status}.`);
+
+        const data = (await response.json()) as {
+          results: VisitFormAgencyOption[] | VisitFormWholesaleOption[];
+        };
+        if (locationType === 'agency') setAgencySearchResults(data.results as VisitFormAgencyOption[]);
+        else setWholesaleSearchResults(data.results as VisitFormWholesaleOption[]);
+        setResolvedLocationSearch(searchKey);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        console.error('Visit account search failed', error);
+        setLocationSearchError('Account search is unavailable. Try again.');
+      } finally {
+        if (!controller.signal.aborted) setIsLocationSearching(false);
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [locationSearch, locationType]);
+
   const searchText = normalize(locationSearch);
   const contactSearchText = normalize(contactSearch);
   const selectedAgency =
+    agencySearchResults.find((agency) => agency.id === agencyId) ??
     agencies.find((agency) => agency.id === agencyId) ??
     (locationType === 'agency' && agencyId && initialValues?.locationName
       ? { id: agencyId, agencyId: '', lastVisitAt: null, name: initialValues.locationName, city: null, county: null, phone: null }
       : undefined);
   const selectedWholesaleAccount =
+    wholesaleSearchResults.find((account) => account.id === wholesaleAccountId) ??
     wholesaleAccounts.find((account) => account.id === wholesaleAccountId) ??
     (locationType === 'wholesale' && wholesaleAccountId && initialValues?.locationName
       ? { id: wholesaleAccountId, licenseeId: '', lastVisitAt: null, name: initialValues.locationName, agencyId: null, city: null, county: null, phone: null }
       : undefined);
   const selectedLocation = locationType === 'agency' ? selectedAgency : selectedWholesaleAccount;
   const selectedContact = contacts.find((contact) => contact.id === contactId);
+  const locationSearchKey = `${locationType}:${searchText}`;
+  const hasResolvedLocationSearch = resolvedLocationSearch === locationSearchKey;
   const visibleLocations = useMemo(() => {
-    const options = locationType === 'agency' ? agencies : wholesaleAccounts;
+    const initialOptions = locationType === 'agency' ? agencies : wholesaleAccounts;
+    const searchedOptions = locationType === 'agency' ? agencySearchResults : wholesaleSearchResults;
+    const options = searchText.length >= 2
+      ? hasResolvedLocationSearch
+        ? searchedOptions
+        : []
+      : initialOptions.slice(0, 5);
+
     return withSelected(
-      options
-        .filter((option) =>
-          includesSearch(
-            searchText,
-            option.name,
-            'licenseeId' in option ? option.licenseeId : option.agencyId,
-            option.city,
-            option.county,
-            option.phone,
-          ),
-        )
-        .slice(0, searchText ? 8 : 5),
+      options,
       selectedLocation,
     );
-  }, [agencies, locationType, searchText, selectedLocation, wholesaleAccounts]);
+  }, [
+    agencies,
+    agencySearchResults,
+    hasResolvedLocationSearch,
+    locationType,
+    searchText,
+    selectedLocation,
+    wholesaleAccounts,
+    wholesaleSearchResults,
+  ]);
   const visibleContacts = useMemo(() => {
     const agencyKeys = new Set([selectedAgency?.id, selectedAgency?.agencyId, agencyId].filter(Boolean));
     const scopedContacts = contacts.filter((contact) =>
@@ -203,6 +261,8 @@ export function LogVisitForm({
     setWholesaleAccountId('');
     setContactId('');
     setLocationSearch('');
+    setResolvedLocationSearch('');
+    setLocationSearchError(null);
     setSelectedOutcomes([]);
   };
 
@@ -261,7 +321,13 @@ export function LogVisitForm({
                 value={locationSearch}
                 onChange={(event) => setLocationSearch(event.target.value)}
               />
-              {!searchText ? <p className="field-note">Recently visited first</p> : null}
+              {!searchText ? <p className="field-note">Recently visited first. Type at least 2 characters to search every account.</p> : null}
+              {searchText.length === 1 ? <p className="field-note">Enter one more character to search every account.</p> : null}
+              {isLocationSearching ? <p aria-live="polite" className="field-note">Searching all {locationType} accounts…</p> : null}
+              {locationSearchError ? <p className="field-note danger-text" role="alert">{locationSearchError}</p> : null}
+              {searchText.length >= 2 && hasResolvedLocationSearch && visibleLocations.length === 0 ? (
+                <p className="field-note">No {locationType} accounts match “{locationSearch.trim()}”.</p>
+              ) : null}
               <div className="quick-picker-list">
                 {visibleLocations.map((location) => (
                   <button
