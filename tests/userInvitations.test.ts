@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import type { SendEmailInput } from '../lib/email/sendEmail';
 import {
   createUserInvitationToken,
   getUserInvitationUrl,
   hashUserInvitationToken,
   renderUserInvitationEmail,
+  sendUserInvitationEmail,
   USER_INVITATION_HOURS,
 } from '../lib/userInvitations';
 
@@ -32,4 +34,26 @@ test('invitation URL encodes the token and email includes the password setup act
   assert.match(rendered.text, /Create your .* password/i);
   assert.match(rendered.html, /Create my password/);
   assert.match(rendered.html, /Alex &amp; Taylor/);
+});
+
+test('activation reminder clearly identifies itself and uses a unique reminder send key', async () => {
+  let sent: SendEmailInput | undefined;
+
+  await sendUserInvitationEmail({
+    appBaseUrl: 'https://crm.example.com',
+    emailSender: async (input) => {
+      sent = input;
+      return { providerMessageId: 'email-123' };
+    },
+    invitationId: 'invite-123',
+    isReminder: true,
+    recipientEmail: 'alex@example.com',
+    recipientName: 'Alex Taylor',
+    token: 'fresh-token',
+  });
+
+  assert.ok(sent);
+  assert.match(sent.subject, /^Reminder:/);
+  assert.match(sent.text, /reminder to finish setting up/i);
+  assert.equal(sent.idempotencyKey, 'user-activation-reminder-invite-123');
 });
