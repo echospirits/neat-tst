@@ -37,6 +37,7 @@ type SortableVisitPickerOption = {
 };
 
 const defaultTake = 750;
+const defaultSearchTake = 20;
 
 const toIsoString = (date: Date | null | undefined) => date?.toISOString() ?? null;
 
@@ -178,6 +179,50 @@ export async function getAgencyVisitPickerOptionById({
   return toAgencyOption(agency, lastVisitByAgencyKey);
 }
 
+export async function searchAgenciesForVisitPicker({
+  db = prisma,
+  query,
+  take = defaultSearchTake,
+}: {
+  db?: PrismaClient;
+  query: string;
+  take?: number;
+}) {
+  const search = query.trim();
+  if (search.length < 2) return [];
+
+  const agencies = await db.agency.findMany({
+    orderBy: { name: 'asc' },
+    take: Math.min(Math.max(take, 1), 50),
+    where: {
+      OR: [
+        { name: { contains: search, mode: 'insensitive' } },
+        { agencyId: { contains: search, mode: 'insensitive' } },
+        { address: { contains: search, mode: 'insensitive' } },
+        { city: { contains: search, mode: 'insensitive' } },
+        { county: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
+      ],
+    },
+    select: {
+      agencyId: true,
+      city: true,
+      county: true,
+      id: true,
+      name: true,
+      phone: true,
+    },
+  });
+  const lastVisitByAgencyKey = await getLastVisitByLocationId({
+    db,
+    ids: agencies.flatMap((agency) => [agency.id, agency.agencyId]),
+    locationField: 'agencyId',
+    locationType: 'agency',
+  });
+
+  return sortVisitPickerOptions(agencies.map((agency) => toAgencyOption(agency, lastVisitByAgencyKey)));
+}
+
 export async function getWholesaleAccountsForVisitPicker({
   db = prisma,
   take = defaultTake,
@@ -241,4 +286,53 @@ export async function getWholesaleVisitPickerOptionById({
   });
 
   return toWholesaleOption(account, lastVisitByAccountId);
+}
+
+export async function searchWholesaleAccountsForVisitPicker({
+  db = prisma,
+  query,
+  take = defaultSearchTake,
+}: {
+  db?: PrismaClient;
+  query: string;
+  take?: number;
+}) {
+  const search = query.trim();
+  if (search.length < 2) return [];
+
+  const accounts = await db.wholesaleAccount.findMany({
+    orderBy: { name: 'asc' },
+    take: Math.min(Math.max(take, 1), 50),
+    where: {
+      isActive: true,
+      OR: [
+        { name: { contains: search, mode: 'insensitive' } },
+        { licenseeId: { contains: search, mode: 'insensitive' } },
+        { licenseeIds: { some: { licenseeId: { contains: search, mode: 'insensitive' } } } },
+        { agencyId: { contains: search, mode: 'insensitive' } },
+        { address: { contains: search, mode: 'insensitive' } },
+        { city: { contains: search, mode: 'insensitive' } },
+        { county: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
+      ],
+    },
+    select: {
+      agencyId: true,
+      city: true,
+      county: true,
+      id: true,
+      licenseeId: true,
+      licenseeIds: { select: { licenseeId: true } },
+      name: true,
+      phone: true,
+    },
+  });
+  const lastVisitByAccountId = await getLastVisitByLocationId({
+    db,
+    ids: accounts.map((account) => account.id),
+    locationField: 'wholesaleAccountId',
+    locationType: 'wholesale',
+  });
+
+  return sortVisitPickerOptions(accounts.map((account) => toWholesaleOption(account, lastVisitByAccountId)));
 }

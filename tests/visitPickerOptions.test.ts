@@ -5,6 +5,8 @@ import {
   getAgenciesForVisitPicker,
   getInitialVisitLocationType,
   getWholesaleAccountsForVisitPicker,
+  searchAgenciesForVisitPicker,
+  searchWholesaleAccountsForVisitPicker,
   sortVisitPickerOptions,
 } from '../lib/visitPickerOptions';
 
@@ -129,5 +131,63 @@ describe('visit picker services', () => {
     );
     assert.equal(result[0].lastVisitAt, '2026-05-12T00:00:00.000Z');
     assert.equal(result[1].lastVisitAt, null);
+  });
+
+  it('searches the full agency table by name, ID, address, city, county, or phone', async () => {
+    let findManyArgs: Record<string, unknown> | undefined;
+    const db = {
+      agency: {
+        findMany: async (args: Record<string, unknown>) => {
+          findManyArgs = args;
+          return [{ agencyId: '99999', city: 'Toledo', county: 'Lucas', id: 'agency-999', name: 'Far Away Spirits', phone: null }];
+        },
+      },
+      loggedVisit: { groupBy: async () => [] },
+    } as unknown as PrismaClient;
+
+    const result = await searchAgenciesForVisitPicker({ db, query: 'Far Away' });
+
+    assert.equal(result[0].id, 'agency-999');
+    assert.equal(findManyArgs?.take, 20);
+    assert.equal((findManyArgs?.where as { OR: unknown[] }).OR.length, 6);
+  });
+
+  it('searches all active wholesale accounts including alternate Licensee IDs', async () => {
+    let findManyArgs: Record<string, unknown> | undefined;
+    const db = {
+      wholesaleAccount: {
+        findMany: async (args: Record<string, unknown>) => {
+          findManyArgs = args;
+          return [{
+            agencyId: null,
+            city: 'Cincinnati',
+            county: 'Hamilton',
+            id: 'wholesale-999',
+            licenseeId: '900001',
+            licenseeIds: [{ licenseeId: '900001-A' }],
+            name: 'Southern Account',
+            phone: null,
+          }];
+        },
+      },
+      loggedVisit: { groupBy: async () => [] },
+    } as unknown as PrismaClient;
+
+    const result = await searchWholesaleAccountsForVisitPicker({ db, query: '900001-A' });
+
+    assert.equal(result[0].id, 'wholesale-999');
+    assert.equal(findManyArgs?.take, 20);
+    assert.equal((findManyArgs?.where as { isActive: boolean }).isActive, true);
+    assert.equal((findManyArgs?.where as { OR: unknown[] }).OR.length, 8);
+  });
+
+  it('does not query the database until two search characters are entered', async () => {
+    const db = {
+      agency: { findMany: async () => assert.fail('findMany should not run') },
+      wholesaleAccount: { findMany: async () => assert.fail('findMany should not run') },
+    } as unknown as PrismaClient;
+
+    assert.deepEqual(await searchAgenciesForVisitPicker({ db, query: 'a' }), []);
+    assert.deepEqual(await searchWholesaleAccountsForVisitPicker({ db, query: ' ' }), []);
   });
 });
