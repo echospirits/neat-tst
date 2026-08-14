@@ -39,6 +39,13 @@ export type OhlqAnnualSalesByWholesaleImportResult = OhlqAnnualSalesImportResult
   echoPurchaseState: OhlqWholesalePurchaseStateSyncResult;
 };
 
+export type OhlqAnnualSalesByWholesalePurchaseStateSyncResult = {
+  echoPurchaseState: OhlqWholesalePurchaseStateSyncResult;
+  parsedRows: number;
+  reportDate: string;
+  skippedRows: number;
+};
+
 const toDateOnlyUtc = (isoDate: string) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
     throw new Error(`Invalid OHLQ report date: ${isoDate}`);
@@ -157,6 +164,38 @@ export function parseOhlqAnnualSalesByWholesaleCsv(csv: string | Buffer, reportD
   };
 }
 
+const toWholesalePurchaseStateRows = (rows: Prisma.OhlqAnnualSalesByWholesaleRowCreateManyInput[]) =>
+  rows.map((row) => ({
+    brand: row.brand,
+    permitNumber: row.permitNumber,
+    reportDate: row.reportDate instanceof Date ? row.reportDate : new Date(row.reportDate),
+    vendor: row.vendor,
+    wholesaleBottlesSold: row.wholesaleBottlesSold ?? 0,
+  }));
+
+export async function syncOhlqAnnualSalesByWholesalePurchaseStateCsv({
+  csv,
+  db = prisma,
+  reportDate,
+}: {
+  csv: string | Buffer;
+  db?: PrismaClient;
+  reportDate: string;
+}) {
+  const parsed = parseOhlqAnnualSalesByWholesaleCsv(csv, reportDate);
+  const echoPurchaseState = await syncWholesaleAccountEchoPurchaseState({
+    db,
+    rows: toWholesalePurchaseStateRows(parsed.rows),
+  });
+
+  return {
+    echoPurchaseState,
+    parsedRows: parsed.rows.length,
+    reportDate,
+    skippedRows: parsed.skippedRows,
+  } satisfies OhlqAnnualSalesByWholesalePurchaseStateSyncResult;
+}
+
 export async function importOhlqAnnualSalesCsv({
   csv,
   db = prisma,
@@ -241,13 +280,7 @@ export async function importOhlqAnnualSalesByWholesaleCsv({
   );
   const echoPurchaseState = await syncWholesaleAccountEchoPurchaseState({
     db,
-    rows: parsed.rows.map((row) => ({
-      brand: row.brand,
-      permitNumber: row.permitNumber,
-      reportDate: row.reportDate instanceof Date ? row.reportDate : new Date(row.reportDate),
-      vendor: row.vendor,
-      wholesaleBottlesSold: row.wholesaleBottlesSold ?? 0,
-    })),
+    rows: toWholesalePurchaseStateRows(parsed.rows),
   });
 
   return {

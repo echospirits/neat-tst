@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import type { PrismaClient } from '@prisma/client';
 import {
   parseOhlqAnnualSalesByWholesaleCsv,
   parseOhlqAnnualSalesCsv,
+  syncOhlqAnnualSalesByWholesalePurchaseStateCsv,
 } from '../lib/ohlqAnnualSalesImport';
 
 const csv = [
@@ -58,5 +60,64 @@ describe('parseOhlqAnnualSalesByWholesaleCsv', () => {
     assert.equal('updatedAt' in result.rows[0], false);
     assert.equal('wholesaler' in result.rows[0], false);
     assert.equal('doingBusinessAs' in result.rows[0], false);
+  });
+});
+
+const echoWholesaleCsv = [
+  'District,Agency_Id,Agency_Name,DimVendor_VendorNumber_,Brand,Name,Category,Permit_Number,Wholesaler,Doing_Business_As,Wholesale_Bottles_Sold,Wholesale_Amount,Wholesale_Tax',
+  'GPT,10113,CENTERVILLE LIQUOR & WINE,Z90399001,2804B,ECHO SPIRITS DISTILLING CO BOURBON WHISKEY,Bourbon,00072045-1,ADRIENNES WHITE RABBIT INC,ADRIENNES WHITE RABBIT LOUNGE,2,67.68,0.00',
+].join('\n');
+
+describe('syncOhlqAnnualSalesByWholesalePurchaseStateCsv', () => {
+  it('updates Echo purchase state without importing raw wholesale rows', async () => {
+    const updates: unknown[] = [];
+    const db = {
+      account: {
+        findMany: async () => [],
+      },
+      ohlqBrandMasterItem: {
+        findMany: async () => [{ itemCode: '2804B', name: 'Echo Bourbon' }],
+      },
+      wholesaleAccount: {
+        findMany: async () => [
+          {
+            address: '123 N Main St',
+            city: 'Columbus',
+            id: 'wholesale-1',
+            licenseeId: '72045',
+            licenseeIds: [],
+            name: 'Adriennes White Rabbit',
+            officialAccountId: null,
+            state: 'OH',
+            zip: '43215',
+          },
+        ],
+        updateMany: async ({ data }: { data: unknown }) => {
+          updates.push(data);
+          return { count: 1 };
+        },
+      },
+    } as unknown as PrismaClient;
+
+    const result = await syncOhlqAnnualSalesByWholesalePurchaseStateCsv({
+      csv: echoWholesaleCsv,
+      db,
+      reportDate: '2026-05-11',
+    });
+
+    assert.equal(result.parsedRows, 1);
+    assert.equal(result.skippedRows, 0);
+    assert.equal(result.echoPurchaseState.updatedAccounts, 1);
+    assert.equal(result.echoPurchaseState.matchedPermitNumbers, 1);
+    assert.equal(updates.length, 1);
+
+    const update = updates[0] as {
+      ohlqLastEchoPurchaseDate: Date;
+      ohlqLastEchoPurchaseItemCode: string;
+      ohlqLastEchoPurchaseItemName: string;
+    };
+    assert.equal(update.ohlqLastEchoPurchaseDate.toISOString(), '2026-05-11T00:00:00.000Z');
+    assert.equal(update.ohlqLastEchoPurchaseItemCode, '2804B');
+    assert.equal(update.ohlqLastEchoPurchaseItemName, 'Echo Bourbon');
   });
 });

@@ -17,6 +17,7 @@
     "download:ohlq-annual-sales": "tsx scripts/download-ohlq-annual-sales.ts",
     "download:ohlq-annual-sales:wholesale": "tsx scripts/download-ohlq-annual-sales.ts wholesale",
     "backfill:ohlq-annual-sales": "tsx scripts/backfill-ohlq-annual-sales.ts",
+    "seed:ohlq-wholesale-purchase-state": "tsx scripts/seed-ohlq-wholesale-purchase-state.ts",
     "audit:ohlq-storage": "tsx scripts/audit-ohlq-storage.ts",
     "import:target-account-model": "tsx scripts/import-target-account-model.ts",
     "seed:admin": "tsx scripts/seed-admin.ts",
