@@ -18,6 +18,11 @@ on:
         description: "Number of recent complete report dates to run when reportDate is blank."
         required: false
         type: string
+      purchaseStateOnly:
+        default: false
+        description: "Update wholesale account Echo purchase state/worklist without replacing raw sales rows."
+        required: false
+        type: boolean
 
 concurrency:
   group: ohlq-annual-sales-sync
@@ -111,6 +116,7 @@ jobs:
         run: |
           report_date="${{ github.event.inputs.reportDate || '' }}"
           days="${{ github.event.inputs.days || '' }}"
+          purchase_state_only="${{ github.event.inputs.purchaseStateOnly || 'false' }}"
 
           if [[ -z "$days" ]]; then
             if [[ "${{ github.event_name }}" == "schedule" ]]; then
@@ -120,7 +126,13 @@ jobs:
             fi
           fi
 
-          if [[ -n "$report_date" ]]; then
+          if [[ "$purchase_state_only" == "true" ]]; then
+            if [[ -n "$report_date" ]]; then
+              npm run seed:ohlq-wholesale-purchase-state -- --date "$report_date"
+            else
+              npm run seed:ohlq-wholesale-purchase-state -- --days "$days"
+            fi
+          elif [[ -n "$report_date" ]]; then
             npm run backfill:ohlq-annual-sales -- --date "$report_date"
           else
             npm run backfill:ohlq-annual-sales -- --days "$days"
