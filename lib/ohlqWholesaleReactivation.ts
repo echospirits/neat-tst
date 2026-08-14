@@ -470,7 +470,7 @@ const findActiveWholesaleAccounts = async (db: PrismaClient, licenseeIds: string
     const chunkKeys = Array.from(new Set(chunk.flatMap(getOhlqLicenseeMatchKeys)));
     const chunkAccounts = await db.wholesaleAccount.findMany({
       where: {
-        isActive: true,
+        mergedIntoId: null,
         OR: [
           ...chunk.map((licenseeId) => ({
             licenseeId: { equals: licenseeId, mode: 'insensitive' as const },
@@ -521,7 +521,7 @@ export async function findOhlqWholesaleReactivationCandidates({
   const [lapsedAccounts, recentBuyerAccounts] = await Promise.all([
     db.wholesaleAccount.findMany({
       where: {
-        isActive: true,
+        mergedIntoId: null,
         ohlqLastEchoPurchaseDate: {
           gte: windows.ninetyDayStartDate,
           lt: windows.recentStartDate,
@@ -545,7 +545,7 @@ export async function findOhlqWholesaleReactivationCandidates({
     }),
     db.wholesaleAccount.findMany({
       where: {
-        isActive: true,
+        mergedIntoId: null,
         ohlqLastEchoPurchaseDate: {
           gte: windows.recentStartDate,
           lte: windows.runDate,
@@ -575,6 +575,12 @@ export async function findOhlqWholesaleReactivationCandidates({
   });
   const candidates = lapsedAccounts
     .filter((account) => account.ohlqLastEchoPurchaseDate)
+    .filter(
+      (account) =>
+        !getAccountLicenseeIds(account).some((licenseeId) =>
+          getOhlqLicenseeMatchKeys(licenseeId).some((key) => recentBuyerLicenseeIds.has(key)),
+        ),
+    )
     .map((account) => {
       const purchaseDate = account.ohlqLastEchoPurchaseDate!;
       const item =

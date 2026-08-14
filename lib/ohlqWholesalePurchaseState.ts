@@ -157,7 +157,7 @@ async function findMatchingWholesaleAccounts({
   const [directAccounts, officialAccounts] = await Promise.all([
     db.wholesaleAccount.findMany({
       where: {
-        isActive: true,
+        mergedIntoId: null,
         OR: wholesaleSearchConditions,
       },
       select: {
@@ -201,7 +201,7 @@ async function findMatchingWholesaleAccounts({
       ? db.wholesaleAccount.findMany({
           where: {
             id: { in: linkedOfficialAccountIds },
-            isActive: true,
+            mergedIntoId: null,
           },
           select: {
             address: true,
@@ -219,7 +219,7 @@ async function findMatchingWholesaleAccounts({
     addressSearchConditions.length > 0
       ? db.wholesaleAccount.findMany({
           where: {
-            isActive: true,
+            mergedIntoId: null,
             OR: addressSearchConditions,
           },
           select: {
