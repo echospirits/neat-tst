@@ -18,6 +18,14 @@ on:
         description: "Number of recent complete report dates to run when reportDate is blank."
         required: false
         type: string
+      fromDate:
+        description: "Optional start date for purchase-state-only seeding, formatted YYYY-MM-DD."
+        required: false
+        type: string
+      toDate:
+        description: "Optional end date for purchase-state-only seeding, formatted YYYY-MM-DD."
+        required: false
+        type: string
       purchaseStateOnly:
         default: false
         description: "Update wholesale account Echo purchase state/worklist without replacing raw sales rows."
@@ -116,6 +124,8 @@ jobs:
         run: |
           report_date="${{ github.event.inputs.reportDate || '' }}"
           days="${{ github.event.inputs.days || '' }}"
+          from_date="${{ github.event.inputs.fromDate || '' }}"
+          to_date="${{ github.event.inputs.toDate || '' }}"
           purchase_state_only="${{ github.event.inputs.purchaseStateOnly || 'false' }}"
 
           if [[ -z "$days" ]]; then
@@ -129,6 +139,8 @@ jobs:
           if [[ "$purchase_state_only" == "true" ]]; then
             if [[ -n "$report_date" ]]; then
               npm run seed:ohlq-wholesale-purchase-state -- --date "$report_date"
+            elif [[ -n "$from_date" || -n "$to_date" ]]; then
+              npm run seed:ohlq-wholesale-purchase-state -- --from "$from_date" --to "$to_date"
             else
               npm run seed:ohlq-wholesale-purchase-state -- --days "$days"
             fi
