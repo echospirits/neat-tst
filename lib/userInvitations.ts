@@ -31,9 +31,11 @@ export const getUserInvitationUrl = (token: string, appBaseUrl = getEmailAppBase
 
 export function renderUserInvitationEmail({
   inviteUrl,
+  isReminder = false,
   recipientName,
 }: {
   inviteUrl: string;
+  isReminder?: boolean;
   recipientName: string;
 }) {
   const { appName, entityName } = getTenantConfig();
@@ -41,11 +43,15 @@ export function renderUserInvitationEmail({
   const safeUrl = escapeHtml(inviteUrl);
   const safeAppName = escapeHtml(appName);
   const safeEntityName = escapeHtml(entityName);
-  const subject = `You're invited to ${entityName}`;
+  const subject = isReminder
+    ? `Reminder: finish setting up your ${appName} account`
+    : `You're invited to ${entityName}`;
   const text = [
     `Hello ${recipientName},`,
     '',
-    `You've been invited to ${entityName}.`,
+    isReminder
+      ? `This is a reminder to finish setting up your ${appName} account.`
+      : `You've been invited to ${entityName}.`,
     `Create your ${appName} password using this link:`,
     inviteUrl,
     '',
@@ -58,7 +64,9 @@ export function renderUserInvitationEmail({
       <body style="margin:0;background:#f4f6f8;font-family:Arial,sans-serif;color:#172033;">
         <div style="max-width:560px;margin:0 auto;padding:32px 20px;">
           <div style="background:#ffffff;border:1px solid #e1e6ed;border-radius:12px;padding:28px;">
-            <h1 style="margin:0 0 16px;font-size:24px;">You're invited to ${safeEntityName}</h1>
+            <h1 style="margin:0 0 16px;font-size:24px;">
+              ${isReminder ? `Finish setting up your ${safeAppName} account` : `You're invited to ${safeEntityName}`}
+            </h1>
             <p style="margin:0 0 12px;">Hello ${safeName},</p>
             <p style="margin:0 0 22px;line-height:1.5;">
               Create your ${safeAppName} password to finish setting up your account.
@@ -82,24 +90,28 @@ export function renderUserInvitationEmail({
 }
 
 export async function sendUserInvitationEmail({
+  appBaseUrl,
   emailSender = sendEmail,
   invitationId,
+  isReminder = false,
   recipientEmail,
   recipientName,
   token,
 }: {
+  appBaseUrl?: string;
   emailSender?: SendEmailFn;
   invitationId: string;
+  isReminder?: boolean;
   recipientEmail: string;
   recipientName: string;
   token: string;
 }) {
-  const inviteUrl = getUserInvitationUrl(token);
-  const rendered = renderUserInvitationEmail({ inviteUrl, recipientName });
+  const inviteUrl = getUserInvitationUrl(token, appBaseUrl);
+  const rendered = renderUserInvitationEmail({ inviteUrl, isReminder, recipientName });
 
   return emailSender({
     to: recipientEmail,
     ...rendered,
-    idempotencyKey: `user-invitation-${invitationId}`,
+    idempotencyKey: `${isReminder ? 'user-activation-reminder' : 'user-invitation'}-${invitationId}`,
   });
 }
