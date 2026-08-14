@@ -123,3 +123,14 @@ Required email env vars:
    - agency has strong sales but low/no inventory
    - tasting completed but no follow-up note
    - menu/display promised but no photo proof
+
+## Nearby accounts
+
+Optional, session-only device location can surface nearby agencies and active wholesale accounts without changing normal recency sorting or search. Configure the server-only `GOOGLE_MAPS_GEOCODING_API_KEY`, apply the schema migration, then backfill coordinates in safe batches:
+
+```bash
+npm run backfill:account-geocodes -- --limit 250
+npm run backfill:account-geocodes -- --limit 250 --retry-failed
+```
+
+Provider setup, retry behavior, privacy boundaries, and QA are documented in [docs/location-proximity.md](docs/location-proximity.md).

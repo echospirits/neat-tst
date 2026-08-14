@@ -7,9 +7,11 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireUser } from '../../lib/auth';
 import { formatEasternDate } from '../../lib/dateTime';
+import { getGeocodeResetForAddressChange } from '../../lib/location/geocode';
 import { prisma } from '../../lib/prisma';
 import { LiveFilterForm } from '../components/LiveFilterForm';
 import { AccountViewNavigation } from '../components/AccountViewNavigation';
+import { NearbyAccountsSection } from '../components/NearbyAccountsSection';
 import { TagBadges } from '../tags/TagBadges';
 
 type CsvRow = Record<string, string | undefined>;
@@ -45,16 +47,26 @@ async function importAgencies(formData: FormData) {
     const name = toOptional(row.dba) ?? `Agency ${agencyId}`;
     const primaryContact = toOptional(row.primarycontact);
     const primaryContactPhone = toOptional(row.primarycontactphone);
+    const addressValues = {
+      address: toOptional(row.address),
+      city: toOptional(row.city),
+      state: 'OH',
+      zip: toOptional(row.zip),
+    };
+    const existingAgency = await prisma.agency.findUnique({
+      where: { agencyId },
+      select: { address: true, city: true, state: true, zip: true },
+    });
 
     const agency = await prisma.agency.upsert({
       where: { agencyId },
       create: {
         agencyId,
         name,
-        address: toOptional(row.address),
-        city: toOptional(row.city),
+        address: addressValues.address,
+        city: addressValues.city,
         county: toOptional(row.county),
-        zip: toOptional(row.zip),
+        zip: addressValues.zip,
         phone: toOptional(row.agencyphone),
         d8Permit: parseBool(row.d8permit),
         warehouse: toOptional(row.warehouse),
@@ -67,10 +79,10 @@ async function importAgencies(formData: FormData) {
       },
       update: {
         name,
-        address: toOptional(row.address),
-        city: toOptional(row.city),
+        address: addressValues.address,
+        city: addressValues.city,
         county: toOptional(row.county),
-        zip: toOptional(row.zip),
+        zip: addressValues.zip,
         phone: toOptional(row.agencyphone),
         d8Permit: parseBool(row.d8permit),
         warehouse: toOptional(row.warehouse),
@@ -80,6 +92,7 @@ async function importAgencies(formData: FormData) {
         primaryContact,
         primaryContactPhone,
         wholesaleStatus: toOptional(row.wholesale),
+        ...getGeocodeResetForAddressChange(existingAgency, addressValues),
       },
     });
 
@@ -175,6 +188,7 @@ export default async function AgenciesPage({
         </div>
       </header>
       <AccountViewNavigation active="agencies" />
+      {!q ? <NearbyAccountsSection type="agency" /> : null}
       <LiveFilterForm className="filter-form narrow-filter" label="Filter agencies">
         <input name="q" defaultValue={q} placeholder="Filter name, agency ID, address, contact, phone" />
       </LiveFilterForm>

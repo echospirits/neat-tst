@@ -148,7 +148,7 @@ describe('visit picker services', () => {
     const result = await searchAgenciesForVisitPicker({ db, query: 'Far Away' });
 
     assert.equal(result[0].id, 'agency-999');
-    assert.equal(findManyArgs?.take, 20);
+    assert.equal(findManyArgs?.take, 50);
     assert.equal((findManyArgs?.where as { OR: unknown[] }).OR.length, 6);
   });
 
@@ -176,7 +176,7 @@ describe('visit picker services', () => {
     const result = await searchWholesaleAccountsForVisitPicker({ db, query: '900001-A' });
 
     assert.equal(result[0].id, 'wholesale-999');
-    assert.equal(findManyArgs?.take, 20);
+    assert.equal(findManyArgs?.take, 50);
     assert.equal((findManyArgs?.where as { isActive: boolean }).isActive, true);
     assert.equal((findManyArgs?.where as { OR: unknown[] }).OR.length, 8);
   });
