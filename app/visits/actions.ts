@@ -13,6 +13,13 @@ import {
 import { prisma } from '../../lib/prisma';
 import { getSelectedVoiceFollowUps } from '../../lib/voiceVisitNoteShared';
 import {
+  getOutcomeLabels,
+  getVisitTaskEditPlan,
+  normalizeFollowUpMode,
+  sanitizeOutcomeCodes,
+  shouldCreateVisitTask,
+} from '../../lib/visitWorkflow';
+import {
   getWholesaleLicenseeIdCreateData,
   getWholesaleLicenseeIdLookupWhere,
   getWholesaleLicenseeIdValues,
@@ -76,11 +83,11 @@ const getSelectedTagIds = (formData: FormData) =>
     ),
   );
 
-const getQuickOutcomes = (formData: FormData) =>
+const getOutcomeCodes = (formData: FormData) =>
   Array.from(
     new Set(
       formData
-        .getAll('quickOutcome')
+        .getAll('outcomeCode')
         .map((value) => String(value ?? '').trim())
         .filter(Boolean),
     ),
@@ -170,6 +177,7 @@ export async function createVisit(formData: FormData) {
   const actorName = getUserDisplayName(user);
   const formOrigin = isTaster ? 'visits' : getFormOrigin(formData);
   const worklistItemId = isTaster ? null : toOptional(formData.get('worklistItemId'));
+  const submissionKey = isTaster ? null : toOptional(formData.get('submissionKey'));
   const locationType = isTaster
     ? 'agency'
     : String(formData.get('locationType') ?? 'wholesale') === 'agency'
@@ -182,21 +190,31 @@ export async function createVisit(formData: FormData) {
   const newContactName = isTaster ? null : toOptional(formData.get('newContactName'));
   const newContactPhone = isTaster ? null : toOptional(formData.get('newContactPhone'));
   const summary = toOptional(formData.get('summary'));
-  const quickOutcomes = isTaster ? [] : getQuickOutcomes(formData);
+  const outcomeCodes = isTaster ? [] : sanitizeOutcomeCodes(locationType, getOutcomeCodes(formData));
+  const outcomeLabels = getOutcomeLabels(locationType, outcomeCodes);
   const typedOutcomes = isTaster ? null : toOptional(formData.get('outcomes'));
   const outcomes =
     [
-      quickOutcomes.length > 0 ? `Quick outcomes: ${quickOutcomes.join(', ')}` : null,
+      outcomeLabels.length > 0 ? outcomeLabels.join(', ') : null,
       typedOutcomes,
     ]
       .filter(Boolean)
       .join('\n') || null;
-  const nextStep = isTaster ? null : toOptional(formData.get('nextStep'));
-  const followUpDate = isTaster ? null : toDate(formData.get('followUpDate'));
+  const requestedFollowUpMode = isTaster ? 'none' : normalizeFollowUpMode(toOptional(formData.get('followUpMode')));
+  const nextStep = requestedFollowUpMode === 'none' ? null : toOptional(formData.get('nextStep'));
+  const followUpDate = requestedFollowUpMode === 'none' ? null : toDate(formData.get('followUpDate'));
   const selectedVoiceFollowUps = isTaster ? [] : getSelectedVoiceFollowUps(formData);
   const selectedTagIds = isTaster ? [] : getSelectedTagIds(formData);
   const collectedPhotos = collectPhotos(formData, formOrigin, locationType);
   const photoUploadSessionId = toOptional(formData.get('photoUploadSessionId'));
+
+  if (submissionKey) {
+    const existingVisit = await prisma.loggedVisit.findUnique({
+      where: { submissionKey },
+      select: { createdByUserId: true, id: true },
+    });
+    if (existingVisit?.createdByUserId === user.id) redirectToVisitConfirmation(existingVisit.id, formOrigin);
+  }
 
   if (isTaster && !summary) {
     redirectVisitWithStatus(formOrigin, 'comments-required', locationType);
@@ -404,9 +422,12 @@ export async function createVisit(formData: FormData) {
         contactId,
         summary,
         outcomes,
+        outcomeCodes,
         nextStep,
+        followUpMode: requestedFollowUpMode,
         createdBy: actorName,
         createdByUserId: user.id,
+        submissionKey,
         followUpDate,
       },
     });
@@ -425,7 +446,7 @@ export async function createVisit(formData: FormData) {
         .filter(Boolean)
         .join('\n') || null;
 
-    if (followUpDate) {
+    if (shouldCreateVisitTask(requestedFollowUpMode)) {
       await tx.worklistItem.create({
         data: {
           title: nextStep ? `Follow up: ${nextStep.slice(0, 120)}` : 'Follow up on visit',
@@ -591,4 +612,110 @@ export async function createVisit(formData: FormData) {
     revalidatePath(`/wholesale/${visit.wholesaleAccountId}`);
   }
   redirectToVisitConfirmation(visit.id, formOrigin);
+}
+
+export async function updateVisit(visitId: string, formData: FormData) {
+  const user = await requireUser();
+  const actorName = getUserDisplayName(user);
+  const existingVisit = await prisma.loggedVisit.findUnique({
+    where: { id: visitId },
+    include: {
+      worklistItems: {
+        where: { source: WorklistSource.VISIT_FOLLOW_UP },
+        orderBy: { createdAt: 'asc' },
+      },
+    },
+  });
+
+  if (!existingVisit) redirect('/visits');
+
+  const locationType = String(formData.get('locationType') ?? 'wholesale') === 'agency' ? 'agency' : 'wholesale';
+  const agencyId = locationType === 'agency' ? toOptional(formData.get('agencyId')) : null;
+  const wholesaleAccountId = locationType === 'wholesale' ? toOptional(formData.get('wholesaleAccountId')) : null;
+  if (!agencyId && !wholesaleAccountId) redirect('/visits?status=invalid-location');
+
+  const locationExists =
+    locationType === 'agency'
+      ? await prisma.agency.findUnique({ where: { id: agencyId! }, select: { id: true } })
+      : await prisma.wholesaleAccount.findUnique({ where: { id: wholesaleAccountId! }, select: { id: true } });
+  if (!locationExists) redirect('/visits?status=invalid-location');
+
+  const contactId = toOptional(formData.get('contactId'));
+  if (contactId) {
+    const contact = await prisma.locationContact.findUnique({ where: { id: contactId } });
+    const agencyKeys = new Set([agencyId, locationType === 'agency' && agencyId ? (await prisma.agency.findUnique({ where: { id: agencyId }, select: { agencyId: true } }))?.agencyId : null].filter(Boolean));
+    const contactMatches =
+      contact &&
+      (locationType === 'agency'
+        ? Boolean(contact.agencyId && agencyKeys.has(contact.agencyId))
+        : contact.wholesaleAccountId === wholesaleAccountId);
+    if (!contactMatches) redirect('/visits?status=invalid-contact');
+  }
+
+  const outcomeCodes = sanitizeOutcomeCodes(locationType, getOutcomeCodes(formData));
+  const outcomeLabels = getOutcomeLabels(locationType, outcomeCodes);
+  const legacyOutcomes = toOptional(formData.get('outcomes'));
+  const outcomes = outcomeLabels.length > 0 ? outcomeLabels.join(', ') : legacyOutcomes;
+  const summary = toOptional(formData.get('summary'));
+  const followUpMode = normalizeFollowUpMode(toOptional(formData.get('followUpMode')));
+  const nextStep = followUpMode === 'none' ? null : toOptional(formData.get('nextStep'));
+  const followUpDate = followUpMode === 'none' ? null : toDate(formData.get('followUpDate'));
+  const taskCategory = locationType === 'agency' ? WorklistCategory.AGENCY : WorklistCategory.WHOLESALE;
+  const primaryTask = existingVisit.worklistItems.find((item) => item.title.toLowerCase().startsWith('follow up'));
+  const taskPlan = getVisitTaskEditPlan(followUpMode, primaryTask?.status);
+  const taskTitle = nextStep ? `Follow up: ${nextStep.slice(0, 120)}` : 'Follow up on visit';
+  const taskDetail = [summary ? `Visit notes: ${summary}` : null, outcomes ? `Outcomes: ${outcomes}` : null, nextStep ? `Next step: ${nextStep}` : null]
+    .filter(Boolean)
+    .join('\n') || null;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.loggedVisit.update({
+      where: { id: visitId },
+      data: { locationType, agencyId, wholesaleAccountId, contactId, summary, outcomes, outcomeCodes, nextStep, followUpMode, followUpDate },
+    });
+
+    if (taskPlan === 'create' || taskPlan === 'update') {
+      const taskData = {
+        title: taskTitle,
+        detail: taskDetail,
+        status: WorklistStatus.OPEN,
+        category: taskCategory,
+        agencyId,
+        wholesaleAccountId,
+        dueDate: followUpDate,
+        assignedTo: actorName,
+        assignedToUserId: user.id,
+        completedAt: null,
+        completedByUserId: null,
+        cancelledAt: null,
+        cancelledByUserId: null,
+      };
+      if (taskPlan === 'update' && primaryTask) await tx.worklistItem.update({ where: { id: primaryTask.id }, data: taskData });
+      else {
+        await tx.worklistItem.create({
+          data: {
+            ...taskData,
+            source: WorklistSource.VISIT_FOLLOW_UP,
+            loggedVisitId: visitId,
+            createdBy: actorName,
+            createdByUserId: user.id,
+          },
+        });
+      }
+    } else if (taskPlan === 'cancel' && primaryTask) {
+      await tx.worklistItem.update({
+        where: { id: primaryTask.id },
+        data: { status: WorklistStatus.CANCELLED, cancelledAt: new Date(), cancelledByUserId: user.id },
+      });
+    }
+  });
+
+  revalidatePath('/visits');
+  if (existingVisit.agencyId) revalidatePath(`/agencies/${existingVisit.agencyId}`);
+  if (existingVisit.wholesaleAccountId) revalidatePath(`/wholesale/${existingVisit.wholesaleAccountId}`);
+  if (agencyId) revalidatePath(`/agencies/${agencyId}`);
+  if (wholesaleAccountId) revalidatePath(`/wholesale/${wholesaleAccountId}`);
+  revalidatePath('/alerts');
+  revalidatePath('/my-week');
+  redirect('/visits?status=updated');
 }

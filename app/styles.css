@@ -2338,13 +2338,245 @@ legend {
 }
 
 .field-visit-form {
-  gap: 14px;
+  width: min(720px, 100%);
+  margin: 0 auto;
+  gap: 12px;
 }
 
 .visit-step {
   background:
     linear-gradient(180deg, #ffffff05, transparent 42px),
     #0c0c0f99;
+  padding: clamp(14px, 4vw, 20px);
+}
+
+.visit-step legend {
+  padding: 0 6px;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.selected-location-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 14px;
+  background: #12204a;
+  border: 1px solid #7da0ff;
+  border-radius: 10px;
+}
+
+.selected-location-card div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.selected-location-card span {
+  color: #bfdbfe;
+  font-size: 12px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.selected-location-card strong {
+  overflow: hidden;
+  color: #fff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visit-outcome-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.visit-outcome-chip,
+.follow-up-choice {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  margin: 0;
+  padding: 10px 12px;
+  color: #e2e8f0;
+  background: #101014;
+  border: 1px solid #34343c;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.visit-outcome-chip input,
+.follow-up-choice input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.visit-outcome-chip:has(input:checked),
+.follow-up-choice:has(input:checked) {
+  color: #fff;
+  background: #12204a;
+  border-color: #7da0ff;
+  box-shadow: inset 0 0 0 1px #7da0ff55;
+}
+
+.visit-outcome-chip:has(input:focus-visible),
+.follow-up-choice:has(input:focus-visible) {
+  outline: 2px solid #a9bdff;
+  outline-offset: 2px;
+}
+
+.optional-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.follow-up-choice-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.follow-up-fields,
+.visit-details-content {
+  display: grid;
+  gap: 10px;
+}
+
+.follow-up-fields {
+  margin-top: 12px;
+}
+
+.task-preview {
+  margin: 0;
+  padding: 9px 11px;
+  color: #bbf7d0;
+  background: #052e1a;
+  border: 1px solid #166534;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.visit-details {
+  overflow: hidden;
+  background: #0c0c0f99;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.visit-details > summary {
+  display: grid;
+  min-height: 52px;
+  align-content: center;
+  padding: 10px 14px;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.visit-details > summary span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.visit-details-content {
+  padding: 0 12px 12px;
+}
+
+.streamlined-photo-entry {
+  grid-template-columns: 1fr;
+}
+
+.visit-submit-bar p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.visit-activity-list {
+  display: grid;
+  gap: 12px;
+}
+
+.visit-activity-card {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  padding: 14px;
+  background: linear-gradient(180deg, #ffffff05, transparent 55px), var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.visit-activity-card header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.visit-activity-card header div {
+  display: grid;
+  gap: 3px;
+}
+
+.visit-activity-card header time,
+.visit-activity-card header > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.visit-activity-card header a,
+.visit-activity-card header strong {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 780;
+}
+
+.visit-outcome-badges,
+.visit-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.visit-outcome-badges span {
+  padding: 5px 8px;
+  color: #dbeafe;
+  background: #12204a;
+  border: 1px solid #2f4f92;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.visit-note {
+  margin: 0;
+  color: #e2e8f0;
+  line-height: 1.5;
+}
+
+.visit-card-meta span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.visit-card-meta .visit-follow-up-status {
+  color: #bbf7d0;
+}
+
+@media (min-width: 700px) {
+  .follow-up-choice-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .voice-note-entry {
@@ -2590,10 +2822,9 @@ legend {
 }
 
 .visit-submit-bar {
-  position: sticky;
-  bottom: 0;
+  position: static;
   z-index: 20;
-  padding: 10px 0 0;
+  padding: 10px 0 max(4px, env(safe-area-inset-bottom));
   background: linear-gradient(180deg, transparent, var(--bg) 45%);
 }
 

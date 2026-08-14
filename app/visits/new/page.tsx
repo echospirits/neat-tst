@@ -125,7 +125,7 @@ export default async function NewVisitPage({
   return (
     <>
       <PageHeader
-        description="Capture the account, conversation, outcome, and next commitment in one guided workflow."
+        description="Pick the account, tap what happened, and save. Add detail only when it helps."
         eyebrow="Field activity"
         title="Log Visit"
       />
@@ -140,6 +140,7 @@ export default async function NewVisitPage({
           initialValues={{
             locationType: initialLocationType,
             agencyId: params.agencyId ?? null,
+            locationLocked: Boolean(params.agencyId || params.wholesaleAccountId),
             startVoiceNote: params.voice === '1',
             wholesaleAccountId: params.wholesaleAccountId ?? null,
           }}

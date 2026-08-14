@@ -1014,11 +1014,15 @@ model LoggedVisit {
   contactId          String?
   summary            String?
   outcomes           String?
+  outcomeCodes       String[]       @default([])
   nextStep           String?
+  followUpMode       String?
   followUpDate       DateTime?
   createdBy          String?
   createdByUserId    String?
+  submissionKey      String?        @unique
   createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @default(now()) @updatedAt
   createdByUser      User?          @relation("LoggedVisitCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   photos             VisitPhoto[]
   worklistItems      WorklistItem[]

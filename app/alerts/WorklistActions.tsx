@@ -110,6 +110,7 @@ export function WorklistActions({
               initialValues={{
                 locationType: getInitialLocationType(item),
                 locationName: item.location?.name,
+                locationLocked: Boolean(item.location || item.agencyId || item.wholesaleAccountId),
                 agencyId: item.location?.type === 'agency' ? item.location.id : item.agencyId,
                 wholesaleAccountId:
                   item.location?.type === 'wholesale' ? item.location.id : item.wholesaleAccountId,
