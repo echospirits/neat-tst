@@ -2,12 +2,11 @@
 export const runtime = 'nodejs';
 
 import Link from 'next/link';
-import { getUserDisplayName, requireUser } from '../../lib/auth';
-import { formatDateOnly, formatEasternDateTime } from '../../lib/dateTime';
+import { requireUser } from '../../lib/auth';
 import { prisma } from '../../lib/prisma';
 import { LiveFilterForm } from '../components/LiveFilterForm';
 import { EmptyState, PageHeader, SectionHeading } from '../components/PageChrome';
-import { VisitPhotoGallery } from './VisitPhotoGallery';
+import { VisitActivityTable } from './VisitActivityTable';
 
 export default async function VisitsPage({
   searchParams,
@@ -39,6 +38,9 @@ export default async function VisitsPage({
       createdByUser: true,
       photos: {
         orderBy: { createdAt: 'asc' },
+      },
+      worklistItems: {
+        select: { id: true, status: true, title: true },
       },
       _count: {
         select: {
@@ -75,6 +77,7 @@ export default async function VisitsPage({
         title="Visits"
       />
       {params.status === 'logged' ? <p className="toast-notice page-status">Visit logged.</p> : null}
+      {params.status === 'updated' ? <p className="toast-notice page-status">Visit updated.</p> : null}
 
       <LiveFilterForm className="card filter-form visit-filter" label="Filter visits">
         <input name="q" defaultValue={q} placeholder="Filter summary, outcomes, next steps, rep" />
@@ -91,24 +94,10 @@ export default async function VisitsPage({
           description={q || type ? 'Filtered to the current search.' : 'Most recent activity, newest first.'}
           title="Visit history"
         />
-      {visits.length > 0 ? <div className="table-scroll">
-        <table className="responsive-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Type</th>
-            <th>Location</th>
-            <th>Contact</th>
-            <th>Summary</th>
-            <th>Outcomes</th>
-            <th>Next Step</th>
-            <th>Follow-up</th>
-            <th>Created By</th>
-            <th>Photos</th>
-          </tr>
-        </thead>
-        <tbody>
-          {visits.map((visit) => {
+      {visits.length > 0 ? (
+        <VisitActivityTable
+          contactMap={contactMap}
+          visits={visits.map((visit) => {
             const locationName =
               visit.locationType === 'agency'
                 ? agencyMap[visit.agencyId ?? '']
@@ -120,32 +109,10 @@ export default async function VisitsPage({
                   ? `/wholesale/${visit.wholesaleAccountId}`
                   : null;
 
-            return (
-              <tr key={visit.id}>
-                <td data-label="Date">{formatEasternDateTime(visit.visitAt)}</td>
-                <td data-label="Type">{visit.locationType}</td>
-                <td data-label="Location">
-                  {locationHref ? (
-                    <Link className="table-link" href={locationHref}>
-                      {locationName || 'Open account'}
-                    </Link>
-                  ) : (
-                    locationName
-                  )}
-                </td>
-                <td data-label="Contact">{contactMap[visit.contactId ?? '']}</td>
-                <td data-label="Summary">{visit.summary}</td>
-                <td data-label="Outcomes">{visit.outcomes}</td>
-                <td data-label="Next Step">{visit.nextStep}</td>
-                <td data-label="Follow-up">{formatDateOnly(visit.followUpDate)}</td>
-                <td data-label="Created By">{visit.createdByUser ? getUserDisplayName(visit.createdByUser) : visit.createdBy}</td>
-                <td data-label="Photos"><VisitPhotoGallery photos={visit.photos} /></td>
-              </tr>
-            );
+            return { ...visit, locationName: locationName ?? 'Unknown account', locationHref };
           })}
-        </tbody>
-        </table>
-      </div> : (
+        />
+      ) : (
         <EmptyState
           action={<Link className="btn" href="/visits/new">Log a visit</Link>}
           description="Adjust the filters or capture the first visit for this view."

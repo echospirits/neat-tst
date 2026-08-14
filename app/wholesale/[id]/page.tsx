@@ -96,6 +96,9 @@ export default async function WholesaleActivityPage({
         photos: {
           orderBy: { createdAt: 'asc' },
         },
+        worklistItems: {
+          select: { id: true, status: true, title: true },
+        },
       },
       orderBy: [{ visitAt: 'desc' }],
     }),
