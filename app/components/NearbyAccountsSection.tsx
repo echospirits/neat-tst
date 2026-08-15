@@ -40,7 +40,7 @@ export function NearbyAccountsSection({ type }: { type: 'agency' | 'wholesale' }
     return (
       <div className="nearby-location-control">
         <button className="secondary compact-btn" disabled={status === 'loading'} onClick={requestLocation} type="button">
-          {status === 'loading' ? 'Finding nearby accountsâ€¦' : 'Use my location to show nearby accounts'}
+          {status === 'loading' ? 'Finding nearby accounts…' : 'Use my location to show nearby accounts'}
         </button>
         {status === 'denied' || status === 'unavailable' ? (
           <span className="field-note">Location is unavailable. Account lists still work normally.</span>
@@ -49,7 +49,7 @@ export function NearbyAccountsSection({ type }: { type: 'agency' | 'wholesale' }
     );
   }
 
-  if (isLoading) return <p className="field-note nearby-loading">Finding nearby accountsâ€¦</p>;
+  if (isLoading) return <p className="field-note nearby-loading">Finding nearby accounts…</p>;
   if (accounts.length === 0) return null;
 
   return (
@@ -70,7 +70,7 @@ export function NearbyAccountsSection({ type }: { type: 'agency' | 'wholesale' }
               account.city,
               location.accuracy > 1609 ? `${Math.round(account.distanceMiles)} mi` : formatDistanceMiles(account.distanceMiles),
               lastVisitLabel(account.lastVisitAt),
-            ].filter(Boolean).join(' â€¢ ')}</span>
+            ].filter(Boolean).join(' • ')}</span>
           </Link>
         ))}
       </div>

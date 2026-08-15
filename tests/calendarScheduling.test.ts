@@ -91,7 +91,9 @@ test('calendar tokens are encrypted and authenticated', () => {
     const encrypted = encryptCalendarToken('refresh-secret');
     assert.notEqual(encrypted, 'refresh-secret');
     assert.equal(decryptCalendarToken(encrypted), 'refresh-secret');
-    assert.throws(() => decryptCalendarToken(`${encrypted.slice(0, -1)}x`));
+    const parts = encrypted.split('.');
+    parts[2] = `${parts[2][0] === 'A' ? 'B' : 'A'}${parts[2].slice(1)}`;
+    assert.throws(() => decryptCalendarToken(parts.join('.')));
   } finally {
     process.env.CALENDAR_TOKEN_ENCRYPTION_KEY = previous;
   }
