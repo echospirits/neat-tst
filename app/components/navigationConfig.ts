@@ -15,7 +15,8 @@ export type NavigationItem = {
 export const navigationItems: NavigationItem[] = [
   { key: 'home', href: '/', label: 'Home', section: 'work', mobileOrder: 1 },
   { key: 'worklist', href: '/alerts', label: 'Worklist', mobileLabel: 'Work', section: 'work', mobileOrder: 2 },
-  { key: 'my-week', href: '/my-week', label: 'My Week', section: 'work', moreOrder: 1 },
+  { key: 'opportunities', href: '/opportunities', label: 'Opportunities', section: 'work', moreOrder: 1 },
+  { key: 'my-week', href: '/my-week', label: 'My Week', section: 'work', moreOrder: 2 },
   { key: 'visits', href: '/visits', label: 'Visit History', mobileLabel: 'Visits', section: 'work', mobileOrder: 4 },
   {
     key: 'accounts',
@@ -36,6 +37,7 @@ export const navigationItems: NavigationItem[] = [
   { key: 'target-import', href: '/admin/target-import', label: 'Target Import', section: 'admin', adminOnly: true },
   { key: 'data-health', href: '/admin/data-status', label: 'Data Health', section: 'admin', adminOnly: true },
   { key: 'weekly-digest', href: '/admin/weekly-digest', label: 'Weekly Digest', section: 'admin', adminOnly: true },
+  { key: 'opportunity-performance', href: '/admin/opportunity-performance', label: 'Opportunity Performance', section: 'admin', adminOnly: true },
 ];
 
 export const getNavigationItems = (section: NavigationSection) =>

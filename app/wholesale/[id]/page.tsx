@@ -16,6 +16,7 @@ import { TagBadges } from '../../tags/TagBadges';
 import { VisitActivityTable } from '../../visits/VisitActivityTable';
 import { WholesaleRecentPurchasesCard } from '../WholesaleRecentPurchasesCard';
 import { AccountWorkspaceNavigation } from '../../components/AccountWorkspaceNavigation';
+import { OpportunityAccountPanel } from '../OpportunityAccountPanel';
 
 const formatVisitDate = (date: Date | null | undefined) => formatEasternDate(date) || 'No visits yet';
 const tagStatusMessages: Record<string, string> = {
@@ -281,6 +282,7 @@ export default async function WholesaleActivityPage({
       </div>
 
       <div className="account-workspace-section" id="intelligence">
+        <OpportunityAccountPanel wholesaleAccountId={account.id} />
         <TargetIntelligencePanel wholesaleAccountId={account.id} />
       </div>
 

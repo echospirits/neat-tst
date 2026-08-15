@@ -14,6 +14,7 @@ import { prisma } from '../../lib/prisma';
 import { getGeocodeResetForAddressChange } from '../../lib/location/geocode';
 import { parseTimeInputToMinutes } from '../../lib/dateTime';
 import { syncWorklistItemCalendar } from '../../lib/calendar/worklistSync';
+import { evaluateOpportunityIntelligence } from '../../lib/opportunityEngine';
 import { getSelectedVoiceFollowUps } from '../../lib/voiceVisitNoteShared';
 import {
   getOutcomeLabels,
@@ -632,6 +633,9 @@ export async function createVisit(formData: FormData) {
     select: { id: true },
   });
   for (const item of calendarItems) await syncWorklistItemCalendar(item.id);
+  if (visit.wholesaleAccountId) {
+    await evaluateOpportunityIntelligence({ accountIds: [visit.wholesaleAccountId] });
+  }
 
   revalidatePath('/visits');
   revalidatePath('/visits/new');
@@ -762,6 +766,9 @@ export async function updateVisit(visitId: string, formData: FormData) {
     select: { id: true },
   });
   if (calendarTask) await syncWorklistItemCalendar(calendarTask.id);
+  if (existingVisit.wholesaleAccountId) {
+    await evaluateOpportunityIntelligence({ accountIds: [existingVisit.wholesaleAccountId] });
+  }
 
   revalidatePath('/visits');
   if (existingVisit.agencyId) revalidatePath(`/agencies/${existingVisit.agencyId}`);
