@@ -63,7 +63,7 @@ Mirrored-update loops are prevented with the Google etag/provider timestamp plus
 
 ## Vercel scheduling and limits
 
-`vercel.json` polls every 10 minutes. Vercel sends `Authorization: Bearer $CRON_SECRET`, and the route rejects any other request. Vercel cron runs only on Production deployments. The 10-minute interval requires Vercel Pro; Hobby supports up to 100 cron jobs but only once-daily schedules. If the project is on Hobby, move this job to an external authenticated scheduler or upgrade before production use.
+`vercel.json` polls once daily at 10:00 UTC (6:00 AM EDT / 5:00 AM EST), which is compatible with the current Vercel Hobby plan. Vercel sends `Authorization: Bearer $CRON_SECRET`, and the route rejects any other request. Vercel cron runs only on Production deployments. If faster Google-to-CRM updates are needed later, upgrade to Pro and shorten this interval.
 
 ## Manual QA
 
@@ -81,7 +81,7 @@ Mirrored-update loops are prevented with the Google etag/provider timestamp plus
 ## Current limitations
 
 - Google is the only implemented provider.
-- Sync is polling-based, so Google-to-CRM changes can take up to the cron interval.
+- Sync is polling-based, so Google-to-CRM changes can currently take up to 24 hours. CRM-to-Google changes still sync immediately after the CRM write.
 - Calendar edits affect scheduling only; title and description remain one-way from CRM to Google.
 - Timed events use a fixed 30-minute duration and the shared `America/New_York` timezone because the CRM has no per-user timezone setting.
 - One connected provider account per user is supported. The schema and event links are provider-neutral, so Microsoft Graph or an Apple/CalDAV adapter can be added behind `CalendarProvider` later.
