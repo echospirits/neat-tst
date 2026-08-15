@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { getUserDisplayName, requireUser } from '../../lib/auth';
 import { EASTERN_TIME_ZONE, formatDateOnlyInputValue, formatTimeMinutesInput, formatWorklistDue, parseTimeInputToMinutes } from '../../lib/dateTime';
 import { syncWorklistItemCalendar } from '../../lib/calendar/worklistSync';
+import { evaluateOpportunityIntelligence } from '../../lib/opportunityEngine';
 import { splitReactivationPurchasedAgainDetail } from '../../lib/ohlqWholesaleReactivation';
 import { prisma } from '../../lib/prisma';
 import { getAgenciesForVisitPicker, getWholesaleAccountsForVisitPicker } from '../../lib/visitPickerOptions';
@@ -29,6 +30,7 @@ const statusLabels: Record<WorklistStatus, string> = {
 const sourceLabels: Record<WorklistSource, string> = {
   [WorklistSource.MANUAL]: 'Manual',
   [WorklistSource.OHLQ_WHOLESALE_REACTIVATION]: 'OHLQ wholesale reactivation',
+  [WorklistSource.OPPORTUNITY_INTELLIGENCE]: 'Opportunity intelligence',
   [WorklistSource.TARGET_ACCOUNT_INTELLIGENCE]: 'Target account intelligence',
   [WorklistSource.VISIT_FOLLOW_UP]: 'Visit follow-up',
 };
@@ -149,7 +151,7 @@ async function updateWorklistStatus(formData: FormData) {
     return;
   }
 
-  await prisma.worklistItem.update({
+  const item = await prisma.worklistItem.update({
     where: { id },
     data: {
       status,
@@ -160,6 +162,7 @@ async function updateWorklistStatus(formData: FormData) {
     },
   });
   await syncWorklistItemCalendar(id);
+  if (item.wholesaleAccountId) await evaluateOpportunityIntelligence({ accountIds: [item.wholesaleAccountId] });
 
   revalidatePath('/my-week');
   revalidatePath('/alerts');

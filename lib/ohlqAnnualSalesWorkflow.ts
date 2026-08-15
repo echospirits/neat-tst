@@ -6,7 +6,8 @@ import {
   importOhlqAnnualSalesCsv,
 } from './ohlqAnnualSalesImport';
 import { pruneOhlqAnnualSalesRows } from './ohlqAnnualSalesRetention';
-import { syncOhlqWholesaleReactivationWorklist } from './ohlqWholesaleReactivation';
+import { runOpportunityIntelligenceAfterImport } from './opportunityEngine';
+import { toOhlqDateOnlyUtc } from './ohlqDataStatus';
 import {
   downloadOhlqAnnualSalesReports,
   getOhlqAnnualSalesReportDate,
@@ -117,24 +118,26 @@ export async function runOhlqAnnualSalesWorkflow(options: OhlqAnnualSalesWorkflo
     });
     completedSources.add(OhlqReportDataSource.ANNUAL_SALES_SUMMARY_BY_WHOLESALE);
 
+    const opportunityIntelligence = await runOpportunityIntelligenceAfterImport({
+      reportDate: toOhlqDateOnlyUtc(reportDate),
+    });
+    logger.log(
+      `Opportunity intelligence captured ${opportunityIntelligence.salesEvents.created} purchase event(s), ` +
+        `detected ${opportunityIntelligence.intelligence.detected} opportunity instance(s), and ` +
+        `converted ${opportunityIntelligence.intelligence.converted} opportunity instance(s).`,
+    );
+
     const retention = await pruneOhlqAnnualSalesRows({ reportDate });
     logger.log(
       `OHLQ annual sales retention kept ${retention.retentionDays} day(s) from ${retention.cutoffDate}; ` +
         `deleted ${retention.deletedRows.annualSalesSummary} annual row(s) and ` +
         `${retention.deletedRows.annualSalesSummaryByWholesale} wholesale row(s).`,
     );
-    const wholesaleReactivation = await syncOhlqWholesaleReactivationWorklist();
-    logger.log(
-      `OHLQ wholesale reactivation found ${wholesaleReactivation.matchedAccountsNeedingAction} account(s); ` +
-        `created ${wholesaleReactivation.createdItems}, updated ${wholesaleReactivation.updatedItems}, ` +
-        `flagged ${wholesaleReactivation.flaggedPurchasedAgainItems} purchased-again item(s).`,
-    );
-
     return {
       ok: true,
       durationMs: Date.now() - startedAt,
       retention,
-      wholesaleReactivation,
+      opportunityIntelligence,
       reports: {
         annualSalesSummary: {
           filename: annualSalesDownload.filename,

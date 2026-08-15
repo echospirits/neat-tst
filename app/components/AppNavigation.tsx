@@ -118,6 +118,7 @@ const getBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
     { prefix: '/visits/confirmed', crumbs: [{ href: '/visits', label: 'Visits' }, { href: pathname, label: 'Confirmed' }] },
     { prefix: '/visits', crumbs: [{ href: '/visits', label: 'Visit History' }] },
     { prefix: '/alerts', crumbs: [{ href: '/alerts', label: 'Worklist' }] },
+    { prefix: '/opportunities', crumbs: [{ href: '/opportunities', label: 'Opportunities' }] },
     { prefix: '/my-week', crumbs: [{ href: '/alerts', label: 'My Work' }, { href: '/my-week', label: 'My Week' }] },
     { prefix: '/agencies/', crumbs: [{ href: '/accounts', label: 'Accounts' }, { href: '/agencies', label: 'Agencies' }, { href: pathname, label: 'Agency' }] },
     { prefix: '/agencies', crumbs: [{ href: '/accounts', label: 'Accounts' }, { href: '/agencies', label: 'Agencies' }] },
@@ -131,6 +132,7 @@ const getBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
     { prefix: '/admin/target-import', crumbs: [{ href: '/users', label: 'Administration' }, { href: pathname, label: 'Target Import' }] },
     { prefix: '/admin/data-status', crumbs: [{ href: '/users', label: 'Administration' }, { href: pathname, label: 'Data Health' }] },
     { prefix: '/admin/weekly-digest', crumbs: [{ href: '/users', label: 'Administration' }, { href: pathname, label: 'Weekly Digest' }] },
+    { prefix: '/admin/opportunity-performance', crumbs: [{ href: '/users', label: 'Administration' }, { href: pathname, label: 'Opportunity Performance' }] },
     { prefix: '/settings/calendar', crumbs: [{ href: '/profile', label: 'Profile' }, { href: '/settings/calendar', label: 'Calendar' }] },
     { prefix: '/profile', crumbs: [{ href: '/profile', label: 'Profile' }] },
   ];

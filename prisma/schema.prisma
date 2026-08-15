@@ -48,6 +48,46 @@ enum WorklistSource {
   VISIT_FOLLOW_UP
   OHLQ_WHOLESALE_REACTIVATION
   TARGET_ACCOUNT_INTELLIGENCE
+  OPPORTUNITY_INTELLIGENCE
+}
+
+enum OpportunityType {
+  LAPSED_BUYER
+  FIRST_ORDER_FOLLOW_UP
+  CATEGORY_CONQUEST
+  CROSS_SELL
+  NO_RECENT_TOUCH
+}
+
+enum OpportunityStatus {
+  OPEN
+  ACTIONED
+  SNOOZED
+  DISMISSED
+  CONVERTED
+  RESOLVED
+  EXPIRED
+}
+
+enum OpportunityEventType {
+  DETECTED
+  SHOWN
+  ASSIGNED
+  WORKLIST_CREATED
+  OPENED
+  VISIT_LOGGED
+  ACTIONED
+  SNOOZED
+  DISMISSED
+  PURCHASE_DETECTED
+  CONVERTED
+  RESOLVED
+  EXPIRED
+}
+
+enum OpportunityRankingMode {
+  ACTIVE
+  SHADOW
 }
 
 enum WorklistCategory {
@@ -750,6 +790,9 @@ model WholesaleAccount {
   targetSkuOpportunities        TargetSkuOpportunity[]
   targetHeatLossAlerts          TargetHeatLossAlert[]
   targetChainMemberships        TargetChainMembership[]
+  opportunities                 SalesOpportunity[]
+  opportunitySignal             OpportunityAccountSignal?
+  salesEvents                   AccountSalesEvent[]
 
   @@index([createdByUserId])
   @@index([mergedByUserId])
@@ -1145,6 +1188,7 @@ model WorklistItem {
   agencyId           String?
   wholesaleAccountId String?
   loggedVisitId      String?
+  salesOpportunityId String?
   dueDate            DateTime?
   dueTimeMinutes     Int?
   assignedTo         String?
@@ -1163,6 +1207,7 @@ model WorklistItem {
   createdByUser      User?                   @relation("WorklistItemCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   loggedVisit        LoggedVisit?            @relation(fields: [loggedVisitId], references: [id], onDelete: SetNull)
   calendarEvents     WorklistCalendarEvent[]
+  salesOpportunity   SalesOpportunity?       @relation(fields: [salesOpportunityId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([category])
@@ -1174,6 +1219,149 @@ model WorklistItem {
   @@index([assignedToUserId])
   @@index([completedByUserId])
   @@index([cancelledByUserId])
+  @@index([salesOpportunityId])
+}
+
+model OpportunityAccountSignal {
+  id                  String           @id @default(cuid())
+  wholesaleAccountId  String           @unique
+  asOfDate            DateTime         @db.Date
+  signalVersion       String
+  features            Json
+  firstEchoPurchaseAt DateTime?        @db.Date
+  lastEchoPurchaseAt  DateTime?        @db.Date
+  historyComplete     Boolean          @default(false)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  wholesaleAccount    WholesaleAccount @relation(fields: [wholesaleAccountId], references: [id], onDelete: Cascade)
+
+  @@index([asOfDate])
+  @@index([lastEchoPurchaseAt])
+}
+
+model AccountSalesEvent {
+  id                 String           @id @default(cuid())
+  wholesaleAccountId String
+  reportDate         DateTime         @db.Date
+  agencyId           String
+  vendor             String
+  itemCode           String
+  itemName           String
+  category           String?
+  bottles            Int
+  annualBottlesAfter Int
+  isTenantProduct    Boolean
+  sourceKey          String           @unique
+  createdAt          DateTime         @default(now())
+  wholesaleAccount   WholesaleAccount @relation(fields: [wholesaleAccountId], references: [id], onDelete: Cascade)
+
+  @@index([wholesaleAccountId, reportDate])
+  @@index([reportDate])
+  @@index([vendor, reportDate])
+  @@index([itemCode, reportDate])
+  @@index([category, reportDate])
+  @@index([isTenantProduct, reportDate])
+}
+
+model OpportunityModelVersion {
+  id              String                 @id @default(cuid())
+  name            String
+  version         String
+  opportunityType OpportunityType?
+  mode            OpportunityRankingMode @default(ACTIVE)
+  configuration   Json
+  evaluation      Json?
+  activatedAt     DateTime?
+  retiredAt       DateTime?
+  createdAt       DateTime               @default(now())
+  scores          OpportunityScore[]
+
+  @@unique([name, version, opportunityType, mode])
+  @@index([opportunityType, mode, activatedAt])
+}
+
+model SalesOpportunity {
+  id                   String             @id @default(cuid())
+  wholesaleAccountId   String
+  type                 OpportunityType
+  status               OpportunityStatus  @default(OPEN)
+  cycleKey             String
+  targetCategory       String?
+  title                String
+  recommendedAction    String
+  explanation          Json
+  signalSnapshot       Json
+  rulesVersion         String
+  scoringVersion       String
+  productionScore      Float
+  priorityBand         String
+  assignedToUserId     String?
+  detectedAt           DateTime
+  lastDetectedAt       DateTime
+  shownAt              DateTime?
+  actionedAt           DateTime?
+  snoozedUntil         DateTime?
+  dismissedAt          DateTime?
+  dismissalReason      String?
+  convertedAt          DateTime?
+  resolvedAt           DateTime?
+  expiredAt            DateTime?
+  conversionPurchaseAt DateTime?          @db.Date
+  conversionVisitId    String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  wholesaleAccount     WholesaleAccount   @relation(fields: [wholesaleAccountId], references: [id], onDelete: Cascade)
+  events               OpportunityEvent[]
+  scores               OpportunityScore[]
+  worklistItems        WorklistItem[]
+
+  @@unique([wholesaleAccountId, type, cycleKey])
+  @@index([wholesaleAccountId, status])
+  @@index([type, status, productionScore])
+  @@index([status, detectedAt])
+  @@index([assignedToUserId, status])
+  @@index([scoringVersion])
+}
+
+model OpportunityEvent {
+  id                 String               @id @default(cuid())
+  opportunityId      String
+  eventType          OpportunityEventType
+  eventKey           String
+  wholesaleAccountId String
+  userId             String?
+  loggedVisitId      String?
+  worklistItemId     String?
+  purchaseReportDate DateTime?            @db.Date
+  metadata           Json?
+  occurredAt         DateTime
+  createdAt          DateTime             @default(now())
+  opportunity        SalesOpportunity     @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@unique([opportunityId, eventKey])
+  @@index([wholesaleAccountId, occurredAt])
+  @@index([eventType, occurredAt])
+  @@index([userId, occurredAt])
+  @@index([loggedVisitId])
+  @@index([worklistItemId])
+  @@index([purchaseReportDate])
+}
+
+model OpportunityScore {
+  id             String                  @id @default(cuid())
+  opportunityId  String
+  modelVersionId String
+  mode           OpportunityRankingMode
+  score          Float
+  priorityBand   String
+  factors        Json
+  scoredAt       DateTime                @default(now())
+  opportunity    SalesOpportunity        @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  modelVersion   OpportunityModelVersion @relation(fields: [modelVersionId], references: [id], onDelete: Restrict)
+
+  @@unique([opportunityId, modelVersionId])
+  @@index([mode, score])
+  @@index([scoredAt])
 }
 
 model WorklistCalendarEvent {

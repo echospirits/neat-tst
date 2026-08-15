@@ -4,16 +4,13 @@ export const runtime = 'nodejs';
 import {
   MenuPlacementStatus,
   WorklistCategory,
-  WorklistSource,
   WorklistStatus,
 } from '@prisma/client';
 import Link from 'next/link';
 import { getUserDisplayName, requireUser } from '../lib/auth';
 import { EASTERN_TIME_ZONE } from '../lib/dateTime';
-import { formatOhlqDate } from '../lib/ohlqDataStatus';
-import { getOhlqWholesaleReactivationDashboardSummary } from '../lib/ohlqWholesaleReactivation';
 import { prisma } from '../lib/prisma';
-import { getTenantConfig } from '../lib/tenantConfig';
+import { DashboardOpportunitySummary } from './components/DashboardOpportunitySummary';
 
 const dashboardTimeZone = EASTERN_TIME_ZONE;
 const inactiveWorklistStatuses = [WorklistStatus.COMPLETED, WorklistStatus.CANCELLED];
@@ -170,8 +167,6 @@ function MetricSplits({ agency, wholesale }: { agency: number; wholesale: number
 
 export default async function Dashboard() {
   await requireUser();
-  const tenantConfig = getTenantConfig();
-
   const ranges = getDashboardRanges();
   const visitQueryStart = ranges.weekStart < ranges.monthStart ? ranges.weekStart : ranges.monthStart;
 
@@ -183,7 +178,6 @@ export default async function Dashboard() {
     liveMenuPlacements,
     promisedMenuPlacementsWithoutProof,
     staleMenuPlacements,
-    wholesaleReactivationSummary,
   ] = await Promise.all([
     prisma.worklistItem.count({
       where: { status: { notIn: inactiveWorklistStatuses } },
@@ -242,7 +236,6 @@ export default async function Dashboard() {
         OR: [{ lastVerifiedAt: null }, { lastVerifiedAt: { lt: ranges.stalePlacementCutoff } }],
       },
     }),
-    getOhlqWholesaleReactivationDashboardSummary({ runAt: ranges.now }),
   ]);
 
   const weekVisits = visits.filter((visit) => visit.visitAt.getTime() >= ranges.weekStart.getTime());
@@ -293,6 +286,8 @@ export default async function Dashboard() {
         <Link className="btn secondary compact-btn" href="/alerts">Open full worklist</Link>
       </div>
 
+      <DashboardOpportunitySummary />
+
       <div className="grid">
         <div className="card metric-card">
           <h3>Active worklist</h3>
@@ -300,66 +295,6 @@ export default async function Dashboard() {
           <p className="muted metric-caption">Open and in-progress items</p>
         </div>
 
-        <div className="card metric-card metric-card-wide reactivation-card">
-          <div className="metric-card-title-row">
-            <h3>Wholesale Reactivation</h3>
-            <Link
-              className="btn secondary compact-btn"
-              href={`/alerts?source=${WorklistSource.OHLQ_WHOLESALE_REACTIVATION}`}
-            >
-              View worklist
-            </Link>
-          </div>
-          <p className="metric-value">{wholesaleReactivationSummary.accountCount}</p>
-          <p className="muted metric-caption">
-            Bought {tenantConfig.productPluralLabel} in the last 90 days, but not in the last 30.
-          </p>
-          <div className="metric-splits">
-            <div className="metric-split">
-              <span>Open worklist items</span>
-              <strong>{wholesaleReactivationSummary.openWorklistItems}</strong>
-            </div>
-            <div className="metric-split">
-              <span>Unmatched Licensee IDs</span>
-              <strong>{wholesaleReactivationSummary.unmatchedLicenseeCount}</strong>
-            </div>
-          </div>
-          <div className="reactivation-list">
-            {wholesaleReactivationSummary.topAccounts.length > 0 ? (
-              wholesaleReactivationSummary.topAccounts.map((account) => {
-                const itemLabel = account.lastItemLabel ?? `${tenantConfig.productLabel} item`;
-
-                return (
-                  <Link
-                    className={
-                      account.purchasedAgainAt ? 'reactivation-row reactivation-row-needs-review' : 'reactivation-row'
-                    }
-                    href={`/wholesale/${account.wholesaleAccountId}`}
-                    key={account.worklistItemId}
-                  >
-                    <span>
-                      <strong>{account.accountName}</strong>
-                      {account.purchasedAgainAt ? (
-                        <small className="reactivation-warning-ribbon">
-                          Purchased again {formatOhlqDate(account.purchasedAgainAt)}. This worklist item can be cancelled.
-                        </small>
-                      ) : (
-                        <small>{itemLabel}</small>
-                      )}
-                    </span>
-                    <em>
-                      {account.daysSinceLastEchoPurchase === null
-                        ? 'Active'
-                        : `${account.daysSinceLastEchoPurchase} days`}
-                    </em>
-                  </Link>
-                );
-              })
-            ) : (
-              <p className="muted metric-empty">No wholesale reactivation accounts right now.</p>
-            )}
-          </div>
-        </div>
       </div>
 
       <details className="dashboard-section dashboard-details">
