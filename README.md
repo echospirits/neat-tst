@@ -124,6 +124,9 @@ Required email env vars:
    - agency has strong sales but low/no inventory
    - tasting completed but no follow-up note
    - menu/display promised but no photo proof
+## Calendar integration
+
+Google Calendar OAuth, environment setup, sync behavior, and QA are documented in [docs/google-calendar.md](docs/google-calendar.md).
 
 ## Nearby accounts
 

@@ -12,6 +12,8 @@ import {
 } from '../../lib/blob';
 import { prisma } from '../../lib/prisma';
 import { getGeocodeResetForAddressChange } from '../../lib/location/geocode';
+import { parseTimeInputToMinutes } from '../../lib/dateTime';
+import { syncWorklistItemCalendar } from '../../lib/calendar/worklistSync';
 import { getSelectedVoiceFollowUps } from '../../lib/voiceVisitNoteShared';
 import {
   getOutcomeLabels,
@@ -204,6 +206,15 @@ export async function createVisit(formData: FormData) {
   const requestedFollowUpMode = isTaster ? 'none' : normalizeFollowUpMode(toOptional(formData.get('followUpMode')));
   const nextStep = requestedFollowUpMode === 'none' ? null : toOptional(formData.get('nextStep'));
   const followUpDate = requestedFollowUpMode === 'none' ? null : toDate(formData.get('followUpDate'));
+  const followUpTimeMinutes = followUpDate ? parseTimeInputToMinutes(formData.get('followUpTime')) : null;
+  const requestedFollowUpAssigneeId = requestedFollowUpMode === 'task'
+    ? toOptional(formData.get('followUpAssignedToUserId')) ?? user.id
+    : null;
+  const followUpAssignee = requestedFollowUpAssigneeId
+    ? await prisma.user.findFirst({ where: { id: requestedFollowUpAssigneeId, isActive: true, role: { not: UserRole.TASTER } } })
+    : null;
+  if (requestedFollowUpAssigneeId && !followUpAssignee) redirectVisitWithStatus(formOrigin, 'invalid-assignee', locationType);
+  const followUpAssigneeName = followUpAssignee ? getUserDisplayName(followUpAssignee) : actorName;
   const selectedVoiceFollowUps = isTaster ? [] : getSelectedVoiceFollowUps(formData);
   const selectedTagIds = isTaster ? [] : getSelectedTagIds(formData);
   const collectedPhotos = collectPhotos(formData, formOrigin, locationType);
@@ -445,6 +456,8 @@ export async function createVisit(formData: FormData) {
         createdByUserId: user.id,
         submissionKey,
         followUpDate,
+        followUpTimeMinutes,
+        followUpAssignedToUserId: followUpAssignee?.id ?? null,
       },
     });
 
@@ -473,8 +486,9 @@ export async function createVisit(formData: FormData) {
           ...taskLocation,
           loggedVisitId: loggedVisit.id,
           dueDate: followUpDate,
-          assignedTo: actorName,
-          assignedToUserId: user.id,
+          dueTimeMinutes: followUpTimeMinutes,
+          assignedTo: followUpAssigneeName,
+          assignedToUserId: followUpAssignee?.id ?? user.id,
           createdBy: actorName,
           createdByUserId: user.id,
         },
@@ -501,8 +515,8 @@ export async function createVisit(formData: FormData) {
           ...taskLocation,
           loggedVisitId: loggedVisit.id,
           dueDate: voiceFollowUp.dueDate,
-          assignedTo: actorName,
-          assignedToUserId: user.id,
+          assignedTo: followUpAssigneeName,
+          assignedToUserId: followUpAssignee?.id ?? user.id,
           createdBy: actorName,
           createdByUserId: user.id,
         },
@@ -613,6 +627,12 @@ export async function createVisit(formData: FormData) {
     }
   }
 
+  const calendarItems = await prisma.worklistItem.findMany({
+    where: { OR: [{ loggedVisitId: visit.id }, ...(worklistItemId ? [{ id: worklistItemId }] : [])] },
+    select: { id: true },
+  });
+  for (const item of calendarItems) await syncWorklistItemCalendar(item.id);
+
   revalidatePath('/visits');
   revalidatePath('/visits/new');
   revalidatePath('/alerts');
@@ -676,6 +696,15 @@ export async function updateVisit(visitId: string, formData: FormData) {
   const followUpMode = normalizeFollowUpMode(toOptional(formData.get('followUpMode')));
   const nextStep = followUpMode === 'none' ? null : toOptional(formData.get('nextStep'));
   const followUpDate = followUpMode === 'none' ? null : toDate(formData.get('followUpDate'));
+  const followUpTimeMinutes = followUpDate ? parseTimeInputToMinutes(formData.get('followUpTime')) : null;
+  const requestedFollowUpAssigneeId = followUpMode === 'task'
+    ? toOptional(formData.get('followUpAssignedToUserId')) ?? user.id
+    : null;
+  const followUpAssignee = requestedFollowUpAssigneeId
+    ? await prisma.user.findFirst({ where: { id: requestedFollowUpAssigneeId, isActive: true, role: { not: UserRole.TASTER } } })
+    : null;
+  if (requestedFollowUpAssigneeId && !followUpAssignee) redirect('/visits?status=invalid-assignee');
+  const followUpAssigneeName = followUpAssignee ? getUserDisplayName(followUpAssignee) : actorName;
   const taskCategory = locationType === 'agency' ? WorklistCategory.AGENCY : WorklistCategory.WHOLESALE;
   const primaryTask = existingVisit.worklistItems.find((item) => item.title.toLowerCase().startsWith('follow up'));
   const taskPlan = getVisitTaskEditPlan(followUpMode, primaryTask?.status);
@@ -687,7 +716,7 @@ export async function updateVisit(visitId: string, formData: FormData) {
   await prisma.$transaction(async (tx) => {
     await tx.loggedVisit.update({
       where: { id: visitId },
-      data: { locationType, agencyId, wholesaleAccountId, contactId, summary, outcomes, outcomeCodes, nextStep, followUpMode, followUpDate },
+      data: { locationType, agencyId, wholesaleAccountId, contactId, summary, outcomes, outcomeCodes, nextStep, followUpMode, followUpDate, followUpTimeMinutes, followUpAssignedToUserId: followUpAssignee?.id ?? null },
     });
 
     if (taskPlan === 'create' || taskPlan === 'update') {
@@ -699,8 +728,9 @@ export async function updateVisit(visitId: string, formData: FormData) {
         agencyId,
         wholesaleAccountId,
         dueDate: followUpDate,
-        assignedTo: actorName,
-        assignedToUserId: user.id,
+        dueTimeMinutes: followUpTimeMinutes,
+        assignedTo: followUpAssigneeName,
+        assignedToUserId: followUpAssignee?.id ?? user.id,
         completedAt: null,
         completedByUserId: null,
         cancelledAt: null,
@@ -725,6 +755,13 @@ export async function updateVisit(visitId: string, formData: FormData) {
       });
     }
   });
+
+  const calendarTask = await prisma.worklistItem.findFirst({
+    where: { loggedVisitId: visitId, source: WorklistSource.VISIT_FOLLOW_UP, title: { startsWith: 'Follow up', mode: 'insensitive' } },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true },
+  });
+  if (calendarTask) await syncWorklistItemCalendar(calendarTask.id);
 
   revalidatePath('/visits');
   if (existingVisit.agencyId) revalidatePath(`/agencies/${existingVisit.agencyId}`);

@@ -90,3 +90,79 @@ export const addDaysToDateInputValue = (dateInputValue: string, days: number) =>
 
 export const addEasternCalendarDays = (days: number, from: DateValue = new Date()) =>
   addDaysToDateInputValue(formatEasternDateInputValue(from), days);
+
+export const parseTimeInputToMinutes = (value: FormDataEntryValue | string | null | undefined) => {
+  const match = String(value ?? '').trim().match(/^(\d{2}):(\d{2})$/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59 ? hours * 60 + minutes : null;
+};
+
+export const formatTimeMinutesInput = (minutes: number | null | undefined) => {
+  if (minutes == null || minutes < 0 || minutes >= 24 * 60) return '';
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+};
+
+export const formatTimeMinutes = (minutes: number | null | undefined) => {
+  const value = formatTimeMinutesInput(minutes);
+  if (!value) return '';
+  const [hours, mins] = value.split(':').map(Number);
+  return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }).format(
+    new Date(Date.UTC(2000, 0, 1, hours, mins)),
+  );
+};
+
+export const formatWorklistDue = (
+  date: DateValue | null | undefined,
+  dueTimeMinutes: number | null | undefined,
+) => {
+  const dateLabel = formatDateOnly(date);
+  if (!dateLabel) return '';
+  const timeLabel = formatTimeMinutes(dueTimeMinutes);
+  return timeLabel ? `${dateLabel} at ${timeLabel}` : dateLabel;
+};
+
+export const getZonedDateTimeParts = (date: DateValue, timeZone = EASTERN_TIME_ZONE) => {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', {
+      day: '2-digit',
+      hour: '2-digit',
+      hourCycle: 'h23',
+      minute: '2-digit',
+      month: '2-digit',
+      second: '2-digit',
+      timeZone,
+      year: 'numeric',
+    })
+      .formatToParts(toDate(date))
+      .filter((part) => part.type !== 'literal')
+      .map((part) => [part.type, Number(part.value)]),
+  );
+  return {
+    year: parts.year,
+    month: parts.month,
+    day: parts.day,
+    hour: parts.hour,
+    minute: parts.minute,
+    second: parts.second,
+  };
+};
+
+export const zonedDateTimeToUtc = (
+  dateInput: string,
+  minutes: number,
+  timeZone = EASTERN_TIME_ZONE,
+) => {
+  const match = dateInput.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match || minutes < 0 || minutes >= 24 * 60) throw new Error('Invalid local date/time');
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  const guess = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  const local = getZonedDateTimeParts(guess, timeZone);
+  const offset = Date.UTC(local.year, local.month - 1, local.day, local.hour, local.minute) - guess.getTime();
+  return new Date(Date.UTC(year, month - 1, day, hour, minute) - offset);
+};

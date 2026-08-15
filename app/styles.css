@@ -3624,3 +3624,63 @@ legend {
     bottom: 82px;
   }
 }
+.calendar-settings-card form,
+.worklist-edit-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.integration-summary {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1rem 0;
+}
+
+.integration-summary div {
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.35fr) 1fr;
+  gap: 0.75rem;
+}
+
+.integration-summary dt {
+  color: var(--muted);
+}
+
+.integration-summary dd {
+  margin: 0;
+}
+
+.worklist-edit-details {
+  position: relative;
+}
+
+.worklist-edit-details[open] {
+  flex-basis: 100%;
+  min-width: min(32rem, 88vw);
+}
+
+.worklist-edit-form {
+  margin-top: 0.75rem;
+}
+
+.profile-integration-link {
+  border-top: 1px solid var(--line);
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+}
+
+.error-text {
+  color: var(--danger, #a52a2a);
+}
+
+@media (max-width: 700px) {
+  .integration-summary div {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+
+  .worklist-edit-details[open] {
+    min-width: 100%;
+  }
+
+}

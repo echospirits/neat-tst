@@ -4,6 +4,7 @@ export const runtime = 'nodejs';
 import { notFound } from 'next/navigation';
 import { getUserDisplayName, requireUser } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
+import { formatTimeMinutesInput } from '../../../../lib/dateTime';
 import {
   getAgenciesForVisitPicker,
   getAgencyVisitPickerOptionById,
@@ -21,13 +22,18 @@ export default async function EditVisitPage({ params }: { params: Promise<{ id: 
   const visit = await prisma.loggedVisit.findUnique({ where: { id } });
   if (!visit) notFound();
 
-  const [agencyOptions, wholesaleOptions, contacts] = await Promise.all([
+  const [agencyOptions, wholesaleOptions, contacts, activeUsers] = await Promise.all([
     getAgenciesForVisitPicker(),
     getWholesaleAccountsForVisitPicker(),
     prisma.locationContact.findMany({
       orderBy: { name: 'asc' },
       take: 1000,
       select: { id: true, name: true, role: true, phone: true, email: true, agencyId: true, wholesaleAccountId: true },
+    }),
+    prisma.user.findMany({
+      where: { isActive: true, role: { not: 'TASTER' } },
+      orderBy: [{ name: 'asc' }, { email: 'asc' }],
+      select: { id: true, email: true, firstName: true, lastName: true, name: true },
     }),
   ]);
   const [selectedAgency, selectedWholesale] = await Promise.all([
@@ -57,6 +63,7 @@ export default async function EditVisitPage({ params }: { params: Promise<{ id: 
         <LogVisitForm
           action={action}
           actorName={getUserDisplayName(user)}
+          currentUserId={user.id}
           agencies={agencies}
           contacts={contacts}
           initialValues={{
@@ -64,6 +71,8 @@ export default async function EditVisitPage({ params }: { params: Promise<{ id: 
             contactId: visit.contactId,
             followUpDate: visit.followUpDate?.toISOString().slice(0, 10),
             followUpMode: normalizeFollowUpMode(visit.followUpMode),
+            followUpTime: formatTimeMinutesInput(visit.followUpTimeMinutes),
+            followUpAssignedToUserId: visit.followUpAssignedToUserId ?? user.id,
             locationLocked: true,
             locationName,
             locationType: visit.locationType === 'agency' ? 'agency' : 'wholesale',
@@ -75,6 +84,7 @@ export default async function EditVisitPage({ params }: { params: Promise<{ id: 
           }}
           mode="edit"
           submitLabel="Save changes"
+          users={activeUsers.map((activeUser) => ({ id: activeUser.id, name: getUserDisplayName(activeUser) }))}
           wholesaleAccounts={wholesaleAccounts}
         />
       </div></div>

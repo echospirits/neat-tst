@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 import { WorklistStatus } from '@prisma/client';
 import Link from 'next/link';
 import { requireUser } from '../../lib/auth';
-import { formatDateOnly } from '../../lib/dateTime';
+import { formatWorklistDue } from '../../lib/dateTime';
 import { prisma } from '../../lib/prisma';
 import { GlobalSearchForm } from '../components/GlobalSearchForm';
 
@@ -70,7 +70,7 @@ export default async function SearchPage({ searchParams }: { searchParams?: Prom
             ],
           },
           orderBy: [{ dueDate: 'asc' }, { updatedAt: 'desc' }],
-          select: { id: true, title: true, detail: true, category: true, dueDate: true, status: true },
+          select: { id: true, title: true, detail: true, category: true, dueDate: true, dueTimeMinutes: true, status: true },
         }),
       ])
     : [[], [], []];
@@ -144,7 +144,7 @@ export default async function SearchPage({ searchParams }: { searchParams?: Prom
                 {workItems.map((item) => (
                   <Link className="search-result-row" href={`/alerts?q=${encodeURIComponent(item.title)}`} key={item.id}>
                     <span><strong>{item.title}</strong><small>{item.detail || 'No additional detail'}</small></span>
-                    <span><small>{item.category.toLowerCase()}</small><strong>{formatDateOnly(item.dueDate) || 'No due date'}</strong></span>
+                    <span><small>{item.category.toLowerCase()}</small><strong>{formatWorklistDue(item.dueDate, item.dueTimeMinutes) || 'No due date'}</strong></span>
                   </Link>
                 ))}
               </div>

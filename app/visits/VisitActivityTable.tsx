@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getUserDisplayName } from '../../lib/auth';
-import { formatDateOnly, formatEasternDateTime } from '../../lib/dateTime';
+import { formatEasternDateTime, formatWorklistDue } from '../../lib/dateTime';
 import { getVisitOutcomeDisplay } from '../../lib/visitWorkflow';
 import { VisitPhotoGallery } from './VisitPhotoGallery';
 
@@ -17,6 +17,7 @@ export type VisitActivity = {
   nextStep: string | null;
   followUpMode: string | null;
   followUpDate: Date | null;
+  followUpTimeMinutes: number | null;
   createdBy: string | null;
   createdByUser: { email: string; name: string | null } | null;
   photos: { id: string; url: string; caption: string | null; type: string }[];
@@ -33,7 +34,7 @@ const followUpLabel = (visit: VisitActivity) => {
     const openCount = visit.worklistItems.filter((item) => item.status === 'OPEN' || item.status === 'IN_PROGRESS').length;
     return openCount > 0 ? `${openCount} open worklist ${openCount === 1 ? 'item' : 'items'}` : 'Worklist item completed';
   }
-  if (visit.nextStep) return visit.followUpDate ? `${visit.nextStep} · ${formatDateOnly(visit.followUpDate)}` : visit.nextStep;
+  if (visit.nextStep) return visit.followUpDate ? `${visit.nextStep} · ${formatWorklistDue(visit.followUpDate, visit.followUpTimeMinutes)}` : visit.nextStep;
   return null;
 };
 

@@ -6,7 +6,8 @@ import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getUserDisplayName, requireUser } from '../../lib/auth';
-import { formatDateOnly } from '../../lib/dateTime';
+import { formatDateOnlyInputValue, formatTimeMinutesInput, formatWorklistDue, parseTimeInputToMinutes } from '../../lib/dateTime';
+import { syncWorklistItemCalendar } from '../../lib/calendar/worklistSync';
 import { splitReactivationPurchasedAgainDetail } from '../../lib/ohlqWholesaleReactivation';
 import { prisma } from '../../lib/prisma';
 import { getAgenciesForVisitPicker, getWholesaleAccountsForVisitPicker } from '../../lib/visitPickerOptions';
@@ -52,6 +53,7 @@ const noticeMessages: Record<string, string> = {
   'storage-not-configured': 'Photo object storage is not configured yet.',
   'photo-upload-failed': 'The visit was saved, but one or more photos could not be uploaded.',
   'photo-verification-failed': 'The photo could not be verified, so the visit and worklist update were not saved.',
+  'invalid-assignee': 'Choose an active CRM user for the follow-up.',
 };
 
 const toOptional = (value: FormDataEntryValue | null | undefined) => {
@@ -99,16 +101,18 @@ async function createWorklistItem(formData: FormData) {
     wholesaleAccountId,
   );
   const assignedToUserId = toOptional(formData.get('assignedToUserId'));
+  const dueDate = toDate(formData.get('dueDate'));
 
   if (!title) {
     redirect('/alerts?created=invalid');
   }
 
   const assignedUser = assignedToUserId
-    ? await prisma.user.findUnique({ where: { id: assignedToUserId } })
+    ? await prisma.user.findFirst({ where: { id: assignedToUserId, isActive: true, role: { not: 'TASTER' } } })
     : null;
+  if (assignedToUserId && !assignedUser) redirect('/alerts?created=invalid-assignee');
 
-  await prisma.worklistItem.create({
+  const item = await prisma.worklistItem.create({
     data: {
       title,
       detail: toOptional(formData.get('detail')),
@@ -118,13 +122,15 @@ async function createWorklistItem(formData: FormData) {
       agencyId: category === WorklistCategory.AGENCY ? agencyId : null,
       wholesaleAccountId:
         category === WorklistCategory.WHOLESALE ? wholesaleAccountId : null,
-      dueDate: toDate(formData.get('dueDate')),
+      dueDate,
+      dueTimeMinutes: dueDate ? parseTimeInputToMinutes(formData.get('dueTime')) : null,
       assignedTo: assignedUser ? getUserDisplayName(assignedUser) : null,
       assignedToUserId: assignedUser?.id,
       createdBy: getUserDisplayName(currentUser),
       createdByUserId: currentUser.id,
     },
   });
+  await syncWorklistItemCalendar(item.id);
 
   revalidatePath('/alerts');
   revalidatePath('/');
@@ -152,7 +158,37 @@ async function updateWorklistStatus(formData: FormData) {
       cancelledByUserId: status === WorklistStatus.CANCELLED ? currentUser.id : null,
     },
   });
+  await syncWorklistItemCalendar(id);
 
+  revalidatePath('/alerts');
+  revalidatePath('/my-week');
+  revalidatePath('/');
+}
+
+async function updateWorklistItem(formData: FormData) {
+  'use server';
+  await requireUser();
+  const id = toOptional(formData.get('id'));
+  const title = toOptional(formData.get('title'));
+  const assignedToUserId = toOptional(formData.get('assignedToUserId'));
+  const dueDate = toDate(formData.get('dueDate'));
+  if (!id || !title) return;
+  const assignedUser = assignedToUserId
+    ? await prisma.user.findFirst({ where: { id: assignedToUserId, isActive: true, role: { not: 'TASTER' } } })
+    : null;
+  if (assignedToUserId && !assignedUser) return;
+  await prisma.worklistItem.update({
+    where: { id },
+    data: {
+      title,
+      detail: toOptional(formData.get('detail')),
+      dueDate,
+      dueTimeMinutes: dueDate ? parseTimeInputToMinutes(formData.get('dueTime')) : null,
+      assignedToUserId: assignedUser?.id ?? null,
+      assignedTo: assignedUser ? getUserDisplayName(assignedUser) : null,
+    },
+  });
+  await syncWorklistItemCalendar(id);
   revalidatePath('/alerts');
   revalidatePath('/my-week');
   revalidatePath('/');
@@ -211,6 +247,7 @@ export default async function Alerts({
         cancelledByUser: true,
         completedByUser: true,
         createdByUser: true,
+        calendarEvents: { where: { provider: 'GOOGLE' } },
         loggedVisit: {
           select: {
             locationType: true,
@@ -236,7 +273,7 @@ export default async function Alerts({
         wholesaleAccountId: true,
       },
     }),
-    prisma.user.findMany({ orderBy: [{ name: 'asc' }, { email: 'asc' }] }),
+    prisma.user.findMany({ where: { isActive: true, role: { not: 'TASTER' } }, orderBy: [{ name: 'asc' }, { email: 'asc' }] }),
     prisma.tag.findMany({
       orderBy: { name: 'asc' },
       select: {
@@ -278,6 +315,7 @@ export default async function Alerts({
           <form action={createWorklistItem} className="quick-task-form">
             <input name="title" placeholder="What needs to happen?" required />
             <DatePickerField name="dueDate" aria-label="Due date" pickerLabel="Choose due date" />
+            <input aria-label="Due time (optional)" name="dueTime" type="time" />
             <select name="category" defaultValue={WorklistCategory.GENERAL} aria-label="Category">
               <option value={WorklistCategory.AGENCY}>Agency</option>
               <option value={WorklistCategory.WHOLESALE}>Wholesale</option>
@@ -410,12 +448,13 @@ export default async function Alerts({
                         ) : (
                           <strong>{getWorklistLocationFallbackLabel(item)}</strong>
                         )}
-                        <div className="muted">{formatDateOnly(item.dueDate) || 'No due date'}</div>
+                        <div className="muted">{formatWorklistDue(item.dueDate, item.dueTimeMinutes) || 'No due date'}</div>
                       </td>
                       <td data-label="Owner">{item.assignedToUser ? getUserDisplayName(item.assignedToUser) : item.assignedTo}</td>
                       <td data-label="Actions">
                         <WorklistActions
                           actorName={getUserDisplayName(currentUser)}
+                          currentUserId={currentUser.id}
                           agencies={agencyOptions}
                           contacts={contacts}
                           createVisitAction={createVisit}
@@ -423,6 +462,12 @@ export default async function Alerts({
                             id: item.id,
                             title: item.title,
                             detail: parsedDetail.detail,
+                            editDetail: item.detail,
+                            dueDate: formatDateOnlyInputValue(item.dueDate ?? undefined),
+                            dueTime: formatTimeMinutesInput(item.dueTimeMinutes),
+                            assignedToUserId: item.assignedToUserId,
+                            calendarSyncStatus: item.calendarEvents[0]?.syncStatus ?? null,
+                            calendarSyncError: item.calendarEvents[0]?.syncError ?? null,
                             status: item.status,
                             category: item.category,
                             agencyId: item.agencyId,
@@ -432,6 +477,8 @@ export default async function Alerts({
                               : null,
                           }}
                           tags={tags}
+                          users={users.map((user) => ({ id: user.id, name: getUserDisplayName(user) }))}
+                          updateItemAction={updateWorklistItem}
                           updateStatusAction={updateWorklistStatus}
                           wholesaleAccounts={wholesaleOptions}
                         />
