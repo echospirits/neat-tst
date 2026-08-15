@@ -28,6 +28,7 @@ const statusMessages: Record<string, string> = {
   'photo-verification-failed': 'The picture could not be verified, so the visit was not saved. Try uploading it again.',
   'comments-required': 'Enter comments before logging the visit.',
   'photo-required': 'Add one picture before logging the visit.',
+  'invalid-assignee': 'Choose an active CRM user for the follow-up.',
   'visit-logged': 'Agency visit logged.',
 };
 
@@ -76,7 +77,7 @@ export default async function NewVisitPage({
     );
   }
 
-  const [agencyOptions, wholesaleAccountOptions, contacts, tags] = await Promise.all([
+  const [agencyOptions, wholesaleAccountOptions, contacts, tags, activeUsers] = await Promise.all([
     getAgenciesForVisitPicker(),
     getWholesaleAccountsForVisitPicker(),
     prisma.locationContact.findMany({
@@ -99,6 +100,11 @@ export default async function NewVisitPage({
         name: true,
         color: true,
       },
+    }),
+    prisma.user.findMany({
+      where: { isActive: true, role: { not: UserRole.TASTER } },
+      orderBy: [{ name: 'asc' }, { email: 'asc' }],
+      select: { id: true, email: true, firstName: true, lastName: true, name: true },
     }),
   ]);
   const initialLocationType = getInitialVisitLocationType(params);
@@ -135,6 +141,7 @@ export default async function NewVisitPage({
         <LogVisitForm
           action={createVisit}
           actorName={getUserDisplayName(user)}
+          currentUserId={user.id}
           agencies={agencies}
           contacts={contacts}
           initialValues={{
@@ -145,6 +152,7 @@ export default async function NewVisitPage({
             wholesaleAccountId: params.wholesaleAccountId ?? null,
           }}
           tags={tags}
+          users={activeUsers.map((activeUser) => ({ id: activeUser.id, name: getUserDisplayName(activeUser) }))}
           wholesaleAccounts={wholesaleAccounts}
         />
       </div></div>

@@ -5,7 +5,8 @@ import { Prisma, WorklistCategory, WorklistSource, WorklistStatus } from '@prism
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import { getUserDisplayName, requireUser } from '../../lib/auth';
-import { EASTERN_TIME_ZONE, formatDateOnly } from '../../lib/dateTime';
+import { EASTERN_TIME_ZONE, formatDateOnlyInputValue, formatTimeMinutesInput, formatWorklistDue, parseTimeInputToMinutes } from '../../lib/dateTime';
+import { syncWorklistItemCalendar } from '../../lib/calendar/worklistSync';
 import { splitReactivationPurchasedAgainDetail } from '../../lib/ohlqWholesaleReactivation';
 import { prisma } from '../../lib/prisma';
 import { getAgenciesForVisitPicker, getWholesaleAccountsForVisitPicker } from '../../lib/visitPickerOptions';
@@ -71,6 +72,11 @@ const toWorklistStatus = (value: FormDataEntryValue | string | null | undefined)
   return Object.values(WorklistStatus).includes(status as WorklistStatus)
     ? (status as WorklistStatus)
     : WorklistStatus.OPEN;
+};
+
+const toDate = (value: FormDataEntryValue | null | undefined) => {
+  const date = toOptional(value);
+  return date ? new Date(`${date}T00:00:00`) : null;
 };
 
 const getDateParts = (date: Date): DateParts => {
@@ -153,7 +159,37 @@ async function updateWorklistStatus(formData: FormData) {
       cancelledByUserId: status === WorklistStatus.CANCELLED ? currentUser.id : null,
     },
   });
+  await syncWorklistItemCalendar(id);
 
+  revalidatePath('/my-week');
+  revalidatePath('/alerts');
+  revalidatePath('/');
+}
+
+async function updateWorklistItem(formData: FormData) {
+  'use server';
+  await requireUser();
+  const id = toOptional(formData.get('id'));
+  const title = toOptional(formData.get('title'));
+  const assignedToUserId = toOptional(formData.get('assignedToUserId'));
+  if (!id || !title) return;
+  const assignedUser = assignedToUserId
+    ? await prisma.user.findFirst({ where: { id: assignedToUserId, isActive: true, role: { not: 'TASTER' } } })
+    : null;
+  if (assignedToUserId && !assignedUser) return;
+  const dueDate = toDate(formData.get('dueDate'));
+  await prisma.worklistItem.update({
+    where: { id },
+    data: {
+      title,
+      detail: toOptional(formData.get('detail')),
+      dueDate,
+      dueTimeMinutes: dueDate ? parseTimeInputToMinutes(formData.get('dueTime')) : null,
+      assignedToUserId: assignedUser?.id ?? null,
+      assignedTo: assignedUser ? getUserDisplayName(assignedUser) : null,
+    },
+  });
+  await syncWorklistItemCalendar(id);
   revalidatePath('/my-week');
   revalidatePath('/alerts');
   revalidatePath('/');
@@ -173,7 +209,7 @@ export default async function MyWeekPage() {
     },
   };
 
-  const [items, agencyOptions, wholesaleOptions, contacts, tags] = await Promise.all([
+  const [items, agencyOptions, wholesaleOptions, contacts, tags, users] = await Promise.all([
     prisma.worklistItem.findMany({
       where: {
         AND: [
@@ -184,6 +220,7 @@ export default async function MyWeekPage() {
       },
       take: 300,
       include: {
+        calendarEvents: { where: { provider: 'GOOGLE' } },
         assignedToUser: true,
         cancelledByUser: true,
         completedByUser: true,
@@ -220,6 +257,11 @@ export default async function MyWeekPage() {
         name: true,
         color: true,
       },
+    }),
+    prisma.user.findMany({
+      where: { isActive: true, role: { not: 'TASTER' } },
+      orderBy: [{ name: 'asc' }, { email: 'asc' }],
+      select: { id: true, email: true, firstName: true, lastName: true, name: true },
     }),
   ]);
 
@@ -311,12 +353,13 @@ export default async function MyWeekPage() {
                           ) : (
                             <strong>{getWorklistLocationFallbackLabel(item)}</strong>
                           )}
-                          <div className="muted">{formatDateOnly(item.dueDate) || 'No due date'}</div>
+                          <div className="muted">{formatWorklistDue(item.dueDate, item.dueTimeMinutes) || 'No due date'}</div>
                         </td>
                         <td data-label="Source">{sourceLabels[item.source]}</td>
                         <td data-label="Actions">
                           <WorklistActions
                             actorName={actorName}
+                            currentUserId={currentUser.id}
                             agencies={agencyOptions}
                             contacts={contacts}
                             createVisitAction={createVisit}
@@ -324,6 +367,12 @@ export default async function MyWeekPage() {
                               id: item.id,
                               title: item.title,
                               detail: parsedDetail.detail,
+                              editDetail: item.detail,
+                              dueDate: formatDateOnlyInputValue(item.dueDate ?? undefined),
+                              dueTime: formatTimeMinutesInput(item.dueTimeMinutes),
+                              assignedToUserId: item.assignedToUserId,
+                              calendarSyncStatus: item.calendarEvents[0]?.syncStatus ?? null,
+                              calendarSyncError: item.calendarEvents[0]?.syncError ?? null,
                               status: item.status as WorklistActionStatus,
                               category: item.category,
                               agencyId: item.agencyId,
@@ -333,6 +382,8 @@ export default async function MyWeekPage() {
                                 : null,
                             }}
                             tags={tags}
+                            users={users.map((user) => ({ id: user.id, name: getUserDisplayName(user) }))}
+                            updateItemAction={updateWorklistItem}
                             updateStatusAction={updateWorklistStatus}
                             wholesaleAccounts={wholesaleOptions}
                           />

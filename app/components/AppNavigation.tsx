@@ -131,6 +131,7 @@ const getBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
     { prefix: '/admin/target-import', crumbs: [{ href: '/users', label: 'Administration' }, { href: pathname, label: 'Target Import' }] },
     { prefix: '/admin/data-status', crumbs: [{ href: '/users', label: 'Administration' }, { href: pathname, label: 'Data Health' }] },
     { prefix: '/admin/weekly-digest', crumbs: [{ href: '/users', label: 'Administration' }, { href: pathname, label: 'Weekly Digest' }] },
+    { prefix: '/settings/calendar', crumbs: [{ href: '/profile', label: 'Profile' }, { href: '/settings/calendar', label: 'Calendar' }] },
     { prefix: '/profile', crumbs: [{ href: '/profile', label: 'Profile' }] },
   ];
   const match = routeMap.find((route) => pathname === route.prefix || pathname.startsWith(route.prefix));

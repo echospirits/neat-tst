@@ -7,6 +7,7 @@ import { getUserDisplayName, requireUserSession } from '../../lib/auth';
 import { hashPassword, verifyPassword } from '../../lib/password';
 import { prisma } from '../../lib/prisma';
 import { PageHeader } from '../components/PageChrome';
+import Link from 'next/link';
 
 const toOptional = (value: FormDataEntryValue | null | undefined) => {
   const trimmed = String(value ?? '').trim();
@@ -115,6 +116,11 @@ export default async function ProfilePage({
           </details>
           <button type="submit">Save profile</button>
         </form>
+        <div className="profile-integration-link">
+          <h2>Calendar</h2>
+          <p className="muted">Connect your own Google Calendar for dated worklist follow-ups.</p>
+          <Link className="button-link secondary" href="/settings/calendar">Calendar settings</Link>
+        </div>
       </div></div>
     </>
   );

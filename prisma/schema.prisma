@@ -68,6 +68,20 @@ enum GeocodeStatus {
   FAILED
 }
 
+enum CalendarProviderName {
+  GOOGLE
+  MICROSOFT
+  APPLE
+}
+
+enum CalendarSyncStatus {
+  PENDING
+  SYNCED
+  ERROR
+  REMOVED
+  DISABLED
+}
+
 enum WeeklyDigestType {
   USER_WEEKLY
   ADMIN_WEEKLY
@@ -181,9 +195,53 @@ model User {
   cancelledWorklistItems      WorklistItem[]         @relation("WorklistItemCancelledBy")
   assignedTargetProfiles      TargetAccountProfile[] @relation("TargetAccountAssignedTo")
   ownedTargetSkuOpportunities TargetSkuOpportunity[] @relation("TargetSkuOpportunityOwner")
+  calendarConnections         CalendarConnection[]
+  calendarOAuthStates         CalendarOAuthState[]
+  followUpAssignedVisits      LoggedVisit[]          @relation("LoggedVisitFollowUpAssignedTo")
 
   @@index([role])
   @@index([isActive])
+}
+
+model CalendarConnection {
+  id                     String                  @id @default(cuid())
+  userId                 String
+  provider               CalendarProviderName
+  providerAccountId      String
+  providerEmail          String?
+  accessTokenEncrypted   String
+  refreshTokenEncrypted  String?
+  tokenExpiresAt         DateTime?
+  scope                  String
+  selectedCalendarId     String
+  selectedCalendarName   String?
+  syncEnabled            Boolean                 @default(true)
+  syncToken              String?
+  lastSyncAt             DateTime?
+  syncError              String?
+  requiresReconnect      Boolean                 @default(false)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  worklistCalendarEvents WorklistCalendarEvent[]
+
+  @@unique([userId, provider])
+  @@index([provider, providerAccountId])
+  @@index([provider, syncEnabled, requiresReconnect])
+}
+
+model CalendarOAuthState {
+  id         String               @id @default(cuid())
+  userId     String
+  provider   CalendarProviderName
+  stateHash  String               @unique
+  returnPath String?
+  expiresAt  DateTime
+  createdAt  DateTime             @default(now())
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, provider])
+  @@index([expiresAt])
 }
 
 model WeeklyDigestLog {
@@ -1029,28 +1087,32 @@ model LocationContact {
 }
 
 model LoggedVisit {
-  id                 String         @id @default(cuid())
-  visitAt            DateTime       @default(now())
-  locationType       String
-  agencyId           String?
-  wholesaleAccountId String?
-  contactId          String?
-  summary            String?
-  outcomes           String?
-  outcomeCodes       String[]       @default([])
-  nextStep           String?
-  followUpMode       String?
-  followUpDate       DateTime?
-  createdBy          String?
-  createdByUserId    String?
-  submissionKey      String?        @unique
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @default(now()) @updatedAt
-  createdByUser      User?          @relation("LoggedVisitCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  photos             VisitPhoto[]
-  worklistItems      WorklistItem[]
+  id                       String         @id @default(cuid())
+  visitAt                  DateTime       @default(now())
+  locationType             String
+  agencyId                 String?
+  wholesaleAccountId       String?
+  contactId                String?
+  summary                  String?
+  outcomes                 String?
+  outcomeCodes             String[]       @default([])
+  nextStep                 String?
+  followUpMode             String?
+  followUpDate             DateTime?
+  followUpTimeMinutes      Int?
+  followUpAssignedToUserId String?
+  createdBy                String?
+  createdByUserId          String?
+  submissionKey            String?        @unique
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @default(now()) @updatedAt
+  createdByUser            User?          @relation("LoggedVisitCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  followUpAssignedToUser   User?          @relation("LoggedVisitFollowUpAssignedTo", fields: [followUpAssignedToUserId], references: [id], onDelete: SetNull)
+  photos                   VisitPhoto[]
+  worklistItems            WorklistItem[]
 
   @@index([createdByUserId])
+  @@index([followUpAssignedToUserId])
   @@index([locationType, agencyId, visitAt])
   @@index([locationType, wholesaleAccountId, visitAt])
 }
@@ -1074,16 +1136,17 @@ model VisitPhoto {
 }
 
 model WorklistItem {
-  id                 String           @id @default(cuid())
+  id                 String                  @id @default(cuid())
   title              String
   detail             String?
-  status             WorklistStatus   @default(OPEN)
-  source             WorklistSource   @default(MANUAL)
-  category           WorklistCategory @default(GENERAL)
+  status             WorklistStatus          @default(OPEN)
+  source             WorklistSource          @default(MANUAL)
+  category           WorklistCategory        @default(GENERAL)
   agencyId           String?
   wholesaleAccountId String?
   loggedVisitId      String?
   dueDate            DateTime?
+  dueTimeMinutes     Int?
   assignedTo         String?
   createdBy          String?
   createdByUserId    String?
@@ -1092,13 +1155,14 @@ model WorklistItem {
   cancelledByUserId  String?
   completedAt        DateTime?
   cancelledAt        DateTime?
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
-  assignedToUser     User?            @relation("WorklistItemAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
-  cancelledByUser    User?            @relation("WorklistItemCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
-  completedByUser    User?            @relation("WorklistItemCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
-  createdByUser      User?            @relation("WorklistItemCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  loggedVisit        LoggedVisit?     @relation(fields: [loggedVisitId], references: [id], onDelete: SetNull)
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  assignedToUser     User?                   @relation("WorklistItemAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  cancelledByUser    User?                   @relation("WorklistItemCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+  completedByUser    User?                   @relation("WorklistItemCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
+  createdByUser      User?                   @relation("WorklistItemCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  loggedVisit        LoggedVisit?            @relation(fields: [loggedVisitId], references: [id], onDelete: SetNull)
+  calendarEvents     WorklistCalendarEvent[]
 
   @@index([status])
   @@index([category])
@@ -1110,4 +1174,28 @@ model WorklistItem {
   @@index([assignedToUserId])
   @@index([completedByUserId])
   @@index([cancelledByUserId])
+}
+
+model WorklistCalendarEvent {
+  id              String               @id @default(cuid())
+  worklistItemId  String
+  connectionId    String?
+  provider        CalendarProviderName
+  externalEventId String?
+  calendarId      String?
+  syncStatus      CalendarSyncStatus   @default(PENDING)
+  eventUpdatedAt  DateTime?
+  eventEtag       String?
+  crmScheduleHash String?
+  lastSyncedAt    DateTime?
+  syncError       String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  worklistItem    WorklistItem         @relation(fields: [worklistItemId], references: [id], onDelete: Cascade)
+  connection      CalendarConnection?  @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  @@unique([worklistItemId, provider])
+  @@unique([provider, externalEventId])
+  @@index([connectionId])
+  @@index([syncStatus])
 }

@@ -55,6 +55,11 @@ export type VisitFormTagOption = {
   color: string | null;
 };
 
+export type VisitFormUserOption = {
+  id: string;
+  name: string;
+};
+
 type VisitFormInitialValues = {
   locationType?: VisitLocationType;
   locationName?: string | null;
@@ -68,6 +73,8 @@ type VisitFormInitialValues = {
   nextStep?: string | null;
   followUpMode?: VisitFollowUpMode;
   followUpDate?: string | null;
+  followUpTime?: string | null;
+  followUpAssignedToUserId?: string | null;
   startVoiceNote?: boolean;
 };
 
@@ -78,6 +85,8 @@ type LogVisitFormProps = {
   contacts: VisitFormContactOption[];
   tags?: VisitFormTagOption[];
   actorName: string;
+  currentUserId?: string;
+  users?: VisitFormUserOption[];
   formOrigin?: 'visits' | 'worklist';
   worklistItemId?: string;
   initialValues?: VisitFormInitialValues;
@@ -114,6 +123,8 @@ export function LogVisitForm({
   contacts,
   tags = [],
   actorName,
+  currentUserId,
+  users = [],
   formOrigin = 'visits',
   worklistItemId,
   initialValues,
@@ -133,6 +144,10 @@ export function LogVisitForm({
   const [followUpMode, setFollowUpMode] = useState<VisitFollowUpMode>(initialValues?.followUpMode ?? 'none');
   const [followUpText, setFollowUpText] = useState(initialValues?.nextStep ?? '');
   const [followUpDate, setFollowUpDate] = useState(initialValues?.followUpDate ?? '');
+  const [followUpTime, setFollowUpTime] = useState(initialValues?.followUpTime ?? '');
+  const [followUpAssignedToUserId, setFollowUpAssignedToUserId] = useState(
+    initialValues?.followUpAssignedToUserId ?? currentUserId ?? '',
+  );
   const [isVoiceNoteOpen, setIsVoiceNoteOpen] = useState(initialValues?.startVoiceNote ?? false);
   const [submissionKey, setSubmissionKey] = useState('');
   const [newWholesaleName, setNewWholesaleName] = useState('');
@@ -329,6 +344,7 @@ export function LogVisitForm({
     if (mode !== 'none' && !followUpDate) setFollowUpDate(addEasternCalendarDays(7));
     if (mode === 'none') {
       setFollowUpDate('');
+      setFollowUpTime('');
       setFollowUpText('');
     }
   };
@@ -501,7 +517,29 @@ export function LogVisitForm({
               value={followUpDate}
               onChange={(event) => setFollowUpDate(event.target.value)}
             />
-            {followUpMode === 'task' ? <p className="task-preview">A worklist item will be assigned to {actorName}.</p> : null}
+            <label htmlFor="follow-up-time">Time <span className="optional-label">Optional</span></label>
+            <input
+              id="follow-up-time"
+              name="followUpTime"
+              type="time"
+              value={followUpTime}
+              onChange={(event) => setFollowUpTime(event.target.value)}
+            />
+            {followUpMode === 'task' ? (
+              <label htmlFor="follow-up-assignee">
+                Responsible person
+                <select
+                  id="follow-up-assignee"
+                  name="followUpAssignedToUserId"
+                  required
+                  value={followUpAssignedToUserId}
+                  onChange={(event) => setFollowUpAssignedToUserId(event.target.value)}
+                >
+                  {users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}
+                </select>
+                {users.length === 0 ? <span className="task-preview">Assigned to {actorName}</span> : null}
+              </label>
+            ) : null}
           </div>
         ) : null}
       </fieldset>

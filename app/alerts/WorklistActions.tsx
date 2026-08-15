@@ -17,6 +17,12 @@ type WorklistActionItem = {
   id: string;
   title: string;
   detail: string | null;
+  editDetail: string | null;
+  dueDate: string;
+  dueTime: string;
+  assignedToUserId: string | null;
+  calendarSyncStatus: string | null;
+  calendarSyncError: string | null;
   status: WorklistStatus;
   category: WorklistCategory;
   agencyId: string | null;
@@ -37,6 +43,9 @@ type WorklistActionsProps = {
   tags: VisitFormTagOption[];
   createVisitAction: (formData: FormData) => void | Promise<void>;
   updateStatusAction: (formData: FormData) => void | Promise<void>;
+  updateItemAction: (formData: FormData) => void | Promise<void>;
+  currentUserId: string;
+  users: Array<{ id: string; name: string }>;
 };
 
 const getInitialLocationType = (item: WorklistActionItem): VisitLocationType => {
@@ -60,6 +69,9 @@ export function WorklistActions({
   tags,
   createVisitAction,
   updateStatusAction,
+  updateItemAction,
+  currentUserId,
+  users,
 }: WorklistActionsProps) {
   const [isLogVisitOpen, setIsLogVisitOpen] = useState(false);
   const initialSummary = [item.title, item.detail].filter(Boolean).join('\n\n');
@@ -77,6 +89,22 @@ export function WorklistActions({
           Complete
         </button>
       </form>
+
+      <details className="compact-details worklist-edit-details">
+        <summary>Edit</summary>
+        <form action={updateItemAction} className="worklist-edit-form">
+          <input name="id" type="hidden" value={item.id} />
+          <label>Task<input name="title" defaultValue={item.title} required /></label>
+          <label>Details<textarea name="detail" defaultValue={item.editDetail ?? ''} rows={3} /></label>
+          <div className="form-grid">
+            <label>Due date<input name="dueDate" type="date" defaultValue={item.dueDate} /></label>
+            <label>Time <span className="optional-label">Optional</span><input name="dueTime" type="time" defaultValue={item.dueTime} /></label>
+            <label>Assigned to<select name="assignedToUserId" defaultValue={item.assignedToUserId ?? ''}><option value="">-- Unassigned --</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label>
+          </div>
+          {item.calendarSyncStatus ? <p className="field-note">Calendar: {item.calendarSyncStatus.toLowerCase().replaceAll('_', ' ')}{item.calendarSyncError ? ` - ${item.calendarSyncError}` : ''}</p> : null}
+          <button type="submit">Save task</button>
+        </form>
+      </details>
 
       <form action={updateStatusAction}>
         <input name="id" type="hidden" value={item.id} />
@@ -104,6 +132,7 @@ export function WorklistActions({
             <LogVisitForm
               action={createVisitAction}
               actorName={actorName}
+              currentUserId={currentUserId}
               agencies={agencies}
               contacts={contacts}
               formOrigin="worklist"
@@ -118,6 +147,7 @@ export function WorklistActions({
               }}
               submitLabel="Log visit and complete item"
               tags={tags}
+              users={users}
               wholesaleAccounts={wholesaleAccounts}
               worklistItemId={item.id}
             />
