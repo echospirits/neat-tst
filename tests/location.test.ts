@@ -8,6 +8,7 @@ import {
   normalizeGeocodeAddress,
 } from '../lib/location/geocode';
 import { getNearbyWholesaleAccounts } from '../lib/location/nearbyAccounts';
+import { shouldAutomaticallyRequestLocation } from '../lib/location/locationPreference';
 import { rankVisitSearchOptions } from '../lib/visitPickerOptions';
 
 describe('location distance', () => {
@@ -43,6 +44,13 @@ describe('geocode address caching', () => {
 });
 
 describe('nearby account behavior', () => {
+  it('automatically refreshes location after opt-in or when browser permission is already granted', () => {
+    assert.equal(shouldAutomaticallyRequestLocation(true, 'prompt'), true);
+    assert.equal(shouldAutomaticallyRequestLocation(false, 'granted'), true);
+    assert.equal(shouldAutomaticallyRequestLocation(false, 'prompt'), false);
+    assert.equal(shouldAutomaticallyRequestLocation(true, 'denied'), false);
+  });
+
   it('excludes missing coordinates, requests active accounts, and sorts closest first', async () => {
     let findManyWhere: Record<string, unknown> | undefined;
     const db = {
