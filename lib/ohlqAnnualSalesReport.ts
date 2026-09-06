@@ -133,6 +133,7 @@ export type OhlqAnnualSalesDownloadOptions = {
   downloadDir?: string;
   headless?: boolean;
   logger?: Logger;
+  partnerCredentials?: { password: string; username: string };
   reportDate?: string;
   returnBuffer?: boolean;
   useServerlessChromium?: boolean;
@@ -892,6 +893,7 @@ type OhlqDownloadRuntime = {
   debugDir: string;
   downloadDir: string;
   logger: Logger;
+  partnerCredentials?: { password: string; username: string };
   reportDate: ReportDate;
   returnBuffer: boolean;
   runDateIso: string;
@@ -914,6 +916,7 @@ function createDownloadRuntime(options: OhlqAnnualSalesDownloadOptions): OhlqDow
     debugDir,
     downloadDir,
     logger,
+    partnerCredentials: options.partnerCredentials,
     reportDate,
     returnBuffer: options.returnBuffer ?? false,
     runDateIso,
@@ -966,9 +969,9 @@ async function closeBrowserPage(context: BrowserContext, browser: Browser | null
   await browser?.close().catch(() => undefined);
 }
 
-async function signInToOhlqPartner(page: Page) {
-  const ohlqUsername = requireEnv('OHLQ_OPS_USERNAME');
-  const ohlqPassword = requireEnv('OHLQ_OPS_PASSWORD');
+async function signInToOhlqPartner(page: Page, credentials?: { password: string; username: string }) {
+  const ohlqUsername = credentials?.username ?? requireEnv('OHLQ_OPS_USERNAME');
+  const ohlqPassword = credentials?.password ?? requireEnv('OHLQ_OPS_PASSWORD');
 
   await gotoWithRetry(page, 'https://ops.ohlq.com/login', { waitUntil: 'domcontentloaded', timeout: 60_000 });
   if (!page.url().includes('/partner')) {
@@ -1015,6 +1018,7 @@ async function openOhlqPowerBiReportWithSessionRetry(
   report: OhlqPowerBiReportConfig,
   runtime: OhlqDownloadRuntime,
   ohlqReportRedirectUrl: string,
+  partnerCredentials?: { password: string; username: string },
 ) {
   for (let attempt = 1; attempt <= OHLQ_REPORT_REDIRECT_ATTEMPTS; attempt += 1) {
     await gotoWithRetry(page, ohlqReportRedirectUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
@@ -1026,7 +1030,7 @@ async function openOhlqPowerBiReportWithSessionRetry(
     runtime.logger.log(
       `OHLQ OPS returned to login while opening ${report.fileSlug}; re-authenticating before retry ${attempt + 1}.`,
     );
-    await signInToOhlqPartner(page);
+    await signInToOhlqPartner(page, partnerCredentials);
   }
 
   throw new Error(`OHLQ OPS returned to login while opening ${report.fileSlug}; report redirect did not complete.`);
@@ -1044,7 +1048,7 @@ async function downloadOhlqPowerBiReportFromPage(
 
   logger.log(`Using report date ${reportDate.display} (${reportDate.iso}).`);
 
-  await openOhlqPowerBiReportWithSessionRetry(page, report, runtime, ohlqReportRedirectUrl);
+  await openOhlqPowerBiReportWithSessionRetry(page, report, runtime, ohlqReportRedirectUrl, runtime.partnerCredentials);
 
   const frame = await waitForPowerBiReportFrame(page, report, debugDir, ohlqReportRedirectUrl);
   if (report.dateRange) {
@@ -1095,7 +1099,7 @@ async function downloadOhlqPowerBiReports(
   let activeReport: OhlqPowerBiReportConfig | undefined;
 
   try {
-    await signInToOhlqPartner(page);
+    await signInToOhlqPartner(page, options.partnerCredentials);
 
     const results: OhlqAnnualSalesDownloadResult[] = [];
     for (const report of reports) {
@@ -1131,10 +1135,11 @@ async function downloadOhlqPartnerMasterFromPage(
     filename: (reportDate: string) => string;
     heading: RegExp;
   },
+  partnerCredentials?: { password: string; username: string },
 ) {
   await gotoWithRetry(page, OHLQ_ACCOUNT_MASTER_FEED_URL, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   if (isOhlqOpsLoginUrl(page.url())) {
-    await signInToOhlqPartner(page);
+    await signInToOhlqPartner(page, partnerCredentials);
     await gotoWithRetry(page, OHLQ_ACCOUNT_MASTER_FEED_URL, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   }
 
@@ -1185,12 +1190,12 @@ export async function downloadOhlqAccountMaster(options: OhlqAnnualSalesDownload
   const runtime = createDownloadRuntime(options);
   const { browser, context, page } = await openBrowserPage(options);
   try {
-    await signInToOhlqPartner(page);
+    await signInToOhlqPartner(page, options.partnerCredentials);
     return await downloadOhlqPartnerMasterFromPage(page, runtime, {
       displayName: 'Account Master',
       filename: getOhlqAccountMasterFilename,
       heading: /^ACCOUNT MASTER DATA$/i,
-    });
+    }, options.partnerCredentials);
   } catch (error) {
     const screenshotPath = await saveDebugScreenshot(page, 'ohlq-account-master-error', runtime.debugDir);
     runtime.logger.error(`Debug screenshot: ${screenshotPath}`);
@@ -1204,12 +1209,12 @@ export async function downloadOhlqBrandMaster(options: OhlqAnnualSalesDownloadOp
   const runtime = createDownloadRuntime(options);
   const { browser, context, page } = await openBrowserPage(options);
   try {
-    await signInToOhlqPartner(page);
+    await signInToOhlqPartner(page, options.partnerCredentials);
     return await downloadOhlqPartnerMasterFromPage(page, runtime, {
       displayName: 'Brand Master',
       filename: getOhlqBrandMasterFilename,
       heading: /^BRAND MASTER DATA$/i,
-    });
+    }, options.partnerCredentials);
   } catch (error) {
     const screenshotPath = await saveDebugScreenshot(page, 'ohlq-brand-master-error', runtime.debugDir);
     runtime.logger.error(`Debug screenshot: ${screenshotPath}`);
@@ -1231,19 +1236,11 @@ export async function downloadOhlqAgencyInventoryReport(options: OhlqAnnualSales
   return downloadOhlqPowerBiReport(getOhlqAgencyInventoryReportConfig(), options);
 }
 
-export async function downloadOhlqAnnualSalesReports(options: OhlqAnnualSalesDownloadOptions = {}) {
-  const [annualSalesSummary, annualSalesSummaryByWholesale, agencyInventoryReport] = await downloadOhlqPowerBiReports(
-    [
-      OHLQ_ANNUAL_SALES_SUMMARY_REPORT,
-      OHLQ_ANNUAL_SALES_BY_WHOLESALE_REPORT,
-      getOhlqAgencyInventoryReportConfig(),
-    ],
+export async function downloadOhlqSharedSalesReports(options: OhlqAnnualSalesDownloadOptions = {}) {
+  const [annualSalesSummary, annualSalesSummaryByWholesale] = await downloadOhlqPowerBiReports(
+    [OHLQ_ANNUAL_SALES_SUMMARY_REPORT, OHLQ_ANNUAL_SALES_BY_WHOLESALE_REPORT],
     options,
   );
-
-  if (!annualSalesSummary || !annualSalesSummaryByWholesale || !agencyInventoryReport) {
-    throw new Error('Unable to download all required OHLQ reports.');
-  }
-
-  return { agencyInventoryReport, annualSalesSummary, annualSalesSummaryByWholesale };
+  if (!annualSalesSummary || !annualSalesSummaryByWholesale) throw new Error('Unable to download both shared OHLQ sales reports.');
+  return { annualSalesSummary, annualSalesSummaryByWholesale };
 }

@@ -152,6 +152,7 @@ type InventoryRecord = Record<string, unknown> & {
 };
 
 function createInventoryDb() {
+  const organizationId = 'org_echo_spirits';
   const current = new Map<string, InventoryRecord>();
   const snapshots = new Map<string, InventoryRecord>();
   const key = (record: { agencyNumber: string; itemCode: string }) => `${record.agencyNumber}:${record.itemCode}`;
@@ -189,12 +190,15 @@ function createInventoryDb() {
     agency: {
       findMany: async () => [{ agencyId: '10509', id: 'agency-10509' }],
     },
+    organization: {
+      findUnique: async () => ({ appName: 'Neat', digestName: 'Neat', displayName: 'Echo Spirits', id: organizationId, productLabel: 'Echo Spirits', productPluralLabel: 'Echo Spirits products', products: [], vendorIdentifiers: [{ vendorId: 'Z90399001' }] }),
+    },
     ohlqAgencyInventoryCurrent: {
       findMany: async () => Array.from(current.values()).map(({ agencyNumber, itemCode }) => ({ agencyNumber, itemCode })),
     },
   } as unknown as PrismaClient;
 
-  return { current, db, snapshots };
+  return { current, db, organizationId, snapshots };
 }
 
 describe('importOhlqAgencyInventoryCsv', () => {
@@ -205,6 +209,7 @@ describe('importOhlqAgencyInventoryCsv', () => {
       csv: firstCsv,
       db: state.db,
       minimumQualifyingRows: 1,
+      organizationId: state.organizationId,
       reportDate: '2026-08-18',
     });
     assert.equal(first.diagnostics.currentRecordsInserted, 2);
@@ -216,6 +221,7 @@ describe('importOhlqAgencyInventoryCsv', () => {
       csv: firstCsv,
       db: state.db,
       minimumQualifyingRows: 1,
+      organizationId: state.organizationId,
       reportDate: '2026-08-18',
     });
     assert.equal(repeated.diagnostics.currentRecordsInserted, 0);
@@ -227,6 +233,7 @@ describe('importOhlqAgencyInventoryCsv', () => {
       csv: tomorrowCsv,
       db: state.db,
       minimumQualifyingRows: 1,
+      organizationId: state.organizationId,
       reportDate: '2026-08-19',
     });
     assert.equal(state.snapshots.size, 4);
@@ -240,6 +247,7 @@ describe('importOhlqAgencyInventoryCsv', () => {
       csv: [header, row()].join('\n'),
       db: state.db,
       minimumQualifyingRows: 1,
+      organizationId: state.organizationId,
       reportDate: '2026-08-18',
     });
     const before = Array.from(state.current.entries());
@@ -249,6 +257,7 @@ describe('importOhlqAgencyInventoryCsv', () => {
         csv: header,
         db: state.db,
         minimumQualifyingRows: 1,
+        organizationId: state.organizationId,
         reportDate: '2026-08-19',
       }),
       /no data rows/i,
