@@ -64,4 +64,3 @@ test('platform admins are not selected when Echo is ineligible for weekly digest
   });
   assert.equal((await sendWeeklyDigestForAllUsers()).attempted, 0);
 });
-
