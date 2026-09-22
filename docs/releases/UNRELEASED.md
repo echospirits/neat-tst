@@ -25,7 +25,7 @@ This manifest is the repository-backed record of work in TST that may be include
 ### All-feature staging entitlements
 
 - Description: Every tenant in APP_ENV=test receives all registered capabilities, including pilots. Organization and role authorization still applies; production package defaults are unchanged. New tenant creation, plan saves, and staging seed retain this policy.
-- Relevant commit(s): Commit titled `Enable all registered features for staging tenants`.
+- Relevant commit(s): `a65695f4`.
 - Feature flag: All registered organization features, test environment only.
 - Default flag state: Enabled in test; existing defaults in production.
 - Migration(s): None.
@@ -36,10 +36,10 @@ This manifest is the repository-backed record of work in TST that may be include
 
 ### Account Sales Status / Pipeline
 
-- Description: Adds tenant-owned Agency and Wholesale Sales Status, immutable status history, inline account and Log Visit updates, objective Buying State, deterministic Needs Attention rules, imported-sales transitions to Purchasing, account activity events, and a lightweight responsive Pipeline page. This remains independent of Intelligence Opportunities.
+- Description: Adds tenant-owned Agency and Wholesale Sales Status, immutable status history, inline account and Log Visit updates, objective Buying State, deterministic Needs Attention rules, imported-sales transitions to Purchasing, account activity events, and a lightweight responsive Pipeline page. Follow-up adds shared color-coded stage arrows on account/Pipeline pages and a Kanban board alongside the existing List view, preserving status filters. Nurture/Lost remain separate from forward progression. This remains independent of Intelligence Opportunities.
 - Relevant commit(s): `67c61f44`.
 - Feature flag: `ACCOUNT_SALES_STATUS`.
-- Default flag state: Disabled; enabled for Echo Spirits through the organization entitlement migration/bootstrap mechanism.
+- Default flag state: Disabled in production by default; enabled for Echo Spirits through the organization entitlement migration/bootstrap mechanism. All test-environment tenants are enabled under the staging entitlement policy above.
 - Migration(s): `prisma/migrations/20260922120000_account_sales_status/migration.sql`.
 - Environment/config: None.
 - User-visible: Yes.

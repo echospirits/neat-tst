@@ -4,6 +4,7 @@ import { BUYING_STATE_LABELS, SALES_STATUS_LABELS, SALES_STATUS_OPTIONS, type Bu
 import { formatEasternDate } from '../../lib/dateTime';
 import { updateAccountSalesStatus } from '../account-sales-status/actions';
 import { SubmitButton } from './SubmitButton';
+import { SalesStatusJourney } from './SalesStatusJourney';
 
 const DAY = 86_400_000;
 const timeInStatus = (updatedAt: Date | null) => {
@@ -32,7 +33,9 @@ export function AccountSalesStatusPanel({
   statusIsExplicit: boolean;
   statusUpdatedAt: Date | null;
 }) {
-  return <section className="account-sales-status-bar" aria-label="Account sales status">
+  return <section className="account-sales-status-section" aria-label="Account sales status">
+    <SalesStatusJourney currentStatus={status} />
+    <div className="account-sales-status-bar">
     <div className="account-sales-status-current">
       <span><small>Sales Status</small><strong>{SALES_STATUS_LABELS[status]}</strong></span>
       <span><small>Buying State</small><strong>{BUYING_STATE_LABELS[buyingState]}</strong></span>
@@ -48,5 +51,6 @@ export function AccountSalesStatusPanel({
       </select>
       <SubmitButton className="compact-btn" pendingLabel="Saving…">Save</SubmitButton>
     </form>
+    </div>
   </section>;
 }
