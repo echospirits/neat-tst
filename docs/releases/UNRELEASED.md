@@ -57,3 +57,15 @@ This manifest is the repository-backed record of work in TST that may be include
 - User-visible: Yes; administrators can see the version in Environment diagnostics.
 - Production readiness: Not reviewed; this task publishes to TST only.
 - Rollout notes: No application feature changes or production promotion are included. Production must use a separate release task.
+
+### Consistent compact sidebar
+
+- Description: Uses four matching, always-visible navigation sections with consistent typography and title casing; removes nested administration headings and compacts the account footer. Full platform-admin navigation fits 1366 x 768 and 1440 x 900 without scrolling; mobile retains touch-sized links.
+- Relevant commit(s): Commit titled `Standardize and compact sidebar navigation`.
+- Feature flag: None; existing role and feature visibility preserved.
+- Default flag state: N/A.
+- Migration(s): None.
+- Environment/config: None.
+- User-visible: Yes.
+- Production readiness: Navigation tests (9), typecheck, and rendered-component desktop/mobile checks passed; separate production release review required.
+- Rollout notes: TST only. Scrolling remains available for unusually short windows or enlarged text.

@@ -65,31 +65,13 @@ function NavGroupLinks({ group, pathname }: { group: NavGroup; pathname: string 
 
 function AdministrationMenu({ enabledFeatures, hasOrganizationAdminAccess, isPlatformAdmin, pathname }: { enabledFeatures: string[]; hasOrganizationAdminAccess: boolean; isPlatformAdmin: boolean; pathname: string }) {
   const groups = getAdministrationNavigationGroups(enabledFeatures, isPlatformAdmin, hasOrganizationAdminAccess);
-  const isActive = groups.some((group) => group.items.some((item) => isActivePath(pathname, item)));
-
-  return <details className={`app-nav-disclosure${isActive ? ' is-active' : ''}`} open={isActive || undefined}>
-    <summary><span>Administration</span><span aria-hidden="true" className="app-nav-disclosure-arrow">›</span></summary>
-    <div className="app-admin-menu">
-      <div className="app-admin-menu-groups">
-        {groups.map((group) => <section className="app-admin-menu-group" key={group.label}>
-          <p className="app-nav-label">{group.label}</p>
-          {group.items.map((item) => <NavLink item={item} key={item.href} pathname={pathname} />)}
-        </section>)}
-      </div>
-    </div>
-  </details>;
+  return <NavGroupLinks group={{ label: 'Administration', items: groups.flatMap((group) => group.items) }} pathname={pathname} />;
 }
 
 function IntelligenceMenu({ enabledFeatures, isAdmin, isPlatformAdmin, pathname }: { enabledFeatures: string[]; isAdmin: boolean; isPlatformAdmin: boolean; pathname: string }) {
   const items = getIntelligenceNavigationItems(enabledFeatures, isAdmin, isPlatformAdmin);
   if (!items.length) return null;
-  const isActive = items.some((item) => isActivePath(pathname, item));
-  return <details className={`app-nav-disclosure app-intelligence-menu${isActive ? ' is-active' : ''}`} open key={pathname}>
-    <summary><span>Intelligence</span><span aria-hidden="true" className="app-nav-disclosure-arrow">›</span></summary>
-    <div className="app-intelligence-links">
-      {items.map((item) => <NavLink item={item} key={item.href} pathname={pathname} />)}
-    </div>
-  </details>;
+  return <NavGroupLinks group={{ label: 'Intelligence', items }} pathname={pathname} />;
 }
 
 export function AppSidebarNavigation({ enabledFeatures, isAdmin, isPlatformAdmin, isTaster }: { enabledFeatures: string[]; isAdmin: boolean; isPlatformAdmin: boolean; isTaster: boolean }) {
@@ -119,7 +101,7 @@ export function AppSidebarNavigation({ enabledFeatures, isAdmin, isPlatformAdmin
         Log Visit
       </Link>
 
-      <NavGroupLinks group={{ label: 'My work', items: workItems }} pathname={pathname} />
+      <NavGroupLinks group={{ label: 'My Work', items: workItems }} pathname={pathname} />
       <NavGroupLinks group={{ label: 'Accounts', items: accountItems }} pathname={pathname} />
       <IntelligenceMenu enabledFeatures={enabledFeatures} isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} pathname={pathname} />
       {!isAdmin && !isPlatformAdmin ? <NavLink item={{ href: '/admin/data-status', key: 'data-health', label: 'Data Status', section: 'utility' }} pathname={pathname} /> : null}
