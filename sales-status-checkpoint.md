@@ -39,7 +39,7 @@
 
 ## Remaining work
 
-- Snapshot border polish: removed only `.pipeline-kanban-column` outer border. All disclosure/filter behavior and keyboard focus styling retained. Focused validation and TST push pending.
+- Snapshot border polish completed at `0e69b071`: removed only `.pipeline-kanban-column` outer border. All disclosure/filter behavior and keyboard focus styling retained. 8 focused tests passed; deployed mobile (390 x 844) and desktop (1440 x 900) review confirmed borderless groups, collapsed defaults, working toggles, and no mobile overflow.
 - Pipeline disclosure follow-up completed at `6de381a9` in `app/pipeline/page.tsx`, `SalesStatusJourney.tsx`, and `salesStatus.css`; regression coverage added to `tests/accountSalesStatus.test.ts`. Kanban default, initially collapsed native status groups, raised icon-bearing filters, and view-preserving clear filters. 8 focused tests, typecheck, build, and live 1440 x 900 / 390 x 844 review passed: 8 initially collapsed groups, pointer/Enter toggles, empty group message, filter persistence, List clear-filter recovery, 56px mobile headers, and no horizontal overflow. Deployment Ready; no account data mutated.
 - No feature work remains. Staging deployment Ready; health identifies `neon-neat-tst` / `test`.
 - Existing unrelated `20260917120000_agency_store_context` migration-history discrepancy remains documented, not modified. No production promotion or numbered release bump.
