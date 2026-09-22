@@ -71,3 +71,15 @@ This manifest is the repository-backed record of work in TST that may be include
 - User-visible: Yes.
 - Production readiness: Navigation tests (9), typecheck, and rendered-component desktop/mobile checks passed; separate production release review required.
 - Rollout notes: TST only. Scrolling remains available for unusually short windows or enlarged text.
+
+### Direct account address and phone links
+
+- Description: Removes the Contact dropdown from Wholesale and Agency detail pages. Addresses link directly to maps in detail pages and directories; displayed account phone numbers link to the calling app. Links have visible underlines and 44px touch targets, with explicit unavailable text for missing values.
+- Relevant commit(s): Commit titled `Make account addresses and phone numbers directly actionable`.
+- Feature flag: None.
+- Default flag state: N/A.
+- Migration(s): None.
+- Environment/config: None.
+- User-visible: Yes.
+- Production readiness: Typecheck and rendered-component checks at 390 x 844 and 1440 x 900 passed, including missing values, link destinations, touch target height, and no horizontal overflow. Native app handoff requires physical-device verification; separate production release review required.
+- Rollout notes: TST 0.13.0-dev only. Android uses its geo URI handler, Apple devices use Maps links, and other browsers retain web directions as a fallback. Device/browser settings determine the app that handles external links.

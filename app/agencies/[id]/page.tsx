@@ -1,3 +1,4 @@
+import { AddressLink, PhoneLink } from '../../components/AccountContactLinks';
 import { AnchoredDetails } from '../../components/AnchoredDetails';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -141,10 +142,8 @@ export default async function AgencyActivityPage({
         </div>
         <div className="page-heading-actions">
           <ContextualActions
-            address={[agency.address, agency.city, agency.state, agency.zip].filter(Boolean).join(', ')}
             context={{ accountName: agency.name, agencyId: agency.id, returnTo: `/agencies/${agency.id}`, sourceLabel: agency.name, sourceType: 'AGENCY_DETAIL' }}
             currentUserId={currentUser.id}
-            phone={agency.primaryContactPhone ?? agency.phone}
             users={actionUsers}
           />
           <details className="account-secondary-actions"><summary>More actions</summary><div>
@@ -182,7 +181,7 @@ export default async function AgencyActivityPage({
           <p><strong>Agency ID</strong><span>{agency.agencyId}</span></p>
           <p>
             <strong>Address</strong>
-            <span>{[agency.address, agency.city, agency.state, agency.zip].filter(Boolean).join(', ')}</span>
+            <AddressLink address={[agency.address, agency.city, agency.state, agency.zip].filter(Boolean).join(', ')} />
           </p>
           <p>
             <strong>Primary contact</strong>
@@ -190,11 +189,11 @@ export default async function AgencyActivityPage({
           </p>
           <p>
             <strong>Contact phone</strong>
-            <span>{agency.primaryContactPhone}</span>
+            <PhoneLink phone={agency.primaryContactPhone} />
           </p>
           <p>
             <strong>Agency phone</strong>
-            <span>{agency.phone}</span>
+            <PhoneLink phone={agency.phone} />
           </p>
         </div>
         <AccountTagPanel

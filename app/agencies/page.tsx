@@ -1,3 +1,4 @@
+import { AddressLink, PhoneLink } from '../components/AccountContactLinks';
 ﻿export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -242,7 +243,7 @@ export default async function AgenciesPage({
                     {agency.name}
                   </Link>
                   <span className="account-directory-mobile-only account-directory-location">
-                    {address || `Agency ${agency.agencyId}`}
+                    {address ? <AddressLink address={address} /> : `Agency ${agency.agencyId}`}
                   </span>
                   <span className="account-directory-mobile-only account-directory-context">
                     {stats.lastVisitAt ? `Last visit ${formatEasternDate(stats.lastVisitAt)}` : 'Not visited yet'}
@@ -250,11 +251,11 @@ export default async function AgenciesPage({
                   </span>
                 </td>
                 <td className="account-directory-secondary-cell" data-label="Agency ID">{agency.agencyId}</td>
-                <td className="account-directory-secondary-cell" data-label="Address">{agency.address}</td>
+                <td className="account-directory-secondary-cell" data-label="Address"><AddressLink address={address}>{agency.address}</AddressLink></td>
                 <td className="account-directory-secondary-cell" data-label="City">{agency.city}</td>
                 <td className="account-directory-secondary-cell" data-label="Primary Contact">{agency.primaryContact}</td>
-                <td className="account-directory-secondary-cell" data-label="Contact Phone">{agency.primaryContactPhone}</td>
-                <td className="account-directory-secondary-cell" data-label="Agency Phone">{agency.phone}</td>
+                <td className="account-directory-secondary-cell" data-label="Contact Phone"><PhoneLink phone={agency.primaryContactPhone} /></td>
+                <td className="account-directory-secondary-cell" data-label="Agency Phone"><PhoneLink phone={agency.phone} /></td>
                 <td className="account-directory-secondary-cell" data-label="Tags">
                   <TagBadges tags={agency.tags.map((assignment) => assignment.tag)} />
                 </td>

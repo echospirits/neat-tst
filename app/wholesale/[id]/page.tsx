@@ -1,3 +1,4 @@
+import { AddressLink, PhoneLink } from '../../components/AccountContactLinks';
 import { AnchoredDetails } from '../../components/AnchoredDetails';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -269,10 +270,8 @@ export default async function WholesaleActivityPage({
         <div className="page-heading-actions">
           {hasDirectWholesaleOrders ? <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/direct-order`}>Create order</Link> : null}
           <ContextualActions
-            address={[account.address, account.city, account.state, account.zip].filter(Boolean).join(', ')}
             context={{ accountName: account.name, returnTo: `/wholesale/${account.id}`, sourceLabel: account.name, sourceType: 'WHOLESALE_DETAIL', wholesaleAccountId: account.id }}
             currentUserId={user.id}
-            phone={account.phone}
             users={actionUsers}
           />
           <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/edit`}>Edit</Link>
@@ -314,7 +313,7 @@ export default async function WholesaleActivityPage({
           <p><strong>Licensee IDs</strong><span>{formatWholesaleLicenseeIds(account)}</span></p>
           <p>
             <strong>Address</strong>
-            <span>{[account.address, account.city, account.state, account.zip].filter(Boolean).join(', ')}</span>
+            <AddressLink address={[account.address, account.city, account.state, account.zip].filter(Boolean).join(', ')} />
           </p>
           <p>
             <strong>Agency ID</strong>
@@ -326,7 +325,7 @@ export default async function WholesaleActivityPage({
           </p>
           <p>
             <strong>Phone</strong>
-            <span>{account.phone}</span>
+            <PhoneLink phone={account.phone} />
           </p>
           <p>
             <strong>Delivery day</strong>

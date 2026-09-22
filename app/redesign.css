@@ -495,3 +495,13 @@ summary { cursor: pointer; min-height: 44px; padding-block: 10px; }
 }
 .mobile-more-menu .app-nav-group { margin: 0; padding: 0; gap: 0; }
 .mobile-more-menu .app-nav-link { font-family: inherit; font-size: 13px; font-weight: 500; min-height: 44px; }
+
+.account-contact-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

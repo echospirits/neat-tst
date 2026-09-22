@@ -1,3 +1,4 @@
+import { AddressLink } from '../components/AccountContactLinks';
 ﻿export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -635,7 +636,7 @@ export default async function WholesalePage({
                     {row.name}
                   </Link>
                   <span className="account-directory-mobile-only account-directory-location">
-                    {row.locationText || (row.licenseeIdsText ? `Licensee ${row.licenseeIdsText}` : 'Location unavailable')}
+                    {row.locationText ? <AddressLink address={row.locationText} /> : (row.licenseeIdsText ? `Licensee ${row.licenseeIdsText}` : 'Location unavailable')}
                   </span>
                   <span className="account-directory-mobile-only account-directory-context">
                     {row.opportunityPriority ? <span className={`priority priority-${row.opportunityPriority.toLowerCase()}`}>{row.opportunityPriority}</span> : null}
@@ -643,7 +644,7 @@ export default async function WholesalePage({
                   </span>
                 </td>
                 <td className="account-directory-secondary-cell" data-label="Licensee IDs">{row.licenseeIdsText}</td>
-                <td className="account-directory-secondary-cell" data-label="Address">{row.address}</td>
+                <td className="account-directory-secondary-cell" data-label="Address"><AddressLink address={row.locationText}>{row.address}</AddressLink></td>
                 <td className="account-directory-secondary-cell" data-label="City">{row.city}</td>
                 <td className="account-directory-secondary-cell" data-label="Agency ID">{row.agencyId}</td>
                 <td className="account-directory-secondary-cell" data-label="Most Recent Visit">{formatEasternDate(row.mostRecentVisit)}</td>
