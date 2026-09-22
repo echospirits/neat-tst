@@ -14,6 +14,29 @@ enum AccountType {
   OTHER
 }
 
+enum SalesAccountType {
+  AGENCY
+  WHOLESALE
+}
+
+enum AccountSalesStatus {
+  TARGET
+  CONTACTED
+  ENGAGED
+  INTERESTED
+  WAITING_ON_ORDER
+  PURCHASING
+  NURTURE
+  LOST
+}
+
+enum AccountSalesStatusSource {
+  USER
+  VISIT
+  SALES_DATA
+  SYSTEM
+}
+
 enum AlertStatus {
   OPEN
   SNOOZED
@@ -460,6 +483,7 @@ model Organization {
   products              OrganizationProduct[]
   features              OrganizationFeature[]
   accountOverlays       OrganizationAccountOverlay[]
+  salesStatusHistory    AccountSalesStatusHistory[]
   auditEvents           OrganizationAuditEvent[]
   provisioningRuns      OrganizationProvisioningRun[]
   weeklyDigestLogs      WeeklyDigestLog[]
@@ -630,28 +654,53 @@ model OrganizationFeature {
 }
 
 model OrganizationAccountOverlay {
-  id                    String       @id @default(cuid())
+  id                    String              @id @default(cuid())
   organizationId        String
   accountType           String
   externalAccountId     String
-  active                Boolean      @default(true)
+  active                Boolean             @default(true)
   targetStatus          String?
   assignedUserId        String?
+  salesStatus           AccountSalesStatus?
+  salesStatusUpdatedAt  DateTime?
+  salesStatusUpdatedBy  String?
   priority              String?
   notes                 String?
   customName            String?
-  tags                  Json         @default("[]")
+  tags                  Json                @default("[]")
   relationshipStatus    String?
-  opportunitySuppressed Boolean      @default(false)
+  opportunitySuppressed Boolean             @default(false)
   strategy              String?
   storeContext          Json?
-  createdAt             DateTime     @default(now())
-  updatedAt             DateTime     @updatedAt
-  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  organization          Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, accountType, externalAccountId])
   @@index([organizationId, active])
   @@index([assignedUserId])
+  @@index([organizationId, salesStatus])
+}
+
+model AccountSalesStatusHistory {
+  id                String                   @id @default(cuid())
+  organizationId    String
+  accountType       SalesAccountType
+  externalAccountId String
+  previousStatus    AccountSalesStatus?
+  newStatus         AccountSalesStatus
+  changedAt         DateTime                 @default(now())
+  changedByUserId   String?
+  source            AccountSalesStatusSource
+  loggedVisitId     String?
+  context           String?
+  purchaseSourceKey String?
+  organization      Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, purchaseSourceKey])
+  @@index([organizationId, accountType, externalAccountId, changedAt])
+  @@index([organizationId, newStatus, changedAt])
+  @@index([loggedVisitId])
 }
 
 model OrganizationAuditEvent {
@@ -2124,27 +2173,27 @@ model AgencyIntelligenceEvent {
 }
 
 model AgencyMarketProfile {
-  id                     String                 @id @default(cuid())
-  organizationId         String
-  agencyId               String
-  asOfDate               DateTime               @db.Date
-  observedSince          DateTime?              @db.Date
-  observedDayCount       Int                    @default(0)
+  id                       String                 @id @default(cuid())
+  organizationId           String
+  agencyId                 String
+  asOfDate                 DateTime               @db.Date
+  observedSince            DateTime?              @db.Date
+  observedDayCount         Int                    @default(0)
   totalRetailEqBottles     Float                  @default(0)
   tenantRetailEqBottles    Float                  @default(0)
   nonTenantRetailEqBottles Float                  @default(0)
-  categoryMix            Json                   @default("{}")
-  priceCoverage          Float                  @default(0)
-  medianPrice750         Float?
+  categoryMix              Json                   @default("{}")
+  priceCoverage            Float                  @default(0)
+  medianPrice750           Float?
   localRetailEqBottles     Float                  @default(0)
-  localShare             Float                  @default(0)
-  confidence             AgencyMarketConfidence
-  signalSnapshot         Json
-  scoringVersion         String
-  createdAt              DateTime               @default(now())
-  updatedAt              DateTime               @updatedAt
-  agency                 Agency                 @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  organization           Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  localShare               Float                  @default(0)
+  confidence               AgencyMarketConfidence
+  signalSnapshot           Json
+  scoringVersion           String
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  agency                   Agency                 @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  organization             Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, agencyId])
   @@index([organizationId, confidence])

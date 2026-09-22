@@ -17,7 +17,8 @@ import {
 import { createVisit } from '../actions';
 import { LogVisitForm } from '../LogVisitForm';
 import { TasterVisitForm } from '../TasterVisitForm';
-import { requireOrganizationContext } from '../../../lib/organizations';
+import { getOrganizationFeatures, requireOrganizationContext } from '../../../lib/organizations';
+import { VISIT_SALES_STATUS_OPTIONS } from '../../../lib/accountSalesStatus';
 
 export const metadata = buildPageMetadata('Log Visit');
 
@@ -61,6 +62,7 @@ export default async function NewVisitPage({
 }) {
   const [params, user] = await Promise.all([(await searchParams) ?? {}, requireUser({ allowTaster: true })]);
   const { organizationId } = await requireOrganizationContext(user);
+  const enabledFeatures = await getOrganizationFeatures(organizationId);
 
   if (user.role === UserRole.TASTER) {
     const agencies = await getAgenciesForVisitPicker({ take: 8, organizationId });
@@ -179,6 +181,7 @@ export default async function NewVisitPage({
             returnTo: params.returnTo?.startsWith('/') && !params.returnTo.startsWith('//') ? params.returnTo : null,
           }}
           tags={tags}
+          salesStatusOptions={enabledFeatures.has('ACCOUNT_SALES_STATUS') ? VISIT_SALES_STATUS_OPTIONS.map((option) => ({ ...option })) : []}
           users={activeUsers.map((activeUser) => ({ id: activeUser.id, name: getUserDisplayName(activeUser) }))}
           wholesaleAccounts={wholesaleAccounts}
           worklistItemId={params.worklistItemId}

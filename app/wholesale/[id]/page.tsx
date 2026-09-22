@@ -27,6 +27,9 @@ import { formatOrderCurrency } from '../../wholesale-orders/orderPresentation';
 import { AccountMemoryPanel } from '../../account-memory/AccountMemoryPanel';
 import { getCommunicationTitle } from '../../../lib/accountMemory';
 import { readBusinessHours } from '../../../lib/accountResearchQueue';
+import { SalesAccountType } from '@prisma/client';
+import { getAccountSalesStatusSummary, SALES_STATUS_LABELS } from '../../../lib/accountSalesStatus';
+import { AccountSalesStatusPanel } from '../../components/AccountSalesStatusPanel';
 
 const formatVisitDate = (date: Date | null | undefined) => formatEasternDate(date) || 'No visits yet';
 const getMergedWholesaleAccountIds = async (accountId: string) => {
@@ -87,6 +90,7 @@ export default async function WholesaleActivityPage({
   const enabledFeatures = await getOrganizationFeatures(organizationId);
   const hasWholesaleOpportunities = enabledFeatures.has('WHOLESALE_OPPORTUNITIES');
   const hasDirectWholesaleOrders = enabledFeatures.has('OHIO_DIRECT_WHOLESALE_ORDERS');
+  const hasAccountSalesStatus = enabledFeatures.has('ACCOUNT_SALES_STATUS');
   const tenantConfig = await getOrganizationTenantConfig(organizationId);
   const { id } = await params;
   const query = (await searchParams) ?? {};
@@ -248,6 +252,11 @@ export default async function WholesaleActivityPage({
   const latestVisitAt = visits[0]?.visitAt;
   const actionUsers = users.filter((activeUser) => activeUser.isActive && activeUser.role !== UserRole.TASTER).map((activeUser) => ({ id: activeUser.id, name: getUserDisplayName(activeUser) }));
   const businessHours = readBusinessHours(account.targetPublicResearch?.identitySnapshot);
+  const [salesStatusSummary, salesStatusHistory] = hasAccountSalesStatus ? await Promise.all([
+    getAccountSalesStatusSummary({ accountType: SalesAccountType.WHOLESALE, externalAccountId: id, organizationId }),
+    prisma.accountSalesStatusHistory.findMany({ where: { organizationId, accountType: SalesAccountType.WHOLESALE, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 }),
+  ]) : [null, []];
+  const userNames = new Map(users.map((entry) => [entry.id, getUserDisplayName(entry)]));
 
   return (
     <>
@@ -275,6 +284,7 @@ export default async function WholesaleActivityPage({
           </div></details>
         </div>
       </header>
+      {salesStatusSummary ? <AccountSalesStatusPanel accountType={SalesAccountType.WHOLESALE} externalAccountId={id} returnTo={`/wholesale/${id}`} {...salesStatusSummary} /> : null}
       {query.status ? <p className="toast-notice" role="status">{statusMessages[query.status] ?? query.status}</p> : null}
       {query.tagStatus ? <p className="pill">{tagStatusMessages[query.tagStatus] ?? query.tagStatus}</p> : null}
       {query.memoryStatus ? <p className="toast-notice" role="status">{query.memoryStatus === 'notes-saved' ? 'Account notes saved.' : query.memoryStatus === 'contact-saved' ? 'Contact saved.' : 'Unable to save that account information.'}</p> : null}
@@ -370,7 +380,7 @@ export default async function WholesaleActivityPage({
       <section className="dashboard-section account-workspace-section" id="activity">
         <div className="section-heading">
           <h2>Activity</h2>
-          <span className="pill">{visits.length + filedOrders.length + communicationActivities.length}</span>
+          <span className="pill">{visits.length + filedOrders.length + communicationActivities.length + salesStatusHistory.length}</span>
         </div>
         <VisitActivityTable contactMap={contactMap} visits={visits} supplementalEvents={filedOrders.map((order) => ({
           actor: order.filedSource === WholesaleOrderFiledSource.MANUAL ? order.filedBy?.displayName : 'OHLQ sales match',
@@ -384,6 +394,13 @@ export default async function WholesaleActivityPage({
           detail: getCommunicationTitle(activity.activityType, activity.contact.name), id: activity.id,
           href: '',
           title: activity.activityType === 'EMAIL_INITIATED' ? 'Email initiated' : 'Call initiated',
+        }))).concat(salesStatusHistory.map((event) => ({
+          actor: event.changedByUserId ? userNames.get(event.changedByUserId) ?? 'Former team member' : 'Neat',
+          at: event.changedAt,
+          detail: event.previousStatus ? `${SALES_STATUS_LABELS[event.previousStatus]} → ${SALES_STATUS_LABELS[event.newStatus]}` : `Set to ${SALES_STATUS_LABELS[event.newStatus]}`,
+          id: `sales-status-${event.id}`,
+          href: '',
+          title: event.source === 'SALES_DATA' ? 'Purchase detected' : 'Sales status changed',
         })))} />
       </section>
     </>

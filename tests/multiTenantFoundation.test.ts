@@ -17,11 +17,11 @@ test('feature registry has stable unique keys and explicit dependency metadata',
 test('feature packages keep Core mandatory and group every intelligence capability', () => {
   assert.deepEqual(DEFAULT_FEATURE_KEYS, CORE_PACKAGE_FEATURE_KEYS);
   assert.deepEqual(INTELLIGENCE_PACKAGE_FEATURE_KEYS, ['AGENCY_INTELLIGENCE', 'WHOLESALE_OPPORTUNITIES', 'ADVANCED_INTELLIGENCE']);
-  assert.deepEqual(OPTIONAL_FEATURE_KEYS, ['OHIO_DIRECT_WHOLESALE_ORDERS', 'ANALYTICS']);
+  assert.deepEqual(OPTIONAL_FEATURE_KEYS, ['OHIO_DIRECT_WHOLESALE_ORDERS', 'ANALYTICS', 'ACCOUNT_SALES_STATUS']);
   assert.deepEqual(getPackageFeatureKeys(false), CORE_PACKAGE_FEATURE_KEYS);
-  assert.deepEqual(getPackageFeatureKeys(true), FEATURE_KEYS.filter((key) => key !== 'OHIO_DIRECT_WHOLESALE_ORDERS' && key !== 'ANALYTICS'));
-  assert.deepEqual(getPackageFeatureKeys(true, true), FEATURE_KEYS.filter((key) => key !== 'ANALYTICS'));
-  assert.deepEqual(getPackageFeatureKeys(true, true, true), FEATURE_KEYS);
+  assert.deepEqual(getPackageFeatureKeys(true), FEATURE_KEYS.filter((key) => key !== 'OHIO_DIRECT_WHOLESALE_ORDERS' && key !== 'ANALYTICS' && key !== 'ACCOUNT_SALES_STATUS'));
+  assert.deepEqual(getPackageFeatureKeys(true, true), FEATURE_KEYS.filter((key) => key !== 'ANALYTICS' && key !== 'ACCOUNT_SALES_STATUS'));
+  assert.deepEqual(getPackageFeatureKeys(true, true, true), FEATURE_KEYS.filter((key) => key !== 'ACCOUNT_SALES_STATUS'));
   assert.equal(hasIntelligencePackage(['AGENCY_INTELLIGENCE']), true);
   assert.equal(hasIntelligencePackage(CORE_PACKAGE_FEATURE_KEYS), false);
 });
@@ -56,7 +56,7 @@ test('Analytics is an independent opt-in pilot with no automatic tenant grants',
   }
   for (const path of ['app/platform/organizations/new/page.tsx', 'app/platform/organizations/[id]/page.tsx']) {
     const source = readFileSync(path, 'utf8');
-    assert.match(source, /getPackageFeatureKeys\(intelligenceEnabled, directWholesaleOrdersEnabled, analyticsEnabled\)/);
+    assert.match(source, /getPackageFeatureKeys\(intelligenceEnabled, directWholesaleOrdersEnabled, analyticsEnabled, accountSalesStatusEnabled\)/);
     assert.match(source, /name="analytics" type="checkbox"/);
   }
 });

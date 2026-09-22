@@ -4,13 +4,15 @@ import { prisma } from './prisma';
 import { getOrganizationTenantConfig, matchesTenantProduct } from './tenantConfig';
 import { catalogLiters, compareWithBuyers, toAffinityProduct, type BuyerBasket } from './opportunityAffinity';
 import { learnedAdjustment, labelMatureOutcome, outcomeSegment, trainOutcomeModel, type OutcomeExample } from './opportunityLearning';
-import { buildDailyPurchaseEvents } from './opportunitySalesLedger';
 import { getDistilleryOnlyItemCodes, isOpportunityEligibleOhlqProduct } from './ohlqProductEligibility';
 import { normalizeOpportunityCategory, OPPORTUNITY_RANKING_VERSION, OPPORTUNITY_RULES_VERSION, OPPORTUNITY_SIGNAL_VERSION, opportunityRules } from './opportunityConfig';
 import { detectOpportunityHypotheses, noCurrentOpportunityRank, presentOpportunityHypothesis, RESEARCH_FIT_VERSION, RuleBasedOpportunityRanker, selectPrimaryOpportunity, type AccountOpportunitySignals } from './opportunityIntelligence';
 import { isDismissedOpportunityMatch } from './opportunityWorkflow';
 import { hasResearchIdentityChanged, readPublicRatings, readResearchEvidence } from './accountResearchQueue';
 import { isOutsideOhio, isOhioAccount } from './usStates';
+import { captureWholesaleSalesEvents } from './accountSalesEvents';
+import { buildDailyPurchaseEvents } from './opportunitySalesLedger';
+export { captureWholesaleSalesEvents } from './accountSalesEvents';
 
 const DAY = 86400000;
 const dateOnly = (date: Date) => date.toISOString().slice(0, 10);
@@ -21,20 +23,6 @@ const stringList = (value: unknown) => Array.isArray(value) ? value.map(String).
 const activeOpportunityStatuses = [OpportunityStatus.OPEN, OpportunityStatus.ACTIONED, OpportunityStatus.SNOOZED];
 const scoreOnlyOpportunityStatuses = [...activeOpportunityStatuses, OpportunityStatus.DISMISSED];
 const SCORE_ONLY_ACCOUNT_QUERY_BATCH_SIZE = 250;
-
-export async function captureWholesaleSalesEvents({ db = prisma, reportDate, organizationId }: { db?: PrismaClient; reportDate: Date; organizationId: string }) {
-  const config = await getOrganizationTenantConfig(organizationId, db);
-  config.productFilter.mode = 'item-list';
-  const [currentRows, accounts, masters] = await Promise.all([
-    db.ohlqAnnualSalesByWholesaleRow.findMany({ where: { reportDate } }),
-    db.wholesaleAccount.findMany({ where: { mergedIntoId: null, OR: [{ state: { in: ['OH', 'Ohio'], mode: 'insensitive' } }, { state: null }, { state: '' }] }, select: { id: true, licenseeId: true, licenseeIds: { select: { licenseeId: true } } } }),
-    db.ohlqBrandMasterItem.findMany({ select: { itemCode: true, name: true, category: true } }),
-  ]);
-  const data = buildDailyPurchaseEvents(currentRows, accounts, masters, config);
-  let created = 0;
-  for (let i = 0; i < data.length; i += 1000) created += (await db.accountSalesEvent.createMany({ skipDuplicates: true, data: data.slice(i, i + 1000) })).count;
-  return { created, skippedWithoutBaseline: false };
-}
 
 const eventKey = (type: OpportunityEventType, suffix: string) => `${type}:${suffix}`;
 

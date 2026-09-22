@@ -23,6 +23,9 @@ import { getCommunicationTitle } from '../../../lib/accountMemory';
 import { readStoreContext } from '../../../lib/agencyStoreContext';
 import { getAgencyMarketFitsForDisplay } from '../../../lib/agencyMarketIntelligenceService';
 import { AgencyRetailMarketIntelligence, AgencyStoreIntelligence, AgencyStoreSummary } from '../AgencyStoreIntelligence';
+import { SalesAccountType } from '@prisma/client';
+import { getAccountSalesStatusSummary, SALES_STATUS_LABELS } from '../../../lib/accountSalesStatus';
+import { AccountSalesStatusPanel } from '../../components/AccountSalesStatusPanel';
 
 const formatVisitDate = (date: Date | null | undefined) => formatEasternDate(date) || 'No visits yet';
 const tagStatusMessages: Record<string, string> = {
@@ -54,6 +57,7 @@ export default async function AgencyActivityPage({
   const enabledFeatures = await getOrganizationFeatures(organizationId);
   const hasAgencyIntelligence = enabledFeatures.has('AGENCY_INTELLIGENCE');
   const hasWholesaleOpportunities = enabledFeatures.has('WHOLESALE_OPPORTUNITIES');
+  const hasAccountSalesStatus = enabledFeatures.has('ACCOUNT_SALES_STATUS');
   const { id } = await params;
   const query = (await searchParams) ?? {};
 
@@ -115,6 +119,11 @@ export default async function AgencyActivityPage({
   ]);
   const storeContext = readStoreContext(overlay?.storeContext);
   const actionUsers = users.map((user) => ({ id: user.id, name: getUserDisplayName(user) }));
+  const [salesStatusSummary, salesStatusHistory] = hasAccountSalesStatus ? await Promise.all([
+    getAccountSalesStatusSummary({ accountType: SalesAccountType.AGENCY, externalAccountId: id, organizationId }),
+    prisma.accountSalesStatusHistory.findMany({ where: { organizationId, accountType: SalesAccountType.AGENCY, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 }),
+  ]) : [null, []];
+  const userNames = new Map(users.map((entry) => [entry.id, getUserDisplayName(entry)]));
 
   const contacts = await prisma.locationContact.findMany({
     where: { organizationId, id: { in: visits.map((visit) => visit.contactId).filter(Boolean) as string[] } },
@@ -143,6 +152,7 @@ export default async function AgencyActivityPage({
           </div></details>
         </div>
       </header>
+      {salesStatusSummary ? <AccountSalesStatusPanel accountType={SalesAccountType.AGENCY} externalAccountId={id} returnTo={`/agencies/${id}`} {...salesStatusSummary} /> : null}
       {hasAgencyIntelligence ? <AgencyStoreSummary context={storeContext} market={marketProfile} d8Permit={agency.d8Permit} county={agency.county} /> : null}
       {query.status ? <p className="toast-notice" role="status">{statusMessages[query.status] ?? query.status}</p> : null}
       {query.tagStatus ? <p className="pill">{tagStatusMessages[query.tagStatus] ?? query.tagStatus}</p> : null}
@@ -208,7 +218,7 @@ export default async function AgencyActivityPage({
       <section className="dashboard-section account-workspace-section" id="activity">
         <div className="section-heading">
           <h2>Activity</h2>
-          <span className="pill">{visits.length + communicationActivities.length}</span>
+          <span className="pill">{visits.length + communicationActivities.length + salesStatusHistory.length}</span>
         </div>
         <VisitActivityTable contactMap={contactMap} visits={visits} supplementalEvents={communicationActivities.map((activity) => ({
           actor: getUserDisplayName(activity.createdByUser),
@@ -216,7 +226,13 @@ export default async function AgencyActivityPage({
           detail: getCommunicationTitle(activity.activityType, activity.contact.name),
           id: activity.id,
           title: activity.activityType === 'EMAIL_INITIATED' ? 'Email initiated' : 'Call initiated',
-        }))} />
+        })).concat(salesStatusHistory.map((event) => ({
+          actor: event.changedByUserId ? userNames.get(event.changedByUserId) ?? 'Former team member' : 'Neat',
+          at: event.changedAt,
+          detail: event.previousStatus ? `${SALES_STATUS_LABELS[event.previousStatus]} → ${SALES_STATUS_LABELS[event.newStatus]}` : `Set to ${SALES_STATUS_LABELS[event.newStatus]}`,
+          id: `sales-status-${event.id}`,
+          title: event.source === 'SALES_DATA' ? 'Purchase detected' : 'Sales status changed',
+        })))} />
       </section>
       {hasAgencyIntelligence ? <AnchoredDetails className="account-overview-details account-workspace-section agency-retail-intelligence" id="intelligence" initialOpen summary="Retail Intelligence">
         <div className="retail-intelligence-content">
