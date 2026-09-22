@@ -89,7 +89,7 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
     </nav>
 
     {view === 'board' ? <section className="dashboard-section" aria-label="Accounts by sales status">
-      <div className="section-heading"><div><span className="page-eyebrow">Pipeline snapshot</span><h2>Accounts by status</h2><p className="muted">Open an account to update its status or log a visit.</p></div><span className="pill">{rows.length} accounts</span></div>
+      <div className="section-heading"><div><span className="page-eyebrow">Pipeline snapshot</span><h2>Accounts by status</h2><p className="muted">Open an account to update its status or log a visit.</p></div><span className="pill">{rows.length} account{rows.length === 1 ? '' : 's'}</span></div>
       <div className="pipeline-kanban">
         {SALES_STATUS_OPTIONS.filter((option) => !selectedStatus || selectedStatus === option.value).map((option) => {
           const stageRows = rows.filter((row) => row.salesStatus === option.value);

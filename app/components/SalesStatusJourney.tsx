@@ -14,7 +14,7 @@ export function SalesStatusJourney({ currentStatus, counts, filterHref }: Props)
   const stage = (option: typeof SALES_STATUS_OPTIONS[number], index?: number) => {
     const current = currentStatus === option.value;
     const content = <>
-      <span className="sales-journey-caption">{counts ? `${counts[option.value] ?? 0} accounts` : index === undefined ? 'Other status' : `Stage ${index + 1}`}</span>
+      <span className="sales-journey-caption">{counts ? `${counts[option.value] ?? 0} account${counts[option.value] === 1 ? '' : 's'}` : index === undefined ? 'Other status' : `Stage ${index + 1}`}</span>
       <strong>{option.label}</strong>
       {current ? <span className="sales-journey-current">{filterHref ? 'Selected' : 'Current status'}</span> : null}
     </>;

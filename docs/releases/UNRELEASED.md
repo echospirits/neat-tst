@@ -37,13 +37,13 @@ This manifest is the repository-backed record of work in TST that may be include
 ### Account Sales Status / Pipeline
 
 - Description: Adds tenant-owned Agency and Wholesale Sales Status, immutable status history, inline account and Log Visit updates, objective Buying State, deterministic Needs Attention rules, imported-sales transitions to Purchasing, account activity events, and a lightweight responsive Pipeline page. Follow-up adds shared color-coded stage arrows on account/Pipeline pages and a Kanban board alongside the existing List view, preserving status filters. Nurture/Lost remain separate from forward progression. This remains independent of Intelligence Opportunities.
-- Relevant commit(s): `67c61f44`.
+- Relevant commit(s): `67c61f44` (pilot), `8fca96ff` (stage arrows and Kanban).
 - Feature flag: `ACCOUNT_SALES_STATUS`.
 - Default flag state: Disabled in production by default; enabled for Echo Spirits through the organization entitlement migration/bootstrap mechanism. All test-environment tenants are enabled under the staging entitlement policy above.
 - Migration(s): `prisma/migrations/20260922120000_account_sales_status/migration.sql`.
 - Environment/config: None.
 - User-visible: Yes.
-- Production readiness: Not reviewed for production; full tests, typecheck, build, tenant/feature/idempotency audits, and the TST schema postflight passed. Staging browser validation is recorded after deployment.
+- Production readiness: Not reviewed for production; full tests, typecheck, build, tenant/feature/idempotency audits, and the TST schema postflight passed. Follow-up: 30 focused tests, typecheck, and build passed; deployed 1440 x 900 and 390 x 844 browser review passed for arrows, Kanban/List switching, status filters, empty recovery, and account links. No horizontal mobile page overflow.
 - Rollout notes: Pilot feature. Apply the additive migration before deploying application code. No backfill is required; existing tracked wholesale purchase events are reused, and future successful imports reconcile eligible tracked accounts. TST retains a pre-existing unapplied `20260917120000_agency_store_context` migration-history entry that was not modified by this feature.
 
 ### Lightweight release and version framework
