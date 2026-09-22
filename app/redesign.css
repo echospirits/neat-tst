@@ -457,14 +457,15 @@ summary { cursor: pointer; min-height: 44px; padding-block: 10px; }
   .pipeline-support-grid { grid-template-columns: 1fr; }
 }
 
-/* One navigation hierarchy, with all desktop destinations visible. */
-.app-nav-group .app-nav-label {
+/* Clear section hierarchy with inline, opt-in administration. */
+.app-nav-group .app-nav-label,
+.app-sidebar-administration > .app-nav-label {
   font-family: inherit;
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 750;
   line-height: 18px;
-  letter-spacing: 0;
-  text-transform: none;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 @media (min-width: 901px) {
   body > aside { width: 260px; flex-basis: 260px; padding: 12px; height: 100dvh; min-height: 0; overflow-y: auto; }
@@ -472,10 +473,10 @@ summary { cursor: pointer; min-height: 44px; padding-block: 10px; }
   aside .app-brand { margin: 0 4px 8px; }
   aside .global-search-compact { margin: 0 0 8px; }
   aside .global-search-compact input, aside .global-search-compact button { min-height: 32px; height: 32px; padding-top: 4px; padding-bottom: 4px; }
-  .app-sidebar-nav { gap: 6px; }
-  .app-sidebar-nav .app-nav-group { gap: 0; margin: 0; padding: 5px 0 0; border-top: 1px solid var(--line); }
-  .app-sidebar-nav .app-nav-label { margin: 0 9px 2px; }
-  aside .app-sidebar-nav .app-nav-link { display: flex; align-items: center; margin: 0; min-height: 26px; padding: 3px 9px; font-family: inherit; font-size: 13px; font-weight: 500; line-height: 18px; border-radius: 6px; }
+  .app-sidebar-nav { gap: 10px; }
+  .app-sidebar-nav .app-nav-group { gap: 0; margin: 0; padding: 9px 0 0; border-top: 1px solid var(--line); }
+  .app-sidebar-nav .app-nav-label { margin: 0 9px 5px; }
+  aside .app-sidebar-nav .app-nav-link { display: flex; align-items: center; margin: 0; min-height: 32px; padding: 6px 9px; font-family: inherit; font-size: 13px; font-weight: 500; line-height: 18px; border-radius: 6px; }
   aside .app-sidebar-nav .app-nav-primary { min-height: 34px; font-weight: 650; }
   aside .user-card { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 6px; margin-top: 8px; padding-top: 8px; }
   aside .user-card strong { font-size: 12px; }
@@ -488,11 +489,20 @@ summary { cursor: pointer; min-height: 44px; padding-block: 10px; }
 @media (min-width: 901px) and (max-height: 800px) {
   aside .app-brand { display: flex; align-items: baseline; gap: 8px; }
   aside .app-brand strong { font-size: 24px; }
-  .app-sidebar-nav { gap: 3px; }
-  .app-sidebar-nav .app-nav-group { padding-top: 3px; }
-  .app-sidebar-nav .app-nav-label { line-height: 16px; margin-bottom: 0; }
-  aside .app-sidebar-nav .app-nav-link { min-height: 22px; padding-block: 1px; }
+  .app-sidebar-nav { gap: 5px; }
+  .app-sidebar-nav .app-nav-group { padding-top: 6px; }
+  .app-sidebar-nav .app-nav-label { line-height: 18px; margin-bottom: 4px; }
+  aside .app-sidebar-nav .app-nav-link { min-height: 28px; padding-block: 4px; }
 }
+/* Native details expands in the sidebar flow, never over the page. */
+.app-sidebar-administration { border-top: 1px solid var(--line); padding-top: 7px; }
+.app-sidebar-administration > summary.app-nav-label { display: flex; align-items: center; justify-content: space-between; min-height: 32px; margin: 0; padding: 5px 9px; border-radius: 6px; cursor: pointer; list-style: none; }
+.app-sidebar-administration > summary::-webkit-details-marker { display: none; }
+.app-sidebar-administration > summary:hover, .app-sidebar-administration.is-active > summary { background: var(--sage); color: var(--text); }
+.app-sidebar-administration > summary:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+.app-sidebar-administration-arrow { font-size: 20px; line-height: 1; transition: transform 160ms ease; }
+.app-sidebar-administration[open] .app-sidebar-administration-arrow { transform: rotate(90deg); }
+.app-sidebar-administration-links { display: grid; padding-top: 4px; }
 .mobile-more-menu .app-nav-group { margin: 0; padding: 0; gap: 0; }
 .mobile-more-menu .app-nav-link { font-family: inherit; font-size: 13px; font-weight: 500; min-height: 44px; }
 

@@ -63,8 +63,8 @@ This manifest is the repository-backed record of work in TST that may be include
 
 ### Consistent compact sidebar
 
-- Description: Uses four matching, always-visible navigation sections with consistent typography and title casing; removes nested administration headings and compacts the account footer. Full platform-admin navigation fits 1366 x 768 and 1440 x 900 without scrolling; mobile retains touch-sized links.
-- Relevant commit(s): Commit titled `Standardize and compact sidebar navigation`.
+- Description: Uses consistent uppercase section headings, moderate link spacing, and a compact account footer. Administration starts collapsed and expands inline below its heading. The default platform-admin sidebar fits 1366 x 768 and 1440 x 900 without scrolling; expanded administration remains scroll-accessible on shorter screens. Mobile retains touch-sized links.
+- Relevant commit(s): `94b040c6`; follow-up commit titled `Refine sidebar spacing and expand administration inline`.
 - Feature flag: None; existing role and feature visibility preserved.
 - Default flag state: N/A.
 - Migration(s): None.

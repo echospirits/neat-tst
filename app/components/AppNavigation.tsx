@@ -65,7 +65,14 @@ function NavGroupLinks({ group, pathname }: { group: NavGroup; pathname: string 
 
 function AdministrationMenu({ enabledFeatures, hasOrganizationAdminAccess, isPlatformAdmin, pathname }: { enabledFeatures: string[]; hasOrganizationAdminAccess: boolean; isPlatformAdmin: boolean; pathname: string }) {
   const groups = getAdministrationNavigationGroups(enabledFeatures, isPlatformAdmin, hasOrganizationAdminAccess);
-  return <NavGroupLinks group={{ label: 'Administration', items: groups.flatMap((group) => group.items) }} pathname={pathname} />;
+  const items = groups.flatMap((group) => group.items);
+  const isActive = items.some((item) => isActivePath(pathname, item));
+  return <details className={`app-sidebar-administration${isActive ? ' is-active' : ''}`}>
+    <summary className="app-nav-label"><span>Administration</span><span aria-hidden="true" className="app-sidebar-administration-arrow">›</span></summary>
+    <div className="app-sidebar-administration-links">
+      {items.map((item) => <NavLink item={item} key={item.href} pathname={pathname} />)}
+    </div>
+  </details>;
 }
 
 function IntelligenceMenu({ enabledFeatures, isAdmin, isPlatformAdmin, pathname }: { enabledFeatures: string[]; isAdmin: boolean; isPlatformAdmin: boolean; pathname: string }) {
