@@ -8,7 +8,7 @@ import { getDistilleryOnlyItemCodes, isOpportunityEligibleOhlqProduct } from './
 import { normalizeOpportunityCategory, OPPORTUNITY_RANKING_VERSION, OPPORTUNITY_RULES_VERSION, OPPORTUNITY_SIGNAL_VERSION, opportunityRules } from './opportunityConfig';
 import { detectOpportunityHypotheses, noCurrentOpportunityRank, presentOpportunityHypothesis, RESEARCH_FIT_VERSION, RuleBasedOpportunityRanker, selectPrimaryOpportunity, type AccountOpportunitySignals } from './opportunityIntelligence';
 import { isDismissedOpportunityMatch } from './opportunityWorkflow';
-import { hasResearchIdentityChanged, readPublicRatings, readResearchEvidence } from './accountResearchQueue';
+import { hasResearchIdentityChanged, readPublicRatings, readResearchEvidence, readResearchSignals } from './accountResearchQueue';
 import { isOutsideOhio, isOhioAccount } from './usStates';
 import { captureWholesaleSalesEvents } from './accountSalesEvents';
 import { buildDailyPurchaseEvents } from './opportunitySalesLedger';
@@ -91,7 +91,7 @@ export async function evaluateOpportunityIntelligence({ db = prisma, asOfDate = 
           name: true,
           state: true, address: true, city: true, zip: true,
           targetProfiles: { where: { organizationId }, take: 1, select: { assignedUserId: true, researchStatus: true, ownershipGroup: { select: { name: true } } } },
-          targetPublicResearch: { select: { lastRefreshedAt: true, researchConfidence: true, openStatus: true, patioOutdoor: true, cocktailProgram: true, popularitySignal: true, ownershipVerification: true, buyerStructure: true, isNationalChain: true, googleRating: true, googleReviewCount: true, yelpRating: true, yelpReviewCount: true, localBrandsOnMenu: true, sourceUrls: true, identitySnapshot: true } },
+          targetPublicResearch: { select: { lastRefreshedAt: true, researchConfidence: true, openStatus: true, patioOutdoor: true, privateDining: true, cocktailProgram: true, popularitySignal: true, ownershipVerification: true, buyerStructure: true, isNationalChain: true, googleRating: true, googleReviewCount: true, yelpRating: true, yelpReviewCount: true, localBrandsOnMenu: true, sourceUrls: true, identitySnapshot: true } },
           tags: { where: { organizationId }, select: { tag: { select: { name: true } } } },
           opportunitySignals: { where: { organizationId }, take: 1 },
         },
@@ -192,6 +192,7 @@ export async function evaluateOpportunityIntelligence({ db = prisma, asOfDate = 
     const firstObserved = (opportunitySignal?.signalVersion === OPPORTUNITY_SIGNAL_VERSION ? opportunitySignal.firstEchoPurchaseAt : null) ?? echoEvents[0]?.reportDate ?? null;
     const lastEcho = echoEvents.at(-1)?.reportDate ?? null;
     const research = account.targetPublicResearch;
+    const researchSignals = readResearchSignals(research?.identitySnapshot);
     const normalizedTags = new Set(account.tags.map(({ tag }) => tag.name.toUpperCase().replace(/[\s-]+/g, '_')));
     const signal: AccountOpportunitySignals = {
       salesDataAvailable: isOhioAccount(account.state),
@@ -216,7 +217,10 @@ export async function evaluateOpportunityIntelligence({ db = prisma, asOfDate = 
       ownershipGroupName: targetProfile?.ownershipGroup?.name ?? null,
       isNationalChain: normalizedTags.has('NATIONAL_CHAIN') ? true : normalizedTags.has('LOCAL_INDEPENDENT') ? false : research?.isNationalChain ?? null,
       ownershipVerification: research?.ownershipVerification ?? null, buyerStructure: research?.buyerStructure ?? null,
-      patioOutdoor: research?.patioOutdoor ?? null, cocktailProgram: research?.cocktailProgram ?? null, popularitySignal: research?.popularitySignal ?? null,
+      patioOutdoor: research?.patioOutdoor ?? null, privateDining: research?.privateDining ?? researchSignals.privateDining,
+      venueType: researchSignals.venueType, footTrafficSignal: researchSignals.footTrafficSignal,
+      footTrafficEvidence: researchSignals.footTrafficEvidence, meetingSpaceSquareFeet: researchSignals.meetingSpaceSquareFeet,
+      cocktailProgram: research?.cocktailProgram ?? null, popularitySignal: research?.popularitySignal ?? null,
       googleRating: numberValue(research?.googleRating), googleReviewCount: research?.googleReviewCount ?? null,
       yelpRating: numberValue(research?.yelpRating), yelpReviewCount: research?.yelpReviewCount ?? null,
       publicRatings: readPublicRatings(research?.identitySnapshot),

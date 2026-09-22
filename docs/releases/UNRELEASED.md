@@ -86,3 +86,15 @@ This manifest is the repository-backed record of work in TST that may be include
 - User-visible: Yes.
 - Production readiness: Typecheck and rendered-component checks at 390 x 844 and 1440 x 900 passed, including missing values, link destinations, touch target height, and no horizontal overflow. Native app handoff requires physical-device verification; separate production release review required.
 - Rollout notes: TST 0.13.0-dev only. Android uses its geo URI handler, Apple devices use Maps links, and other browsers retain web directions as a fallback. Device/browser settings determine the app that handles external links.
+
+### Objective traffic-weighted account research and opportunity scoring
+
+- Description: Advances opportunity ranking to `ACCOUNT_FIT_V6` and research-only discovery to `RESEARCH_FIT_V2`. Account research now captures evidence-backed foot-traffic signals, private dining, venue type, and hotel meeting-space square footage. Research-only scoring gives direct traffic evidence and verified review counts the largest weight, limits subjective star ratings to two points, rewards patio/private-dining capacity indicators, and gives a large meeting-space contribution only to a bar or restaurant inside that exact hotel property.
+- Relevant commit(s): Commit titled `Weight objective traffic in opportunity scoring`.
+- Feature flag: Existing `ADVANCED_INTELLIGENCE` / `WHOLESALE_OPPORTUNITIES` entitlements.
+- Default flag state: Existing entitlement behavior; all TST tenants enabled under the staging policy.
+- Migration(s): None. New structured fields are stored in the existing research identity snapshot; private dining uses its existing column.
+- Environment/config: None.
+- User-visible: Yes; score explanations identify objective traffic, review volume, venue attributes, and the intentionally small star-rating contribution. Research-only scores remain labeled provisional.
+- Production readiness: Ready for TST evaluation; 48 focused research, scoring, tenant-scope, and presentation tests, typecheck, and an isolated production build passed.
+- Rollout notes: TST only. Existing research immediately benefits from the new review-count weighting after V6 recalculation. Foot-traffic, venue-type, and hotel meeting-space points appear after a new research refresh captures their structured evidence. Run `npm run recalculate:opportunities:v6` in the intended environment to rescore preserved tenant opportunities without changing pursued, dismissed, or snoozed statuses.

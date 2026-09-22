@@ -28,6 +28,7 @@ export type ResearchIdentitySnapshot = {
   publicRatings?: AccountResearchResult['publicRatings'];
   businessHours?: AccountResearchResult['businessHours'];
   researchEvidence?: AccountResearchResult['evidence'];
+  researchSignals?: Pick<AccountResearchResult, 'privateDining' | 'venueType' | 'footTrafficSignal' | 'footTrafficEvidence' | 'meetingSpaceSquareFeet'>;
   // Read-only compatibility for research completed before source provenance was captured.
   googleHours?: Array<{ day: string; hours: string }>;
 };
@@ -66,7 +67,8 @@ const isOlderThan = (value: Date | null | undefined, cutoff: Date) => !value || 
 
 export const createResearchIdentitySnapshot = (
   candidate: Pick<ResearchQueueCandidate, 'name' | 'address' | 'city' | 'state' | 'zip'>,
-  research?: Pick<AccountResearchResult, 'publicRatings' | 'businessHours' | 'evidence'>,
+  research?: Pick<AccountResearchResult, 'publicRatings' | 'businessHours' | 'evidence'>
+    & Partial<Pick<AccountResearchResult, 'privateDining' | 'venueType' | 'footTrafficSignal' | 'footTrafficEvidence' | 'meetingSpaceSquareFeet'>>,
 ): ResearchIdentitySnapshot => ({
   accountName: candidate.name,
   address: candidate.address,
@@ -77,6 +79,13 @@ export const createResearchIdentitySnapshot = (
     publicRatings: research.publicRatings,
     businessHours: research.businessHours,
     researchEvidence: research.evidence,
+    researchSignals: {
+      privateDining: research.privateDining ?? 'Unknown',
+      venueType: research.venueType ?? 'Unknown',
+      footTrafficSignal: research.footTrafficSignal ?? 'Unknown',
+      footTrafficEvidence: research.footTrafficEvidence ?? null,
+      meetingSpaceSquareFeet: research.meetingSpaceSquareFeet ?? null,
+    },
   } : {}),
 });
 
@@ -128,6 +137,26 @@ export const readResearchEvidence = (snapshot: unknown): AccountResearchResult['
     && typeof item.field === 'string' && typeof item.claim === 'string'
     && typeof item.sourceUrl === 'string' && typeof item.exactLocation === 'boolean'
   ));
+};
+
+export const readResearchSignals = (snapshot: unknown): NonNullable<ResearchIdentitySnapshot['researchSignals']> => {
+  const unknownSignals = {
+    privateDining: 'Unknown', venueType: 'Unknown', footTrafficSignal: 'Unknown',
+    footTrafficEvidence: null, meetingSpaceSquareFeet: null,
+  } as const;
+  if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) return unknownSignals;
+  const stored = (snapshot as Partial<ResearchIdentitySnapshot>).researchSignals;
+  if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return unknownSignals;
+  const privateDining = ['Strong', 'Yes', 'No', 'Unknown'].includes(stored.privateDining) ? stored.privateDining : 'Unknown';
+  const venueType = ['Hotel bar/restaurant', 'Restaurant', 'Bar', 'Other', 'Unknown'].includes(stored.venueType) ? stored.venueType : 'Unknown';
+  const footTrafficSignal = ['Very High', 'High', 'Medium', 'Low', 'Unknown'].includes(stored.footTrafficSignal) ? stored.footTrafficSignal : 'Unknown';
+  return {
+    privateDining,
+    venueType,
+    footTrafficSignal,
+    footTrafficEvidence: typeof stored.footTrafficEvidence === 'string' ? stored.footTrafficEvidence : null,
+    meetingSpaceSquareFeet: typeof stored.meetingSpaceSquareFeet === 'number' && stored.meetingSpaceSquareFeet >= 0 ? stored.meetingSpaceSquareFeet : null,
+  } as NonNullable<ResearchIdentitySnapshot['researchSignals']>;
 };
 
 export const hasResearchIdentityChanged = (
