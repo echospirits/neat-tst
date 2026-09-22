@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { buildPageMetadata } from '../../../../lib/appBrand';
 import { getUserDisplayName, requirePlatformAdmin } from '../../../../lib/auth';
-import { FEATURE_KEYS, getPackageFeatureKeys, hasIntelligencePackage } from '../../../../lib/featureRegistry';
+import { FEATURE_KEYS, getEnvironmentFeatureKeys, getPackageFeatureKeys, hasIntelligencePackage } from '../../../../lib/featureRegistry';
 import { saveOrganizationA3aLocation, saveOrganizationProductSelection } from '../../../../lib/organizationConfiguration';
 import { assertFeatureDependencies, writeOrganizationAudit } from '../../../../lib/organizations';
 import { discoverOrganizationProducts } from '../../../../lib/organizationProductDiscovery';
@@ -60,7 +60,7 @@ async function saveFeatures(formData: FormData) {
   const directWholesaleOrdersEnabled = formData.get('directWholesaleOrders') === 'on';
   const analyticsEnabled = formData.get('analytics') === 'on';
   const accountSalesStatusEnabled = formData.get('accountSalesStatus') === 'on';
-  const enabled = assertFeatureDependencies(getPackageFeatureKeys(intelligenceEnabled, directWholesaleOrdersEnabled, analyticsEnabled, accountSalesStatusEnabled));
+  const enabled = assertFeatureDependencies(getEnvironmentFeatureKeys(getPackageFeatureKeys(intelligenceEnabled, directWholesaleOrdersEnabled, analyticsEnabled, accountSalesStatusEnabled)));
   await prisma.$transaction(FEATURE_KEYS.map((featureKey) => prisma.organizationFeature.upsert({ where: { organizationId_featureKey: { organizationId: id, featureKey } }, create: { organizationId: id, featureKey, enabled: enabled.includes(featureKey), source: 'platform-admin' }, update: { enabled: enabled.includes(featureKey), source: 'platform-admin' } })));
   await writeOrganizationAudit(actor.id, id, OrganizationAuditAction.FEATURE_CHANGED, { coreIncluded: true, directWholesaleOrdersEnabled, intelligenceEnabled, analyticsEnabled, accountSalesStatusEnabled, enabled });
   revalidatePath(`/platform/organizations/${id}`);

@@ -2,7 +2,7 @@
 
 ## Current checkpoint
 
-8. Release manifest — complete; deployed browser review pending push
+8. Original feature committed and deployed at 9c6afd2b. Crash recovery confirmed the schema and all 17 entitlements on all 3 staging tenants. Permanent staging policy is being published; visual follow-up requested (stage arrows and Kanban).
 
 ## Key decisions
 
@@ -33,5 +33,5 @@
 
 ## Remaining work
 
-- Push to `staging/tst`, wait for deployment, and visually review 390 x 844 plus desktop.
+- Complete and publish the staging policy, then implement stage arrows and Kanban and visually review 390 x 844 plus desktop.
 - Verify staging health and report the existing unrelated `20260917120000_agency_store_context` migration-history discrepancy.

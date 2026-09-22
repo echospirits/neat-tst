@@ -58,6 +58,10 @@ export const CORE_PACKAGE_FEATURE_KEYS = FEATURE_KEYS.filter((key) =>
 export const DEFAULT_FEATURE_KEYS = [...CORE_PACKAGE_FEATURE_KEYS];
 export const ECHO_FEATURE_KEYS = FEATURE_KEYS.filter((key) => key !== 'ANALYTICS');
 
+export function getEnvironmentFeatureKeys(configured: readonly FeatureKey[], env: Record<string, string | undefined> = process.env): FeatureKey[] {
+  return env.APP_ENV?.trim().toLowerCase() === 'test' ? [...FEATURE_KEYS] : [...configured];
+}
+
 export function getPackageFeatureKeys(intelligenceEnabled: boolean, directWholesaleOrdersEnabled = false, analyticsEnabled = false, accountSalesStatusEnabled = false): FeatureKey[] {
   return FEATURE_KEYS.filter((key) =>
     CORE_PACKAGE_FEATURE_KEYS.includes(key as (typeof CORE_PACKAGE_FEATURE_KEYS)[number]) ||

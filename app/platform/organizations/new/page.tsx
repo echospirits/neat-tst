@@ -6,7 +6,7 @@ import { OrganizationAuditAction, UserRole } from '@prisma/client';
 import { redirect } from 'next/navigation';
 import { buildPageMetadata } from '../../../../lib/appBrand';
 import { requirePlatformAdmin } from '../../../../lib/auth';
-import { getPackageFeatureKeys } from '../../../../lib/featureRegistry';
+import { getEnvironmentFeatureKeys, getPackageFeatureKeys } from '../../../../lib/featureRegistry';
 import { isValidA3aStoreId, normalizeOrganizationIdentifierList } from '../../../../lib/organizationConfiguration';
 import { assertFeatureDependencies } from '../../../../lib/organizations';
 import { prisma } from '../../../../lib/prisma';
@@ -35,7 +35,7 @@ async function provisionOrganization(formData: FormData) {
   const directWholesaleOrdersEnabled = formData.get('directWholesaleOrders') === 'on';
   const analyticsEnabled = formData.get('analytics') === 'on';
   const accountSalesStatusEnabled = formData.get('accountSalesStatus') === 'on';
-  const features = assertFeatureDependencies(getPackageFeatureKeys(intelligenceEnabled, directWholesaleOrdersEnabled, analyticsEnabled, accountSalesStatusEnabled));
+  const features = assertFeatureDependencies(getEnvironmentFeatureKeys(getPackageFeatureKeys(intelligenceEnabled, directWholesaleOrdersEnabled, analyticsEnabled, accountSalesStatusEnabled)));
   if (!name || !slug || !adminFirstName || !adminLastName || !adminEmail || primaryState !== 'OH' || vendorIds.some((value) => !/^[A-Z0-9-]{3,32}$/.test(value)) || a3aStoreIds.some((value) => !isValidA3aStoreId(value))) redirect('/platform/organizations/new?status=invalid');
   const existing = await prisma.user.findUnique({ where: { email: adminEmail }, select: { id: true } });
   if (existing) redirect('/platform/organizations/new?status=email-in-use');

@@ -41,6 +41,7 @@
     "backfill:account-geocodes": "tsx scripts/backfill-account-geocodes.ts",
     "seed:admin": "tsx scripts/seed-admin.ts",
     "seed:staging": "tsx scripts/seed-staging.ts",
+    "enable:staging-features": "tsx scripts/enable-all-staging-features.ts",
     "bootstrap:multitenancy": "tsx scripts/bootstrap-multitenancy.ts",
     "verify:tenant-isolation": "tsx scripts/verify-tenant-isolation.ts",
     "vercel:link": "vercel link",

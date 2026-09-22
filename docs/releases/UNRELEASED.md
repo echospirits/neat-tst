@@ -22,6 +22,18 @@ This manifest is the repository-backed record of work in TST that may be include
 
 ## Pending changes carried into the 0.13.0 cycle
 
+### All-feature staging entitlements
+
+- Description: Every tenant in APP_ENV=test receives all registered capabilities, including pilots. Organization and role authorization still applies; production package defaults are unchanged. New tenant creation, plan saves, and staging seed retain this policy.
+- Relevant commit(s): Commit titled `Enable all registered features for staging tenants`.
+- Feature flag: All registered organization features, test environment only.
+- Default flag state: Enabled in test; existing defaults in production.
+- Migration(s): None.
+- Environment/config: Existing APP_ENV=test; no new variables.
+- User-visible: Yes.
+- Production readiness: Test policy only; 475 tests and typecheck passed. No production data changed.
+- Rollout notes: Ran `npm run enable:staging-features -- --env-file=<test-env-file>` on neon-neat-tst; all 3 tenants have all 17 features enabled. Repeat after adding features so persisted entitlements used by background jobs remain synchronized. External side-effect controls remain in force.
+
 ### Account Sales Status / Pipeline
 
 - Description: Adds tenant-owned Agency and Wholesale Sales Status, immutable status history, inline account and Log Visit updates, objective Buying State, deterministic Needs Attention rules, imported-sales transitions to Purchasing, account activity events, and a lightweight responsive Pipeline page. This remains independent of Intelligence Opportunities.

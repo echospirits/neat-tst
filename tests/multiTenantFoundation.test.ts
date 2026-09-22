@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { CORE_PACKAGE_FEATURE_KEYS, DEFAULT_FEATURE_KEYS, ECHO_FEATURE_KEYS, FEATURE_KEYS, FEATURE_REGISTRY, getPackageFeatureKeys, hasIntelligencePackage, INTELLIGENCE_PACKAGE_FEATURE_KEYS, OPTIONAL_FEATURE_KEYS, validateFeatureSelection } from '../lib/featureRegistry';
+import { CORE_PACKAGE_FEATURE_KEYS, DEFAULT_FEATURE_KEYS, ECHO_FEATURE_KEYS, FEATURE_KEYS, FEATURE_REGISTRY, getEnvironmentFeatureKeys, getPackageFeatureKeys, hasIntelligencePackage, INTELLIGENCE_PACKAGE_FEATURE_KEYS, OPTIONAL_FEATURE_KEYS, validateFeatureSelection } from '../lib/featureRegistry';
 import { getNavigationItems, navigationItems } from '../app/components/navigationConfig';
 import { normalizeOrganizationIdentifierList } from '../lib/organizationConfiguration';
 
@@ -32,6 +32,24 @@ test('invalid entitlement combinations report every missing dependency', () => {
     { feature: 'WHOLESALE_OPPORTUNITIES', dependency: 'WHOLESALE_ACCOUNTS' },
     { feature: 'WHOLESALE_OPPORTUNITIES', dependency: 'OHLQ_SALES_DATA' },
   ]);
+});
+
+test('test environment enables every registered feature without changing production package defaults', () => {
+  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'test' }), FEATURE_KEYS);
+  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'production' }), ['CORE_CRM']);
+  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'development' }), ['CORE_CRM']);
+});
+
+test('staging tenant creation, editing, and seeding preserve all-feature entitlements', () => {
+  const newOrganization = readFileSync('app/platform/organizations/new/page.tsx', 'utf8');
+  const editOrganization = readFileSync('app/platform/organizations/[id]/page.tsx', 'utf8');
+  const seed = readFileSync('scripts/seed-staging.ts', 'utf8');
+  const reconcile = readFileSync('scripts/enable-all-staging-features.ts', 'utf8');
+  assert.match(newOrganization, /getEnvironmentFeatureKeys\(getPackageFeatureKeys/);
+  assert.match(editOrganization, /getEnvironmentFeatureKeys\(getPackageFeatureKeys/);
+  assert.match(seed, /FEATURE_KEYS\.map/);
+  assert.match(reconcile, /getAppEnvironment\(\) !== 'test'/);
+  assert.match(reconcile, /FEATURE_KEYS\.map/);
 });
 
 test('Analytics is an independent opt-in pilot with no automatic tenant grants', () => {
