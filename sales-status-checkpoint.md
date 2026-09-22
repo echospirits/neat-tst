@@ -38,5 +38,7 @@
 
 ## Remaining work
 
+- Wholesale compact-progress follow-up: implemented progression shading, 24px mobile strip, direct Edit/Merge, and removed Voice note shortcut; typecheck and 7 focused tests passed. Build and deployed responsive review in progress.
+
 - No feature work remains. Staging deployment Ready; health identifies `neon-neat-tst` / `test`.
 - Existing unrelated `20260917120000_agency_store_context` migration-history discrepancy remains documented, not modified. No production promotion or numbered release bump.

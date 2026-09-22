@@ -275,16 +275,13 @@ export default async function WholesaleActivityPage({
             phone={account.phone}
             users={actionUsers}
           />
-          <details className="account-secondary-actions"><summary>More actions</summary><div>
-          <Link className="btn compact-btn secondary" href={`/visits/new?type=wholesale&wholesaleAccountId=${account.id}&voice=1`}>Voice note</Link>
           <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/edit`}>Edit</Link>
           {isAdminRole(user.role) && !account.officialAccountId ? (
             <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/merge`}>Merge account</Link>
           ) : null}
-          </div></details>
         </div>
       </header>
-      {salesStatusSummary ? <AccountSalesStatusPanel accountType={SalesAccountType.WHOLESALE} externalAccountId={id} returnTo={`/wholesale/${id}`} {...salesStatusSummary} /> : null}
+      {salesStatusSummary ? <AccountSalesStatusPanel compact accountType={SalesAccountType.WHOLESALE} externalAccountId={id} returnTo={`/wholesale/${id}`} {...salesStatusSummary} /> : null}
       {query.status ? <p className="toast-notice" role="status">{statusMessages[query.status] ?? query.status}</p> : null}
       {query.tagStatus ? <p className="pill">{tagStatusMessages[query.tagStatus] ?? query.tagStatus}</p> : null}
       {query.memoryStatus ? <p className="toast-notice" role="status">{query.memoryStatus === 'notes-saved' ? 'Account notes saved.' : query.memoryStatus === 'contact-saved' ? 'Contact saved.' : 'Unable to save that account information.'}</p> : null}

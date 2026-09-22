@@ -41,3 +41,28 @@
 @media (min-width: 761px) {
   .pipeline-account-list { overflow-x: auto; }
 }
+
+/* Account progress stays small; the Pipeline keeps its full filter labels. */
+.sales-journey--compact { margin: 0 0 8px; }
+.sales-journey--compact .sales-journey-path { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+.sales-journey--compact li.is-current { outline: none; }
+.sales-journey--compact li.is-upcoming { --stage-bg: #eeeeea; --stage-ink: #66695f; }
+.sales-journey--compact li > div { min-height: 44px; padding: 8px 16px; }
+.sales-journey--compact .sales-journey-number { display: none; }
+.sales-journey--compact .sales-journey-other { display: flex; margin-top: 6px; }
+.sales-journey--compact .sales-journey-other li > div { min-height: 26px; padding: 4px 10px; }
+@media (max-width: 760px) {
+  .account-sales-status-section--compact { margin-block: 10px; }
+  .sales-journey--compact .sales-journey-path li > div { min-height: 24px; padding: 3px 8px 3px 12px; align-items: center; }
+  .sales-journey--compact .sales-journey-path li > div { clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 0 100%, 7px 50%); }
+  .sales-journey--compact .sales-journey-number { display: inline; font-size: 11px; font-weight: 650; }
+  .sales-journey--compact .sales-journey-path strong { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .account-sales-status-section--compact .account-sales-status-bar { padding: 10px; gap: 8px; }
+  .account-sales-status-section--compact .account-sales-status-current { gap: 4px 12px; }
+  .account-sales-status-section--compact .account-sales-status-meta { display: flex; flex-wrap: wrap; gap: 3px 8px; }
+  .account-sales-status-section--compact .account-sales-status-current strong { font-size: 13px; }
+  .account-sales-status-section--compact .account-sales-status-meta small,
+  .account-sales-status-section--compact .account-sales-status-meta span { font-size: 10px; }
+  .account-sales-status-section--compact .account-sales-status-form label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .account-sales-status-section--compact .account-sales-status-form select { font-size: 14px; }
+}

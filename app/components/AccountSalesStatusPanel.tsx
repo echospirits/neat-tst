@@ -16,6 +16,7 @@ const timeInStatus = (updatedAt: Date | null) => {
 
 export function AccountSalesStatusPanel({
   accountType,
+  compact = false,
   buyingState,
   changedBy,
   externalAccountId,
@@ -25,6 +26,7 @@ export function AccountSalesStatusPanel({
   statusUpdatedAt,
 }: {
   accountType: SalesAccountType;
+  compact?: boolean;
   buyingState: BuyingState;
   changedBy: { email: string; name: string | null; firstName: string | null; lastName: string | null } | null;
   externalAccountId: string;
@@ -33,8 +35,8 @@ export function AccountSalesStatusPanel({
   statusIsExplicit: boolean;
   statusUpdatedAt: Date | null;
 }) {
-  return <section className="account-sales-status-section" aria-label="Account sales status">
-    <SalesStatusJourney currentStatus={status} />
+  return <section className={`account-sales-status-section${compact ? ' account-sales-status-section--compact' : ''}`} aria-label="Account sales status">
+    <SalesStatusJourney currentStatus={status} compact={compact} />
     <div className="account-sales-status-bar">
     <div className="account-sales-status-current">
       <span><small>Sales Status</small><strong>{SALES_STATUS_LABELS[status]}</strong></span>
