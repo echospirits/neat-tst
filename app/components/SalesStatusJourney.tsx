@@ -20,6 +20,7 @@ export function SalesStatusJourney({ compact = false, currentStatus, counts, fil
       {!compact ? <span className="sales-journey-caption">{counts ? `${counts[option.value] ?? 0} account${counts[option.value] === 1 ? '' : 's'}` : index === undefined ? 'Other status' : `Stage ${index + 1}`}</span> : null}
       {compact && index !== undefined ? <span className="sales-journey-number" aria-hidden="true">{index + 1}</span> : null}
       <strong>{option.label}</strong>
+      {filterHref ? <svg className="sales-journey-filter-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16l-6 7v7l-4 2v-9z" /></svg> : null}
       {current && !compact ? <span className="sales-journey-current">{filterHref ? 'Selected' : 'Current status'}</span> : null}
     </>;
     return <li key={option.value} data-sales-stage={option.value} className={[current ? 'is-current' : '', muted ? 'is-upcoming' : ''].filter(Boolean).join(' ')}>
@@ -27,7 +28,7 @@ export function SalesStatusJourney({ compact = false, currentStatus, counts, fil
     </li>;
   };
 
-  return <div className={compact ? 'sales-journey sales-journey--compact' : 'sales-journey'} aria-label={filterHref ? 'Filter pipeline by sales status' : 'Sales relationship stages'}>
+  return <div className={['sales-journey', compact ? 'sales-journey--compact' : '', filterHref ? 'sales-journey--filters' : ''].filter(Boolean).join(' ')} aria-label={filterHref ? 'Filter pipeline by sales status' : 'Sales relationship stages'}>
     <ol className="sales-journey-path">
       {SALES_STATUS_OPTIONS.filter(({ value }) => (ACTIVE_SALES_STATUSES as readonly AccountSalesStatus[]).includes(value)).map((option, index) => stage(option, index))}
     </ol>

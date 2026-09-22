@@ -36,6 +36,7 @@ This manifest is the repository-backed record of work in TST that may be include
 
 ### Account Sales Status / Pipeline
 
+- Pipeline disclosure follow-up: Kanban is the default (List remains secondary). Snapshot status headers are keyboard-accessible native disclosures, all collapsed initially, with counts and rotating chevrons. Top status filters gain raised borders, filter icons, and hover/focus feedback; filtering preserves the selected view. No migration/environment/entitlement changes. Validation: 8 focused tests and typecheck passed; build and deployed responsive review pending.
 - Wholesale usability follow-up: color progress only through the current stage, mute later stages, remove the selection box, and use a single 24px numbered arrow strip on mobile with the full current label beneath. Show Edit and eligible Merge actions directly; remove the wholesale Voice note shortcut. Pipeline filters/board and Agency presentation remain unchanged. No migration/environment changes.
 
 - Description: Adds tenant-owned Agency and Wholesale Sales Status, immutable status history, inline account and Log Visit updates, objective Buying State, deterministic Needs Attention rules, imported-sales transitions to Purchasing, account activity events, and a lightweight responsive Pipeline page. Follow-up adds shared color-coded stage arrows on account/Pipeline pages and a Kanban board alongside the existing List view, preserving status filters. Nurture/Lost remain separate from forward progression. This remains independent of Intelligence Opportunities.

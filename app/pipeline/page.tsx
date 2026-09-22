@@ -24,7 +24,7 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
   const { organizationId } = await requireFeatureForUser(user, 'ACCOUNT_SALES_STATUS');
   const params = await searchParams;
   const requestedStatus = params?.status;
-  const view = params?.view === 'board' ? 'board' : 'list';
+  const view = params?.view === 'list' ? 'list' : 'board';
   const selectedStatus = Object.values(AccountSalesStatus).includes(requestedStatus as AccountSalesStatus) ? requestedStatus as AccountSalesStatus : null;
   const now = new Date();
   const config = await getOrganizationTenantConfig(organizationId);
@@ -83,8 +83,8 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
     <PageHeader eyebrow="Accounts" title="Pipeline" description="Where relationships stand, what needs attention, and recent movement. Worklist remains the source of truth for next actions." />
     <SalesStatusJourney currentStatus={selectedStatus} counts={counts} filterHref={(status) => pipelineHref(view, selectedStatus === status ? null : status)} />
     <nav className="scope-tabs" aria-label="Pipeline view">
-      <Link href={pipelineHref('list')} aria-current={view === 'list' ? 'page' : undefined}>List</Link>
       <Link href={pipelineHref('board')} aria-current={view === 'board' ? 'page' : undefined}>Kanban board</Link>
+      <Link href={pipelineHref('list')} aria-current={view === 'list' ? 'page' : undefined}>List</Link>
       {selectedStatus ? <Link href={pipelineHref(view, null)}>Clear status filter</Link> : null}
     </nav>
 
@@ -93,8 +93,8 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
       <div className="pipeline-kanban">
         {SALES_STATUS_OPTIONS.filter((option) => !selectedStatus || selectedStatus === option.value).map((option) => {
           const stageRows = rows.filter((row) => row.salesStatus === option.value);
-          return <section className="pipeline-kanban-column" data-sales-stage={option.value} key={option.value} aria-labelledby={`column-${option.value}`}>
-            <header><h3 id={`column-${option.value}`}>{option.label}</h3><span className="pill">{stageRows.length}</span></header>
+          return <details className="pipeline-kanban-column" data-sales-stage={option.value} key={`${selectedStatus ?? 'all'}-${option.value}`}>
+            <summary><h3>{option.label}</h3><span className="pill">{stageRows.length}</span><svg className="pipeline-kanban-chevron" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 5 7 7-7 7" /></svg></summary>
             {stageRows.map((row) => <article className="pipeline-kanban-card" key={`${row.accountType}:${row.externalAccountId}`}>
               <Link className="pipeline-kanban-account" href={row.accountType === SalesAccountType.AGENCY ? `/agencies/${row.externalAccountId}` : `/wholesale/${row.externalAccountId}`}>{row.account.name}</Link>
               <span className="muted">{row.accountType === SalesAccountType.AGENCY ? 'Agency' : 'Wholesale'}{row.account.city ? ` · ${row.account.city}` : ''}</span>
@@ -104,7 +104,7 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
               {row.attention.length ? <span className="pipeline-kanban-attention">Needs attention: {row.attention.join(' · ')}</span> : null}
             </article>)}
             {!stageRows.length ? <p className="pipeline-kanban-empty">No tracked accounts in {option.label}.</p> : null}
-          </section>;
+          </details>;
         })}
       </div>
       {!allRows.length ? <p className="muted">Set Sales Status on an <Link href="/agencies">Agency</Link> or <Link href="/wholesale">Wholesale Account</Link> to add it to your pipeline.</p> : null}
@@ -125,7 +125,7 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
             <span className={row.attention.length ? 'pipeline-attention needs-attention' : 'pipeline-attention'}><small>Needs Attention</small><strong>{row.attention[0] ?? 'On track'}</strong>{row.attention.length > 1 ? <em>+{row.attention.length - 1} more</em> : null}</span>
           </article>;
         })}
-      </div> : <div className="card empty-state"><h3>No tracked accounts{selectedStatus ? ` in ${SALES_STATUS_LABELS[selectedStatus]}` : ''}</h3><p>Set Sales Status from an Agency or Wholesale Account page, or clear this filter.</p>{selectedStatus ? <Link className="btn secondary" href="/pipeline">Clear filter</Link> : null}</div>}
+      </div> : <div className="card empty-state"><h3>No tracked accounts{selectedStatus ? ` in ${SALES_STATUS_LABELS[selectedStatus]}` : ''}</h3><p>Set Sales Status from an Agency or Wholesale Account page, or clear this filter.</p>{selectedStatus ? <Link className="btn secondary" href={pipelineHref(view, null)}>Clear filter</Link> : null}</div>}
     </section>}
 
     <div className="pipeline-support-grid">

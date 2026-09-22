@@ -22,9 +22,21 @@
 .sales-journey-current { font-weight: 750; }
 .sales-journey-other { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 380px; margin-top: 10px; }
 .sales-journey-other li > a, .sales-journey-other li > div { min-height: 52px; border-radius: 8px; padding: 7px 12px; }
+.sales-journey--filters li { border: 1px solid var(--stage-ink); box-shadow: 0 3px 0 color-mix(in srgb, var(--stage-ink) 35%, transparent); background: var(--panel); }
+.sales-journey--filters li > a { position: relative; cursor: pointer; padding-right: 32px; border-radius: 7px; }
+.sales-journey--filters li:hover { transform: translateY(-2px); box-shadow: 0 5px 0 color-mix(in srgb, var(--stage-ink) 35%, transparent); }
+.sales-journey--filters li:active { transform: translateY(2px); box-shadow: none; }
+.sales-journey--filters li.is-current { box-shadow: none; }
+.sales-journey-filter-icon { position: absolute; right: 14px; top: 12px; }
 .pipeline-kanban { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
 .pipeline-kanban-column { min-width: 0; border: 1px solid var(--line); border-radius: 12px; background: #f3f3ed; overflow: hidden; }
-.pipeline-kanban-column > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; background: var(--stage-bg); color: var(--stage-ink); }
+.pipeline-kanban-column > summary { display: flex; align-items: center; gap: 8px; min-height: 56px; box-sizing: border-box; padding: 12px; background: var(--stage-bg); color: var(--stage-ink); cursor: pointer; list-style: none; }
+.pipeline-kanban-column > summary::-webkit-details-marker { display: none; }
+.pipeline-kanban-column > summary:hover { filter: brightness(.96); }
+.pipeline-kanban-column > summary:focus-visible { outline: 3px solid var(--stage-ink); outline-offset: -3px; }
+.pipeline-kanban-column > summary .pill { margin-left: auto; }
+.pipeline-kanban-chevron { flex-shrink: 0; }
+.pipeline-kanban-column[open] > summary .pipeline-kanban-chevron { transform: rotate(90deg); }
 .pipeline-kanban-column h3 { margin: 0; font-size: 15px; color: inherit; }
 .pipeline-kanban-card { display: grid; gap: 4px; background: var(--panel); margin: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; overflow-wrap: anywhere; }
 .pipeline-kanban-account { display: flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 650; }
