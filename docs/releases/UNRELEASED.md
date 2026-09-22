@@ -22,6 +22,18 @@ This manifest is the repository-backed record of work in TST that may be include
 
 ## Pending changes carried into the 0.13.0 cycle
 
+### Account Sales Status / Pipeline
+
+- Description: Adds tenant-owned Agency and Wholesale Sales Status, immutable status history, inline account and Log Visit updates, objective Buying State, deterministic Needs Attention rules, imported-sales transitions to Purchasing, account activity events, and a lightweight responsive Pipeline page. This remains independent of Intelligence Opportunities.
+- Relevant commit(s): `67c61f44`.
+- Feature flag: `ACCOUNT_SALES_STATUS`.
+- Default flag state: Disabled; enabled for Echo Spirits through the organization entitlement migration/bootstrap mechanism.
+- Migration(s): `prisma/migrations/20260922120000_account_sales_status/migration.sql`.
+- Environment/config: None.
+- User-visible: Yes.
+- Production readiness: Not reviewed for production; full tests, typecheck, build, tenant/feature/idempotency audits, and the TST schema postflight passed. Staging browser validation is recorded after deployment.
+- Rollout notes: Pilot feature. Apply the additive migration before deploying application code. No backfill is required; existing tracked wholesale purchase events are reused, and future successful imports reconcile eligible tracked accounts. TST retains a pre-existing unapplied `20260917120000_agency_store_context` migration-history entry that was not modified by this feature.
+
 ### Lightweight release and version framework
 
 - Description: Adds canonical application versioning, release process/checklist documentation, a structured unreleased manifest, a read-only Git release audit, and a subtle version display in protected environment diagnostics.

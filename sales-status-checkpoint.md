@@ -2,7 +2,7 @@
 
 ## Current checkpoint
 
-7. Tests + responsive review + tenant audit — implementation validation complete; deployed browser review pending push
+8. Release manifest — complete; deployed browser review pending push
 
 ## Key decisions
 
@@ -33,6 +33,5 @@
 
 ## Remaining work
 
-- Add the `docs/releases/UNRELEASED.md` entry with the feature commit SHA.
 - Push to `staging/tst`, wait for deployment, and visually review 390 x 844 plus desktop.
 - Verify staging health and report the existing unrelated `20260917120000_agency_store_context` migration-history discrepancy.
