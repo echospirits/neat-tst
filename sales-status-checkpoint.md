@@ -2,7 +2,7 @@
 
 ## Current checkpoint
 
-8. Complete. Original feature deployed at 9c6afd2b; staging entitlement policy completed and pushed at a65695f4; stage-arrow and Kanban follow-up deployed at 8fca96ff and reviewed in the authenticated staging browser.
+8. Complete. Original feature deployed at 9c6afd2b; staging entitlement policy completed and pushed at a65695f4; stage-arrow and Kanban follow-up deployed at 8fca96ff; compact wholesale progress and direct actions deployed at bcecf92f and reviewed in the authenticated staging browser.
 
 ## Key decisions
 
@@ -35,10 +35,9 @@
 - TST schema postflight: history table, overlay columns, and Echo entitlement confirmed on `neon-neat-tst`.
 - Staging policy recovery: 475 tests passed; typecheck and build passed.
 - Arrow/Kanban follow-up: 30 focused tests, typecheck, and build passed. Live browser reviewed at 1440 x 900 and 390 x 844: stage selection, account context, eight board columns, matching list/count/card totals, filter persistence, empty status recovery, Agency and Wholesale panels, and mobile document width within viewport. No account data was mutated during the visual review.
+- Wholesale compact-progress follow-up: 7 focused tests, typecheck, build, and live 1440 x 900 / 390 x 844 review passed. Mobile status area reduced from 546px to 164px (24px arrow strip). Confirmed color through Interested with later stages gray, no current outline, direct Edit, no More actions/Voice note shortcut, and no horizontal page overflow. Existing Merge authorization preserved. No account data mutated.
 
 ## Remaining work
-
-- Wholesale compact-progress follow-up: implemented progression shading, 24px mobile strip, direct Edit/Merge, and removed Voice note shortcut; typecheck and 7 focused tests passed. Build and deployed responsive review in progress.
 
 - No feature work remains. Staging deployment Ready; health identifies `neon-neat-tst` / `test`.
 - Existing unrelated `20260917120000_agency_store_context` migration-history discrepancy remains documented, not modified. No production promotion or numbered release bump.
