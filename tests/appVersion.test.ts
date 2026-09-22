@@ -6,7 +6,7 @@ import { APP_VERSION } from '../lib/appVersion';
 
 test('application version comes from package.json and is shown in protected diagnostics', () => {
   assert.equal(APP_VERSION, packageMetadata.version);
-  assert.match(APP_VERSION, /^0\.\d+\.\d+$/);
+  assert.match(APP_VERSION, /^0\.\d+\.\d+(?:-dev)?$/);
 
   const diagnostics = readFileSync('app/admin/environment/page.tsx', 'utf8');
   assert.match(diagnostics, /requireAdmin\(\)/);

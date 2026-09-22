@@ -1,6 +1,6 @@
 # Neat Release Process
 
-Neat uses `0.X.0` for planned feature releases and `0.X.Y` for bugfix or hotfix releases. `package.json` is the canonical application version source; generated lockfile metadata may mirror it.
+Neat uses `0.X.0-dev` while TST is open for development toward a planned `0.X.0` feature release, and `0.X.Y` for a stable bugfix or hotfix release. Remove the `-dev` suffix only when establishing the exact release candidate. `package.json` is the canonical application version source; generated lockfile metadata may mirror it.
 
 ## Feature development: TST only
 
@@ -35,6 +35,7 @@ Prefer backward-compatible migrations. Flag destructive SQL, table or column rem
 1. Copy `UNRELEASED.md` to `docs/releases/<version>.md`, preserving the internal technical manifest.
 2. Add concise user-facing **New**, **Improved**, and **Fixed** notes to the archived file.
 3. Reset `UNRELEASED.md` to its empty template and begin the next version deliberately.
+4. Advance TST to the next planned `0.X.0-dev` version before new feature work begins.
 
 ## Hotfixes
 

@@ -41,7 +41,7 @@ function verifyRef(ref: string) {
 function versionAt(ref: string) {
   const packageJson = git(['show', `${ref}:package.json`]);
   const parsed = JSON.parse(packageJson) as { version?: unknown };
-  if (typeof parsed.version !== 'string' || !/^0\.\d+\.\d+$/.test(parsed.version)) {
+  if (typeof parsed.version !== 'string' || !/^0\.\d+\.\d+(?:-dev)?$/.test(parsed.version)) {
     throw new Error(`${ref}:package.json does not contain a valid pre-1.0 version.`);
   }
   return parsed.version;
