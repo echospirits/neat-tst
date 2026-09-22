@@ -39,6 +39,6 @@
 
 ## Remaining work
 
-- Pipeline disclosure follow-up implemented in `app/pipeline/page.tsx`, `SalesStatusJourney.tsx`, and `salesStatus.css`; regression coverage added to `tests/accountSalesStatus.test.ts`. Kanban default, initially collapsed native status groups, raised icon-bearing filters, and view-preserving clear filters. 8 focused tests and typecheck passed; build, staging publication, and responsive review pending.
+- Pipeline disclosure follow-up completed at `6de381a9` in `app/pipeline/page.tsx`, `SalesStatusJourney.tsx`, and `salesStatus.css`; regression coverage added to `tests/accountSalesStatus.test.ts`. Kanban default, initially collapsed native status groups, raised icon-bearing filters, and view-preserving clear filters. 8 focused tests, typecheck, build, and live 1440 x 900 / 390 x 844 review passed: 8 initially collapsed groups, pointer/Enter toggles, empty group message, filter persistence, List clear-filter recovery, 56px mobile headers, and no horizontal overflow. Deployment Ready; no account data mutated.
 - No feature work remains. Staging deployment Ready; health identifies `neon-neat-tst` / `test`.
 - Existing unrelated `20260917120000_agency_store_context` migration-history discrepancy remains documented, not modified. No production promotion or numbered release bump.
