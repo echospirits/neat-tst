@@ -21,7 +21,7 @@ This manifest is the repository-backed record of work in TST that has not been r
 ### Lightweight release and version framework
 
 - Description: Adds canonical application versioning, release process/checklist documentation, a structured unreleased manifest, a read-only Git release audit, and a subtle version display in protected environment diagnostics.
-- Relevant commit(s): TST commit containing this entry; replace with its short SHA after the implementation commit is created.
+- Relevant commit(s): `f6166065`.
 - Feature flag: None.
 - Default flag state: N/A.
 - Migration(s): None.
