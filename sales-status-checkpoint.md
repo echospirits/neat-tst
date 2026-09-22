@@ -39,7 +39,7 @@
 
 ## Remaining work
 
-- Top filter border polish: remove border/shadow frames and persistent selection outline; retain icons, colors, Selected labels, hover, and keyboard-visible focus. Focused validation and staging review pending.
+- Top filter border polish completed at `48ce510b`: removed border/shadow frames and persistent selection outline; retained icons, colors, Selected labels, hover, and keyboard-visible focus. 8 focused tests passed; deployed desktop (1440 x 900) and mobile (390 x 844) checks confirmed no frames/shadows, working selection without an outline, and no horizontal overflow.
 - Snapshot border polish completed at `0e69b071`: removed only `.pipeline-kanban-column` outer border. All disclosure/filter behavior and keyboard focus styling retained. 8 focused tests passed; deployed mobile (390 x 844) and desktop (1440 x 900) review confirmed borderless groups, collapsed defaults, working toggles, and no mobile overflow.
 - Pipeline disclosure follow-up completed at `6de381a9` in `app/pipeline/page.tsx`, `SalesStatusJourney.tsx`, and `salesStatus.css`; regression coverage added to `tests/accountSalesStatus.test.ts`. Kanban default, initially collapsed native status groups, raised icon-bearing filters, and view-preserving clear filters. 8 focused tests, typecheck, build, and live 1440 x 900 / 390 x 844 review passed: 8 initially collapsed groups, pointer/Enter toggles, empty group message, filter persistence, List clear-filter recovery, 56px mobile headers, and no horizontal overflow. Deployment Ready; no account data mutated.
 - No feature work remains. Staging deployment Ready; health identifies `neon-neat-tst` / `test`.
