@@ -43,6 +43,7 @@ export type ResearchQueueCandidate = {
   state: string | null;
   zip: string | null;
   createdAt: Date;
+  isTargeting?: boolean;
   targetPublicResearch: { lastRefreshedAt: Date | null; identitySnapshot: unknown } | null;
   opportunities: Array<{ productionScore: number; status: OpportunityStatus; actionedAt: Date | null; lastDetectedAt: Date }>;
   upcomingWork: Array<{ dueDate: Date | null; createdAt: Date }>;
@@ -196,9 +197,10 @@ export function classifyResearchNeed(candidate: ResearchQueueCandidate, now = ne
   const upcomingTwoDayWork = candidate.upcomingWork.some((item) => item.dueDate && item.dueDate >= now && item.dueDate <= nextTwoDays);
   const otherUpcomingWork = candidate.upcomingWork.some((item) => (item.dueDate && item.dueDate >= now && item.dueDate <= nextSevenDays) || (!item.dueDate && item.createdAt >= ageCutoff(now, 1)));
 
+  if (candidate.isTargeting) return { ...candidate, priorityBucket: 1, researchReason: 'Target account; refresh research' };
   if (candidate.opportunities.length === 0 && !refreshedAt) return { ...candidate, priorityBucket: 1, researchReason: 'New account without an opportunity score or research' };
   if (hasResearchIdentityChanged(candidate, candidate.targetPublicResearch?.identitySnapshot)) return { ...candidate, priorityBucket: 2, researchReason: 'Account name or address changed since research' };
-  if (stale30 && recentPursuit) return { ...candidate, priorityBucket: 3, researchReason: 'Pursued by a tenant in the last day; research is over 30 days old' };
+  if (stale30 && recentPursuit) return { ...candidate, priorityBucket: 3, researchReason: 'Opportunity moved to in progress by a tenant in the last day; research is over 30 days old' };
   if (stale30 && upcomingTwoDayWork) return { ...candidate, priorityBucket: 4, researchReason: 'Tenant work is due in the next two days; research is over 30 days old' };
   if (stale30 && (otherUpcomingWork || recentTenantActivity)) return { ...candidate, priorityBucket: 5, researchReason: 'Upcoming or recent tenant activity; research is over 30 days old' };
   if (isOlderThan(refreshedAt, ageCutoff(now, 90))) return { ...candidate, priorityBucket: 6, researchReason: 'Research intelligence is over 90 days old' };
@@ -214,6 +216,8 @@ export async function getPrioritizedAccountResearchQueue({
   now?: Date;
   limit?: number | null;
 } = {}) {
+  const targetedOverlays = await db.organizationAccountOverlay.findMany({ where: { accountType: 'WHOLESALE', isTargeting: true }, select: { externalAccountId: true } });
+  const targetedIds = [...new Set(targetedOverlays.map(({ externalAccountId }) => externalAccountId))];
   const accounts = await db.wholesaleAccount.findMany({
     where: {
       isActive: true,
@@ -266,6 +270,7 @@ export async function getPrioritizedAccountResearchQueue({
     .filter((account) => !shouldDeferResearchRetry(account, now))
     .map((account) => classifyResearchNeed({
       ...account,
+      isTargeting: targetedIds.includes(account.id),
       upcomingWork: workByAccount.get(account.id) ?? [],
     }, now))
     .filter((item): item is ResearchQueueItem => Boolean(item))

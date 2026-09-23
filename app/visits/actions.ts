@@ -17,6 +17,7 @@ import { getGeocodeResetForAddressChange } from '../../lib/location/geocode';
 import { parseTimeInputToMinutes } from '../../lib/dateTime';
 import { syncWorklistItemCalendar } from '../../lib/calendar/worklistSync';
 import { parseSalesStatus, setAccountSalesStatus } from '../../lib/accountSalesStatus';
+import { setAccountTargeting } from '../../lib/accountTargeting';
 import { createVisitDiagnostics, type VisitDiagnostics } from '../../lib/visitDiagnostics';
 import { getSelectedVoiceFollowUps } from '../../lib/voiceVisitNoteShared';
 import {
@@ -220,6 +221,7 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
   const newContactPhone = isTaster ? null : toOptional(formData.get('newContactPhone'));
   const summary = toOptional(formData.get('summary'));
   const requestedSalesStatus = isTaster ? null : parseSalesStatus(formData.get('salesStatus'));
+  const requestedTargeting = !isTaster && formData.get('targetAccount') === 'true';
   if (requestedSalesStatus && !(await hasFeature(organizationId, 'ACCOUNT_SALES_STATUS'))) {
     redirectVisitWithStatus(formOrigin, 'invalid-context', locationType);
   }
@@ -546,6 +548,18 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
         organizationId,
         source: AccountSalesStatusSource.VISIT,
         status: requestedSalesStatus,
+      });
+    }
+    if (requestedTargeting) {
+      await setAccountTargeting({
+        accountType: locationType === 'agency' ? SalesAccountType.AGENCY : SalesAccountType.WHOLESALE,
+        changedAt: loggedVisit.visitAt,
+        changedByUserId: user.id,
+        db: tx,
+        externalAccountId: locationType === 'agency' ? agencyId! : wholesaleAccountId!,
+        isTargeting: true,
+        loggedVisitId: loggedVisit.id,
+        organizationId,
       });
     }
     if (contactIds.length) await tx.loggedVisitContact.createMany({

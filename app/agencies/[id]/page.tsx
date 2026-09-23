@@ -27,6 +27,7 @@ import { AgencyRetailMarketIntelligence, AgencyStoreIntelligence, AgencyStoreSum
 import { SalesAccountType } from '@prisma/client';
 import { getAccountSalesStatusSummary, SALES_STATUS_LABELS } from '../../../lib/accountSalesStatus';
 import { AccountSalesStatusPanel } from '../../components/AccountSalesStatusPanel';
+import { TargetAccountControl } from '../../components/TargetAccountControl';
 
 const formatVisitDate = (date: Date | null | undefined) => formatEasternDate(date) || 'No visits yet';
 const tagStatusMessages: Record<string, string> = {
@@ -51,7 +52,7 @@ export default async function AgencyActivityPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ status?: string; tagStatus?: string; memoryStatus?: string }>;
+  searchParams?: Promise<{ status?: string; tagStatus?: string; memoryStatus?: string; targetStatus?: string }>;
 }) {
   const currentUser = await requireUser();
   const { organizationId } = await requireOrganizationContext(currentUser);
@@ -103,7 +104,7 @@ export default async function AgencyActivityPage({
     prisma.user.findMany({ where: { organizationId, isActive: true, role: { not: 'TASTER' } }, orderBy: [{ name: 'asc' }, { email: 'asc' }] }),
     prisma.organizationAccountOverlay.findUnique({
       where: { organizationId_accountType_externalAccountId: { organizationId, accountType: 'AGENCY', externalAccountId: id } },
-      select: { notes: true, storeContext: true },
+      select: { notes: true, storeContext: true, isTargeting: true },
     }),
     prisma.locationContact.findMany({
       where: { organizationId, agencyId: id },
@@ -125,6 +126,7 @@ export default async function AgencyActivityPage({
     prisma.accountSalesStatusHistory.findMany({ where: { organizationId, accountType: SalesAccountType.AGENCY, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 }),
   ]) : [null, []];
   const userNames = new Map(users.map((entry) => [entry.id, getUserDisplayName(entry)]));
+  const targetingHistory = await prisma.accountTargetingHistory.findMany({ where: { organizationId, accountType: SalesAccountType.AGENCY, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 });
 
   const contacts = await prisma.locationContact.findMany({
     where: { organizationId, id: { in: visits.map((visit) => visit.contactId).filter(Boolean) as string[] } },
@@ -138,9 +140,11 @@ export default async function AgencyActivityPage({
         <div>
           <span className="page-eyebrow">Agency · {agency.city || 'Location not set'}</span>
           <h1>{agency.name}</h1>
+          {overlay?.isTargeting ? <p><strong className="target-account-marker">TARGET ACCOUNT</strong></p> : null}
           {agency.tags.length ? <TagBadges tags={agency.tags.map((assignment) => assignment.tag)} /> : null}
         </div>
         <div className="page-heading-actions">
+          <TargetAccountControl accountType={SalesAccountType.AGENCY} externalAccountId={id} isTargeting={overlay?.isTargeting ?? false} allowStop returnTo={`/agencies/${id}`} />
           <ContextualActions
             context={{ accountName: agency.name, agencyId: agency.id, returnTo: `/agencies/${agency.id}`, sourceLabel: agency.name, sourceType: 'AGENCY_DETAIL' }}
             currentUserId={currentUser.id}
@@ -217,7 +221,7 @@ export default async function AgencyActivityPage({
       <section className="dashboard-section account-workspace-section" id="activity">
         <div className="section-heading">
           <h2>Activity</h2>
-          <span className="pill">{visits.length + communicationActivities.length + salesStatusHistory.length}</span>
+          <span className="pill">{visits.length + communicationActivities.length + salesStatusHistory.length + targetingHistory.length}</span>
         </div>
         <VisitActivityTable contactMap={contactMap} visits={visits} supplementalEvents={communicationActivities.map((activity) => ({
           actor: getUserDisplayName(activity.createdByUser),
@@ -231,6 +235,13 @@ export default async function AgencyActivityPage({
           detail: event.previousStatus ? `${SALES_STATUS_LABELS[event.previousStatus]} → ${SALES_STATUS_LABELS[event.newStatus]}` : `Set to ${SALES_STATUS_LABELS[event.newStatus]}`,
           id: `sales-status-${event.id}`,
           title: event.source === 'SALES_DATA' ? 'Purchase detected' : 'Sales status changed',
+        }))).concat(targetingHistory.map((event) => ({
+          actor: event.changedByUserId ? userNames.get(event.changedByUserId) ?? 'Former team member' : 'Neat',
+          at: event.changedAt,
+          detail: event.isTargeting ? 'TARGET ACCOUNT' : 'Targeting stopped',
+          href: '',
+          id: `targeting-${event.id}`,
+          title: event.isTargeting ? 'Account targeted' : 'Targeting stopped',
         })))} />
       </section>
       {hasAgencyIntelligence ? <AnchoredDetails className="account-overview-details account-workspace-section agency-retail-intelligence" id="intelligence" initialOpen summary="Retail Intelligence">

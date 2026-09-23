@@ -98,3 +98,15 @@ This manifest is the repository-backed record of work in TST that may be include
 - User-visible: Yes; score explanations identify objective traffic, review volume, venue attributes, and the intentionally small star-rating contribution. Research-only scores remain labeled provisional.
 - Production readiness: Ready for TST evaluation; 48 focused research, scoring, tenant-scope, and presentation tests, typecheck, and an isolated production build passed.
 - Rollout notes: TST only. Existing research immediately benefits from the new review-count weighting after V6 recalculation. Foot-traffic, venue-type, and hotel meeting-space points appear after a new research refresh captures their structured evidence. Run `npm run recalculate:opportunities:v6` in the intended environment to rescore preserved tenant opportunities without changing pursued, dismissed, or snoozed statuses.
+
+### Target / Targeting Accounts
+
+- Description: Replaces user-facing Pursuing terminology with Target Account / Targeting. Targeting is an organization-owned core CRM account overlay, available without Intelligence, and can be initiated on account pages, Log Visit, Wholesale Opportunities, and Agency Intelligence. Targeting updates Sales Status to TARGET where enabled, preserves PURCHASING, and prioritizes wholesale accounts for refreshed public research. The prior actioned-opportunity state and its worklist/research behavior remain intact.
+- Relevant commit(s): Pending.
+- Feature flag: None for account targeting; existing Intelligence entitlements remain required for Intelligence pages.
+- Default flag state: Available to all organizations.
+- Migration(s): `prisma/migrations/20260923120000_account_targeting/migration.sql`.
+- Environment/config: None.
+- User-visible: Yes.
+- Production readiness: Not reviewed; TST feature development only.
+- Rollout notes: Tenant-specific target state and history. Agency Intelligence data has no separate targeted research queue; its existing agency intelligence refresh remains controlled by the established OHLQ data workflow.

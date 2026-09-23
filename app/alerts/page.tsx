@@ -24,6 +24,7 @@ import { RecordPicker } from '../components/RecordPicker';
 import { DatePickerField } from '../components/DatePickerField';
 import { LiveFilterForm } from '../components/LiveFilterForm';
 import { WorkViewNavigation } from '../components/WorkViewNavigation';
+import { TargetAccountMarker } from '../components/TargetAccountMarker';
 import { createVisit } from '../visits/actions';
 import { WorklistActions } from './WorklistActions';
 import { getWorklistGroup, worklistGroups } from '../../lib/worklistPresentation';
@@ -332,6 +333,8 @@ export default async function Alerts({
   ]);
 
   const worklistLocations = await getWorklistLocations(items);
+  const targetOverlays = await prisma.organizationAccountOverlay.findMany({ where: { organizationId, isTargeting: true, OR: [{ accountType: 'AGENCY', externalAccountId: { in: items.map((item) => item.agencyId).filter((id): id is string => Boolean(id)) } }, { accountType: 'WHOLESALE', externalAccountId: { in: items.map((item) => item.wholesaleAccountId).filter((id): id is string => Boolean(id)) } }] }, select: { accountType: true, externalAccountId: true } });
+  const targetedAccountKeys = new Set(targetOverlays.map((item) => `${item.accountType}:${item.externalAccountId}`));
 
   const groups = worklistGroups.map((title) => ({
     title,
@@ -451,9 +454,12 @@ export default async function Alerts({
                       </td>
                       <td data-label="Location / Due">
                         {location ? (
+                          <>
                           <Link className="table-link" href={location.href}>
                             {location.name}
                           </Link>
+                          {targetedAccountKeys.has(`${location.type === 'agency' ? 'AGENCY' : 'WHOLESALE'}:${location.id}`) ? <TargetAccountMarker /> : null}
+                          </>
                         ) : (
                           <strong>{getWorklistLocationFallbackLabel(item)}</strong>
                         )}

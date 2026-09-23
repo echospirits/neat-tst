@@ -252,7 +252,7 @@ export async function OpportunityAccountPanel({ agencyId, wholesaleAccountId, cu
       <IntelligenceFacts facts={[
         { label: 'Active', value: opportunities.length },
         { label: 'High priority', value: highPriority },
-        { label: 'Pursuing', value: pursuing },
+        { label: 'In progress', value: pursuing },
         { label: 'Follow-ups', value: openFollowUps },
         { label: 'Linked accounts', value: linkedAccounts.length },
         { label: 'Buying / 30d', value: buyingAccounts },

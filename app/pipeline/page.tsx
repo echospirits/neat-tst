@@ -31,7 +31,7 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
   const overlays = await prisma.organizationAccountOverlay.findMany({
     where: { organizationId, salesStatus: { not: null } },
     orderBy: [{ salesStatusUpdatedAt: 'desc' }],
-    select: { accountType: true, assignedUserId: true, externalAccountId: true, salesStatus: true, salesStatusUpdatedAt: true },
+    select: { accountType: true, assignedUserId: true, externalAccountId: true, salesStatus: true, salesStatusUpdatedAt: true, isTargeting: true },
   });
   const agencyIds = overlays.filter((row) => row.accountType === SalesAccountType.AGENCY).map((row) => row.externalAccountId);
   const wholesaleIds = overlays.filter((row) => row.accountType === SalesAccountType.WHOLESALE).map((row) => row.externalAccountId);
@@ -96,7 +96,7 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
           return <details className="pipeline-kanban-column" data-sales-stage={option.value} key={`${selectedStatus ?? 'all'}-${option.value}`}>
             <summary><h3>{option.label}</h3><span className="pill">{stageRows.length}</span><svg className="pipeline-kanban-chevron" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 5 7 7-7 7" /></svg></summary>
             {stageRows.map((row) => <article className="pipeline-kanban-card" key={`${row.accountType}:${row.externalAccountId}`}>
-              <Link className="pipeline-kanban-account" href={row.accountType === SalesAccountType.AGENCY ? `/agencies/${row.externalAccountId}` : `/wholesale/${row.externalAccountId}`}>{row.account.name}</Link>
+              <Link className="pipeline-kanban-account" href={row.accountType === SalesAccountType.AGENCY ? `/agencies/${row.externalAccountId}` : `/wholesale/${row.externalAccountId}`}>{row.account.name}</Link>{row.isTargeting ? <small className="target-account-marker">TARGET ACCOUNT</small> : null}
               <span className="muted">{row.accountType === SalesAccountType.AGENCY ? 'Agency' : 'Wholesale'}{row.account.city ? ` · ${row.account.city}` : ''}</span>
               <span>{BUYING_STATE_LABELS[row.buyingState]} · {daysInStatus(row.salesStatusUpdatedAt!)} days in status</span>
               <span className="muted">{row.assignedUserId ? usersById.get(row.assignedUserId) ?? 'Former team member' : 'Unassigned'}</span>
@@ -114,7 +114,7 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
         {rows.map((row) => {
           const href = row.accountType === SalesAccountType.AGENCY ? `/agencies/${row.externalAccountId}` : `/wholesale/${row.externalAccountId}`;
           return <article className="pipeline-account-row" key={`${row.accountType}:${row.externalAccountId}`}>
-            <div className="pipeline-account-identity"><Link href={href}>{row.account.name}</Link><span>{row.accountType === SalesAccountType.AGENCY ? 'Agency' : 'Wholesale'}{row.account.city ? ` · ${row.account.city}` : ''}</span></div>
+            <div className="pipeline-account-identity"><Link href={href}>{row.account.name}</Link>{row.isTargeting ? <small className="target-account-marker">TARGET ACCOUNT</small> : null}<span>{row.accountType === SalesAccountType.AGENCY ? 'Agency' : 'Wholesale'}{row.account.city ? ` · ${row.account.city}` : ''}</span></div>
             <span><small>Sales Status</small><strong>{SALES_STATUS_LABELS[row.salesStatus!]}</strong></span>
             <span><small>Buying State</small><strong>{BUYING_STATE_LABELS[row.buyingState]}</strong></span>
             <span><small>Owner</small><strong>{row.assignedUserId ? usersById.get(row.assignedUserId) ?? 'Former team member' : 'Unassigned'}</strong></span>

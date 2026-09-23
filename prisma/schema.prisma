@@ -452,70 +452,71 @@ model User {
 }
 
 model Organization {
-  id                    String                            @id @default(cuid())
-  name                  String
-  displayName           String
-  slug                  String                            @unique
-  active                Boolean                           @default(true)
-  primaryState          String                            @default("OH")
-  timezone              String                            @default("America/New_York")
-  website               String?
-  logoUrl               String?
-  appName               String                            @default("Neat")
-  digestName            String                            @default("Neat")
-  productLabel          String                            @default("product")
-  productPluralLabel    String                            @default("products")
-  brandPrimaryColor     String                            @default("#2458ff")
-  brandAccentColor      String                            @default("#6d28d9")
-  contactName           String?
-  contactEmail          String?
-  contactPhone          String?
-  supportEmail          String?
-  settings              Json                              @default("{}")
-  accountStatus         OrganizationStatus                @default(TRIAL)
-  onboardingStatus      OrganizationOnboardingStatus      @default(PROVISIONING)
-  onboardingData        Json                              @default("{}")
-  notes                 String?
-  createdAt             DateTime                          @default(now())
-  updatedAt             DateTime                          @updatedAt
-  vendorIdentifiers     OrganizationVendorIdentifier[]
-  a3aStoreIdentifiers   OrganizationA3aStoreIdentifier[]
-  products              OrganizationProduct[]
-  features              OrganizationFeature[]
-  accountOverlays       OrganizationAccountOverlay[]
-  salesStatusHistory    AccountSalesStatusHistory[]
-  auditEvents           OrganizationAuditEvent[]
-  provisioningRuns      OrganizationProvisioningRun[]
-  weeklyDigestLogs      WeeklyDigestLog[]
-  tags                  Tag[]
-  menuPlacements        MenuPlacement[]
-  recipes               Recipe[]
-  recipeSuggestions     RecipeSuggestion[]
-  targetProfiles        TargetAccountProfile[]
-  locationTags          LocationTag[]
-  locationContacts      LocationContact[]
-  contactImports        ContactImportSession[]
-  accountActivities     AccountActivity[]
-  loggedVisitContacts   LoggedVisitContact[]
-  loggedVisits          LoggedVisit[]
-  visitPhotos           VisitPhoto[]
-  worklistItems         WorklistItem[]
-  agencyProducts        AgencyProductIntelligence[]
-  agencySummaries       AgencyIntelligenceSummary[]
-  agencyEvents          AgencyIntelligenceEvent[]
-  agencyMarketProfiles  AgencyMarketProfile[]
-  agencyProductFits     AgencyProductMarketFit[]
-  opportunitySignals    OpportunityAccountSignal[]
-  accountSalesEvents    AccountSalesEvent[]
-  salesOpportunities    SalesOpportunity[]
-  opportunityEvents     OpportunityEvent[]
-  ohlqCredentials       OrganizationOhlqCredentials?
-  inventorySnapshots    OhlqAgencyInventorySnapshot[]
-  currentInventory      OhlqAgencyInventoryCurrent[]
-  inventoryImportRuns   OhlqTenantInventoryImportStatus[]
-  wholesaleOrders       WholesaleOrder[]
-  accountResearchPilots AccountResearchPilot[]
-  accountResearchJobs   AccountResearchJob[]
+  id                      String                            @id @default(cuid())
+  name                    String
+  displayName             String
+  slug                    String                            @unique
+  active                  Boolean                           @default(true)
+  primaryState            String                            @default("OH")
+  timezone                String                            @default("America/New_York")
+  website                 String?
+  logoUrl                 String?
+  appName                 String                            @default("Neat")
+  digestName              String                            @default("Neat")
+  productLabel            String                            @default("product")
+  productPluralLabel      String                            @default("products")
+  brandPrimaryColor       String                            @default("#2458ff")
+  brandAccentColor        String                            @default("#6d28d9")
+  contactName             String?
+  contactEmail            String?
+  contactPhone            String?
+  supportEmail            String?
+  settings                Json                              @default("{}")
+  accountStatus           OrganizationStatus                @default(TRIAL)
+  onboardingStatus        OrganizationOnboardingStatus      @default(PROVISIONING)
+  onboardingData          Json                              @default("{}")
+  notes                   String?
+  createdAt               DateTime                          @default(now())
+  updatedAt               DateTime                          @updatedAt
+  vendorIdentifiers       OrganizationVendorIdentifier[]
+  a3aStoreIdentifiers     OrganizationA3aStoreIdentifier[]
+  products                OrganizationProduct[]
+  features                OrganizationFeature[]
+  accountOverlays         OrganizationAccountOverlay[]
+  accountTargetingHistory AccountTargetingHistory[]
+  salesStatusHistory      AccountSalesStatusHistory[]
+  auditEvents             OrganizationAuditEvent[]
+  provisioningRuns        OrganizationProvisioningRun[]
+  weeklyDigestLogs        WeeklyDigestLog[]
+  tags                    Tag[]
+  menuPlacements          MenuPlacement[]
+  recipes                 Recipe[]
+  recipeSuggestions       RecipeSuggestion[]
+  targetProfiles          TargetAccountProfile[]
+  locationTags            LocationTag[]
+  locationContacts        LocationContact[]
+  contactImports          ContactImportSession[]
+  accountActivities       AccountActivity[]
+  loggedVisitContacts     LoggedVisitContact[]
+  loggedVisits            LoggedVisit[]
+  visitPhotos             VisitPhoto[]
+  worklistItems           WorklistItem[]
+  agencyProducts          AgencyProductIntelligence[]
+  agencySummaries         AgencyIntelligenceSummary[]
+  agencyEvents            AgencyIntelligenceEvent[]
+  agencyMarketProfiles    AgencyMarketProfile[]
+  agencyProductFits       AgencyProductMarketFit[]
+  opportunitySignals      OpportunityAccountSignal[]
+  accountSalesEvents      AccountSalesEvent[]
+  salesOpportunities      SalesOpportunity[]
+  opportunityEvents       OpportunityEvent[]
+  ohlqCredentials         OrganizationOhlqCredentials?
+  inventorySnapshots      OhlqAgencyInventorySnapshot[]
+  currentInventory        OhlqAgencyInventoryCurrent[]
+  inventoryImportRuns     OhlqTenantInventoryImportStatus[]
+  wholesaleOrders         WholesaleOrder[]
+  accountResearchPilots   AccountResearchPilot[]
+  accountResearchJobs     AccountResearchJob[]
 
   @@index([active, accountStatus])
   @@index([onboardingStatus])
@@ -670,6 +671,9 @@ model OrganizationAccountOverlay {
   tags                  Json                @default("[]")
   relationshipStatus    String?
   opportunitySuppressed Boolean             @default(false)
+  isTargeting           Boolean             @default(false)
+  targetingUpdatedAt    DateTime?
+  targetingUpdatedBy    String?
   strategy              String?
   storeContext          Json?
   createdAt             DateTime            @default(now())
@@ -680,6 +684,22 @@ model OrganizationAccountOverlay {
   @@index([organizationId, active])
   @@index([assignedUserId])
   @@index([organizationId, salesStatus])
+  @@index([organizationId, accountType, isTargeting])
+}
+
+model AccountTargetingHistory {
+  id                String           @id @default(cuid())
+  organizationId    String
+  accountType       SalesAccountType
+  externalAccountId String
+  isTargeting       Boolean
+  changedAt         DateTime         @default(now())
+  changedByUserId   String?
+  loggedVisitId     String?
+  organization      Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, accountType, externalAccountId, changedAt])
+  @@index([loggedVisitId])
 }
 
 model AccountSalesStatusHistory {

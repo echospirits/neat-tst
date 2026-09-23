@@ -201,7 +201,7 @@ function researchOnlyHypothesis(signals: AccountOpportunitySignals): Opportunity
     return {
       type: OpportunityType.CATEGORY_CONQUEST, pitchMode: 'RESEARCH_ONLY', targetCategory: null,
       cycleKey: 'research-fit', title: 'Research-based account fit',
-      recommendedAction: signals.openStatus === 'Closed' ? 'Verify closure before pursuing' : 'Qualify buyer, price fit and local distribution',
+      recommendedAction: signals.openStatus === 'Closed' ? 'Verify closure before prioritizing' : 'Qualify buyer, price fit and local distribution',
       explanation: ['Provisional research-only assessment; purchase volume, bottle-price affinity and buying outcomes are unavailable.'],
     };
 }

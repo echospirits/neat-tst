@@ -18,6 +18,7 @@ import { LiveFilterForm } from '../components/LiveFilterForm';
 import { AccountViewNavigation } from '../components/AccountViewNavigation';
 import { NearbyAccountsSection } from '../components/NearbyAccountsSection';
 import { TagBadges } from '../tags/TagBadges';
+import { TargetAccountMarker } from '../components/TargetAccountMarker';
 
 export const metadata = buildPageMetadata('Agencies');
 
@@ -166,6 +167,8 @@ export default async function AgenciesPage({
     orderBy: [{ name: 'asc' }, { agencyId: 'asc' }],
   });
   const agencyIds = agencies.map((agency) => agency.id);
+  const targetingOverlays = await prisma.organizationAccountOverlay.findMany({ where: { organizationId, accountType: 'AGENCY', externalAccountId: { in: agencyIds }, isTargeting: true }, select: { externalAccountId: true } });
+  const targetedIds = new Set(targetingOverlays.map((item) => item.externalAccountId));
   const visitStats =
     agencyIds.length > 0
       ? await prisma.loggedVisit.groupBy({
@@ -242,6 +245,7 @@ export default async function AgenciesPage({
                   <Link className="table-link account-directory-name-link" href={`/agencies/${agency.id}`}>
                     {agency.name}
                   </Link>
+                  {targetedIds.has(agency.id) ? <TargetAccountMarker /> : null}
                   <span className="account-directory-mobile-only account-directory-location">
                     {address ? <AddressLink address={address} /> : `Agency ${agency.agencyId}`}
                   </span>

@@ -243,7 +243,7 @@ export function estimateResearchCostMicros({ inputTokens, outputTokens, webSearc
 export function chooseResearchTier(opportunities: Array<{ status: string; productionScore: number }>) {
   const pursued = opportunities.some((item) => item.status === 'ACTIONED');
   const highestScore = Math.max(0, ...opportunities.map((item) => item.productionScore));
-  if (pursued) return { tier: 'DEEP' as const, reason: 'Pursued account; complete commercial refresh.' };
+  if (pursued) return { tier: 'DEEP' as const, reason: 'Opportunity in progress; complete commercial refresh.' };
   if (highestScore >= 70) return { tier: 'DEEP' as const, reason: `High provisional opportunity score (${Math.round(highestScore)}).` };
   return { tier: 'LIGHTWEIGHT' as const, reason: `Initial identity and public-fit pass for score ${Math.round(highestScore)}.` };
 }

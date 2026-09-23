@@ -111,6 +111,8 @@ type LogVisitFormProps = {
   mode?: 'create' | 'edit';
   submitLabel?: string;
   salesStatusOptions?: Array<{ label: string; value: string }>;
+  targetedAgencyIds?: string[];
+  targetedWholesaleAccountIds?: string[];
 };
 
 const normalize = (value: string | null | undefined) => (value ?? '').trim().toLowerCase();
@@ -148,6 +150,8 @@ export function LogVisitForm({
   mode = 'create',
   submitLabel = 'Save visit',
   salesStatusOptions = [],
+  targetedAgencyIds = [],
+  targetedWholesaleAccountIds = [],
 }: LogVisitFormProps) {
   const [locationType, setLocationType] = useState<VisitLocationType>(initialValues?.locationType ?? 'wholesale');
   const [agencyId, setAgencyId] = useState(initialValues?.agencyId ?? '');
@@ -667,6 +671,13 @@ export function LogVisitForm({
           <label className="visit-outcome-chip"><input defaultChecked name="salesStatus" type="radio" value="" /><span>No change</span></label>
           {salesStatusOptions.map((option) => <label className="visit-outcome-chip" key={option.value}><input name="salesStatus" type="radio" value={option.value} /><span>{option.label}</span></label>)}
         </div>
+      </fieldset> : null}
+
+      {hasLocation && mode === 'create' ? <fieldset className="visit-step visit-target-account-step">
+        <legend>Account focus <span className="optional-label">Optional</span></legend>
+        {(locationType === 'agency' ? targetedAgencyIds.includes(agencyId) : targetedWholesaleAccountIds.includes(wholesaleAccountId))
+          ? <p className="visit-target-state"><strong className="target-account-marker">TARGET ACCOUNT</strong><span>We’re actively working this account.</span></p>
+          : <label className="visit-target-choice"><input name="targetAccount" type="checkbox" value="true" /><span><strong>Target Account</strong><small>Mark this account for active work and refresh its research.</small></span></label>}
       </fieldset> : null}
 
       <details className="visit-details">

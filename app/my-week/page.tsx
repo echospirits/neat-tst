@@ -16,6 +16,7 @@ import { getWorklistLocationFallbackLabel, getWorklistLocations } from '../../li
 import { createVisit } from '../visits/actions';
 import { WorklistActions } from '../alerts/WorklistActions';
 import { WorkViewNavigation } from '../components/WorkViewNavigation';
+import { TargetAccountMarker } from '../components/TargetAccountMarker';
 import { WorklistDetail } from '../alerts/WorklistDetail';
 
 export const metadata = buildPageMetadata('My Week');
@@ -293,6 +294,8 @@ export default async function MyWeekPage() {
   ]);
 
   const worklistLocations = await getWorklistLocations(items);
+  const targetOverlays = await prisma.organizationAccountOverlay.findMany({ where: { organizationId, isTargeting: true, OR: [{ accountType: 'AGENCY', externalAccountId: { in: items.map((item) => item.agencyId).filter((id): id is string => Boolean(id)) } }, { accountType: 'WHOLESALE', externalAccountId: { in: items.map((item) => item.wholesaleAccountId).filter((id): id is string => Boolean(id)) } }] }, select: { accountType: true, externalAccountId: true } });
+  const targetedAccountKeys = new Set(targetOverlays.map((item) => `${item.accountType}:${item.externalAccountId}`));
   const dueThisWeek = items.filter((item) => item.dueDate);
   const noDate = items.filter((item) => !item.dueDate);
   const groups = [
@@ -374,9 +377,12 @@ export default async function MyWeekPage() {
                         </td>
                         <td data-label="Location / Due">
                           {location ? (
+                            <>
                             <Link className="table-link" href={location.href}>
                               {location.name}
                             </Link>
+                            {targetedAccountKeys.has(`${location.type === 'agency' ? 'AGENCY' : 'WHOLESALE'}:${location.id}`) ? <TargetAccountMarker /> : null}
+                            </>
                           ) : (
                             <strong>{getWorklistLocationFallbackLabel(item)}</strong>
                           )}

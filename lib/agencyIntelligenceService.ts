@@ -151,7 +151,7 @@ const actionLabel: Record<AgencyProductAnalysis['recommendedAction'], string> = 
   MAINTAIN: 'Maintain',
   MONITOR: 'Monitor',
   NO_ACTION: 'No action',
-  PURSUE_PLACEMENT: 'Pursue placement',
+  PURSUE_PLACEMENT: 'Seek placement',
   REDUCE_PRIORITY: 'Reduce priority',
   RESTOCK: 'Restock',
   SCHEDULE_TASTING: 'Schedule tasting',

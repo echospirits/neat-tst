@@ -31,6 +31,7 @@ import { readBusinessHours } from '../../../lib/accountResearchQueue';
 import { SalesAccountType } from '@prisma/client';
 import { getAccountSalesStatusSummary, SALES_STATUS_LABELS } from '../../../lib/accountSalesStatus';
 import { AccountSalesStatusPanel } from '../../components/AccountSalesStatusPanel';
+import { TargetAccountControl } from '../../components/TargetAccountControl';
 
 const formatVisitDate = (date: Date | null | undefined) => formatEasternDate(date) || 'No visits yet';
 const getMergedWholesaleAccountIds = async (accountId: string) => {
@@ -164,7 +165,7 @@ export default async function WholesaleActivityPage({
     hasDirectWholesaleOrders ? listWholesaleOrders({ organizationId, wholesaleAccountIds: mergedAccountIds, filed: true, pageSize: 200 }) : { orders: [], totalCount: 0, page: 1, pageSize: 200 },
     prisma.organizationAccountOverlay.findUnique({
       where: { organizationId_accountType_externalAccountId: { organizationId, accountType: 'WHOLESALE', externalAccountId: id } },
-      select: { notes: true },
+      select: { notes: true, isTargeting: true },
     }),
     prisma.locationContact.findMany({
       where: { organizationId, wholesaleAccountId: id },
@@ -258,6 +259,7 @@ export default async function WholesaleActivityPage({
     prisma.accountSalesStatusHistory.findMany({ where: { organizationId, accountType: SalesAccountType.WHOLESALE, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 }),
   ]) : [null, []];
   const userNames = new Map(users.map((entry) => [entry.id, getUserDisplayName(entry)]));
+  const targetingHistory = await prisma.accountTargetingHistory.findMany({ where: { organizationId, accountType: SalesAccountType.WHOLESALE, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 });
 
   return (
     <>
@@ -265,9 +267,11 @@ export default async function WholesaleActivityPage({
         <div>
           <span className="page-eyebrow">Wholesale · {account.city || 'Location not set'}</span>
           <h1>{account.name}</h1>
+          {overlay?.isTargeting ? <p><strong className="target-account-marker">TARGET ACCOUNT</strong></p> : null}
           {account.tags.length ? <TagBadges tags={account.tags.map((assignment) => assignment.tag)} /> : null}
         </div>
         <div className="page-heading-actions">
+          <TargetAccountControl accountType={SalesAccountType.WHOLESALE} externalAccountId={id} isTargeting={overlay?.isTargeting ?? false} allowStop returnTo={`/wholesale/${id}`} />
           {hasDirectWholesaleOrders ? <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/direct-order`}>Create order</Link> : null}
           <ContextualActions
             context={{ accountName: account.name, returnTo: `/wholesale/${account.id}`, sourceLabel: account.name, sourceType: 'WHOLESALE_DETAIL', wholesaleAccountId: account.id }}
@@ -376,7 +380,7 @@ export default async function WholesaleActivityPage({
       <section className="dashboard-section account-workspace-section" id="activity">
         <div className="section-heading">
           <h2>Activity</h2>
-          <span className="pill">{visits.length + filedOrders.length + communicationActivities.length + salesStatusHistory.length}</span>
+          <span className="pill">{visits.length + filedOrders.length + communicationActivities.length + salesStatusHistory.length + targetingHistory.length}</span>
         </div>
         <VisitActivityTable contactMap={contactMap} visits={visits} supplementalEvents={filedOrders.map((order) => ({
           actor: order.filedSource === WholesaleOrderFiledSource.MANUAL ? order.filedBy?.displayName : 'OHLQ sales match',
@@ -397,6 +401,13 @@ export default async function WholesaleActivityPage({
           id: `sales-status-${event.id}`,
           href: '',
           title: event.source === 'SALES_DATA' ? 'Purchase detected' : 'Sales status changed',
+        }))).concat(targetingHistory.map((event) => ({
+          actor: event.changedByUserId ? userNames.get(event.changedByUserId) ?? 'Former team member' : 'Neat',
+          at: event.changedAt,
+          detail: event.isTargeting ? 'TARGET ACCOUNT' : 'Targeting stopped',
+          href: '',
+          id: `targeting-${event.id}`,
+          title: event.isTargeting ? 'Account targeted' : 'Targeting stopped',
         })))} />
       </section>
     </>
