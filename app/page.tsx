@@ -12,11 +12,11 @@ import { DashboardOpportunitySummary } from './components/DashboardOpportunitySu
 import { GlobalSearchForm } from './components/GlobalSearchForm';
 import { DashboardAgencyIntelligence } from './components/DashboardAgencyIntelligence';
 import { getWorklistLocations } from '../lib/worklistLocations';
-import { isValidSchedulerDate } from '../lib/myDayWeekScheduler';
+import { getSchedulerWeekDates, isValidSchedulerDate } from '../lib/myDayWeekScheduler';
 import { createSchedulerWorklistItem, completeSchedulerWorklistItem, updateSchedulerWorklistItem } from './my-week/actions';
 import { WorklistScheduler } from './my-week/WorklistScheduler';
 
-export const metadata = buildPageMetadata('My Day');
+export const metadata = buildPageMetadata('My Schedule');
 
 const dashboardTimeZone = EASTERN_TIME_ZONE;
 const inactiveWorklistStatuses = [WorklistStatus.COMPLETED, WorklistStatus.CANCELLED];
@@ -171,14 +171,19 @@ function MetricSplits({ agency, wholesale }: { agency: number; wholesale: number
   );
 }
 
-export default async function Dashboard({ searchParams }: { searchParams?: Promise<{ date?: string }> }) {
+export default async function Dashboard({ searchParams }: { searchParams?: Promise<{ date?: string; view?: string }> }) {
   const user = await requireUser();
   const { organizationId } = await requireOrganizationContext(user);
   const enabledFeatures = await getOrganizationFeatures(organizationId);
   const params = (await searchParams) ?? {};
   const anchorDate = isValidSchedulerDate(params.date) ? params.date : formatEasternDateInputValue();
-  const nextDayStart = new Date(`${addDaysToDateInputValue(anchorDate, 1)}T00:00:00.000Z`);
-  const overdueCutoff = new Date(`${addDaysToDateInputValue(anchorDate, -30)}T00:00:00.000Z`);
+  const view = params.view === 'week' ? 'week' : 'day';
+  const weekDates = getSchedulerWeekDates(anchorDate);
+  const schedulerRangeStart = [addDaysToDateInputValue(anchorDate, -30), addDaysToDateInputValue(weekDates[0], -30)]
+    .sort()[0];
+  const schedulerRangeEnd = [addDaysToDateInputValue(anchorDate, 1), addDaysToDateInputValue(weekDates[6], 1)]
+    .sort()
+    .at(-1)!;
   const ranges = getDashboardRanges();
   const visitQueryStart = ranges.weekStart < ranges.monthStart ? ranges.weekStart : ranges.monthStart;
   const excludedIntelligenceSources: WorklistSource[] = [
@@ -266,7 +271,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
         AND: [
           { OR: [{ assignedToUserId: user.id }, { assignedTo: getUserDisplayName(user) }] },
           { status: { in: [WorklistStatus.OPEN, WorklistStatus.IN_PROGRESS] } },
-          { OR: [{ dueDate: null }, { dueDate: { gte: overdueCutoff, lt: nextDayStart } }] },
+          { OR: [{ dueDate: null }, { dueDate: { gte: new Date(`${schedulerRangeStart}T00:00:00.000Z`), lt: new Date(`${schedulerRangeEnd}T00:00:00.000Z`) } }] },
         ],
       },
       orderBy: [{ dueDate: { sort: 'asc', nulls: 'last' } }, { dueTimeMinutes: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }],
@@ -336,11 +341,10 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
     <>
       <header className="page-heading page-header dashboard-heading">
         <div>
-          <span className="page-eyebrow">{new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: dashboardTimeZone }).format(new Date(`${anchorDate}T12:00:00.000Z`))}</span>
-          <h1>My day</h1>
-          <p className="muted">A clear next step. A little more time in the field.</p>
+          <span className="page-eyebrow">Worklist</span>
+          <h1>My Schedule</h1>
+          <p className="muted">Plan your day or scan the week ahead.</p>
         </div>
-        <Link className="btn secondary" href="/my-week">View My Week</Link>
       </header>
 
       <WorklistScheduler
@@ -351,7 +355,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
         items={schedulerItems}
         updateAction={updateSchedulerWorklistItem}
         users={schedulerUsers.map((member) => ({ id: member.id, name: getUserDisplayName(member) }))}
-        view="day"
+        view={view}
       />
       <div className="day-search"><GlobalSearchForm /></div>
 
@@ -371,10 +375,6 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
           <Link className="quick-action-card" href="/search">
             <strong>Find account</strong>
             <span>{enabledFeatures.has('WHOLESALE_OPPORTUNITIES') ? 'Agency, wholesale, or opportunity' : 'Agency or wholesale'}</span>
-          </Link>
-          <Link className="quick-action-card" href="/my-week">
-            <strong>My Week</strong>
-            <span>{scheduledVisitTotal} scheduled in 7 days</span>
           </Link>
         </div>
       </section>

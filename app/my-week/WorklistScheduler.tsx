@@ -64,6 +64,7 @@ const formatShortDay = (date: string) => shortDayFormatter.format(dateAtUtcMidni
 const formatMonthRange = (date: string) => monthRangeFormatter.format(dateAtUtcMidnight(date));
 const timeLabel = (minutes: number) => formatTimeMinutes(minutes);
 const statusLabel = (status: string) => status === 'IN_PROGRESS' ? 'In progress' : 'Open';
+const scheduleHref = (view: 'day' | 'week', date: string) => `/?view=${view}&date=${date}`;
 
 function SchedulerAccountLabel({ item, fallback }: { item: SchedulerItem; fallback?: string }) {
   return <>{item.location?.name ?? fallback ?? item.category.toLowerCase()}{item.isTargeting && item.location ? <> · <TargetAccountMarker /></> : null}</>;
@@ -392,11 +393,14 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
 
   const weekLabel = `${formatMonthRange(weekDates[0])} – ${formatMonthRange(weekDates[6])}`;
   const feedbackIsError = Boolean(feedback) && !['Saving schedule…', 'Schedule saved.', 'Existing task scheduled.'].includes(feedback);
-  const dateNavBase = view === 'day' ? '/' : '/my-week';
   const previousDate = addSchedulerDays(anchorDate, view === 'day' ? -1 : -7);
   const nextDate = addSchedulerDays(anchorDate, view === 'day' ? 1 : 7);
 
   return <section className={`worklist-scheduler worklist-scheduler-${view}`} aria-labelledby="scheduler-title">
+    <nav aria-label="Schedule view" className="view-switcher scheduler-view-tabs">
+      <Link aria-current={view === 'day' ? 'page' : undefined} href={scheduleHref('day', anchorDate)}>Day</Link>
+      <Link aria-current={view === 'week' ? 'page' : undefined} href={scheduleHref('week', anchorDate)}>Week</Link>
+    </nav>
     <header className="scheduler-header">
       <div>
         <span className="page-eyebrow">My work</span>
@@ -405,9 +409,9 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
       </div>
       <div className="scheduler-header-actions">
         <nav className="scheduler-date-nav" aria-label={view === 'day' ? 'Choose day' : 'Choose week'}>
-          <Link aria-label={view === 'day' ? 'Previous day' : 'Previous week'} href={`${dateNavBase}?date=${previousDate}`}>‹</Link>
-          <Link href={`${dateNavBase}?date=${currentDate}`}>Today</Link>
-          <Link aria-label={view === 'day' ? 'Next day' : 'Next week'} href={`${dateNavBase}?date=${nextDate}`}>›</Link>
+          <Link aria-label={view === 'day' ? 'Previous day' : 'Previous week'} href={scheduleHref(view, previousDate)}>‹</Link>
+          <Link href={scheduleHref(view, currentDate)}>Today</Link>
+          <Link aria-label={view === 'day' ? 'Next day' : 'Next week'} href={scheduleHref(view, nextDate)}>›</Link>
         </nav>
         <button className="btn primary" onClick={() => openAdd(addButtonDate, null)} type="button">Add work</button>
       </div>
@@ -505,7 +509,7 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
         </ActionForm>
         <div className="scheduler-context-actions">
           {selectedItem.location ? <Link className="btn secondary" href={selectedItem.location.href}>Open account</Link> : null}
-          {getTaskVisitHref(selectedItem, view === 'day' ? '/' : '/my-week') ? <Link className="btn secondary" href={getTaskVisitHref(selectedItem, view === 'day' ? '/' : '/my-week')!}>Log visit</Link> : null}
+          {getTaskVisitHref(selectedItem, scheduleHref(view, anchorDate)) ? <Link className="btn secondary" href={getTaskVisitHref(selectedItem, scheduleHref(view, anchorDate))!}>Log visit</Link> : null}
           <Link className="btn secondary" href={`/alerts#worklist-${selectedItem.id}`}>More task actions</Link>
           <ActionForm action={completeAction} onSuccess={refreshAfterSave}>
             <input name="id" type="hidden" value={selectedItem.id} />

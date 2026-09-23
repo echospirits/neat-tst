@@ -4460,6 +4460,22 @@ legend {
 }
 
 /* My Day / My Week Worklist scheduler */
+.scheduler-view-tabs {
+  margin: 0 0 16px;
+}
+
+.scheduler-view-tabs a {
+  display: inline-flex;
+  min-width: 88px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+}
+
+.scheduler-view-tabs a[aria-current="page"] {
+  color: #fff;
+}
+
 .worklist-scheduler {
   min-width: 0;
   margin: 0 0 1.5rem;

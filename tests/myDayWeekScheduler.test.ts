@@ -169,12 +169,26 @@ test('calendar creation creates one normal Worklist row with selected account an
   assert.ok(calls.some((call) => call.name === 'calendar' && call.args === 'new-task'));
 });
 
-test('My Day and My Week reads are organization-scoped, current-user-scoped, active-only, and bounded', () => {
-  for (const [path, userId] of [['../app/page.tsx', 'user.id'], ['../app/my-week/page.tsx', 'currentUser.id']] as const) {
-    const source = readFileSync(new URL(path, import.meta.url), 'utf8');
-    assert.match(source, /organizationId,/);
-    assert.match(source, new RegExp(`assignedToUserId: ${userId.replace('.', '\\.')}`));
-    assert.match(source, /status: \{ in: \[WorklistStatus\.OPEN, WorklistStatus\.IN_PROGRESS\] \}/);
-    assert.match(source, /take: 300/);
-  }
+test('My Schedule loads one tenant-scoped dataset for both day and week views', () => {
+  const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  assert.match(page, /getSchedulerWeekDates\(anchorDate\)/);
+  assert.match(page, /schedulerRangeStart/);
+  assert.match(page, /schedulerRangeEnd/);
+  assert.match(page, /organizationId,/);
+  assert.match(page, /assignedToUserId: user\.id/);
+  assert.match(page, /status: \{ in: \[WorklistStatus\.OPEN, WorklistStatus\.IN_PROGRESS\] \}/);
+  assert.match(page, /take: 300/);
+  assert.match(page, /view=\{view\}/);
+
+  const legacyRoute = readFileSync(new URL('../app/my-week/page.tsx', import.meta.url), 'utf8');
+  assert.match(legacyRoute, /redirect\(`\/\?view=week/);
+});
+
+test('schedule tabs and date controls stay on the combined route and preserve the active view', () => {
+  const scheduler = readFileSync(new URL('../app/my-week/WorklistScheduler.tsx', import.meta.url), 'utf8');
+  assert.match(scheduler, /aria-label="Schedule view"/);
+  assert.match(scheduler, /scheduleHref\('day', anchorDate\)/);
+  assert.match(scheduler, /scheduleHref\('week', anchorDate\)/);
+  assert.match(scheduler, /scheduleHref\(view, previousDate\)/);
+  assert.match(scheduler, /scheduleHref\(view, nextDate\)/);
 });

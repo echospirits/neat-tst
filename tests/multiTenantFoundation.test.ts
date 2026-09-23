@@ -151,7 +151,6 @@ test('intelligence sections are omitted from core-only dashboards and account pa
   }
   assert.match(readFileSync('app/page.tsx', 'utf8'), /AGENCY_INTELLIGENCE/);
   assert.match(readFileSync('app/alerts/page.tsx', 'utf8'), /excludedIntelligenceSources/);
-  assert.match(readFileSync('app/my-week/page.tsx', 'utf8'), /excludedIntelligenceSources/);
 });
 
 test('private visit and worklist entry points include organization scoping', () => {
