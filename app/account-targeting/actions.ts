@@ -3,6 +3,7 @@
 import { SalesAccountType } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { scheduleTargetedAgencyResearch } from '../../lib/scheduleTargetedAgencyResearch';
 import { requireUser } from '../../lib/auth';
 import { setAccountTargeting } from '../../lib/accountTargeting';
 import { requireOrganizationContext } from '../../lib/organizations';
@@ -21,7 +22,10 @@ export async function updateAccountTargeting(formData: FormData) {
   const isTargeting = formData.get('isTargeting') === 'true';
   const returnTo = safeReturnTo(formData.get('returnTo'));
   if (!externalAccountId) redirect(`${returnTo}?targetStatus=invalid`);
-  await prisma.$transaction((tx) => setAccountTargeting({ accountType, changedByUserId: user.id, db: tx, externalAccountId, isTargeting, organizationId }));
+  const targeting = await prisma.$transaction((tx) => setAccountTargeting({ accountType, changedByUserId: user.id, db: tx, externalAccountId, isTargeting, organizationId }));
+  if (targeting.changed && targeting.isTargeting && accountType === SalesAccountType.AGENCY) {
+    scheduleTargetedAgencyResearch({ agencyId: externalAccountId, organizationId });
+  }
   for (const path of [returnTo, '/agencies', '/wholesale', '/alerts', '/my-week', '/pipeline', '/opportunities', '/agency-focus']) revalidatePath(path);
   redirect(`${returnTo}?targetStatus=${isTargeting ? 'targeted' : 'stopped'}`);
 }

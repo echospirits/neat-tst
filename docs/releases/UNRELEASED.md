@@ -49,7 +49,7 @@ This manifest is the repository-backed record of work in TST that may be include
 - Environment/config: None.
 - User-visible: Yes.
 - Production readiness: Not reviewed for production; full tests, typecheck, build, tenant/feature/idempotency audits, and the TST schema postflight passed. Follow-up: 30 focused tests, typecheck, and build passed; deployed 1440 x 900 and 390 x 844 browser review passed for arrows, Kanban/List switching, status filters, empty recovery, and account links. Wholesale compact follow-up: 7 focused tests, typecheck, build, and deployed desktop/mobile review passed; mobile status area reduced from 546px to 164px, with 24px arrows. Confirmed progression shading, no current-stage outline, direct Edit, and no Voice note shortcut. No horizontal mobile page overflow.
-- Rollout notes: Pilot feature. Apply the additive migration before deploying application code. No backfill is required; existing tracked wholesale purchase events are reused, and future successful imports reconcile eligible tracked accounts. TST retains a pre-existing unapplied `20260917120000_agency_store_context` migration-history entry that was not modified by this feature.
+- Rollout notes: Pilot feature. Apply the additive migration before deploying application code. No backfill is required; existing tracked wholesale purchase events are reused, and future successful imports reconcile eligible tracked accounts. The additive `20260917120000_agency_store_context` prerequisite was applied to TST with the Target / Targeting deployment.
 
 ### Lightweight release and version framework
 
@@ -101,12 +101,12 @@ This manifest is the repository-backed record of work in TST that may be include
 
 ### Target / Targeting Accounts
 
-- Description: Replaces user-facing Pursuing terminology with Target Account / Targeting. Targeting is an organization-owned core CRM account overlay, available without Intelligence, and can be initiated on account pages, Log Visit, Wholesale Opportunities, and Agency Intelligence. Targeting updates Sales Status to TARGET where enabled, preserves PURCHASING, and prioritizes wholesale accounts for refreshed public research. The prior actioned-opportunity state and its worklist/research behavior remain intact.
-- Relevant commit(s): `dfcda229`.
+- Description: Replaces user-facing Pursuing terminology with Target Account / Targeting. Targeting is an organization-owned core CRM account overlay, available without Intelligence, and can be initiated on account pages, Log Visit, Wholesale Opportunities, and Agency Intelligence. Targeting updates Sales Status to TARGET where enabled, preserves established relationship statuses, and prioritizes wholesale accounts for refreshed public research. Agency targeting re-runs the existing agency intelligence pipeline for that account when complete inputs are available; targeted agencies are also included in the next tenant inventory refresh for core-only organizations. The prior actioned-opportunity state and its worklist/research behavior remain intact.
+- Relevant commit(s): Pending.
 - Feature flag: None for account targeting; existing Intelligence entitlements remain required for Intelligence pages.
 - Default flag state: Available to all organizations.
 - Migration(s): `prisma/migrations/20260923120000_account_targeting/migration.sql`.
 - Environment/config: None.
 - User-visible: Yes.
 - Production readiness: Not reviewed; TST feature development only.
-- Rollout notes: Tenant-specific target state and history. Agency Intelligence data has no separate targeted research queue; its existing agency intelligence refresh remains controlled by the established OHLQ data workflow.
+- Rollout notes: Tenant-specific target state and history. Agency refresh uses the existing OHLQ intelligence workflow and waits for complete sales and inventory inputs; failures are logged without undoing the targeting action. Apply the previously pending additive `20260917120000_agency_store_context` migration and this feature migration before deploying code.

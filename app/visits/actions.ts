@@ -18,6 +18,7 @@ import { parseTimeInputToMinutes } from '../../lib/dateTime';
 import { syncWorklistItemCalendar } from '../../lib/calendar/worklistSync';
 import { parseSalesStatus, setAccountSalesStatus } from '../../lib/accountSalesStatus';
 import { setAccountTargeting } from '../../lib/accountTargeting';
+import { scheduleTargetedAgencyResearch } from '../../lib/scheduleTargetedAgencyResearch';
 import { createVisitDiagnostics, type VisitDiagnostics } from '../../lib/visitDiagnostics';
 import { getSelectedVoiceFollowUps } from '../../lib/voiceVisitNoteShared';
 import {
@@ -676,6 +677,9 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
   });
 
   diagnostics.mark('committed', { visitId: visit.id, committed: true });
+  if (requestedTargeting && locationType === 'agency' && agencyId) {
+    scheduleTargetedAgencyResearch({ agencyId, organizationId });
+  }
   diagnostics.mark('photos');
   if (isTaster) {
     const photo = pendingPhotos[0]!;

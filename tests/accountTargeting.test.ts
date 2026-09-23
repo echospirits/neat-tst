@@ -61,6 +61,13 @@ test('all required user surfaces use the centralized account target action and s
     assert.match(source, /TargetAccountControl|targetAccount/);
   }
   assert.match(readFileSync('app/components/TargetAccountMarker.tsx', 'utf8'), /TARGET ACCOUNT/);
+  assert.match(readFileSync('app/account-targeting/actions.ts', 'utf8'), /scheduleTargetedAgencyResearch/);
+  assert.match(readFileSync('app/visits/actions.ts', 'utf8'), /scheduleTargetedAgencyResearch/);
+  assert.match(readFileSync('lib/scheduleTargetedAgencyResearch.ts', 'utf8'), /refreshTargetedAgencyResearch/);
+  assert.match(readFileSync('lib/agencyIntelligenceService.ts', 'utf8'), /targetedAgencyIds/);
+  const inventoryWorkflow = readFileSync('lib/ohlqTenantInventoryWorkflow.ts', 'utf8');
+  assert.match(inventoryWorkflow, /accountOverlays: \{ some: \{ accountType: 'AGENCY', isTargeting: true \} \}/);
+  assert.match(inventoryWorkflow, /targetedAgencyIds: organization\.features\.length \? undefined/);
   const styles = readFileSync('app/styles.css', 'utf8');
   assert.match(styles, /\.target-account-marker\s*\{[^}]*display:\s*block;[^}]*max-width:\s*100%/);
   assert.match(styles, /\.target-account-control\s*\{[^}]*flex-wrap:\s*wrap/);
