@@ -120,5 +120,5 @@ This manifest is the repository-backed record of work in TST that may be include
 - Migration(s): None for scheduler scheduling; existing `WorklistItem.dueDate` and `dueTimeMinutes` support undated, date-only, and timed work. Duration remains presentation-only because the schema has no duration field.
 - Environment/config: None.
 - User-visible: Yes.
-- Production readiness: Not reviewed for production; 32 focused tests, typecheck, and production build passed. TST review at 1440 x 900 and 390 x 844 passed on deployment `5f2bd3d`; verify the latest mobile cross-tab date carry before promotion.
+- Production readiness: Not reviewed for production; 32 focused tests, typecheck, and production build passed. TST deployment `cbd5119` reached Ready. Live review passed at 1440 x 900 and 390 x 844, including mobile selected-day handoff and legacy-route date preservation.
 - Rollout notes: TST `0.13.0-dev` only. Existing Worklist records remain authoritative. Schedule updates use the existing deferred Google Calendar sync path; no calendar model, sync mechanism, or provider scope was added. Account IDs and related CRM context remain on Worklist items; target markers come from the organization-scoped account overlay. No migration, environment change, `main` push, or production tag.
