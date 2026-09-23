@@ -110,3 +110,15 @@ This manifest is the repository-backed record of work in TST that may be include
 - User-visible: Yes.
 - Production readiness: Not reviewed; TST feature development only.
 - Rollout notes: Tenant-specific target state and history. Agency refresh uses the existing OHLQ intelligence workflow and waits for complete sales and inventory inputs; failures are logged without undoing the targeting action. The previously pending Agency market and store-context schema prerequisites were verified/reconciled, then `20260923120000_account_targeting` was applied to TST before the code push.
+
+### My Day / My Week Worklist Scheduler
+
+- Description: Turns My Day and My Week into a visual scheduler over existing Worklist items. Desktop supports a weekly time grid, drag/drop scheduling, and planning trays; mobile uses a day timeline, week date selector, quick reschedule/reassignment, and contextual account actions. Calendar Add supports both new Worklist tasks and scheduling an existing task in place. Targeted accounts use the shared TARGET ACCOUNT treatment. No route optimization is included.
+- Relevant commit(s): `98857019`, `37307923`.
+- Feature flag: None; existing organization and assignment access rules apply.
+- Default flag state: N/A.
+- Migration(s): None for scheduler scheduling; existing `WorklistItem.dueDate` and `dueTimeMinutes` support undated, date-only, and timed work. Duration remains presentation-only because the schema has no duration field.
+- Environment/config: None.
+- User-visible: Yes.
+- Production readiness: Not reviewed for production; verify through the separate release checklist before promotion.
+- Rollout notes: TST `0.13.0-dev` only. Existing Worklist records remain authoritative. Schedule updates use the existing deferred Google Calendar sync path; no calendar model, sync mechanism, or provider scope was added. Account IDs and related CRM context remain on Worklist items; target markers come from the organization-scoped account overlay. No `main` push or production tag.
