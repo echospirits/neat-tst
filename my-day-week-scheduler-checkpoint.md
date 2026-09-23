@@ -8,8 +8,8 @@
 - **Calendar abstraction:** `WorklistCalendarEvent` links existing Worklist items to Google events. Existing `scheduleWorklistSync(id)` defers sync after a Worklist write and contains failures.
 - **Account/context:** Worklist stores `agencyId`, `wholesaleAccountId`, `salesOpportunityId`, `loggedVisitId`, and product-intelligence context. `getWorklistLocations` resolves account labels in batches and falls back to linked visit context. Tenant-scoped `OrganizationAccountOverlay.isTargeting` supplies the shared Target Account marker.
 - **Assignment and tenancy:** My Week filters by current user's ID (with legacy assignee-name compatibility), organization, active status, and a bounded date range plus undated work. Scheduler writes re-check organization and eligible assignees server-side.
-- **Existing UI:** `/` is My Day plus dashboard content; `/my-week` previously grouped active tasks by due date. The Worklist route retains full edit/cancel actions; scheduler sheets add completion, scheduling, reassignment, account access, and Log Visit.
-- **Minimal change:** one Worklist-backed scheduler UI across both routes, narrow tenant-scoped server actions, existing deferred Google sync, and native desktop drag/drop (no DnD dependency is installed).
+- **Existing UI:** `/` is the canonical My Schedule page with dashboard context below the scheduler. Day and Week are view tabs over the same scheduler component; `/my-week` redirects to the Week tab while preserving a valid date.
+- **Minimal change:** one Worklist-backed scheduler route with view-specific bounded reads matching the prior Day and Week date windows, narrow tenant-scoped server actions, existing deferred Google sync, and native desktop drag/drop (no DnD dependency is installed).
 
 ## Checkpoints
 
@@ -36,4 +36,11 @@
 - Focused tests: 8 passed. Typecheck: passed after Prisma client generation from the rebased schema. Production build: passed.
 - Browser review: desktop My Day and My Week reviewed at 1440 x 900; mobile timeline, week selector, and task action sheet reviewed at 390 x 844. Document width matched the viewport in each layout. Tested empty-slot date/time prefill, mobile date/time/reassignment controls, existing-work search and account search with a fixture response, and failure feedback from safe preview-only actions. Desktop drag/drop fired on the target; a rejected preview action left the original tray item in place and created no visible duplicate. No real Worklist records were changed. The final shared Target Account marker addition passed typecheck and build; its reusable styling is constrained by the existing shared marker CSS.
 - Google Calendar: scheduler writes call the existing deferred `scheduleWorklistSync`; no calendar provider or sync behavior was added.
-- Final default-config production build: passed. Scheduler implementation commit: `98857019`; Target Account marker integration commit: `37307923`; release-manifest entry references both. The manifest and checkpoint were pushed to `staging/tst` as a fast-forward from `dc3b918b`; remote `refs/heads/tst` was verified at `c04b1edc`. No numbered release file, production tag, or push to `main`; no implementation work remains.
+- Original scheduler implementation commit: `98857019`; Target Account marker integration commit: `37307923`. The initial release manifest and checkpoint were pushed to `staging/tst` at `c04b1edc`. No numbered release file, production tag, or push to `main` was included.
+
+## Unified My Schedule follow-up (2026-09-23)
+
+- **Usability:** replaced the separate My Day and My Week destinations with one stable My Schedule navigation item and adjacent Day / Week tabs. The selected date and view stay in the URL for refreshes, browser history, date navigation, and Log Visit return navigation.
+- **Preserved behavior:** Day retains its single-day time grid, Anytime and overdue/undated work; Week retains the Monday–Sunday grid, Anytime columns, mobile 7-day selector, and selected-day timeline. Completion, quick scheduling, reassignment, account actions, drag/drop, and New Work / Existing Work are unchanged.
+- **Data parity:** Day and Week continue to query their respective prior bounded date windows, with the same tenant, current-user, active-status, intelligence-entitlement, and 300-item guards. The legacy `/my-week` URL redirects into Week.
+- **Verification:** 32 focused scheduler, navigation, and tenancy tests passed; typecheck and production build passed. Desktop and 390 x 844 TST browser review is pending after the push.
