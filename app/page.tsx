@@ -1,23 +1,22 @@
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-import {
-  MenuPlacementStatus,
-  WorklistCategory,
-  WorklistStatus,
-} from '@prisma/client';
+import { MenuPlacementStatus, WorklistCategory, WorklistSource, WorklistStatus } from '@prisma/client';
 import Link from 'next/link';
 import { buildPageMetadata } from '../lib/appBrand';
 import { getUserDisplayName, requireUser } from '../lib/auth';
-import { EASTERN_TIME_ZONE } from '../lib/dateTime';
+import { addDaysToDateInputValue, EASTERN_TIME_ZONE, formatDateOnlyInputValue, formatEasternDateInputValue } from '../lib/dateTime';
 import { prisma } from '../lib/prisma';
 import { getOrganizationFeatures, requireOrganizationContext } from '../lib/organizations';
 import { DashboardOpportunitySummary } from './components/DashboardOpportunitySummary';
 import { GlobalSearchForm } from './components/GlobalSearchForm';
-import { DashboardNextWork } from './components/DashboardNextWork';
 import { DashboardAgencyIntelligence } from './components/DashboardAgencyIntelligence';
+import { getWorklistLocations } from '../lib/worklistLocations';
+import { isValidSchedulerDate } from '../lib/myDayWeekScheduler';
+import { createSchedulerWorklistItem, completeSchedulerWorklistItem, updateSchedulerWorklistItem } from './my-week/actions';
+import { WorklistScheduler } from './my-week/WorklistScheduler';
 
-export const metadata = buildPageMetadata('Dashboard');
+export const metadata = buildPageMetadata('My Day');
 
 const dashboardTimeZone = EASTERN_TIME_ZONE;
 const inactiveWorklistStatuses = [WorklistStatus.COMPLETED, WorklistStatus.CANCELLED];
@@ -172,12 +171,20 @@ function MetricSplits({ agency, wholesale }: { agency: number; wholesale: number
   );
 }
 
-export default async function Dashboard() {
+export default async function Dashboard({ searchParams }: { searchParams?: Promise<{ date?: string }> }) {
   const user = await requireUser();
   const { organizationId } = await requireOrganizationContext(user);
   const enabledFeatures = await getOrganizationFeatures(organizationId);
+  const params = (await searchParams) ?? {};
+  const anchorDate = isValidSchedulerDate(params.date) ? params.date : formatEasternDateInputValue();
+  const nextDayStart = new Date(`${addDaysToDateInputValue(anchorDate, 1)}T00:00:00.000Z`);
+  const overdueCutoff = new Date(`${addDaysToDateInputValue(anchorDate, -30)}T00:00:00.000Z`);
   const ranges = getDashboardRanges();
   const visitQueryStart = ranges.weekStart < ranges.monthStart ? ranges.weekStart : ranges.monthStart;
+  const excludedIntelligenceSources: WorklistSource[] = [
+    ...(!enabledFeatures.has('AGENCY_INTELLIGENCE') ? [WorklistSource.AGENCY_INTELLIGENCE] : []),
+    ...(!enabledFeatures.has('WHOLESALE_OPPORTUNITIES') ? [WorklistSource.OPPORTUNITY_INTELLIGENCE] : []),
+  ];
 
   const [
     activeWorklistItems,
@@ -187,6 +194,8 @@ export default async function Dashboard() {
     liveMenuPlacements,
     promisedMenuPlacementsWithoutProof,
     staleMenuPlacements,
+    schedulerWorklistItems,
+    schedulerUsers,
   ] = await Promise.all([
     prisma.worklistItem.count({
       where: { organizationId, status: { notIn: inactiveWorklistStatuses } },
@@ -250,7 +259,51 @@ export default async function Dashboard() {
         OR: [{ lastVerifiedAt: null }, { lastVerifiedAt: { lt: ranges.stalePlacementCutoff } }],
       },
     }),
+    prisma.worklistItem.findMany({
+      where: {
+        organizationId,
+        ...(excludedIntelligenceSources.length ? { source: { notIn: excludedIntelligenceSources } } : {}),
+        AND: [
+          { OR: [{ assignedToUserId: user.id }, { assignedTo: getUserDisplayName(user) }] },
+          { status: { in: [WorklistStatus.OPEN, WorklistStatus.IN_PROGRESS] } },
+          { OR: [{ dueDate: null }, { dueDate: { gte: overdueCutoff, lt: nextDayStart } }] },
+        ],
+      },
+      orderBy: [{ dueDate: { sort: 'asc', nulls: 'last' } }, { dueTimeMinutes: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }],
+      take: 300,
+      include: {
+        loggedVisit: { select: { locationType: true, agencyId: true, wholesaleAccountId: true } },
+        agencyProductIntelligence: { select: { itemCode: true, itemName: true } },
+      },
+    }),
+    prisma.user.findMany({
+      where: { organizationId, isActive: true, role: { notIn: ['TASTER', 'PLATFORM_ADMIN'] } },
+      orderBy: [{ name: 'asc' }, { email: 'asc' }],
+      select: { id: true, email: true, firstName: true, lastName: true, name: true },
+    }),
   ]);
+
+  const schedulerLocations = await getWorklistLocations(schedulerWorklistItems);
+  const schedulerItems = schedulerWorklistItems.map((item) => {
+    const location = schedulerLocations.get(item.id);
+    return {
+      id: item.id,
+      title: item.title,
+      detail: item.detail,
+      dueDate: item.dueDate ? formatDateOnlyInputValue(item.dueDate) : null,
+      dueTimeMinutes: item.dueTimeMinutes,
+      status: item.status,
+      category: item.category,
+      agencyId: item.agencyId,
+      wholesaleAccountId: item.wholesaleAccountId,
+      salesOpportunityId: item.salesOpportunityId,
+      agencyProductIntelligenceId: item.agencyProductIntelligenceId,
+      productItemCode: item.agencyProductIntelligence?.itemCode ?? null,
+      productName: item.agencyProductIntelligence?.itemName ?? null,
+      assignedToUserId: item.assignedToUserId,
+      location: location ? { id: location.id, name: location.name, type: location.type, href: location.href } : null,
+    };
+  });
 
   const weekVisits = visits.filter((visit) => visit.visitAt.getTime() >= ranges.weekStart.getTime());
   const monthVisits = visits.filter((visit) => visit.visitAt.getTime() >= ranges.monthStart.getTime());
@@ -266,15 +319,24 @@ export default async function Dashboard() {
     <>
       <header className="page-heading page-header dashboard-heading">
         <div>
-          <span className="page-eyebrow">{new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: dashboardTimeZone }).format(ranges.now)}</span>
+          <span className="page-eyebrow">{new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: dashboardTimeZone }).format(new Date(`${anchorDate}T12:00:00.000Z`))}</span>
           <h1>My day</h1>
           <p className="muted">A clear next step. A little more time in the field.</p>
         </div>
         <Link className="btn secondary" href="/my-week">View My Week</Link>
       </header>
 
+      <WorklistScheduler
+        anchorDate={anchorDate}
+        completeAction={completeSchedulerWorklistItem}
+        createAction={createSchedulerWorklistItem}
+        currentUserId={user.id}
+        items={schedulerItems}
+        updateAction={updateSchedulerWorklistItem}
+        users={schedulerUsers.map((member) => ({ id: member.id, name: getUserDisplayName(member) }))}
+        view="day"
+      />
       <div className="day-search"><GlobalSearchForm /></div>
-      <DashboardNextWork organizationId={organizationId} userId={user.id} enabledFeatures={enabledFeatures} />
 
       <section className="dashboard-quick-actions" aria-labelledby="quick-actions-title">
         <div className="section-heading">
