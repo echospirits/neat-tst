@@ -102,7 +102,7 @@ This manifest is the repository-backed record of work in TST that may be include
 ### Target / Targeting Accounts
 
 - Description: Replaces user-facing Pursuing terminology with Target Account / Targeting. Targeting is an organization-owned core CRM account overlay, available without Intelligence, and can be initiated on account pages, Log Visit, Wholesale Opportunities, and Agency Intelligence. Targeting updates Sales Status to TARGET where enabled, preserves PURCHASING, and prioritizes wholesale accounts for refreshed public research. The prior actioned-opportunity state and its worklist/research behavior remain intact.
-- Relevant commit(s): Pending.
+- Relevant commit(s): `dfcda229`.
 - Feature flag: None for account targeting; existing Intelligence entitlements remain required for Intelligence pages.
 - Default flag state: Available to all organizations.
 - Migration(s): `prisma/migrations/20260923120000_account_targeting/migration.sql`.
