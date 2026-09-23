@@ -284,6 +284,22 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
   ]);
 
   const schedulerLocations = await getWorklistLocations(schedulerWorklistItems);
+  const schedulerAgencyIds = [...new Set([...schedulerLocations.values()].flatMap((location) => location?.type === 'agency' ? [location.id] : []))];
+  const schedulerWholesaleIds = [...new Set([...schedulerLocations.values()].flatMap((location) => location?.type === 'wholesale' ? [location.id] : []))];
+  const schedulerTargetOverlays = schedulerAgencyIds.length || schedulerWholesaleIds.length
+    ? await prisma.organizationAccountOverlay.findMany({
+        where: {
+          organizationId,
+          isTargeting: true,
+          OR: [
+            { accountType: 'AGENCY', externalAccountId: { in: schedulerAgencyIds } },
+            { accountType: 'WHOLESALE', externalAccountId: { in: schedulerWholesaleIds } },
+          ],
+        },
+        select: { accountType: true, externalAccountId: true },
+      })
+    : [];
+  const schedulerTargetedAccountKeys = new Set(schedulerTargetOverlays.map((item) => `${item.accountType}:${item.externalAccountId}`));
   const schedulerItems = schedulerWorklistItems.map((item) => {
     const location = schedulerLocations.get(item.id);
     return {
@@ -301,6 +317,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
       productItemCode: item.agencyProductIntelligence?.itemCode ?? null,
       productName: item.agencyProductIntelligence?.itemName ?? null,
       assignedToUserId: item.assignedToUserId,
+      isTargeting: Boolean(location && schedulerTargetedAccountKeys.has(`${location.type === 'agency' ? 'AGENCY' : 'WHOLESALE'}:${location.id}`)),
       location: location ? { id: location.id, name: location.name, type: location.type, href: location.href } : null,
     };
   });
