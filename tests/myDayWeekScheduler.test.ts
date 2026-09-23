@@ -172,8 +172,8 @@ test('calendar creation creates one normal Worklist row with selected account an
 test('My Schedule loads one tenant-scoped dataset for both day and week views', () => {
   const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
   assert.match(page, /getSchedulerWeekDates\(anchorDate\)/);
-  assert.match(page, /schedulerRangeStart/);
-  assert.match(page, /schedulerRangeEnd/);
+  assert.match(page, /view === 'week' \? weekDates\[0\] : anchorDate/);
+  assert.match(page, /view === 'week' \? weekDates\[6\] : anchorDate/);
   assert.match(page, /organizationId,/);
   assert.match(page, /assignedToUserId: user\.id/);
   assert.match(page, /status: \{ in: \[WorklistStatus\.OPEN, WorklistStatus\.IN_PROGRESS\] \}/);

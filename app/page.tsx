@@ -179,11 +179,8 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
   const anchorDate = isValidSchedulerDate(params.date) ? params.date : formatEasternDateInputValue();
   const view = params.view === 'week' ? 'week' : 'day';
   const weekDates = getSchedulerWeekDates(anchorDate);
-  const schedulerRangeStart = [addDaysToDateInputValue(anchorDate, -30), addDaysToDateInputValue(weekDates[0], -30)]
-    .sort()[0];
-  const schedulerRangeEnd = [addDaysToDateInputValue(anchorDate, 1), addDaysToDateInputValue(weekDates[6], 1)]
-    .sort()
-    .at(-1)!;
+  const schedulerRangeStart = addDaysToDateInputValue(view === 'week' ? weekDates[0] : anchorDate, -30);
+  const schedulerRangeEnd = addDaysToDateInputValue(view === 'week' ? weekDates[6] : anchorDate, 1);
   const ranges = getDashboardRanges();
   const visitQueryStart = ranges.weekStart < ranges.monthStart ? ranges.weekStart : ranges.monthStart;
   const excludedIntelligenceSources: WorklistSource[] = [
