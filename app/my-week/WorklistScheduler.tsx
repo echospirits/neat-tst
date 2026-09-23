@@ -398,7 +398,7 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
 
   return <section className={`worklist-scheduler worklist-scheduler-${view}`} aria-labelledby="scheduler-title">
     <nav aria-label="Schedule view" className="view-switcher scheduler-view-tabs">
-      <Link aria-current={view === 'day' ? 'page' : undefined} href={scheduleHref('day', anchorDate)}>Day</Link>
+      <Link aria-current={view === 'day' ? 'page' : undefined} href={scheduleHref('day', view === 'week' ? mobileDate : anchorDate)}>Day</Link>
       <Link aria-current={view === 'week' ? 'page' : undefined} href={scheduleHref('week', anchorDate)}>Week</Link>
     </nav>
     <header className="scheduler-header">

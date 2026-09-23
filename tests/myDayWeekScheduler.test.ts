@@ -187,7 +187,7 @@ test('My Schedule loads one tenant-scoped dataset for both day and week views', 
 test('schedule tabs and date controls stay on the combined route and preserve the active view', () => {
   const scheduler = readFileSync(new URL('../app/my-week/WorklistScheduler.tsx', import.meta.url), 'utf8');
   assert.match(scheduler, /aria-label="Schedule view"/);
-  assert.match(scheduler, /scheduleHref\('day', anchorDate\)/);
+  assert.match(scheduler, /scheduleHref\('day', view === 'week' \? mobileDate : anchorDate\)/);
   assert.match(scheduler, /scheduleHref\('week', anchorDate\)/);
   assert.match(scheduler, /scheduleHref\(view, previousDate\)/);
   assert.match(scheduler, /scheduleHref\(view, nextDate\)/);
