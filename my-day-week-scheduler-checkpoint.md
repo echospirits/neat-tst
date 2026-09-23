@@ -31,6 +31,18 @@
 - Work in an isolated TST worktree so shared-checkout changes are untouched; rebase onto the freshly fetched TST tip before publishing.
 - After rebasing onto the existing account-targeting release, query `OrganizationAccountOverlay` by organization and only the linked account IDs, then render the shared `TargetAccountMarker` wherever an account-linked scheduler item appears. No targeting state is inferred from sales status.
 
+## Hardening follow-up (2026-09-23)
+
+- **Concurrency and integrity:** schedule edits and completion use the row's expected `updatedAt` so stale clients cannot overwrite newer or closed work. Concurrent New Work retries share a submission key, and category-specific Agency/Wholesale work requires a valid active account. Existing-work scheduling remains tenant- and active-status-scoped.
+- **Time handling:** date-less work cannot keep a time; nonexistent Eastern spring-forward wall times are rejected, and fall-back ambiguity resolves consistently. Calendar event construction refuses impossible legacy local times rather than silently shifting them.
+- **Workflow safety:** opportunity-linked reassignment writes its activity event in the same transaction; overlapping drag/reschedule submits are suppressed. Legacy assignee names stay visible during edits. The small mobile shortcut control now has a 44px minimum height.
+- **Verification:** 44 focused scheduler, calendar, Worklist action-safety, and multi-tenant tests passed; `npm run typecheck` and `npm run build` passed. Commit `a47020f1` was pushed to `staging/tst`; Vercel deployment `neat-27dmdzq6k` is Ready. Live desktop Day and Week views were reviewed at the available ~1520 x 720 viewport. The new-work form was inspected without submitting; clearing its date disabled the time control. No Worklist records were changed. The CUA browser session did not expose an exact viewport override, so 320px and 390px live screenshots were not repeated in this follow-up; the previous 390 x 844 baseline review is recorded above, and the only mobile CSS change here raises the shortcut minimum height from 40px to 44px.
+
+## Needs Product Decision
+
+- **Exact-time overlaps:** Worklist has no duration field, while calendar events currently use a default duration. Decide whether close or overlapping starts should be allowed, warned, or blocked, and what duration should define a collision. The scheduler currently preserves exact start times and does not impose a collision policy.
+- **Simultaneous CRM and Google Calendar edits:** the existing sync path can receive changes from either side. Decide which side wins when the same linked event is changed in both systems between syncs, or define a conflict-resolution prompt. This focused pass preserves the existing sync behavior and does not invent precedence.
+
 ## Verification and remaining work
 
 - Focused tests: 8 passed. Typecheck: passed after Prisma client generation from the rebased schema. Production build: passed.
