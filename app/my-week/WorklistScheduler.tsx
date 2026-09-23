@@ -8,6 +8,7 @@ import { SubmitButton } from '../components/SubmitButton';
 import { TargetAccountMarker } from '../components/TargetAccountMarker';
 import { useDialogFocus } from '../components/useDialogFocus';
 import { addDaysToDateInputValue, formatDateOnlyInputValue, formatTimeMinutes, formatTimeMinutesInput } from '../../lib/dateTime';
+import { getOperatingHoursConflict, type OperatingHoursEntry } from '../../lib/operatingHours';
 import {
   addSchedulerDays,
   getCurrentSchedulerDate,
@@ -30,7 +31,7 @@ const shortDayFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/
 const monthRangeFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' });
 const weekdayFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short' });
 
-type WorklistLocation = { id: string; name: string; type: 'agency' | 'wholesale'; href: string } | null;
+type WorklistLocation = { id: string; name: string; type: 'agency' | 'wholesale'; href: string; businessHours: OperatingHoursEntry[] | null } | null;
 type SchedulerItem = SchedulerWorklistItem & {
   title: string;
   detail: string | null;
@@ -296,23 +297,25 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
     const top = ((minute - GRID_START_MINUTES) / GRID_SLOT_MINUTES) * GRID_SLOT_HEIGHT;
     const width = 100 / laneCount;
     const style = { top: `${top}px`, left: `${width * lane}%`, width: `${width}%`, height: `${GRID_SLOT_HEIGHT - 3}px` } as CSSProperties;
+    const hoursConflict = getOperatingHoursConflict({ accountType: item.location?.type, schedule: item.location?.businessHours, date: item.dueDate, startMinutes: item.dueTimeMinutes });
     const overlapLabel = overlapCount > 1
       ? ` Overlaps ${overlapCount - 1} other scheduled item${overlapCount === 2 ? '' : 's'}.`
       : '';
     return <button
-      aria-label={`${timeLabel(minute)}: ${item.title}${item.location ? `, ${item.location.name}${item.isTargeting ? ', Target account' : ''}` : ''}.${overlapLabel} Open task actions`}
-      className={`scheduler-event${overlapCount > 1 ? ' scheduler-event-overlapping' : ''}`}
+      aria-label={`${timeLabel(minute)}: ${item.title}${item.location ? `, ${item.location.name}${item.isTargeting ? ', Target account' : ''}` : ''}.${hoursConflict ? ` ${hoursConflict.label}.` : ''}${overlapLabel} Open task actions`}
+      className={`scheduler-event${overlapCount > 1 ? ' scheduler-event-overlapping' : ''}${hoursConflict ? ` scheduler-event-hours-${hoursConflict.accountType}` : ''}`}
       draggable
       key={item.id}
       onClick={() => openEdit(item)}
       onDragStart={(event) => startDrag(event, item)}
       style={style}
+      title={hoursConflict?.label}
       type="button"
     >
       {overlapCount > 1 ? <span aria-hidden="true" className="scheduler-event-overlap-badge" title={overlapLabel.trim()}>{overlapCount}×</span> : null}
       <span className="scheduler-event-time">{timeLabel(minute)}</span>
       <strong>{item.title}</strong>
-      {item.location ? <span className="scheduler-event-location"><SchedulerAccountLabel item={item} /></span> : null}
+      {item.location ? <span className="scheduler-event-location"><span className="scheduler-event-account-name"><SchedulerAccountLabel item={item} /></span>{hoursConflict ? <small className={`scheduler-hours-indicator scheduler-hours-indicator--${hoursConflict.accountType}`}>Outside hours</small> : null}</span> : null}
     </button>;
   };
 
@@ -375,10 +378,15 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
             {inGrid.map(({ item, lane, laneCount, overlapCount }) => renderEvent(item, lane, laneCount, overlapCount))}
             {outside.length > 0 ? <div className="scheduler-outside-events">
               <strong>Outside planning hours</strong>
-              {outside.map(({ item, overlapCount }) => <button className="scheduler-anytime-row" draggable key={item.id} onClick={() => openEdit(item)} onDragStart={(event) => startDrag(event, item)} type="button">
+              {outside.map(({ item, overlapCount }) => {
+                const hoursConflict = getOperatingHoursConflict({ accountType: item.location?.type, schedule: item.location?.businessHours, date: item.dueDate, startMinutes: item.dueTimeMinutes });
+                return <button aria-label={`${timeLabel(item.dueTimeMinutes!)}: ${item.title}${hoursConflict ? `. ${hoursConflict.label}.` : ''} Open task actions`} className={`scheduler-anytime-row${hoursConflict ? ` scheduler-anytime-hours-${hoursConflict.accountType}` : ''}`} draggable key={item.id} onClick={() => openEdit(item)} onDragStart={(event) => startDrag(event, item)} title={hoursConflict?.label} type="button">
                 <span>{timeLabel(item.dueTimeMinutes!)}</span><strong>{item.title}</strong>
+                {item.location ? <small>{item.location.name}</small> : null}
+                {hoursConflict ? <small className="scheduler-hours-indicator">{hoursConflict.label}</small> : null}
                 {overlapCount > 1 ? <small className="scheduler-overlap-indicator">Overlaps {overlapCount - 1} other scheduled item{overlapCount === 2 ? '' : 's'}</small> : null}
-              </button>)}
+              </button>;
+              })}
             </div> : null}
           </div>;
         })}
@@ -394,15 +402,19 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
     return <div className="scheduler-mobile-day" key={date}>
       <h2>{formatDay(date)}</h2>
       {day.timed.length > 0 ? <ol className="scheduler-mobile-timeline">
-        {timed.map(({ item, overlapCount }) => <li key={item.id}>
+        {timed.map(({ item, overlapCount }) => {
+          const hoursConflict = getOperatingHoursConflict({ accountType: item.location?.type, schedule: item.location?.businessHours, date: item.dueDate, startMinutes: item.dueTimeMinutes });
+          return <li key={item.id}>
           <span className="scheduler-mobile-time">{timeLabel(item.dueTimeMinutes!)}</span>
-          <button className="scheduler-mobile-task" onClick={() => openEdit(item)} type="button">
+          <button aria-label={`${item.title}${hoursConflict ? `. ${hoursConflict.label}.` : ''} Open task actions`} className={`scheduler-mobile-task${hoursConflict ? ` scheduler-mobile-hours-${hoursConflict.accountType}` : ''}`} onClick={() => openEdit(item)} title={hoursConflict?.label} type="button">
             <strong>{item.title}</strong>
             <span><SchedulerAccountLabel item={item} /></span>
+            {hoursConflict ? <small className="scheduler-hours-indicator">{hoursConflict.label}</small> : null}
             {overlapCount > 1 ? <small className="scheduler-overlap-indicator">Overlaps {overlapCount - 1} other scheduled item{overlapCount === 2 ? '' : 's'}</small> : null}
             <small>{statusLabel(item.status)}</small>
           </button>
-        </li>)}
+        </li>;
+        })}
       </ol> : <p className="muted scheduler-day-empty">No timed work scheduled for this day.</p>}
       {outside.length > 0 ? <p className="muted">Includes {outside.length} item{outside.length === 1 ? '' : 's'} outside 7:00 AM–8:00 PM.</p> : null}
       <section className="scheduler-anytime" aria-labelledby={`anytime-${date}`}>

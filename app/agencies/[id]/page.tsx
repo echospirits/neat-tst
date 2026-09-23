@@ -28,6 +28,9 @@ import { SalesAccountType } from '@prisma/client';
 import { getAccountSalesStatusSummary, SALES_STATUS_LABELS } from '../../../lib/accountSalesStatus';
 import { AccountSalesStatusPanel } from '../../components/AccountSalesStatusPanel';
 import { TargetAccountControl } from '../../components/TargetAccountControl';
+import { AgencyOperatingHoursEditor } from './AgencyOperatingHoursEditor';
+import { readOperatingHoursDetails } from '../../../lib/operatingHours';
+import { getAccountResearchPilotAvailability } from '../../../lib/accountResearchOpenAI';
 
 const formatVisitDate = (date: Date | null | undefined) => formatEasternDate(date) || 'No visits yet';
 const tagStatusMessages: Record<string, string> = {
@@ -120,6 +123,8 @@ export default async function AgencyActivityPage({
     hasAgencyIntelligence ? getAgencyMarketFitsForDisplay({ organizationId, agencyId: id }) : [],
   ]);
   const storeContext = readStoreContext(overlay?.storeContext);
+  const knownHours = readOperatingHoursDetails(agency.businessHours);
+  const hoursResearchAvailable = getAccountResearchPilotAvailability().available;
   const actionUsers = users.map((user) => ({ id: user.id, name: getUserDisplayName(user) }));
   const [salesStatusSummary, salesStatusHistory] = hasAccountSalesStatus ? await Promise.all([
     getAccountSalesStatusSummary({ accountType: SalesAccountType.AGENCY, externalAccountId: id, organizationId }),
@@ -199,6 +204,7 @@ export default async function AgencyActivityPage({
             <strong>Agency phone</strong>
             <PhoneLink phone={agency.phone} />
           </p>
+          <AgencyOperatingHoursEditor agencyId={agency.id} {...knownHours} researchAvailable={hoursResearchAvailable} />
         </div>
         <AccountTagPanel
           assignments={agency.tags}

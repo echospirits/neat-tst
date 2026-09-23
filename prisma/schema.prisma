@@ -1352,6 +1352,7 @@ model Agency {
   orderDay                 String?
   orderWeek                String?
   deliveryDay              String?
+  businessHours            Json?
   primaryContact           String?
   primaryContactPhone      String?
   wholesaleStatus          String?

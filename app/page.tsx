@@ -322,7 +322,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
       assignedToUserId: item.assignedToUserId,
       assignedTo: item.assignedTo,
       isTargeting: Boolean(location && schedulerTargetedAccountKeys.has(`${location.type === 'agency' ? 'AGENCY' : 'WHOLESALE'}:${location.id}`)),
-      location: location ? { id: location.id, name: location.name, type: location.type, href: location.href } : null,
+      location: location ? { id: location.id, name: location.name, type: location.type, href: location.href, businessHours: location.businessHours } : null,
     };
   });
 
