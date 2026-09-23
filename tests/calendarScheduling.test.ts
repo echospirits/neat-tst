@@ -8,7 +8,7 @@ import {
   getWorklistScheduleFromExternalEvent,
   getWorklistScheduleHash,
 } from '../lib/calendar/worklistSync';
-import { formatDateOnlyInputValue, formatTimeMinutesInput, parseTimeInputToMinutes } from '../lib/dateTime';
+import { formatDateOnlyInputValue, formatTimeMinutesInput, isValidZonedDateTime, parseTimeInputToMinutes, zonedDateTimeToUtc } from '../lib/dateTime';
 
 const item = (overrides: Record<string, unknown> = {}) => ({
   id: 'task-1',
@@ -51,6 +51,19 @@ test('timed worklist items create 30-minute Eastern events', () => {
   assert.equal(event.schedule.timeZone, 'America/New_York');
   assert.equal(event.schedule.startsAt.toISOString(), '2026-08-21T18:30:00.000Z');
   assert.equal(event.schedule.endsAt.getTime() - event.schedule.startsAt.getTime(), 30 * 60 * 1000);
+});
+
+test('scheduler local times reject the spring-forward gap and preserve the repeated fall-back hour', () => {
+  assert.equal(isValidZonedDateTime('2026-03-08', 2 * 60 + 30), false);
+  assert.equal(isValidZonedDateTime('2026-03-08', 1 * 60 + 30), true);
+  assert.equal(isValidZonedDateTime('2026-03-08', 3 * 60 + 30), true);
+  assert.equal(zonedDateTimeToUtc('2026-03-08', 3 * 60 + 30).toISOString(), '2026-03-08T07:30:00.000Z');
+  assert.equal(isValidZonedDateTime('2026-11-01', 1 * 60 + 30), true);
+  assert.equal(zonedDateTimeToUtc('2026-11-01', 1 * 60 + 30).toISOString(), '2026-11-01T05:30:00.000Z');
+});
+
+test('calendar sync refuses a legacy timed item inside the spring-forward gap', () => {
+  assert.throws(() => buildWorklistCalendarInput({ item: item({ dueDate: new Date('2026-03-08T00:00:00.000Z'), dueTimeMinutes: 2 * 60 + 30 }) as never }), /does not exist/);
 });
 
 test('Google all-day changes map back to date-only CRM schedules', () => {

@@ -33,6 +33,7 @@ type WorklistLocation = { id: string; name: string; type: 'agency' | 'wholesale'
 type SchedulerItem = SchedulerWorklistItem & {
   title: string;
   detail: string | null;
+  updatedAt: string;
   category: string;
   agencyId: string | null;
   wholesaleAccountId: string | null;
@@ -41,6 +42,7 @@ type SchedulerItem = SchedulerWorklistItem & {
   productItemCode: string | null;
   productName: string | null;
   assignedToUserId: string | null;
+  assignedTo: string | null;
   isTargeting: boolean;
   location: WorklistLocation;
 };
@@ -65,6 +67,7 @@ const formatMonthRange = (date: string) => monthRangeFormatter.format(dateAtUtcM
 const timeLabel = (minutes: number) => formatTimeMinutes(minutes);
 const statusLabel = (status: string) => status === 'IN_PROGRESS' ? 'In progress' : 'Open';
 const scheduleHref = (view: 'day' | 'week', date: string) => `/?view=${view}&date=${date}`;
+const LEGACY_ASSIGNMENT = '__legacy_assignment__';
 
 function SchedulerAccountLabel({ item, fallback }: { item: SchedulerItem; fallback?: string }) {
   return <>{item.location?.name ?? fallback ?? item.category.toLowerCase()}{item.isTargeting && item.location ? <> · <TargetAccountMarker /></> : null}</>;
@@ -101,12 +104,14 @@ const getNextWeekday = (date: string) => {
 export function WorklistScheduler({ view, anchorDate, items, currentUserId, users, updateAction, completeAction, createAction }: WorklistSchedulerProps) {
   const router = useRouter();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const scheduleInFlightRef = useRef(false);
   const [mobileDate, setMobileDate] = useState(anchorDate);
   const [selectedItem, setSelectedItem] = useState<SchedulerItem | null>(null);
   const [createContext, setCreateContext] = useState<{ date: string; time: number | null } | null>(null);
   const [createMode, setCreateMode] = useState<'choose' | 'existing' | 'new'>('choose');
   const [createDate, setCreateDate] = useState(anchorDate);
   const [createTime, setCreateTime] = useState('');
+  const [createSubmissionKey, setCreateSubmissionKey] = useState('');
   const [createCategory, setCreateCategory] = useState('GENERAL');
   const [accountSearch, setAccountSearch] = useState('');
   const [accountResults, setAccountResults] = useState<AccountSearchResult[]>([]);
@@ -174,6 +179,13 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
     router.refresh();
   };
 
+  const refreshAfterConflict = (message: string, shouldRefresh: boolean) => {
+    if (!shouldRefresh) return;
+    closeDialogs();
+    setFeedback(message);
+    router.refresh();
+  };
+
   const openAdd = (date: string, time: number | null) => {
     setSelectedItem(null);
     setFeedback('');
@@ -181,6 +193,7 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
     setCreateMode('choose');
     setCreateDate(date);
     setCreateTime(time === null ? '' : formatTimeMinutesInput(time));
+    setCreateSubmissionKey(crypto.randomUUID());
     setCreateCategory('GENERAL');
     setSelectedAccount(null);
     setAccountSearch('');
@@ -191,9 +204,9 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
     setCreateContext(null);
     setFeedback('');
     setSelectedDate(item.dueDate ?? '');
-    setSelectedTime(item.dueTimeMinutes === null ? '' : formatTimeMinutesInput(item.dueTimeMinutes));
-    setSpecificTime(item.dueTimeMinutes !== null);
-    setAssignmentChoice(item.assignedToUserId ?? '');
+    setSelectedTime(!item.dueDate || item.dueTimeMinutes === null ? '' : formatTimeMinutesInput(item.dueTimeMinutes));
+    setSpecificTime(Boolean(item.dueDate && item.dueTimeMinutes !== null));
+    setAssignmentChoice(item.assignedToUserId ?? (item.assignedTo ? LEGACY_ASSIGNMENT : ''));
     setAssignmentChanged(false);
     setSelectedItem(item);
   };
@@ -205,6 +218,7 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
 
   const scheduleDrop = async (event: DragEvent<HTMLDivElement>, date: string) => {
     event.preventDefault();
+    if (scheduleInFlightRef.current) return;
     const id = event.dataTransfer.getData('text/plain');
     const item = items.find((candidate) => candidate.id === id);
     if (!item) return;
@@ -213,47 +227,60 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
     const minutes = GRID_START_MINUTES + slot * GRID_SLOT_MINUTES;
     if (item.dueDate === date && item.dueTimeMinutes === minutes) return;
 
+    scheduleInFlightRef.current = true;
     setSavingTaskId(item.id);
     setFeedback('Saving schedule…');
     const data = new FormData();
     data.set('id', item.id);
+    data.set('expectedUpdatedAt', item.updatedAt);
     data.set('dueDate', date);
     data.set('dueTime', formatTimeMinutesInput(minutes));
     try {
       const result = await updateAction(data);
-      if ('error' in result) setFeedback(result.error);
+      if ('error' in result) {
+        setFeedback(result.error);
+        if (result.refresh) router.refresh();
+      }
       else {
         setFeedback('Schedule saved.');
         router.refresh();
       }
     } catch (error) {
       console.error('Worklist drag schedule failed', error);
-      setFeedback('The task stayed in its previous time. Try again.');
+      setFeedback('Could not confirm the save. Refresh the schedule and check the task before trying again.');
+      router.refresh();
     } finally {
+      scheduleInFlightRef.current = false;
       setSavingTaskId('');
     }
   };
 
   const scheduleExisting = async (item: SchedulerItem) => {
-    if (!createContext) return;
+    if (!createContext || scheduleInFlightRef.current) return;
+    scheduleInFlightRef.current = true;
     setSavingTaskId(item.id);
     setFeedback('Saving schedule…');
     const data = new FormData();
     data.set('id', item.id);
+    data.set('expectedUpdatedAt', item.updatedAt);
     data.set('dueDate', createDate);
     data.set('dueTime', createTime);
     try {
       const result = await updateAction(data);
-      if ('error' in result) setFeedback(result.error);
+      if ('error' in result) {
+        setFeedback(result.error);
+        if (result.refresh) refreshAfterConflict(result.error, true);
+      }
       else {
+        closeDialogs();
         setFeedback('Existing task scheduled.');
         router.refresh();
-        closeDialogs();
       }
     } catch (error) {
       console.error('Existing Worklist schedule failed', error);
-      setFeedback('The task was not changed. Try again.');
+      refreshAfterConflict('Could not confirm the save. Refresh the schedule and check the task before trying again.', true);
     } finally {
+      scheduleInFlightRef.current = false;
       setSavingTaskId('');
     }
   };
@@ -345,7 +372,7 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
             })}
             {outside.length > 0 ? <div className="scheduler-outside-events">
               <strong>Outside planning hours</strong>
-              {outside.map((item) => <button className="scheduler-anytime-row" key={item.id} onClick={() => openEdit(item)} type="button">
+              {outside.map((item) => <button className="scheduler-anytime-row" draggable key={item.id} onClick={() => openEdit(item)} onDragStart={(event) => startDrag(event, item)} type="button">
                 <span>{timeLabel(item.dueTimeMinutes!)}</span><strong>{item.title}</strong>
               </button>)}
             </div> : null}
@@ -485,8 +512,9 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
         <div className="app-modal-header"><div><span className="page-eyebrow">{statusLabel(selectedItem.status)}</span><h2 id={`scheduler-item-${selectedItem.id}`}>{selectedItem.title}</h2></div><button aria-label="Close" className="app-modal-close secondary" onClick={closeDialogs} type="button">Close</button></div>
         {selectedItem.location ? <p className="scheduler-account-context"><span><Link href={selectedItem.location.href}>{selectedItem.location.name}</Link>{selectedItem.isTargeting ? <> · <TargetAccountMarker /></> : null}</span><span>{selectedItem.location.type === 'wholesale' ? 'Wholesale account' : 'Agency'}</span></p> : <p className="muted">No account linked to this task.</p>}
         {selectedItem.detail ? <p className="scheduler-task-detail">{selectedItem.detail}</p> : null}
-        <ActionForm action={updateAction as (data: FormData) => Promise<ActionResult>} className="scheduler-edit-form" onSuccess={refreshAfterSave}>
+        <ActionForm action={updateAction as (data: FormData) => Promise<ActionResult>} className="scheduler-edit-form" onError={refreshAfterConflict} onSuccess={refreshAfterSave}>
           <input name="id" type="hidden" value={selectedItem.id} />
+          <input name="expectedUpdatedAt" type="hidden" value={selectedItem.updatedAt} />
           <label>Scheduled date <span className="optional-label">Optional</span><input name="dueDate" onChange={(event) => { setSelectedDate(event.target.value); if (!event.target.value) { setSelectedTime(''); setSpecificTime(false); } }} type="date" value={selectedDate} /></label>
           <div className="scheduler-shortcuts" aria-label="Reschedule date">
             <button onClick={() => setSelectedDate(currentDate)} type="button">Today</button>
@@ -494,7 +522,7 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
             <button onClick={() => setSelectedDate(getNextFriday(currentDate))} type="button">Friday</button>
             <button onClick={() => setSelectedDate(getNextWeekday(currentDate))} type="button">Next week</button>
           </div>
-          <fieldset className="scheduler-time-options"><legend>Time</legend>
+          <fieldset className="scheduler-time-options" disabled={!selectedDate}><legend>Time</legend>
             <div className="scheduler-shortcuts">
               <button aria-pressed={!specificTime && !selectedTime} onClick={() => { setSelectedTime(''); setSpecificTime(false); }} type="button">Anytime</button>
               <button aria-pressed={selectedTime === '09:00'} onClick={() => { setSelectedTime('09:00'); setSpecificTime(false); }} type="button">Morning</button>
@@ -503,16 +531,22 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
             </div>
             {specificTime ? <label>Start time<input name="dueTime" onChange={(event) => setSelectedTime(event.target.value)} required={Boolean(selectedDate)} type="time" value={selectedTime} /></label> : <input name="dueTime" type="hidden" value={selectedTime} />}
           </fieldset>
-          <label>Assigned to<select onChange={(event) => { setAssignmentChoice(event.target.value); setAssignmentChanged(true); }} value={assignmentChoice}><option value="">Unassigned</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label>
-          {assignmentChanged ? <input name="assignedToUserId" type="hidden" value={assignmentChoice} /> : null}
+          {!selectedDate ? <p className="muted">Choose a date before setting a time.</p> : null}
+          <label>Assigned to<select onChange={(event) => { setAssignmentChoice(event.target.value); setAssignmentChanged(true); }} value={assignmentChoice}>
+            <option value="">Unassigned</option>
+            {selectedItem.assignedToUserId ? null : selectedItem.assignedTo ? <option disabled value={LEGACY_ASSIGNMENT}>Legacy assignment: {selectedItem.assignedTo}</option> : null}
+            {users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}
+          </select></label>
+          {assignmentChanged ? <input name="assignedToUserId" type="hidden" value={assignmentChoice === LEGACY_ASSIGNMENT ? '' : assignmentChoice} /> : null}
           <SubmitButton type="submit">Save schedule</SubmitButton>
         </ActionForm>
         <div className="scheduler-context-actions">
           {selectedItem.location ? <Link className="btn secondary" href={selectedItem.location.href}>Open account</Link> : null}
           {getTaskVisitHref(selectedItem, scheduleHref(view, anchorDate)) ? <Link className="btn secondary" href={getTaskVisitHref(selectedItem, scheduleHref(view, anchorDate))!}>Log visit</Link> : null}
           <Link className="btn secondary" href={`/alerts#worklist-${selectedItem.id}`}>More task actions</Link>
-          <ActionForm action={completeAction} onSuccess={refreshAfterSave}>
+          <ActionForm action={completeAction} onError={refreshAfterConflict} onSuccess={refreshAfterSave}>
             <input name="id" type="hidden" value={selectedItem.id} />
+            <input name="expectedUpdatedAt" type="hidden" value={selectedItem.updatedAt} />
             <SubmitButton>Complete</SubmitButton>
           </ActionForm>
         </div>
@@ -529,19 +563,20 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
         </div> : null}
         {createMode === 'existing' ? <div className="scheduler-existing-work">
           <div className="form-grid scheduler-existing-schedule">
-            <label>Date <span className="optional-label">Optional</span><input onChange={(event) => setCreateDate(event.target.value)} type="date" value={createDate} /></label>
-            <label>Time <span className="optional-label">Optional</span><input onChange={(event) => setCreateTime(event.target.value)} type="time" value={createTime} /></label>
+            <label>Date <span className="optional-label">Optional</span><input onChange={(event) => { setCreateDate(event.target.value); if (!event.target.value) setCreateTime(''); }} type="date" value={createDate} /></label>
+            <label>Time <span className="optional-label">Optional</span><input disabled={!createDate} onChange={(event) => setCreateTime(event.target.value)} type="time" value={createTime} /></label>
           </div>
           <label>Find active Worklist items<input autoComplete="off" onChange={(event) => setExistingSearch(event.target.value)} placeholder="Search task or account" value={existingSearch} /></label>
           {existingSearch ? <button className="secondary" onClick={() => setExistingSearch('')} type="button">Clear task search</button> : null}
           {items.length === 300 ? <p className="muted">Showing up to 300 active tasks due this week, recently overdue, or undated.</p> : null}
           {filteredExisting.length ? <ul>
-            {filteredExisting.map((item) => <li key={item.id}><button disabled={savingTaskId === item.id} onClick={() => void scheduleExisting(item)} type="button">
+            {filteredExisting.map((item) => <li key={item.id}><button disabled={Boolean(savingTaskId)} onClick={() => void scheduleExisting(item)} type="button">
               <strong>{item.title}</strong><span><SchedulerAccountLabel item={item} /></span><small>{item.dueDate ? `${formatDateOnlyInputValue(new Date(`${item.dueDate}T00:00:00.000Z`))}${item.dueTimeMinutes !== null ? ` · ${timeLabel(item.dueTimeMinutes)}` : ' · Anytime'}` : 'No date set'}</small>
             </button></li>)}
           </ul> : <p className="muted">No active items match. Try another search.</p>}
         </div> : null}
         {createMode === 'new' ? <ActionForm action={createAction as (data: FormData) => Promise<ActionResult>} className="scheduler-create-form" onSuccess={refreshAfterSave}>
+          <input name="submissionKey" type="hidden" value={createSubmissionKey} />
           <label>Task<input autoFocus name="title" placeholder="What needs to happen?" required /></label>
           <label>Category<select onChange={(event) => { setCreateCategory(event.target.value); setSelectedAccount(null); setAccountSearch(''); }} value={createCategory} name="category"><option value="GENERAL">General</option><option value="AGENCY">Agency</option><option value="WHOLESALE">Wholesale</option></select></label>
           {createCategory === 'AGENCY' || createCategory === 'WHOLESALE' ? <div className="scheduler-account-picker">
@@ -561,8 +596,8 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
             {!selectedAccount && accountSearch.trim().length >= 2 && !accountSearching && !accountSearchError && accountResults.length === 0 ? <p className="muted">No accounts found.</p> : null}
           </div> : null}
           <div className="form-grid">
-            <label>Date <span className="optional-label">Optional</span><input name="dueDate" onChange={(event) => setCreateDate(event.target.value)} type="date" value={createDate} /></label>
-            <label>Time <span className="optional-label">Optional</span><input name="dueTime" onChange={(event) => setCreateTime(event.target.value)} type="time" value={createTime} /></label>
+            <label>Date <span className="optional-label">Optional</span><input name="dueDate" onChange={(event) => { setCreateDate(event.target.value); if (!event.target.value) setCreateTime(''); }} type="date" value={createDate} /></label>
+            <label>Time <span className="optional-label">Optional</span><input disabled={!createDate} name="dueTime" onChange={(event) => setCreateTime(event.target.value)} type="time" value={createTime} /></label>
             <label>Assigned to<select defaultValue={currentUserId} name="assignedToUserId"><option value="">Unassigned</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label>
           </div>
           <label>Notes <span className="optional-label">Optional</span><textarea name="detail" rows={2} /></label>

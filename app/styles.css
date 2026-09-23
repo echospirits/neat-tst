@@ -4982,7 +4982,7 @@ legend {
 .scheduler-shortcuts button {
   border: 1px solid var(--line);
   border-radius: 999px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0.35rem 0.7rem;
 }
 

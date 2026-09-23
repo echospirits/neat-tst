@@ -308,6 +308,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
       id: item.id,
       title: item.title,
       detail: item.detail,
+      updatedAt: item.updatedAt.toISOString(),
       dueDate: item.dueDate ? formatDateOnlyInputValue(item.dueDate) : null,
       dueTimeMinutes: item.dueTimeMinutes,
       status: item.status,
@@ -319,6 +320,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
       productItemCode: item.agencyProductIntelligence?.itemCode ?? null,
       productName: item.agencyProductIntelligence?.itemName ?? null,
       assignedToUserId: item.assignedToUserId,
+      assignedTo: item.assignedTo,
       isTargeting: Boolean(location && schedulerTargetedAccountKeys.has(`${location.type === 'agency' ? 'AGENCY' : 'WHOLESALE'}:${location.id}`)),
       location: location ? { id: location.id, name: location.name, type: location.type, href: location.href } : null,
     };

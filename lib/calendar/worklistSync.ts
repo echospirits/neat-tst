@@ -4,6 +4,7 @@ import {
   EASTERN_TIME_ZONE,
   formatDateOnlyInputValue,
   getZonedDateTimeParts,
+  isValidZonedDateTime,
   zonedDateTimeToUtc,
 } from '../dateTime';
 import { prisma } from '../prisma';
@@ -54,6 +55,9 @@ export const buildWorklistCalendarInput = ({
 }): CalendarEventInput => {
   if (!item.dueDate) throw new Error('A due date is required to build a calendar event.');
   const date = formatDateOnlyInputValue(item.dueDate);
+  if (item.dueTimeMinutes != null && !isValidZonedDateTime(date, item.dueTimeMinutes, EASTERN_TIME_ZONE)) {
+    throw new Error('The Worklist schedule contains a local time that does not exist on this date.');
+  }
   const appBaseUrl = process.env.APP_BASE_URL?.replace(/\/$/, '');
   const context = [
     accountName ? `Account: ${accountName}` : null,
