@@ -32,7 +32,7 @@ export function AgencyOperatingHoursEditor({
     <ActionForm action={researchAgencyOperatingHours} className="account-hours-research-form" onSuccess={() => router.refresh()}>
       <input name="agencyId" type="hidden" value={agencyId} />
       <SubmitButton className="secondary" disabled={!researchAvailable} pendingLabel="Searching public sources…">Research public hours</SubmitButton>
-      {!researchAvailable ? <small className="muted">Public lookup is unavailable in this environment; enter known hours below.</small> : <small className="muted">Searches OHLQ by agency number first, then checks public hours against this address. Results include a source link and can be edited below.</small>}
+      {!researchAvailable ? <small className="muted">Public lookup is unavailable in this environment; enter known hours below.</small> : <small className="muted">Searches OHLQ by agency number first, then checks other public sources against this address if needed. Results include a source link and can be edited below.</small>}
     </ActionForm>
     <ActionForm action={saveAgencyOperatingHours} className="account-hours-form" key={scheduleKey} onSuccess={() => router.refresh()}>
       <input name="agencyId" type="hidden" value={agencyId} />
