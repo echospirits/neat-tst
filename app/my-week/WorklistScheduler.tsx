@@ -13,6 +13,7 @@ import {
   getCurrentSchedulerDate,
   getSchedulerDayItems,
   getSchedulerPlanningTray,
+  getSchedulerTimedPlacements,
   getSchedulerWeekDates,
   type SchedulerWorklistItem,
 } from '../../lib/myDayWeekScheduler';
@@ -290,14 +291,17 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
   const visibleTray = view === 'day' ? getSchedulerPlanningTray(items, anchorDate) : tray;
   const addButtonDate = view === 'week' ? mobileDate : anchorDate;
 
-  const renderEvent = (item: SchedulerItem, duplicateIndex: number, duplicateCount: number) => {
+  const renderEvent = (item: SchedulerItem, lane: number, laneCount: number, overlapCount: number) => {
     const minute = item.dueTimeMinutes ?? GRID_START_MINUTES;
     const top = ((minute - GRID_START_MINUTES) / GRID_SLOT_MINUTES) * GRID_SLOT_HEIGHT;
-    const width = 100 / duplicateCount;
-    const style = { top: `${top}px`, left: `${width * duplicateIndex}%`, width: `${width}%` } as CSSProperties;
+    const width = 100 / laneCount;
+    const style = { top: `${top}px`, left: `${width * lane}%`, width: `${width}%`, height: `${GRID_SLOT_HEIGHT - 3}px` } as CSSProperties;
+    const overlapLabel = overlapCount > 1
+      ? ` Overlaps ${overlapCount - 1} other scheduled item${overlapCount === 2 ? '' : 's'}.`
+      : '';
     return <button
-      aria-label={`${timeLabel(minute)}: ${item.title}${item.location ? `, ${item.location.name}${item.isTargeting ? ', Target account' : ''}` : ''}. Open task actions`}
-      className="scheduler-event"
+      aria-label={`${timeLabel(minute)}: ${item.title}${item.location ? `, ${item.location.name}${item.isTargeting ? ', Target account' : ''}` : ''}.${overlapLabel} Open task actions`}
+      className={`scheduler-event${overlapCount > 1 ? ' scheduler-event-overlapping' : ''}`}
       draggable
       key={item.id}
       onClick={() => openEdit(item)}
@@ -305,6 +309,7 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
       style={style}
       type="button"
     >
+      {overlapCount > 1 ? <span aria-hidden="true" className="scheduler-event-overlap-badge" title={overlapLabel.trim()}>{overlapCount}×</span> : null}
       <span className="scheduler-event-time">{timeLabel(minute)}</span>
       <strong>{item.title}</strong>
       {item.location ? <span className="scheduler-event-location"><SchedulerAccountLabel item={item} /></span> : null}
@@ -348,8 +353,9 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
         </div>
         {dates.map((date) => {
           const day = getSchedulerDayItems(items, date);
-          const inGrid = day.timed.filter(isInGrid);
-          const outside = day.timed.filter((item) => !isInGrid(item));
+          const timed = getSchedulerTimedPlacements(items, date);
+          const inGrid = timed.filter(({ item }) => isInGrid(item));
+          const outside = timed.filter(({ item }) => !isInGrid(item));
           return <div
             aria-label={`Schedule for ${formatDay(date)}`}
             className="scheduler-day-column"
@@ -366,14 +372,12 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
               style={{ top: `${((minute - GRID_START_MINUTES) / GRID_SLOT_MINUTES) * GRID_SLOT_HEIGHT}px`, height: `${GRID_SLOT_HEIGHT}px` }}
               type="button"
             ><span className="scheduler-slot-add">Add</span></button>)}
-            {inGrid.map((item) => {
-              const sameTime = inGrid.filter((candidate) => candidate.dueTimeMinutes === item.dueTimeMinutes);
-              return renderEvent(item, sameTime.findIndex((candidate) => candidate.id === item.id), sameTime.length);
-            })}
+            {inGrid.map(({ item, lane, laneCount, overlapCount }) => renderEvent(item, lane, laneCount, overlapCount))}
             {outside.length > 0 ? <div className="scheduler-outside-events">
               <strong>Outside planning hours</strong>
-              {outside.map((item) => <button className="scheduler-anytime-row" draggable key={item.id} onClick={() => openEdit(item)} onDragStart={(event) => startDrag(event, item)} type="button">
+              {outside.map(({ item, overlapCount }) => <button className="scheduler-anytime-row" draggable key={item.id} onClick={() => openEdit(item)} onDragStart={(event) => startDrag(event, item)} type="button">
                 <span>{timeLabel(item.dueTimeMinutes!)}</span><strong>{item.title}</strong>
+                {overlapCount > 1 ? <small className="scheduler-overlap-indicator">Overlaps {overlapCount - 1} other scheduled item{overlapCount === 2 ? '' : 's'}</small> : null}
               </button>)}
             </div> : null}
           </div>;
@@ -385,15 +389,17 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
 
   const renderMobileDay = (date: string) => {
     const day = getSchedulerDayItems(items, date);
-    const outside = day.timed.filter((item) => !isInGrid(item));
+    const timed = getSchedulerTimedPlacements(items, date);
+    const outside = timed.filter(({ item }) => !isInGrid(item));
     return <div className="scheduler-mobile-day" key={date}>
       <h2>{formatDay(date)}</h2>
       {day.timed.length > 0 ? <ol className="scheduler-mobile-timeline">
-        {day.timed.map((item) => <li key={item.id}>
+        {timed.map(({ item, overlapCount }) => <li key={item.id}>
           <span className="scheduler-mobile-time">{timeLabel(item.dueTimeMinutes!)}</span>
           <button className="scheduler-mobile-task" onClick={() => openEdit(item)} type="button">
             <strong>{item.title}</strong>
             <span><SchedulerAccountLabel item={item} /></span>
+            {overlapCount > 1 ? <small className="scheduler-overlap-indicator">Overlaps {overlapCount - 1} other scheduled item{overlapCount === 2 ? '' : 's'}</small> : null}
             <small>{statusLabel(item.status)}</small>
           </button>
         </li>)}

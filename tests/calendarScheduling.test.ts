@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { WorklistCategory, WorklistSource, WorklistStatus } from '@prisma/client';
 import { decryptCalendarToken, encryptCalendarToken } from '../lib/calendar/crypto';
-import { buildGoogleCalendarChangesQuery } from '../lib/calendar/google';
+import { buildGoogleCalendarChangesQuery, buildGoogleCalendarUpdateHeaders } from '../lib/calendar/google';
 import {
   buildWorklistCalendarInput,
+  getCalendarEditWinner,
   getWorklistScheduleFromExternalEvent,
   getWorklistScheduleHash,
 } from '../lib/calendar/worklistSync';
@@ -89,6 +90,22 @@ test('schedule hashes are stable and change for material scheduling updates', ()
   assert.equal(first, getWorklistScheduleHash(item() as never));
   assert.notEqual(first, getWorklistScheduleHash(item({ dueTimeMinutes: 60 }) as never));
   assert.notEqual(first, getWorklistScheduleHash(item({ assignedToUserId: 'user-2' }) as never));
+});
+
+test('calendar conflict resolution follows the latest source edit when both sides changed', () => {
+  const crmEarlier = new Date('2026-08-24T19:00:00.000Z');
+  const googleLater = new Date('2026-08-24T19:05:00.000Z');
+  const crmLater = new Date('2026-08-24T19:10:00.000Z');
+  assert.equal(getCalendarEditWinner({ crmChangedSinceSync: true, crmUpdatedAt: crmEarlier, googleUpdatedAt: googleLater }), 'GOOGLE');
+  assert.equal(getCalendarEditWinner({ crmChangedSinceSync: true, crmUpdatedAt: crmLater, googleUpdatedAt: googleLater }), 'CRM');
+  assert.equal(getCalendarEditWinner({ crmChangedSinceSync: true, crmUpdatedAt: crmEarlier, googleUpdatedAt: crmEarlier }), 'GOOGLE');
+  assert.equal(getCalendarEditWinner({ crmChangedSinceSync: false, crmUpdatedAt: crmLater, googleUpdatedAt: googleLater }), 'GOOGLE');
+  assert.equal(getCalendarEditWinner({ crmChangedSinceSync: true, crmUpdatedAt: crmLater, googleUpdatedAt: null }), 'CRM');
+});
+
+test('Google updates carry an If-Match precondition when the last synced ETag is known', () => {
+  assert.deepEqual(buildGoogleCalendarUpdateHeaders('"calendar-etag"'), { 'If-Match': '"calendar-etag"' });
+  assert.deepEqual(buildGoogleCalendarUpdateHeaders(null), {});
 });
 
 test('optional time inputs round-trip as minutes after midnight', () => {

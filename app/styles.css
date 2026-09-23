@@ -4666,6 +4666,23 @@ legend {
   z-index: 2;
 }
 
+.scheduler-event-overlapping {
+  padding-right: 1.45rem;
+}
+
+.scheduler-event-overlap-badge {
+  background: #f8e4b8;
+  border-radius: 999px;
+  color: #553c0b;
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1.25;
+  padding: 0.05rem 0.18rem;
+  position: absolute;
+  right: 0.15rem;
+  top: 0.12rem;
+}
+
 .scheduler-event:hover,
 .scheduler-event:focus-visible {
   background: #dcebc9;
@@ -4883,6 +4900,16 @@ legend {
 
 .scheduler-mobile-task small {
   justify-self: start;
+}
+
+.scheduler-overlap-indicator {
+  background: #f8e4b8;
+  border-radius: 999px;
+  color: #553c0b;
+  font-size: 0.7rem;
+  font-weight: 700;
+  justify-self: start;
+  padding: 0.1rem 0.4rem;
 }
 
 .scheduler-mobile-day h2 {

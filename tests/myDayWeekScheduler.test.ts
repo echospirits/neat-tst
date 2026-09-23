@@ -7,6 +7,7 @@ import { isValidZonedDateTime, parseTimeInputToMinutes } from '../lib/dateTime';
 import {
   getSchedulerDayItems,
   getSchedulerPlanningTray,
+  getSchedulerTimedPlacements,
   getSchedulerWeekDates,
 } from '../lib/myDayWeekScheduler';
 
@@ -39,6 +40,32 @@ test('planning tray includes overdue and undated active work, not completed work
     item('done', '2026-09-01', null, 'COMPLETED'),
   ], '2026-09-21');
   assert.deepEqual(tray.map(({ id }) => id), ['old', 'undated']);
+});
+
+test('overlapping starts remain allowed and receive separate visual lanes', () => {
+  const placements = getSchedulerTimedPlacements([
+    item('first', '2026-09-23', 9 * 60),
+    item('second', '2026-09-23', 9 * 60 + 15),
+    item('adjacent', '2026-09-23', 9 * 60 + 45),
+  ], '2026-09-23');
+  assert.deepEqual(placements.map(({ item: task, lane, laneCount, overlapCount }) => ({ id: task.id, lane, laneCount, overlapCount })), [
+    { id: 'first', lane: 0, laneCount: 2, overlapCount: 2 },
+    { id: 'second', lane: 1, laneCount: 2, overlapCount: 2 },
+    { id: 'adjacent', lane: 0, laneCount: 1, overlapCount: 1 },
+  ]);
+});
+
+test('chained overlaps use lanes without claiming non-overlapping neighbors collide', () => {
+  const placements = getSchedulerTimedPlacements([
+    item('first', '2026-09-23', 9 * 60),
+    item('middle', '2026-09-23', 9 * 60 + 20),
+    item('last', '2026-09-23', 9 * 60 + 40),
+  ], '2026-09-23');
+  assert.deepEqual(placements.map(({ item: task, lane, laneCount, overlapCount }) => ({ id: task.id, lane, laneCount, overlapCount })), [
+    { id: 'first', lane: 0, laneCount: 2, overlapCount: 2 },
+    { id: 'middle', lane: 1, laneCount: 2, overlapCount: 3 },
+    { id: 'last', lane: 0, laneCount: 2, overlapCount: 2 },
+  ]);
 });
 
 const schedulerUpdatedAt = '2026-09-23T12:00:00.000Z';

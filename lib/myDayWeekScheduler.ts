@@ -12,6 +12,17 @@ export type SchedulerDayItems<T extends SchedulerWorklistItem> = {
   anytime: T[];
 };
 
+export type SchedulerTimedPlacement<T extends SchedulerWorklistItem> = {
+  item: T;
+  lane: number;
+  laneCount: number;
+  overlapCount: number;
+};
+
+// Calendar events use 30 minutes by default. This is only the visual block
+// used to make overlaps apparent; it does not impose a Worklist duration.
+export const SCHEDULER_VISUAL_EVENT_MINUTES = 30;
+
 export function isValidSchedulerDate(value: string | null | undefined): value is string {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00.000Z`);
@@ -50,6 +61,42 @@ export function getSchedulerDayItems<T extends SchedulerWorklistItem>(
       .filter((item) => item.dueDate === date && item.dueTimeMinutes === null)
       .sort((left, right) => left.id.localeCompare(right.id)),
   };
+}
+
+export function getSchedulerTimedPlacements<T extends SchedulerWorklistItem>(items: T[], date: string): SchedulerTimedPlacement<T>[] {
+  const timed = getSchedulerDayItems(items, date).timed;
+  const groups: T[][] = [];
+  let groupEnd = -1;
+
+  for (const item of timed) {
+    const start = item.dueTimeMinutes!;
+    const end = start + SCHEDULER_VISUAL_EVENT_MINUTES;
+    if (!groups.length || start >= groupEnd) {
+      groups.push([item]);
+      groupEnd = end;
+    } else {
+      groups[groups.length - 1].push(item);
+      groupEnd = Math.max(groupEnd, end);
+    }
+  }
+
+  return groups.flatMap((group) => {
+    const laneEnds: number[] = [];
+    const placements = group.map((item) => {
+      const start = item.dueTimeMinutes!;
+      const end = start + SCHEDULER_VISUAL_EVENT_MINUTES;
+      let lane = laneEnds.findIndex((previousEnd) => previousEnd <= start);
+      if (lane < 0) lane = laneEnds.length;
+      laneEnds[lane] = end;
+      const overlapCount = group.filter((candidate) => {
+        const candidateStart = candidate.dueTimeMinutes!;
+        const candidateEnd = candidateStart + SCHEDULER_VISUAL_EVENT_MINUTES;
+        return candidateStart < end && candidateEnd > start;
+      }).length;
+      return { item, lane, overlapCount };
+    });
+    return placements.map(({ item, lane, overlapCount }) => ({ item, lane, laneCount: laneEnds.length, overlapCount }));
+  });
 }
 
 export function getSchedulerPlanningTray<T extends SchedulerWorklistItem>(items: T[], weekStart: string) {
