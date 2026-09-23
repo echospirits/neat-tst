@@ -16,6 +16,7 @@ const hoursResearchSchema = {
   properties: {
     exactLocation: { type: 'boolean' },
     matchedName: { type: 'string' },
+    matchedAgencyNumber: { type: 'string' },
     matchedAddress: { type: 'string' },
     sourceName: { type: 'string' },
     sourceUrl: { type: 'string' },
@@ -30,13 +31,14 @@ const hoursResearchSchema = {
       },
     },
   },
-  required: ['exactLocation', 'matchedName', 'matchedAddress', 'sourceName', 'sourceUrl', 'schedule'],
+  required: ['exactLocation', 'matchedName', 'matchedAgencyNumber', 'matchedAddress', 'sourceName', 'sourceUrl', 'schedule'],
 } as const;
 
 const addressAliases: Record<string, string> = {
   street: 'st', road: 'rd', avenue: 'ave', boulevard: 'blvd', highway: 'hwy', drive: 'dr', lane: 'ln', route: 'rt',
 };
 const normalizeIdentity = (value: string) => value.toLowerCase()
+  .replace(/&/g, ' and ')
   .replace(/\b(?:street|st\.?|road|rd\.?|avenue|ave\.?|boulevard|blvd\.?|highway|hwy\.?|drive|dr\.?|lane|ln\.?|route|rt\.?)\b/g, (word) => addressAliases[word.replace(/\.$/, '')] ?? word.replace(/\.$/, ''))
   .replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
 
@@ -71,7 +73,7 @@ export async function researchAgencyOperatingHours(formData: FormData): Promise<
   const agencyId = String(formData.get('agencyId') ?? '').trim();
   const agency = agencyId ? await prisma.agency.findUnique({
     where: { id: agencyId },
-    select: { id: true, name: true, address: true, city: true, state: true, zip: true },
+    select: { id: true, agencyId: true, name: true, address: true, city: true, state: true, zip: true },
   }) : null;
   if (!agency) return { error: 'This agency is no longer available. Refresh the page and try again.' };
   if (!agency.address?.trim() || !agency.city?.trim() || !agency.state?.trim()) {
@@ -94,9 +96,9 @@ export async function researchAgencyOperatingHours(formData: FormData): Promise<
       body: JSON.stringify({
         model: ACCOUNT_RESEARCH_PILOT_MODEL,
         store: false,
-        input: `Find the current publicly listed weekly business hours for this exact Ohio liquor agency location. Search by the supplied account name and full street address. Prefer the Google Maps listing, the agency's official page, or another credible public listing that identifies this exact address. Do not infer hours from another location, chain location, or general business category. Return exactLocation=true only if the source identifies this account name and full address, including city and state, as the same place. Return matchedAddress as the full address shown by the source. Include only days and hours explicitly listed by the source. Use a 12-hour range such as "9:00 AM–5:00 PM", "Closed", or "Open 24 hours". Do not guess missing days. If an exact location or hours source cannot be confirmed, return exactLocation=false and an empty schedule.\n\nAccount name: ${agency.name}\nAddress: ${location}`,
+        input: `Find the current publicly listed weekly business hours for this exact Ohio liquor agency. For Ohio agencies, first search the official OHLQ site-wide search by the exact agency number, then open its official location detail page and use its listed Hours. OHLQ's Locations map filter does not accept agency numbers; use the main site search. Treat an OHLQ location page as an exact identity match only when its displayed Agency # equals the supplied number and its street address, city, and state match. If no matching OHLQ page is found, use Google Maps, the agency's official page, or another credible public listing for the exact supplied address. Do not use old rollout documents, nearby listings, another location, a chain location, or a general business category. Return exactLocation=true only when the source identifies this exact agency. Return matchedAgencyNumber as the number shown on the source, without the #, or an empty string when none is shown. Return matchedAddress as the full address shown by the source. Include only days and hours explicitly listed by the source. Use a 12-hour range such as "9:00 AM–5:00 PM", "Closed", or "Open 24 hours". Do not guess missing days. If an exact location or hours source cannot be confirmed, return exactLocation=false and an empty schedule.\n\nOhio agency number: ${agency.agencyId}\nAccount name: ${agency.name}\nAddress: ${location}`,
         tools: [{ type: 'web_search', search_context_size: 'low' }],
-        max_tool_calls: 1,
+        max_tool_calls: 2,
         max_output_tokens: 900,
         reasoning: { effort: 'low' },
         text: { verbosity: 'low', format: { type: 'json_schema', name: 'agency_business_hours', strict: true, schema: hoursResearchSchema } },
@@ -112,13 +114,14 @@ export async function researchAgencyOperatingHours(formData: FormData): Promise<
     const outputText = payload.output?.flatMap((item) => item.content ?? []).find((item) => item.type === 'output_text' && item.text)?.text;
     if (payload.status !== 'completed' || !outputText) return { error: 'No confirmed public hours were found. You can enter known hours manually.' };
     const result = JSON.parse(outputText) as {
-      exactLocation?: unknown; matchedName?: unknown; matchedAddress?: unknown; sourceName?: unknown; sourceUrl?: unknown;
+      exactLocation?: unknown; matchedName?: unknown; matchedAgencyNumber?: unknown; matchedAddress?: unknown; sourceName?: unknown; sourceUrl?: unknown;
       schedule?: Array<{ day?: unknown; hours?: unknown }>;
     };
     const matchedAddress = typeof result.matchedAddress === 'string' ? normalizeIdentity(result.matchedAddress) : '';
     const accountAddress = normalizeIdentity(agency.address);
     const accountName = normalizeIdentity(agency.name);
     const matchedName = typeof result.matchedName === 'string' ? normalizeIdentity(result.matchedName) : '';
+    const matchedAgencyNumber = typeof result.matchedAgencyNumber === 'string' ? result.matchedAgencyNumber.replace(/\D/g, '') : '';
     const addressTokens = accountAddress.split(' ');
     const cityMatches = agency.city ? matchedAddress.includes(normalizeIdentity(agency.city)) : false;
     const stateCode = normalizeUsState(agency.state);
@@ -128,10 +131,6 @@ export async function researchAgencyOperatingHours(formData: FormData): Promise<
     const zipInSource = matchedAddress.match(/\b\d{5}\b/)?.[0];
     const zipMatches = !agency.zip || !zipInSource || zipInSource === agency.zip.replace(/\D/g, '').slice(0, 5);
     const addressMatches = addressTokens.length >= 2 && matchedAddress.includes(addressTokens.join(' ')) && cityMatches && stateMatches && zipMatches;
-    if (result.exactLocation !== true || !accountName || matchedName !== accountName || !addressMatches) {
-      return { error: 'Search could not confirm this exact agency address. Review or enter its hours manually.' };
-    }
-
     const sourceUrl = typeof result.sourceUrl === 'string' ? result.sourceUrl : '';
     const sourceUrls = (payload.output ?? []).filter((item) => item.type === 'web_search_call')
       .flatMap((item) => item.action?.sources ?? []).map((source) => source.url).filter((url): url is string => Boolean(url));
@@ -140,6 +139,14 @@ export async function researchAgencyOperatingHours(formData: FormData): Promise<
     if (!['http:', 'https:'].includes(parsedSourceUrl.protocol) || !sourceUrls.includes(sourceUrl) || typeof result.sourceName !== 'string' || !result.sourceName.trim()) {
       return { error: 'Search did not return a verifiable source link. Enter the hours manually.' };
     }
+    const sourceHost = parsedSourceUrl.hostname.toLowerCase();
+    const isOhlqLocation = (sourceHost === 'ohlq.com' || sourceHost.endsWith('.ohlq.com')) && /^\/locations\/[^/]+\/?$/.test(parsedSourceUrl.pathname);
+    const agencyNumberMatches = matchedAgencyNumber === agency.agencyId.replace(/\D/g, '');
+    const identityMatches = isOhlqLocation
+      ? agencyNumberMatches && addressMatches
+      : result.exactLocation === true && Boolean(accountName) && matchedName === accountName && addressMatches;
+    if (!identityMatches) return { error: 'Search could not confirm this exact agency location. Review or enter its hours manually.' };
+
     const returnedSchedule = result.schedule ?? [];
     if (!returnedSchedule.length || returnedSchedule.some((entry) => typeof entry.day !== 'string' || !OPERATING_HOURS_DAYS.includes(entry.day as OperatingHoursDay) || typeof entry.hours !== 'string' || !isSupportedOperatingHoursText(entry.hours))) {
       return { error: 'The source did not provide usable weekly hours. You can enter the hours manually.' };
@@ -156,7 +163,7 @@ export async function researchAgencyOperatingHours(formData: FormData): Promise<
     revalidatePath(`/agencies/${agency.id}`);
     revalidatePath('/alerts');
     revalidatePath('/');
-    return { success: 'Public hours found for the exact agency address and saved with their source.' };
+    return { success: 'Public hours found for the exact agency location and saved with their source.' };
   } catch {
     return { error: 'Could not verify public hours right now. Try again or enter the hours manually.' };
   }
