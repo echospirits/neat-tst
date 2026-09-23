@@ -2395,6 +2395,42 @@ fieldset {
   gap: 14px;
 }
 
+.research-queue-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin: 0 0 1rem;
+}
+
+.agency-hours-queue-search {
+  margin: 0 0 .75rem;
+  max-width: 38rem;
+}
+
+.agency-hours-queue-search label {
+  display: grid;
+  gap: .35rem;
+  font-size: .82rem;
+  font-weight: 650;
+}
+
+.agency-hours-queue {
+  overflow-wrap: anywhere;
+}
+
+.agency-hours-queue a {
+  text-decoration: underline;
+  text-underline-offset: .15em;
+}
+
+.agency-hours-queue-action {
+  margin: 0;
+}
+
+.agency-hours-queue-action button {
+  min-height: 44px;
+}
+
 .research-prompt {
   margin: 0;
   max-height: 560px;
@@ -2624,6 +2660,12 @@ fieldset {
 
   .research-job-list span:last-child {
     text-align: left;
+  }
+
+  .agency-hours-queue-action,
+  .agency-hours-queue-action button,
+  .agency-hours-queue > div > span:last-child > .btn {
+    width: 100%;
   }
 
   .pagination-actions {
