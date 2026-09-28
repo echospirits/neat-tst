@@ -27,6 +27,7 @@ This manifest is the repository-backed record of work in TST that may be include
 - Description: Preserve existing exact licensee ownership during address updates and source location grouping. Guard against alias transfers and verify ownership after importing, so one successful run cannot create the conflict that blocks subsequent daily loads.
 - TST pipeline prerequisites: Bring forward production's September 18 lockfile repair and import/intelligence separation. Linux clean-install validation now runs on TST pushes; inventory loads before the separate 100-minute intelligence step. Preserve TST's post-import account sales-status reconciliation. These prerequisites already exist in production and are not promoted a second time.
 - Validation maintenance: Update two pre-existing stale TST tests for the existing Targeting overlay lookup and Intelligence navigation group. Application navigation and research behavior are unchanged.
+- Recovery budget: Manual multi-day sales backfills may run for 120 minutes; daily/single-date imports retain 40 minutes. This permits TST's September 15–27 catch-up within the existing 240-minute job limit.
 - Relevant commit(s): Commit titled `Preserve Account Master licensee ownership across repeated imports`.
 - Feature flag: None.
 - Default flag state: Enabled for existing imports.
