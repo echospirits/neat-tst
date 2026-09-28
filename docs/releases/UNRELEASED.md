@@ -22,6 +22,17 @@ This manifest is the repository-backed record of work in TST that may be include
 
 ## Pending changes carried into the 0.13.0 cycle
 
+### OHLQ intelligence refresh runtime
+
+- Description: Full intelligence refreshes process four independent accounts concurrently, keeping each account's operations sequential and tenant-scoped. Targeted refreshes and previews remain serial. Stop new batches on error and settle every started write before propagating failure.
+- Relevant commit(s): Commit titled `Bound opportunity intelligence database concurrency`.
+- Feature flag/default state: Existing intelligence entitlements unchanged.
+- Migration(s): None.
+- Environment/config: None.
+- User-visible: Data refresh reliability; no scoring rule or UI change.
+- Production readiness: Scoped follow-up to the authorized data-load repair. Concurrency, ordering, tenant scoping, preview ordering, and failure-draining regressions added.
+- Rollout notes: Finish active core imports first; never overlap intelligence writers for one database. TST remains 0.13.0-dev; production follow-up is 0.2.2.
+
 ### OHLQ Account Master identity hotfix
 
 - Description: Preserve existing exact licensee ownership during address updates and source location grouping. Guard against alias transfers and verify ownership after importing, so one successful run cannot create the conflict that blocks subsequent daily loads.
