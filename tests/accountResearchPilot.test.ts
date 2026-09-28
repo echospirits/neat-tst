@@ -152,9 +152,17 @@ it('honors OpenAI retry timing with a bounded buffer', () => {
 
 it('scopes waterfall candidates to the selected tenant organization', async () => {
   let query: unknown;
-  const db = { wholesaleAccount: { findMany: async (value: unknown) => { query = value; return []; } } } as unknown as PrismaClient;
+  let overlayQuery: unknown;
+  const db = {
+    wholesaleAccount: { findMany: async (value: unknown) => { query = value; return []; } },
+    organizationAccountOverlay: { findMany: async (value: unknown) => { overlayQuery = value; return []; } },
+  } as unknown as PrismaClient;
   await getAccountResearchQueue({ db, organizationId: 'org_1', limit: 50 });
   assert.match(JSON.stringify(query), /"organizationId":"org_1"/);
+  assert.deepEqual(overlayQuery, {
+    where: { organizationId: 'org_1', accountType: 'WHOLESALE', isTargeting: true },
+    select: { externalAccountId: true },
+  });
 });
 
 it('keeps manual tests Platform Admin protected and schedules a production-gated worker', () => {

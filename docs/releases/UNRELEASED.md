@@ -22,6 +22,20 @@ This manifest is the repository-backed record of work in TST that may be include
 
 ## Pending changes carried into the 0.13.0 cycle
 
+### OHLQ Account Master identity hotfix
+
+- Description: Preserve existing exact licensee ownership during address updates and source location grouping. Guard against alias transfers and verify ownership after importing, so one successful run cannot create the conflict that blocks subsequent daily loads.
+- TST pipeline prerequisites: Bring forward production's September 18 lockfile repair and import/intelligence separation. Linux clean-install validation now runs on TST pushes; inventory loads before the separate 100-minute intelligence step. Preserve TST's post-import account sales-status reconciliation. These prerequisites already exist in production and are not promoted a second time.
+- Validation maintenance: Update two pre-existing stale TST tests for the existing Targeting overlay lookup and Intelligence navigation group. Application navigation and research behavior are unchanged.
+- Relevant commit(s): Commit titled `Preserve Account Master licensee ownership across repeated imports`.
+- Feature flag: None.
+- Default flag state: Enabled for existing imports.
+- Migration(s): None.
+- Environment/config: None.
+- User-visible: Data freshness is restored; no UI changes.
+- Production readiness: Scoped hotfix authorized for both TST and main; validation and rollout evidence recorded with the release.
+- Rollout notes: Production requires a guarded one-row alias correction for `0898401-00515`, then September 26–27 sales catch-up and current inventory refresh. TST already has correct alias ownership. Preserve both accounts and attached history; do not merge them or synthesize missing inventory observations. TST stays `0.13.0-dev`; production patch version follows its actual package baseline.
+
 ### All-feature staging entitlements
 
 - Description: Every tenant in APP_ENV=test receives all registered capabilities, including pilots. Organization and role authorization still applies; production package defaults are unchanged. New tenant creation, plan saves, and staging seed retain this policy.
