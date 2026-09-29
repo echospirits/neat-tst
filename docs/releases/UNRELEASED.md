@@ -52,7 +52,7 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 ### Wholesale account assessment replacement
 
 - Description: Separates current tenant/account intelligence, computed capture/develop/deepen candidates and chosen pursuits. Adds a complete research-only path, market-aware editable product strategy, explicit effort/confidence/coverage, corrected daily ledger reconciliation, full batched sweeps with run monitoring, contextual acceptance/feedback, and inactive shadow outcomes. Replaces live legacy score reads without rewriting historical pursuits or requesting research.
-- Relevant commit(s): Implementation commit titled `Replace wholesale opportunity scoring with current account assessments`; delivery evidence follows in the [validation record](0.14.0-wholesale-assessment-validation.md).
+- Relevant commit(s): `987f2ab3` (`Replace wholesale opportunity scoring with current account assessments`); delivery evidence follows in the [validation record](0.14.0-wholesale-assessment-validation.md).
 - Feature flag: Existing `WHOLESALE_OPPORTUNITIES`; no new entitlement.
 - Default flag state: Existing tenant settings preserved. Outcome learning inactive.
 - Migration(s): `prisma/migrations/20260929160000_wholesale_assessments` (additive; applied only to verified TST).
