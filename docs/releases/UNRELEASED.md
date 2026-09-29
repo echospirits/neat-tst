@@ -28,7 +28,7 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 ### Open the 0.14.0 development cycle
 
 - Description: Advances the canonical application and lockfile versions to `0.14.0-dev`; starts the manifest, release plan, pending checklist, and validation record for eventual 0.14.0 promotion.
-- Relevant commit(s): The TST commit titled `Open Neat 0.14.0 development cycle`; subsequent verification evidence is linked above.
+- Relevant commit(s): `9cfce468` (`Open Neat 0.14.0 development cycle`); subsequent verification evidence is linked above.
 - Feature flag: None.
 - Default flag state: N/A.
 - Migration(s): None.
