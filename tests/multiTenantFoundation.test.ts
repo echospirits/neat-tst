@@ -87,7 +87,7 @@ test('Wholesale Opportunities uses one entitlement in navigation and server acce
   assert.equal(navigationItems.find((item) => item.href === '/admin/account-research')?.featureKey, 'ADVANCED_INTELLIGENCE');
   const page = readFileSync('app/opportunities/page.tsx', 'utf8');
   const actions = readFileSync('app/opportunities/actions.ts', 'utf8');
-  assert.match(page, /requireFeatureForUser\(currentUser, 'WHOLESALE_OPPORTUNITIES'\)/);
+  assert.match(page, /requireFeatureForUser\(user, 'WHOLESALE_OPPORTUNITIES'\)/);
   assert.match(actions, /requireFeatureForUser\(user, 'WHOLESALE_OPPORTUNITIES'\)/);
 });
 

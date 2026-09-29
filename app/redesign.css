@@ -515,3 +515,14 @@ summary { cursor: pointer; min-height: 44px; padding-block: 10px; }
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* Current wholesale assessments share compact field workflow disclosure. */
+.wholesale-assessment { min-width: 0; overflow-wrap: anywhere; }
+.wholesale-assessment p, .wholesale-assessment ul { margin-block: .4rem; }
+.wholesale-assessment details { margin-top: .65rem; }
+.assessment-heading, .assessment-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+.assessment-actions { margin-block: .6rem; }
+.assessment-actions > p { flex-basis: 100%; }
+.assessment-actions summary, .wholesale-assessment summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
+.opportunity-row > .wholesale-assessment { grid-column: 1 / -1; }
+@media (min-width: 900px) { .opportunity-results .opportunity-row > h2 { grid-column: 1 / 3; } }

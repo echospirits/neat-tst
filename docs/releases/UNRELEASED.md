@@ -48,3 +48,15 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 - User-visible: Yes.
 - Production readiness: Not reviewed; automated tests deferred for TST review. Production release remains separate.
 - Rollout notes: The additive migration was applied to the isolated TST Neon project `neat-crm-tst` (`neondb`, primary branch `main`), reported by the app as `neon-neat-tst`. TST email is suppressed by default; sending from TST requires `EMAIL_SEND_ENABLED=true`, an `EMAIL_OVERRIDE_RECIPIENT`, and the existing Resend configuration. Expired reset records can be retained safely; token hashes are stored instead of raw tokens.
+
+### Wholesale account assessment replacement
+
+- Description: Separates current tenant/account intelligence, computed capture/develop/deepen candidates and chosen pursuits. Adds a complete research-only path, market-aware editable product strategy, explicit effort/confidence/coverage, corrected daily ledger reconciliation, full batched sweeps with run monitoring, contextual acceptance/feedback, and inactive shadow outcomes. Replaces live legacy score reads without rewriting historical pursuits or requesting research.
+- Relevant commit(s): Implementation commit titled `Replace wholesale opportunity scoring with current account assessments`; delivery evidence follows in the [validation record](0.14.0-wholesale-assessment-validation.md).
+- Feature flag: Existing `WHOLESALE_OPPORTUNITIES`; no new entitlement.
+- Default flag state: Existing tenant settings preserved. Outcome learning inactive.
+- Migration(s): `prisma/migrations/20260929160000_wholesale_assessments` (additive; applied only to verified TST).
+- Environment/config: No new variables or external permissions. Echo-only nullable product-role defaults; other tenants neutral. Product strategy/selection changes mark assessments pending for daily or explicit score-only refresh.
+- User-visible: Yes; opportunities, wholesale detail/list, linked agency intelligence, search, dashboard and administration use current assessments; existing pursuit evidence remains distinct.
+- Production readiness: Not reviewed. TST has only 24/90 verified sales days; richer style/use evidence and a post-deployment scheduled-run check remain needed. This is not evidence of forecasting accuracy or a production release.
+- Rollout notes: Follow [migration, commands, monitoring and rollback](../opportunity-intelligence.md). Never replay historical migrations blindly. Recalculate all enabled tenants from saved inputs after migration; reconcile actual persisted counts and source status. No bulk re-research, automatic task creation, provider activation, stable tag or main promotion.
