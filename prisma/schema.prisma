@@ -416,6 +416,7 @@ model User {
   updatedAt                   DateTime               @updatedAt
   sessions                    UserSession[]
   invitations                 UserInvitation[]
+  passwordResetTokens         PasswordResetToken[]
   createdWholesaleAccounts    WholesaleAccount[]     @relation("WholesaleAccountCreatedBy")
   mergedWholesaleAccounts     WholesaleAccount[]     @relation("WholesaleAccountMergedBy")
   createdLocationContacts     LocationContact[]      @relation("LocationContactCreatedBy")
@@ -859,6 +860,19 @@ model UserInvitation {
   @@index([userId])
   @@index([expiresAt])
   @@index([acceptedAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
 }
 
 model LoginThrottle {

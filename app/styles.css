@@ -304,7 +304,7 @@ textarea:focus-visible {
 }
 
 .login-panel {
-  width: min(460px, calc(100vw - 32px));
+  width: min(460px, 100%);
   padding: 24px;
   background: color-mix(in oklab, var(--panel) 92%, black 8%);
   border: 1px solid var(--line);
@@ -316,6 +316,21 @@ textarea:focus-visible {
   margin: 0;
   font-size: 36px;
   letter-spacing: -.04em;
+}
+
+.login-forgot-button {
+  min-height: 44px;
+  align-self: start;
+}
+
+.login-panel input,
+.login-panel form > button {
+  min-height: 44px;
+}
+
+.login-panel .form-error {
+  margin: 0;
+  color: #9a2c26;
 }
 
 .login-brand {

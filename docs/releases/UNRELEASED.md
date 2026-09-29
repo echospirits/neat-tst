@@ -36,3 +36,15 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 - User-visible: Yes; protected Environment diagnostics show the development version.
 - Production readiness: Not reviewed for production; development cycle setup only. Candidate-specific release checks remain pending.
 - Rollout notes: Deploy only to `neat-tst/tst`. No schema changes, backfills, entitlement changes, or external service activation. Remove `-dev` only when preparing the exact stable release candidate, then complete the linked checklist.
+
+### Self-service password reset
+
+- Description: Adds a `Forgot password?` action to sign in. Active users with a password can receive a one-time reset link that expires after one hour, set a new password, and revoke existing sessions. Responses do not disclose whether the email belongs to an account.
+- Relevant commit(s): Pending.
+- Feature flag: None.
+- Default flag state: Available to all users.
+- Migration(s): `prisma/migrations/20260923123000_password_reset_tokens`.
+- Environment/config: Uses the existing email configuration and delivery safeguards; no new variables.
+- User-visible: Yes.
+- Production readiness: Not reviewed; TST feature development only.
+- Rollout notes: Apply this migration only after confirming the isolated `neon-neat-tst` database identity and host. Test email is suppressed by default; sending from TST requires `EMAIL_SEND_ENABLED=true`, an `EMAIL_OVERRIDE_RECIPIENT`, and the existing Resend configuration. Expired reset records can be retained safely; token hashes are stored instead of raw tokens.
