@@ -718,8 +718,8 @@ model AccountSalesStatusHistory {
   organization      Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, purchaseSourceKey])
-  @@index([organizationId, accountType, externalAccountId, changedAt])
-  @@index([organizationId, newStatus, changedAt])
+  @@index([organizationId, accountType, externalAccountId, changedAt], map: "AccountSalesStatusHistory_organizationId_accountType_externalAc")
+  @@index([organizationId, newStatus, changedAt], map: "AccountSalesStatusHistory_organizationId_newStatus_changedAt_id")
   @@index([loggedVisitId])
 }
 

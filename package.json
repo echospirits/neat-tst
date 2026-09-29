@@ -1,6 +1,6 @@
 {
   "name": "ohlq-field-crm-mvp",
-  "version": "0.13.0-dev",
+  "version": "0.13.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

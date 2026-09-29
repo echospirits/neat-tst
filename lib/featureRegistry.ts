@@ -56,7 +56,7 @@ export const CORE_PACKAGE_FEATURE_KEYS = FEATURE_KEYS.filter((key) =>
   !INTELLIGENCE_PACKAGE_FEATURE_KEYS.includes(key as (typeof INTELLIGENCE_PACKAGE_FEATURE_KEYS)[number]) &&
   !OPTIONAL_FEATURE_KEYS.includes(key as (typeof OPTIONAL_FEATURE_KEYS)[number]));
 export const DEFAULT_FEATURE_KEYS = [...CORE_PACKAGE_FEATURE_KEYS];
-export const ECHO_FEATURE_KEYS = FEATURE_KEYS.filter((key) => key !== 'ANALYTICS');
+export const ECHO_FEATURE_KEYS = FEATURE_KEYS.filter((key) => key !== 'ANALYTICS' && key !== 'OHIO_DIRECT_WHOLESALE_ORDERS');
 
 export function getEnvironmentFeatureKeys(configured: readonly FeatureKey[], env: Record<string, string | undefined> = process.env): FeatureKey[] {
   return env.APP_ENV?.trim().toLowerCase() === 'test' ? [...FEATURE_KEYS] : [...configured];
