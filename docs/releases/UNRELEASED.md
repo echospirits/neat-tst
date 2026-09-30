@@ -25,6 +25,18 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 
 ## Pending changes
 
+### Tenant-scoped recent account sales (0.13.1 hotfix carry-forward)
+
+- Description: Retail account sales use the active organization's product list and labels in regular and Support View sessions. Wholesale recent purchases show only that organization's tracked products.
+- Relevant commit(s): `cdd930a5` (source fix cherry-picked from the 0.13.1 production-base hotfix).
+- Feature flag: None.
+- Default flag state: Available to all tenants.
+- Migration(s): None.
+- Environment/config: None.
+- User-visible: Yes.
+- Production readiness: Separately validated as the 0.13.1 hotfix; this TST carry-forward does not promote 0.14.0 development work.
+- Rollout notes: No data repair or backfill. TST passed 549 tests, typecheck, and build. The local typecheck/build excluded a pre-existing untracked `tmp` audit script and used matching development resource labels; no tracked configuration was changed. See [0.13.1 release notes](0.13.1.md) for the production-base hotfix scope.
+
 ### Open the 0.14.0 development cycle
 
 - Description: Advances the canonical application and lockfile versions to `0.14.0-dev`; starts the manifest, release plan, pending checklist, and validation record for eventual 0.14.0 promotion.
