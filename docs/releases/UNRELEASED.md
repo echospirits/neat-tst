@@ -25,6 +25,18 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 
 ## Pending changes
 
+### Restore both wholesale purchase sections (0.13.2 hotfix carry-forward)
+
+- Description: Wholesale account pages again show the active tenant's 30-day purchases first and an expandable list of all OHLQ wholesale purchases at that location second. The tenant section remains organization-scoped in regular and Support View sessions; retail filtering from 0.13.1 is unchanged.
+- Relevant commit(s): `f3085874` (source and regression tests carried from the 0.13.2 production hotfix).
+- Feature flag: None.
+- Default flag state: Available to all tenants.
+- Migration(s): None.
+- Environment/config: None.
+- User-visible: Yes.
+- Production readiness: Separately validated as the 0.13.2 hotfix; this TST carry-forward does not promote 0.14.0 development work.
+- Rollout notes: No data repair or backfill. TST passed 549 tests, typecheck, and build. The local typecheck/build excluded a pre-existing untracked `tmp` audit script and used matching development resource labels; no tracked configuration was changed. Deployment `dpl_5QDxCiXi337PCyHCnWn9WvsmTsfR` reached Ready with `f3085874`, `0.14.0-dev`, and the isolated `neon-neat-tst` database. See [0.13.2 release notes](0.13.2.md) for hotfix scope and validation.
+
 ### Tenant-scoped recent account sales (0.13.1 hotfix carry-forward)
 
 - Description: Retail account sales use the active organization's product list and labels in regular and Support View sessions. Wholesale recent purchases show only that organization's tracked products.
