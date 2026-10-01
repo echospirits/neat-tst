@@ -25,6 +25,18 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 
 ## Pending changes
 
+### Fixed customer-facing organization configuration
+
+- Description: Removes every customer-facing configuration field from Platform Admin provisioning and organization editing: application/digest names, product labels, colors, customer/support contacts, locale, and week start. Admin actions ignore submitted overrides. New organizations use existing schema defaults, en-US/Sunday, and initial-admin contact defaults; edits preserve existing configuration and other JSON settings. Organization Admin has no matching controls or write path.
+- Relevant commit(s): Commit titled `Lock customer-facing organization configuration`.
+- Feature flag: None.
+- Default flag state: N/A; applies to all organizations.
+- Migration(s): None.
+- Environment/config: None.
+- User-visible: Yes.
+- Production readiness: Validated for TST; frozen 0.14.0 candidate gates remain pending.
+- Rollout notes: No backfill or normalization of existing values. Operational organization identity, timezone, website, status, notes, product selection, and A3A location contacts remain editable. See [validation record](0.14.0-validation.md).
+
 ### Gray pipeline chevrons before an account is targeted
 
 - Description: Account-page relationship chevrons use the saved sales status instead of the fallback Target value. Accounts without a saved status show gray incomplete steps and Sales Status displays `Not set`, with `No saved status` detail. The status picker starts at `Choose status` and requires an explicit choice before saving. Saved Target and later stages retain their labels and colors. Applies to wholesale and agency pages; Pipeline filter colors remain available.
