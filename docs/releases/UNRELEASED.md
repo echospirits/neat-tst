@@ -28,13 +28,13 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 ### OHLQ report re-login recovery (0.13.3 hotfix carry-forward)
 
 - Description: Report re-login accepts the expected Power BI report or Microsoft authentication handoff instead of waiting for the partner homepage. Resumes the report without another login cycle, preventing false timeout failures.
-- Relevant commits: To be recorded after validation.
+- Relevant commits: `0abde6e2` (TST fix); production-base hotfix `d2c92f9c`, tag `v0.13.3`.
 - Feature flag: None; existing import/environment guards remain in force.
 - Default flag state: N/A.
 - Migration(s): None.
 - Environment/config: None.
 - User-visible: Yes; scheduled report refresh reliability.
-- Production readiness: Production-base 0.13.3 hotfix passed 529 tests, typecheck and build; TST passed 557 tests, typecheck and build. Deployment verification pending.
+- Production readiness: Separately released as 0.13.3. Production passed 529 tests, typecheck and build; TST passed 557 tests, typecheck and build. Both deployments reached Ready with matching commit metadata, connected isolated database health, and passing Linux clean-install checks.
 - Rollout notes: No database mutation, credential repair, or unrelated 0.14.0 production promotion. See [0.13.3 release notes](0.13.3.md) for root causes, retained data coverage and remaining live-run validation.
 
 ### Restore both wholesale purchase sections (0.13.2 hotfix carry-forward)
