@@ -27,8 +27,8 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 
 ### Gray pipeline chevrons before an account is targeted
 
-- Description: Account-page relationship chevrons use the saved sales status instead of the fallback Target value. Accounts without a saved status show gray incomplete steps; saved Target and later stages retain their stage colors. Applies to wholesale and agency pages; Pipeline filter colors remain available.
-- Relevant commit(s): The TST commit containing this entry (`Fix untargeted account pipeline chevrons`).
+- Description: Account-page relationship chevrons use the saved sales status instead of the fallback Target value. Accounts without a saved status show gray incomplete steps and Sales Status displays `Not set`, with `No saved status` detail. The status picker starts at `Choose status` and requires an explicit choice before saving. Saved Target and later stages retain their labels and colors. Applies to wholesale and agency pages; Pipeline filter colors remain available.
+- Relevant commit(s): `5fabaefe` (`Fix untargeted account pipeline chevrons`); follow-up commit containing the label change (`Show unset account sales status explicitly`).
 - Feature flag: Existing `ACCOUNT_SALES_STATUS`; no new entitlement.
 - Default flag state: Existing tenant settings preserved.
 - Migration(s): None.
