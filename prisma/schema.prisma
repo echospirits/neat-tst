@@ -408,6 +408,7 @@ model User {
   lastName                    String?
   name                        String?
   phone                       String?
+  darkMode                    Boolean                @default(false)
   passwordHash                String?
   role                        UserRole               @default(USER)
   isActive                    Boolean                @default(true)

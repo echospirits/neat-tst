@@ -10,6 +10,8 @@ import { GlobalSearchForm } from './components/GlobalSearchForm';
 import { ActionNotice } from './components/ActionNotice';
 import './styles.css';
 import './redesign.css';
+import './theme.css';
+import { AppearanceSync } from './components/AppearanceSync';
 import { getAppEnvironment, getEnvironmentLabel } from '../lib/appEnvironment';
 
 export const metadata: Metadata = {
@@ -50,8 +52,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     : undefined;
 
   return (
-    <html lang="en">
+    <html lang="en" data-theme={user?.darkMode ? 'dark' : 'light'}>
       <body className={appEnvironment !== 'production' ? 'has-environment-banner' : undefined} style={tenantTheme}>
+        {user ? <AppearanceSync darkMode={user.darkMode} /> : null}
         {appEnvironment !== 'production' ? (
           <div className="environment-banner" role="status">
             {APP_NAME} — {getEnvironmentLabel().toUpperCase()} ENVIRONMENT

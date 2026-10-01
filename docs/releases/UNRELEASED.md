@@ -25,6 +25,19 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 
 ## Pending changes
 
+### Persistent per-user Dark mode
+
+- Description: Adds an automatically saved Dark mode switch at the top of Profile & preferences. The account preference applies to mobile and desktop, survives sign-out and sign-in, and is rendered on the server to avoid an incorrect-theme flash. Open sessions refresh the preference on focus, visibility changes, and every minute while visible. Shared dark surfaces, readable semantic statuses, native controls, and visible keyboard focus cover the app without altering photos or exported documents.
+- Relevant commit(s): Commit titled `Add persistent account dark mode`.
+- Feature flag: None.
+- Default flag state: Available to all signed-in users; light mode remains the default.
+- Migration(s): `prisma/migrations/20261001120000_user_dark_mode`; additive `User.darkMode` boolean defaulting to false.
+- Environment/config: None.
+- User-visible: Yes.
+- Production readiness: Validated for TST; frozen 0.14.0 release gates remain pending.
+- Rollout notes: Apply the migration before deploying the application. Applied only to the isolated `neon-neat-tst` database. Preference writes use the authenticated user's ID and require a same-origin request. No production promotion, backfill, entitlement change, or external service activation. See [Dark mode validation](0.14.0-dark-mode-validation.md).
+
+
 ### Graduate three Pilot capabilities into Core CRM
 
 - Description: Account Sales Status / Pipeline, Analytics (including CSV exports), and Direct Wholesale Orders are included in Core CRM for every new tenant. Both platform Plan forms remove the separate Pilot options; Intelligence remains the add-on. Existing Core CRM tenants receive the three saved entitlements through the migration, including previously disabled Pilot rows. Tenant access checks and Ohio A-3a setup requirements remain in force.
