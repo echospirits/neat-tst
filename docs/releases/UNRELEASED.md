@@ -25,6 +25,19 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 
 ## Pending changes
 
+### Graduate three Pilot capabilities into Core CRM
+
+- Description: Account Sales Status / Pipeline, Analytics (including CSV exports), and Direct Wholesale Orders are included in Core CRM for every new tenant. Both platform Plan forms remove the separate Pilot options; Intelligence remains the add-on. Existing Core CRM tenants receive the three saved entitlements through the migration, including previously disabled Pilot rows. Tenant access checks and Ohio A-3a setup requirements remain in force.
+- Relevant commit(s): `Include graduated Pilot features in Core CRM` (this entry's commit).
+- Feature flag: Existing `ACCOUNT_SALES_STATUS`, `ANALYTICS`, and `OHIO_DIRECT_WHOLESALE_ORDERS` keys retained as Core entitlements.
+- Default flag state: Enabled in Core CRM; Intelligence package behavior unchanged.
+- Migration(s): `prisma/migrations/20261001130000_core_crm_pilot_graduation` (idempotent entitlement upsert; no schema changes).
+- Environment/config: None.
+- User-visible: Yes.
+- Production readiness: Ready for inclusion in 0.14.0 per owner approval; whole-release candidate checks still apply at promotion.
+- Rollout notes: Apply the migration to the exact production release candidate to enable all three for existing Core tenants. TST migration was applied and registered alone after checking migration history, preserving an older pending password-reset migration and concurrent dark-mode migration. No main push or production database mutation.
+- Validation: 559 tests passed; typecheck and production build passed. Verified three enabled bundled entitlements for each of TST's three Core tenants. Static previews of the exact Plan markup with application CSS were checked at 390 x 844 and desktop; authenticated save/create behavior was not browser-tested. See [validation](0.14.0-core-plan-validation.md).
+
 ### Fixed customer-facing organization configuration
 
 - Description: Removes every customer-facing configuration field from Platform Admin provisioning and organization editing: application/digest names, product labels, colors, customer/support contacts, locale, and week start. Admin actions ignore submitted overrides. New organizations use existing schema defaults, en-US/Sunday, and initial-admin contact defaults; edits preserve existing configuration and other JSON settings. Organization Admin has no matching controls or write path.
