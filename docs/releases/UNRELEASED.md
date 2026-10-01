@@ -25,6 +25,18 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 
 ## Pending changes
 
+### Gray pipeline chevrons before an account is targeted
+
+- Description: Account-page relationship chevrons use the saved sales status instead of the fallback Target value. Accounts without a saved status show gray incomplete steps; saved Target and later stages retain their stage colors. Applies to wholesale and agency pages; Pipeline filter colors remain available.
+- Relevant commit(s): The TST commit containing this entry (`Fix untargeted account pipeline chevrons`).
+- Feature flag: Existing `ACCOUNT_SALES_STATUS`; no new entitlement.
+- Default flag state: Existing tenant settings preserved.
+- Migration(s): None.
+- Environment/config: None.
+- User-visible: Yes.
+- Production readiness: Validated for TST; frozen 0.14.0 candidate gates remain pending.
+- Rollout notes: Included in the 0.14.0 development package. No data repair or backfill. See [validation record](0.14.0-validation.md).
+
 ### OHLQ report re-login recovery (0.13.3 hotfix carry-forward)
 
 - Description: Report re-login accepts the expected Power BI report or Microsoft authentication handoff instead of waiting for the partner homepage. Resumes the report without another login cycle, preventing false timeout failures.

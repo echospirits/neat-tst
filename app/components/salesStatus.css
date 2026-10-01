@@ -60,7 +60,7 @@
 .sales-journey--compact { margin: 0 0 8px; }
 .sales-journey--compact .sales-journey-path { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
 .sales-journey--compact li.is-current { outline: none; }
-.sales-journey--compact li.is-upcoming { --stage-bg: #eeeeea; --stage-ink: #66695f; }
+.sales-journey li.is-upcoming { --stage-bg: #eeeeea; --stage-ink: #66695f; }
 .sales-journey--compact li > div { min-height: 44px; padding: 8px 16px; }
 .sales-journey--compact .sales-journey-number { display: none; }
 .sales-journey--compact .sales-journey-other { display: flex; margin-top: 6px; }

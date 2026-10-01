@@ -36,7 +36,7 @@ export function AccountSalesStatusPanel({
   statusUpdatedAt: Date | null;
 }) {
   return <section className={`account-sales-status-section${compact ? ' account-sales-status-section--compact' : ''}`} aria-label="Account sales status">
-    <SalesStatusJourney currentStatus={status} compact={compact} />
+    <SalesStatusJourney currentStatus={statusIsExplicit ? status : null} compact={compact} />
     <div className="account-sales-status-bar">
     <div className="account-sales-status-current">
       <span><small>Sales Status</small><strong>{SALES_STATUS_LABELS[status]}</strong></span>
