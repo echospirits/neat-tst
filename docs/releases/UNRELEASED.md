@@ -25,6 +25,18 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 
 ## Pending changes
 
+### Center visit photos in the visible viewport
+
+- Description: Expanded visit photos open in a viewport-centered native modal outside the visit-history section. Background scrolling is locked while open, preventing mobile photo/panel drift and clipping. Closing restores the original page position and thumbnail focus; Escape, Close, and backdrop dismissal are supported.
+- Relevant commit(s): Commit titled `Fix visit photo viewer positioning and scroll lock`.
+- Feature flag: None.
+- Default flag state: N/A; applies wherever the shared visit photo gallery appears.
+- Migration(s): None.
+- Environment/config: None.
+- User-visible: Yes.
+- Production readiness: Validated for TST; frozen 0.14.0 candidate gates remain pending.
+- Rollout notes: No data changes or service activation. See [photo viewer validation](0.14.0-visit-photo-validation.md).
+
 ### Persistent per-user Dark mode
 
 - Description: Adds an automatically saved Dark mode switch at the top of Profile & preferences. The account preference applies to mobile and desktop, survives sign-out and sign-in, and is rendered on the server to avoid an incorrect-theme flash. Open sessions refresh the preference on focus, visibility changes, and every minute while visible. Shared dark surfaces, readable semantic statuses, native controls, and visible keyboard focus cover the app without altering photos or exported documents.
