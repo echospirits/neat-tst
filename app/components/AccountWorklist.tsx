@@ -31,12 +31,12 @@ export async function AccountWorklist(props: {
     ]);
   } catch (error) {
     console.error('Account outstanding work unavailable', error);
-    return <section className="account-workspace-section" id="account-worklist"><h2>Outstanding work</h2><p className="notice danger" role="alert">Unable to load outstanding work.</p><form action={returnTo} method="get"><button className="secondary" type="submit">Retry</button></form></section>;
+    return <section className="card account-workspace-section account-worklist" id="account-worklist"><h2>Outstanding work</h2><p className="notice danger" role="alert">Unable to load outstanding work.</p><form action={returnTo} method="get"><button className="secondary" type="submit">Retry</button></form></section>;
   }
   const [items, contacts, users, tags] = data;
   const actionUsers = users.map((user) => ({ id: user.id, name: getUserDisplayName(user) }));
   return (
-    <section className="account-workspace-section account-worklist" id="account-worklist" aria-labelledby="account-worklist-heading">
+    <section className="card account-workspace-section account-worklist" id="account-worklist" aria-labelledby="account-worklist-heading">
       <div className="section-heading"><h2 id="account-worklist-heading">Outstanding work</h2><span className="pill">{items.length}</span></div>
       {items.length === 0 ? <p className="muted">No outstanding work for this account. Use Create follow-up in the account actions to add a task.</p> : <>
         <p className="field-note">Team tasks for this account, including unassigned work.</p>

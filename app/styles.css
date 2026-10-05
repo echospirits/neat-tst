@@ -6121,6 +6121,10 @@ legend {
 }
 
 /* Account work uses the same task actions as Worklist in a narrow, wrapping row. */
+.card.account-worklist {
+  background: color-mix(in srgb, var(--panel) 78%, var(--sage) 22%);
+  margin-block: 1rem;
+}
 .account-worklist-group { margin-top: 1rem; }
 .account-worklist-group h3 { margin-bottom: .5rem; }
 .account-worklist-item { min-width: 0; padding: .75rem 0; border-bottom: 1px solid var(--line); }

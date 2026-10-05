@@ -305,7 +305,7 @@ export default async function WholesaleActivityPage({
 
       <AccountMemoryPanel accountId={account.id} accountType="WHOLESALE" contacts={accountContacts} notes={overlay?.notes ?? null} returnTo={`/wholesale/${account.id}`} />
 
-      <Suspense fallback={<section id="account-worklist" className="account-workspace-section" aria-busy="true"><h2>Outstanding work</h2><p role="status">Loading outstanding work…</p></section>}>
+      <Suspense fallback={<section id="account-worklist" className="card account-workspace-section account-worklist" aria-busy="true"><h2>Outstanding work</h2><p role="status">Loading outstanding work…</p></section>}>
         <AccountWorklist accountId={account.id} accountName={account.name} accountType="WHOLESALE" currentUserId={user.id} actorName={getUserDisplayName(user)} organizationId={organizationId} enabledFeatures={enabledFeatures} />
       </Suspense>
 

@@ -180,7 +180,7 @@ export default async function AgencyActivityPage({
 
       <AccountMemoryPanel accountId={agency.id} accountType="AGENCY" contacts={accountContacts} notes={overlay?.notes ?? null} returnTo={`/agencies/${agency.id}`} />
 
-      <Suspense fallback={<section id="account-worklist" className="account-workspace-section" aria-busy="true"><h2>Outstanding work</h2><p role="status">Loading outstanding work…</p></section>}>
+      <Suspense fallback={<section id="account-worklist" className="card account-workspace-section account-worklist" aria-busy="true"><h2>Outstanding work</h2><p role="status">Loading outstanding work…</p></section>}>
         <AccountWorklist accountId={agency.id} accountName={agency.name} accountType="AGENCY" currentUserId={currentUser.id} actorName={getUserDisplayName(currentUser)} organizationId={organizationId} enabledFeatures={enabledFeatures} />
       </Suspense>
 

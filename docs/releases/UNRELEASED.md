@@ -27,8 +27,8 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 
 ### Outstanding work on account pages
 
-- Description: Wholesale and retail account pages show outstanding team Worklist items directly below Notes + contacts, grouped by Overdue, Today, Upcoming, and Unscheduled, with status, due date/time, and owner (including Unassigned). The shared Worklist controls support Log Visit, Complete, Reschedule, Edit, Reassign, and Cancel without navigating away. Visit logging retains account/task/product context and returns to the account section after confirmation.
-- Relevant commit(s): Commit titled `Show outstanding Worklist tasks on account pages` (this entry's commit).
+- Description: Wholesale and retail account pages show outstanding team Worklist items directly below Notes + contacts, grouped by Overdue, Today, Upcoming, and Unscheduled, with status, due date/time, and owner (including Unassigned). The section uses the shared rounded card boundary, padding, and a faint theme-aware sage tint for clear visual separation. The shared Worklist controls support Log Visit, Complete, Reschedule, Edit, Reassign, and Cancel without navigating away. Visit logging retains account/task/product context and returns to the account section after confirmation.
+- Relevant commit(s): Commit titled `Show outstanding Worklist tasks on account pages`; follow-up `Frame account outstanding work in a tinted card`.
 - Feature flag: None; existing intelligence-source entitlement visibility is preserved.
 - Default flag state: Available to all tenants.
 - Migration(s): None.
