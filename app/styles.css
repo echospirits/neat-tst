@@ -6119,3 +6119,14 @@ legend {
   .store-form-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .store-market-metrics { grid-template-columns:repeat(4,minmax(0,1fr)); }
 }
+
+/* Account work uses the same task actions as Worklist in a narrow, wrapping row. */
+.account-worklist-group { margin-top: 1rem; }
+.account-worklist-group h3 { margin-bottom: .5rem; }
+.account-worklist-item { min-width: 0; padding: .75rem 0; border-bottom: 1px solid var(--line); }
+.account-worklist-title, .account-worklist-item .inline-meta { overflow-wrap: anywhere; }
+.account-worklist-item .task-actions { margin-top: .5rem; flex-wrap: wrap; }
+.account-worklist-item .worklist-edit-details { max-width: 100%; }
+.account-worklist-item button, .account-worklist-item summary { min-height: 44px; }
+
+.account-worklist-item .inline-meta { display: flex; flex-wrap: wrap; gap: .35rem .75rem; margin-top: .25rem; }

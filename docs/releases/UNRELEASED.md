@@ -25,6 +25,18 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 
 ## Pending changes
 
+### Outstanding work on account pages
+
+- Description: Wholesale and retail account pages show outstanding team Worklist items directly below Notes + contacts, grouped by Overdue, Today, Upcoming, and Unscheduled, with status, due date/time, and owner (including Unassigned). The shared Worklist controls support Log Visit, Complete, Reschedule, Edit, Reassign, and Cancel without navigating away. Visit logging retains account/task/product context and returns to the account section after confirmation.
+- Relevant commit(s): Commit titled `Show outstanding Worklist tasks on account pages` (this entry's commit).
+- Feature flag: None; existing intelligence-source entitlement visibility is preserved.
+- Default flag state: Available to all tenants.
+- Migration(s): None.
+- Environment/config: None.
+- User-visible: Yes.
+- Production readiness: Validated for TST; frozen 0.14.0 candidate gates remain pending.
+- Rollout notes: Reads existing tenant-scoped OPEN/IN_PROGRESS tasks, including older follow-ups linked through a source visit. Shared task actions retain calendar sync and opportunity reassignment behavior and refresh account pages. No backfill or service activation. See [account Worklist validation](0.14.0-account-worklist-validation.md).
+
 ### Center visit photos in the visible viewport
 
 - Description: Expanded visit photos open in a viewport-centered native modal outside the visit-history section. Background scrolling is locked while open, preventing mobile photo/panel drift and clipping. Closing restores the original page position and thumbnail focus; Escape, Close, and backdrop dismissal are supported.
