@@ -4913,6 +4913,10 @@ legend {
   margin: 0.5rem 0;
 }
 
+.account-detail-list .account-hours-editor > p {
+  display: block;
+}
+
 .account-hours-form {
   display: grid;
   gap: 0.7rem;

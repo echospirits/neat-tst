@@ -1,8 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { Prisma } from '@prisma/client';
 import type { ActionResult } from '../../components/ActionForm';
-import { requireUser } from '../../../lib/auth';
+import { requirePlatformAdmin } from '../../../lib/auth';
 import { requireOrganizationContext } from '../../../lib/organizations';
 import { isSupportedOperatingHoursText, OPERATING_HOURS_DAYS, type OperatingHoursDay } from '../../../lib/operatingHours';
 import { prisma } from '../../../lib/prisma';
@@ -129,8 +130,27 @@ function isOhlqLocationUrl(sourceUrl: URL): boolean {
   return (sourceHost === 'ohlq.com' || sourceHost.endsWith('.ohlq.com')) && /^\/locations\/[^/]+\/?$/.test(sourceUrl.pathname);
 }
 
+async function saveCuratedAgencyHours(agencyId: string, actorUserId: string, hours: Prisma.InputJsonObject): Promise<boolean> {
+  const agency = await prisma.agency.findUnique({ where: { id: agencyId }, select: { businessHours: true, updatedAt: true } });
+  if (!agency) return false;
+  const previous = agency.businessHours && typeof agency.businessHours === 'object' && !Array.isArray(agency.businessHours)
+    ? agency.businessHours : null;
+  const { history: priorHistory, ...previousDetails } = previous ?? {};
+  const savedAt = new Date().toISOString();
+  const history = [
+    ...(Array.isArray(priorHistory) ? priorHistory : []),
+    { replacedAt: savedAt, replacedByUserId: actorUserId, previous: previous ? previousDetails : agency.businessHours },
+  ];
+  // Keep the previous value and provenance together; a concurrent edit must not lose history.
+  const result = await prisma.agency.updateMany({
+    where: { id: agencyId, updatedAt: agency.updatedAt, businessHours: { equals: agency.businessHours ?? Prisma.AnyNull } },
+    data: { businessHours: { ...hours, savedAt, savedByUserId: actorUserId, history } },
+  });
+  return result.count === 1;
+}
+
 export async function saveAgencyOperatingHours(formData: FormData): Promise<ActionResult> {
-  const user = await requireUser();
+  const user = await requirePlatformAdmin();
   await requireOrganizationContext(user);
   const agencyId = String(formData.get('agencyId') ?? '').trim();
   if (!agencyId || !(await prisma.agency.findUnique({ where: { id: agencyId }, select: { id: true } }))) {
@@ -147,7 +167,9 @@ export async function saveAgencyOperatingHours(formData: FormData): Promise<Acti
     schedule.push({ day, hours });
   }
 
-  await prisma.agency.update({ where: { id: agencyId }, data: { businessHours: { schedule, sourceType: 'manual' } } });
+  if (!(await saveCuratedAgencyHours(agencyId, user.id, { schedule, sourceType: 'manual' }))) {
+    return { error: 'The agency changed while saving. Refresh the page and try again.' };
+  }
   revalidatePath(`/agencies/${agencyId}`);
   revalidatePath('/alerts');
   revalidatePath('/');
@@ -155,7 +177,7 @@ export async function saveAgencyOperatingHours(formData: FormData): Promise<Acti
 }
 
 export async function researchAgencyOperatingHours(formData: FormData): Promise<ActionResult> {
-  const user = await requireUser();
+  const user = await requirePlatformAdmin();
   await requireOrganizationContext(user);
   const agencyId = String(formData.get('agencyId') ?? '').trim();
   const agency = agencyId ? await prisma.agency.findUnique({
@@ -209,13 +231,15 @@ export async function researchAgencyOperatingHours(formData: FormData): Promise<
     }
     const schedule = (result.schedule ?? []).map((entry) => ({ day: entry.day as OperatingHoursDay, hours: entry.hours as string }));
 
-    await prisma.agency.update({ where: { id: agency.id }, data: { businessHours: {
+    if (!(await saveCuratedAgencyHours(agency.id, user.id, {
       schedule,
       sourceType: 'public-web-research',
       sourceName: (result.sourceName as string).trim().slice(0, 120),
       sourceUrl,
       researchedAt: new Date().toISOString(),
-    } } });
+    }))) {
+      return { error: 'The agency changed while researching. Refresh the page and try again.' };
+    }
     revalidatePath(`/agencies/${agency.id}`);
     revalidatePath('/alerts');
     revalidatePath('/');

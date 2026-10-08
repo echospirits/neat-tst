@@ -27,7 +27,7 @@ import { getCommunicationTitle } from '../../../lib/accountMemory';
 import { readStoreContext } from '../../../lib/agencyStoreContext';
 import { getAgencyMarketFitsForDisplay } from '../../../lib/agencyMarketIntelligenceService';
 import { AgencyRetailMarketIntelligence, AgencyStoreIntelligence, AgencyStoreSummary } from '../AgencyStoreIntelligence';
-import { SalesAccountType } from '@prisma/client';
+import { SalesAccountType, UserRole } from '@prisma/client';
 import { getAccountSalesStatusSummary, SALES_STATUS_LABELS } from '../../../lib/accountSalesStatus';
 import { AccountSalesStatusPanel } from '../../components/AccountSalesStatusPanel';
 import { TargetAccountControl } from '../../components/TargetAccountControl';
@@ -213,7 +213,7 @@ export default async function AgencyActivityPage({
             <strong>Agency phone</strong>
             <PhoneLink phone={agency.phone} />
           </p>
-          <AgencyOperatingHoursEditor agencyId={agency.id} {...knownHours} researchAvailable={hoursResearchAvailable} />
+          <AgencyOperatingHoursEditor agencyId={agency.id} {...knownHours} canEdit={currentUser.role === UserRole.PLATFORM_ADMIN} researchAvailable={hoursResearchAvailable} />
         </div>
         <AccountTagPanel
           assignments={agency.tags}

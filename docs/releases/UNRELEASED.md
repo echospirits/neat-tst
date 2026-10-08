@@ -62,6 +62,17 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 - Production readiness: Local validation recorded in the linked record; a frozen production candidate and release approval remain separate.
 - Rollout notes: neat-tst/tst only, within the owner-confirmed 0.2.0-dev cycle. No database migration or data repair performed.
 
+### Protect shared agency operating hours
+
+- Description: Manual hours and public-hours research now require platform administrator authority before accessing the agency or a provider. Tenant users and tenant administrators see known hours and their source in a read-only view. Curated changes retain the authenticated actor, timestamp, and previous values, with a conditional write that prevents concurrent saves from discarding history.
+- Relevant commit(s): Commit titled Restrict shared agency hours to platform curation.
+- Feature flag/default state: None / N/A; existing public-research availability checks remain in effect.
+- Migration(s): None; provenance and prior values use the existing businessHours JSON field.
+- Environment/config: None.
+- User-visible: Yes; tenant users can view shared hours, while platform administrators can save or research them.
+- Production readiness: TST fix; 18 focused hours regressions, 72 combined authorization/scheduling tests, standalone TypeScript checks and responsive previews pass. Local compilation passed but final local build checks hit shared-dependency corruption; normal hosted build verification is part of delivery evidence. Production promotion requires a separate release candidate.
+- Rollout notes: neat-tst/tst only. Existing hours remain readable; no backfill or live account changes. New history begins at the first curated update and preserves the value it replaces.
+
 ### Open the v0.2 development cycle
 
 - Description: Starts the owner-selected next cycle at 0.2.0-dev with a release plan, pending candidate checklist and validation record.

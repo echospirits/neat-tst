@@ -13,6 +13,7 @@ export function AgencyOperatingHoursEditor({
   sourceUrl,
   researchedAt,
   researchAvailable,
+  canEdit,
 }: {
   agencyId: string;
   schedule: OperatingHoursEntry[] | null;
@@ -20,15 +21,21 @@ export function AgencyOperatingHoursEditor({
   sourceUrl: string | null;
   researchedAt: string | null;
   researchAvailable: boolean;
+  canEdit: boolean;
 }) {
   const router = useRouter();
   const hoursByDay = new Map(schedule?.map((entry) => [entry.day, entry.hours] as const) ?? []);
   const scheduleKey = JSON.stringify(schedule ?? []);
 
   return <details className="account-hours-editor" id="account-hours">
-    <summary>{schedule?.length ? 'Edit known operating hours' : 'Set known operating hours'}</summary>
-    <p className="muted">Leave a day blank when its hours are unknown. Use “Closed” for a known closure. Agency tasks outside listed hours are marked red in My Schedule and the Worklist.</p>
+    <summary>{canEdit ? (schedule?.length ? 'Edit known operating hours' : 'Set known operating hours') : 'Known operating hours'}</summary>
+    <p className="muted">{canEdit ? 'Leave a day blank when its hours are unknown. Use “Closed” for a known closure. ' : ''}Agency tasks outside listed hours are marked red in My Schedule and the Worklist.</p>
     {sourceName ? <p className="account-hours-source">Source: {sourceUrl ? <a href={sourceUrl} rel="noreferrer" target="_blank">{sourceName}</a> : sourceName}{researchedAt ? ` · checked ${researchedAt.slice(0, 10)}` : ''}</p> : null}
+    {!canEdit ? <>
+      <p className="muted">These hours are shared across organizations. A platform administrator can update them.</p>
+      {schedule?.length ? <dl>{schedule.map((entry) => <div key={entry.day}><dt>{entry.day}</dt><dd>{entry.hours}</dd></div>)}</dl> : <p className="muted">Operating hours are not set.</p>}
+    </> : <>
+    <p className="muted">Updates apply to every organization that uses this agency.</p>
     <ActionForm action={researchAgencyOperatingHours} className="account-hours-research-form" onSuccess={() => router.refresh()}>
       <input name="agencyId" type="hidden" value={agencyId} />
       <SubmitButton className="secondary" disabled={!researchAvailable} pendingLabel="Searching public sources…">Research public hours</SubmitButton>
@@ -41,5 +48,6 @@ export function AgencyOperatingHoursEditor({
       </div>
       <SubmitButton className="secondary" type="submit">Save hours</SubmitButton>
     </ActionForm>
+    </>}
   </details>;
 }
