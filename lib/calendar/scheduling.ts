@@ -96,5 +96,3 @@ export async function getAccountName(item: NonNullable<WorklistForCalendar>) {
   if (item.wholesaleAccountId) return (await prisma.wholesaleAccount.findUnique({ where: { id: item.wholesaleAccountId }, select: { name: true } }))?.name ?? null;
   return null;
 }
-
-
