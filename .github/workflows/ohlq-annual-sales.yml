@@ -86,18 +86,22 @@ jobs:
       - name: Confirm scheduled fallback window
         id: schedule_window
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+          REPOSITORY: ${{ github.repository }}
         run: |
-          if [[ "${{ github.event_name }}" != "schedule" ]]; then
+          if [[ "$EVENT_NAME" != "schedule" ]]; then
             echo "should_run=true" >> "$GITHUB_OUTPUT"
             echo "reason=manual dispatch" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          schedule="${{ github.event.schedule }}"
+          schedule="$EVENT_SCHEDULE"
           eastern_offset="$(TZ=America/New_York date '+%z')"
           eastern_time="$(TZ=America/New_York date '+%Y-%m-%d %H:%M:%S %Z %z')"
 
-          case "${{ github.repository }}" in
+          case "$REPOSITORY" in
             echospirits/ohlq-field-crm)
               daylight_schedule="47 10 * * *"
               standard_schedule="47 11 * * *"
@@ -129,6 +133,58 @@ jobs:
       - name: Check out repository
         if: steps.schedule_window.outputs.should_run == 'true'
         uses: actions/checkout@v4
+
+      - name: Validate OHLQ import inputs
+        id: import_inputs
+        if: steps.schedule_window.outputs.should_run == 'true'
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          report_date: ${{ github.event.inputs.reportDate || '' }}
+          days: ${{ github.event.inputs.days || '' }}
+          from_date: ${{ github.event.inputs.fromDate || '' }}
+          to_date: ${{ github.event.inputs.toDate || '' }}
+          purchase_state_only: ${{ github.event.inputs.purchaseStateOnly || 'false' }}
+        run: |
+          if [[ -z "$days" ]]; then
+            if [[ "$EVENT_NAME" == "schedule" ]]; then
+              days="${OHLQ_CRON_REFRESH_DAYS:-2}"
+            else
+              days="1"
+            fi
+          fi
+
+          for name in report_date from_date to_date; do
+            value="${!name}"
+            if [[ -n "$value" ]]; then
+              if [[ ! "$value" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] ||
+                 [[ "$(date -d "$value" '+%Y-%m-%d' 2>/dev/null)" != "$value" ]]; then
+                echo "$name must be a valid YYYY-MM-DD date." >&2
+                exit 1
+              fi
+            fi
+          done
+
+          case "$purchase_state_only" in
+            true) max_days=120 ;;
+            false) max_days=30 ;;
+            *) echo "purchaseStateOnly must be true or false." >&2; exit 1 ;;
+          esac
+          if [[ ! "$days" =~ ^[1-9][0-9]{0,2}$ ]] || (( days > max_days )); then
+            echo "days must be a whole number between 1 and $max_days." >&2
+            exit 1
+          fi
+
+          if [[ "$purchase_state_only" == "true" && -z "$report_date" ]] &&
+             [[ -n "$from_date" || -n "$to_date" ]]; then
+            if [[ -z "$from_date" || -z "$to_date" || "$from_date" > "$to_date" ]]; then
+              echo "Use both fromDate and toDate, with fromDate on or before toDate." >&2
+              exit 1
+            fi
+          fi
+
+          printf 'report_date=%s\ndays=%s\nfrom_date=%s\nto_date=%s\npurchase_state_only=%s\n' \
+            "$report_date" "$days" "$from_date" "$to_date" "$purchase_state_only" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
         if: steps.schedule_window.outputs.should_run == 'true'
@@ -193,21 +249,13 @@ jobs:
         # Multi-day recovery needs a larger budget than the daily import.
         timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && inputs.reportDate == '' && inputs.days != '1' && 120 || 40 }}
         shell: bash
+        env:
+          report_date: ${{ steps.import_inputs.outputs.report_date }}
+          days: ${{ steps.import_inputs.outputs.days }}
+          from_date: ${{ steps.import_inputs.outputs.from_date }}
+          to_date: ${{ steps.import_inputs.outputs.to_date }}
+          purchase_state_only: ${{ steps.import_inputs.outputs.purchase_state_only }}
         run: |
-          report_date="${{ github.event.inputs.reportDate || '' }}"
-          days="${{ github.event.inputs.days || '' }}"
-          from_date="${{ github.event.inputs.fromDate || '' }}"
-          to_date="${{ github.event.inputs.toDate || '' }}"
-          purchase_state_only="${{ github.event.inputs.purchaseStateOnly || 'false' }}"
-
-          if [[ -z "$days" ]]; then
-            if [[ "${{ github.event_name }}" == "schedule" ]]; then
-              days="${OHLQ_CRON_REFRESH_DAYS:-2}"
-            else
-              days="1"
-            fi
-          fi
-
           if [[ "$purchase_state_only" == "true" ]]; then
             if [[ -n "$report_date" ]]; then
               npm run seed:ohlq-wholesale-purchase-state -- --date "$report_date"
@@ -248,4 +296,6 @@ jobs:
 
       - name: Report skipped scheduled slot
         if: steps.schedule_window.outputs.should_run != 'true'
-        run: echo "${{ steps.schedule_window.outputs.reason }}"
+        env:
+          SKIP_REASON: ${{ steps.schedule_window.outputs.reason }}
+        run: echo "$SKIP_REASON"

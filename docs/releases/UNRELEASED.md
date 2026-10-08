@@ -73,6 +73,17 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 - Production readiness: TST fix; 18 focused hours regressions, 72 combined authorization/scheduling tests, standalone TypeScript checks and responsive previews pass. Local compilation passed but final local build checks hit shared-dependency corruption; normal hosted build verification is part of delivery evidence. Production promotion requires a separate release candidate.
 - Rollout notes: neat-tst/tst only. Existing hours remain readable; no backfill or live account changes. New history begins at the first curated update and preserves the value it replaces.
 
+### OHLQ workflow dispatch input security
+
+- Description: Pass workflow inputs and context through step environment mappings instead of inserting expressions into Bash source. Validate calendar dates, bounded decimal day counts, purchase-state mode and active date ranges before dependency installation or imports. Tenant credential repair preserves organization IDs as a single literal argument.
+- Relevant commit(s): Commit titled Prevent OHLQ workflow dispatch shell injection.
+- Feature flag/default state: None / N/A.
+- Migration(s): None.
+- Environment/config: No new hosted variables or secrets. Existing scheduled refresh defaults and GitHub Environment selection remain in use.
+- User-visible: Invalid dispatch inputs fail before imports; valid single-date, recent-days and purchase-state imports preserve their arguments.
+- Production readiness: Fix verified locally with credential-free Bash regression tests; production promotion requires separate authorization.
+- Rollout notes: neat-tst/tst only. Normal imports accept days 1-30; purchase-state-only accepts days 1-120. Dates must be real calendar dates formatted YYYY-MM-DD. Existing GitHub Environment review/ref restrictions remain separate controls.
+
 ### Open the v0.2 development cycle
 
 - Description: Starts the owner-selected next cycle at 0.2.0-dev with a release plan, pending candidate checklist and validation record.
