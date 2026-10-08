@@ -25,6 +25,18 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 
 ## Pending changes
 
+### Compact user login and daily usage auditing
+
+- Description: Adds User activity under administration and mobile More, plus a platform dashboard link. Organization admins see only their organization's users; platform admins can compare all organizations and filter to one. Live name/email/organization search, UTC date range, login-day filtering, newest/oldest/most-login sorting, and 50-record pagination support permanent daily history. Organization summaries show active users, login counts, days with activity, and average active days per active user, including explicit no-recorded-activity states.
+- Relevant commit(s): Commit titled `Add compact user login and daily usage auditing`.
+- Feature flag: None; administration permission checks apply independently of Analytics entitlements.
+- Default flag state: Available to organization and platform admins. All signed-in roles contribute activity.
+- Migration(s): `prisma/migrations/20261008120000_user_activity_days`; additive daily activity table with a composite user/day primary key and organization/day and day indexes. Applied and registered only on `neon-neat-tst`.
+- Environment/config: None; no new dependency or external service.
+- User-visible: Yes.
+- Production readiness: Validated for TST; frozen 0.14.0 candidate gates remain pending.
+- Rollout notes: Apply this migration before deploying. Successful sign-ins atomically create a session and increment the daily login count. Foreground navigation/interaction records ordinary usage once per UTC day; idle/background activity does not. No IP, device, URL, session token, or event payload is retained. History has no expiry or deletion cascade. Tracking begins at deployment with no fabricated historical backfill. Support View uses the actor's home organization, not the viewed customer. Daily summaries preserve the organization captured when the day's record is first created. See [activity validation and storage notes](0.14.0-user-activity-validation.md). Existing older migration-ledger discrepancies remain separate from this migration.
+
 ### Outstanding work on account pages
 
 - Description: Wholesale and retail account pages show outstanding team Worklist items directly below Notes + contacts, grouped by Overdue, Today, Upcoming, and Unscheduled, with status, due date/time, and owner (including Unassigned). The section uses the shared rounded card boundary, padding, and a faint theme-aware sage tint for clear visual separation. The shared Worklist controls support Log Visit, Complete, Reschedule, Edit, Reassign, and Cancel without navigating away. Visit logging retains account/task/product context and returns to the account section after confirmation.

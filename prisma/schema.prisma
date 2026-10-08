@@ -400,6 +400,20 @@ enum TargetPlacementStatus {
   PLACED
 }
 
+// Compact, permanent daily audit. No cascades from users, organizations or sessions.
+model UserActivityDay {
+  userId          String
+  day             DateTime @db.Date
+  organizationId  String?
+  firstActivityAt DateTime @db.Timestamptz(3)
+  lastLoginAt     DateTime? @db.Timestamptz(3)
+  loginCount      Int      @default(0)
+
+  @@id([userId, day])
+  @@index([organizationId, day])
+  @@index([day])
+}
+
 model User {
   id                          String                 @id @default(cuid())
   organizationId              String?
