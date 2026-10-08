@@ -57,3 +57,14 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 - User-visible: Only platform administrators see the desktop import panel. It explains the shared-directory impact, required columns, limits, and validation/failure results. Agency browsing, search and visit actions remain available to existing authorized users.
 - Production readiness: Implementation checks recorded in [0.2 validation](0.2.0-validation.md); a frozen stable candidate and production release are pending.
 - Rollout notes: TST only. Use a complete agencies CSV with all 15 mapped columns (normalized spaces/punctuation are accepted), unique nonempty Agency IDs and DBA names, supported D-8 booleans, at most 500 characters per field, 1 MB per file and 2,000 agencies. Blank optional cells still clear those uploaded values. A platform administrator needs a current organization/support context for tenant contacts. This fix does not audit or repair any historical directory corruption; canonical recovery requires a separately reviewed import.
+
+### Restrict shared wholesale-account editing to Platform Admins
+
+- Description: Verified Codex Security finding `csf_3f897373ce028dc9a1b2c824` against current code. Both the edit page and its server action now require Platform Admin authorization before reading or updating shared canonical wholesale-account data. The account-detail Edit link follows the same role restriction. Tenant admins, ordinary users, tasters and unauthenticated callers cannot trigger account writes, licensee synchronization, assessment requests, score refreshes or cache revalidation through this action.
+- Relevant commit(s): Commit titled Restrict shared wholesale edits to platform admins.
+- Feature flag/default state: None / N/A; authorization applies whenever the route is available.
+- Migration(s): None.
+- Environment/config: None; dependencies unchanged.
+- User-visible: Yes. Shared account identity/address edits are available only to Platform Admins; authorized editing retains existing validation and refresh behavior.
+- Production readiness: Pending v0.2 candidate gates; focused authorization tests, typecheck and build results are recorded in the validation record.
+- Rollout notes: neat-tst/tst only. No production promotion or data recovery. Existing tenant-owned notes, contacts, targeting and sales status remain available. This change does not introduce a tenant-specific canonical-field correction overlay or address separate shared-account creation/merge paths.

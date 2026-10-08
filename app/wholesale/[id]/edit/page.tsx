@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { AccountType } from '@prisma/client';
 import { buildPageMetadata } from '../../../../lib/appBrand';
-import { requireUser } from '../../../../lib/auth';
+import { requirePlatformAdmin } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
 import { getGeocodeResetForAddressChange } from '../../../../lib/location/geocode';
 import { PageHeader } from '../../../components/PageChrome';
@@ -115,7 +115,7 @@ async function findOfficialWholesaleAccountByLicenseeIds({
 async function updateWholesaleAccount(formData: FormData) {
   'use server';
 
-  await requireUser();
+  await requirePlatformAdmin();
 
   const id = toOptional(formData.get('id'));
   const state = normalizeUsState(String(formData.get('state') ?? 'OH'));
@@ -279,7 +279,7 @@ export default async function EditWholesaleAccountPage({
   params: Promise<{ id: string }>;
   searchParams?: Promise<{ status?: string }>;
 }) {
-  await requireUser();
+  await requirePlatformAdmin();
   const { id } = await params;
   const query = (await searchParams) ?? {};
 

@@ -280,7 +280,9 @@ export default async function WholesaleActivityPage({
             currentUserId={user.id}
             users={actionUsers}
           />
-          <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/edit`}>Edit</Link>
+          {user.role === UserRole.PLATFORM_ADMIN ? (
+            <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/edit`}>Edit</Link>
+          ) : null}
           {isAdminRole(user.role) && !account.officialAccountId ? (
             <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/merge`}>Merge account</Link>
           ) : null}
