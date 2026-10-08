@@ -30,42 +30,57 @@ export async function POST(request: NextRequest) {
     });
 
     if (user?.isActive && user.passwordHash) {
-      const now = new Date();
-      const recentRequest = await prisma.passwordResetToken.findFirst({
-        where: {
-          userId: user.id,
-          createdAt: { gt: new Date(now.getTime() - PASSWORD_RESET_COOLDOWN_MS) },
-        },
-        select: { id: true },
-      });
+      const issuance = await prisma.$transaction(async (tx) => {
+        // Serialize issuance across all app instances before checking the cooldown.
+        // Recheck eligibility while locking the existing user row.
+        const eligibleUsers = await tx.$queryRaw<Array<{ id: string }>>`
+          SELECT "id" FROM "User"
+          WHERE "id" = ${user.id} AND "isActive" = TRUE AND "passwordHash" IS NOT NULL
+          FOR UPDATE
+        `;
+        if (eligibleUsers.length !== 1) return null;
 
-      if (!recentRequest) {
+        const now = new Date();
+        const recentRequest = await tx.passwordResetToken.findFirst({
+          where: {
+            userId: user.id,
+            createdAt: { gt: new Date(now.getTime() - PASSWORD_RESET_COOLDOWN_MS) },
+          },
+          select: { id: true },
+        });
+        if (recentRequest) return null;
+
         const token = createPasswordResetToken(now);
-        const resetRequest = await prisma.$transaction(async (tx) => {
-          const record = await tx.passwordResetToken.create({
-            data: {
-              userId: user.id,
-              tokenHash: token.tokenHash,
-              expiresAt: token.expiresAt,
-            },
-          });
-
-          await tx.passwordResetToken.updateMany({
-            where: { userId: user.id, id: { not: record.id }, usedAt: null },
-            data: { usedAt: now },
-          });
-
-          return record;
+        const record = await tx.passwordResetToken.create({
+          data: {
+            userId: user.id,
+            tokenHash: token.tokenHash,
+            expiresAt: token.expiresAt,
+            createdAt: now,
+          },
         });
 
+        await tx.passwordResetToken.updateMany({
+          where: { userId: user.id, id: { not: record.id }, usedAt: null },
+          data: { usedAt: now },
+        });
+
+        return { record, token };
+      }, { isolationLevel: 'ReadCommitted' });
+
+      if (issuance) {
         try {
           await sendPasswordResetEmail({
             recipientEmail: parsed.email,
-            resetRequestId: resetRequest.id,
-            token: token.token,
+            resetRequestId: issuance.record.id,
+            token: issuance.token.token,
           });
         } catch {
-          await prisma.passwordResetToken.deleteMany({ where: { id: resetRequest.id } });
+          // Retain the cooldown claim even if delivery fails or its outcome is unknown.
+          await prisma.passwordResetToken.updateMany({
+            where: { id: issuance.record.id, usedAt: null },
+            data: { usedAt: new Date() },
+          });
           console.error('Password reset email delivery failed.');
         }
       }

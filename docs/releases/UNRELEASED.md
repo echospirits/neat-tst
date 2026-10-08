@@ -82,3 +82,15 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 - User-visible: Yes. Shared account identity/address edits are available only to Platform Admins; authorized editing retains existing validation and refresh behavior.
 - Production readiness: Pending v0.2 candidate gates; focused authorization tests, typecheck and build results are recorded in the validation record.
 - Rollout notes: neat-tst/tst only. No production promotion or data recovery. Existing tenant-owned notes, contacts, targeting and sales status remain available. This change does not introduce a tenant-specific canonical-field correction overlay or address separate shared-account creation/merge paths.
+
+### Serialize password-reset issuance
+
+- Description: Fixes the Codex Security Cloud password-reset cooldown race by locking the eligible user row before checking the rolling 60-second cooldown and creating/invalidation of reset tokens in one Read Committed transaction. Only the committed issuance sends an email. Failed or ambiguous delivery consumes the token while retaining its cooldown claim.
+- Relevant commit(s): Commit titled Serialize password reset issuance per account.
+- Security finding: `rf_wfr_defaf3acd0db3d93038f51e24e5a32632c38a8b7be6f7383268c45a7800dcf74:wfo_74f696accaa1a3433fb9d166af9e9c5a556e7f7187eb0dd47699147fd5ad9231:occ_0d3e55eacf8081e56661389b`.
+- Feature flag/default state: None / N/A.
+- Migration(s): None; uses the existing User and PasswordResetToken tables.
+- Environment/config: None; existing email delivery controls remain in effect.
+- User-visible: Reset requests retain the generic 202 response. Concurrent requests receive at most one reset email per account during the cooldown. After delivery failure, retry is available once the 60-second cooldown expires.
+- Production readiness: TST validation recorded in [v0.2 validation](0.2.0-validation.md); future production candidate review remains pending.
+- Rollout notes: neat-tst/tst only; no database migration, provider activation or production promotion.
