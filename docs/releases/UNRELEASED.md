@@ -35,3 +35,14 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 - User-visible: Protected Environment diagnostics show the new development version.
 - Production readiness: Development-cycle setup only; no stable v0.2 candidate selected.
 - Rollout notes: neat-tst/tst only. No production tag, migration, entitlement change, backfill or provider activation. Future candidate gates remain unchecked.
+
+### Restrict shared agency CSV imports to platform administrators
+
+- Description: Fixes Security Cloud finding `csf_17e811ce173dbbf6ac47b0e3`. Tenant users and tenant administrators can no longer invoke the global Agency CSV importer. Both the server action and write helper enforce PLATFORM_ADMIN; the upload panel follows the same role restriction. Complete CSV validation precedes a single transaction for shared Agency writes and current-organization contact writes, so invalid files and later write failures cannot leave a partial import.
+- Relevant commit(s): Commit titled Restrict shared agency CSV imports for v0.2.
+- Feature flag/default state: None / N/A; authorization is mandatory.
+- Migration(s): None; the existing shared directory and tenant-contact schema are retained.
+- Environment/config: None; version remains `0.2.0-dev`, dependencies unchanged.
+- User-visible: Only platform administrators see the desktop import panel. It explains the shared-directory impact, required columns, limits, and validation/failure results. Agency browsing, search and visit actions remain available to existing authorized users.
+- Production readiness: Implementation checks recorded in [0.2 validation](0.2.0-validation.md); a frozen stable candidate and production release are pending.
+- Rollout notes: TST only. Use a complete agencies CSV with all 15 mapped columns (normalized spaces/punctuation are accepted), unique nonempty Agency IDs and DBA names, supported D-8 booleans, at most 500 characters per field, 1 MB per file and 2,000 agencies. Blank optional cells still clear those uploaded values. A platform administrator needs a current organization/support context for tenant contacts. This fix does not audit or repair any historical directory corruption; canonical recovery requires a separately reviewed import.
