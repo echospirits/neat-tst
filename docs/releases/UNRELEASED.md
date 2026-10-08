@@ -7,7 +7,7 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 - TST opening base: `1d66a79ce361f2b6a3aee8f6a9f2865927682f54`; complete tree matches production `cde62a7b3470631069bd519dfd2a1c6147bee052`.
 - Previous release: [archive](0.14.0.md), [user notes](0.14.0-user-notes.md), [validation](0.14.0-validation.md), [checklist](0.14.0-checklist.md).
 - Current cycle: [plan](0.2.0-plan.md), [pending checklist](0.2.0-checklist.md), [validation](0.2.0-validation.md).
-- Candidate: not selected; no product feature committed at opening. The owner-selected numbering is intentional; historical version records are retained.
+- Candidate: not selected. Security fixes below are included in the development package; the owner-selected numbering is intentional and historical version records are retained.
 
 ## Entry template
 
@@ -35,6 +35,20 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 - User-visible: No application UI change. Invalid repair dispatch IDs fail before the repair command runs.
 - Production readiness: Implementation and focused security tests verified; pending the normal release candidate review and separately authorized production promotion.
 - Rollout notes: TST only. Existing `--apply`, selected-environment match and organization-existence checks remain required. No workflow dispatch, database access or credential mutation was performed during verification.
+
+### Restrict shared wholesale merges to platform administrators
+
+- Description: Remediates Codex Security finding `csf_bb970f0d2d7159e0c51ddc92` by requiring platform authority for the page, action, candidate discovery, preview and merge service. The transaction rechecks the authenticated actor's current active status and role. Tenant admins cannot read cross-organization merge previews or mutate shared accounts through this workflow.
+- Relevant commit(s): Commit titled Restrict shared wholesale merges to platform administrators.
+- Data integrity: Tag and recipe duplicate removal matches organization plus tag/recipe identity. Global platform merges retain each row's organization ownership and keep existing eligibility, conflict and serializable transaction protections.
+- Audit: Existing source tombstone records the authenticated actor, timestamp and account snapshot; `mergeSnapshot.mergeAudit` adds source/destination IDs, all-organizations scope, per-model moved counts and duplicate removal counts. Caller-supplied actor IDs are no longer accepted.
+- Feature flag/default state: None / N/A; authorization applies to every merge.
+- Migration(s): None; additive audit data uses the existing JSON field.
+- Environment/config: None; dependencies and version remain `0.2.0-dev`.
+- User-visible: Tenant admins no longer see Merge account; platform administrators see an explicit permanent, all-organizations confirmation.
+- Validation: 623/623 tests and TypeScript check passed on the isolated fix; after preserving concurrent security fixes, the combined suite passed 636/636. Coverage includes unauthorized direct service/page/action calls, stale authority, forged actor, tenant duplicate preservation, conflict and success/replay. Build, responsive mock rendering and TST deployment evidence are recorded in [validation](0.2.0-validation.md).
+- Production readiness: Security fix locally validated; stable v0.2 release candidate gates remain pending.
+- Rollout notes: TST-only delivery for v0.2. No migration, backfill, provider activation, production push or production tag. Existing historical merges are not repaired by this change; review their existing actor/snapshot evidence separately if needed.
 
 ### Open the v0.2 development cycle
 

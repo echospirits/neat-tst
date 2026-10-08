@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { PrismaClient } from '@prisma/client';
+import { loadMergeService } from './helpers/wholesaleMergeHarness';
 import {
   getWholesaleMergeDestinationFallbacks,
-  getWholesaleMergeCandidates,
   getWholesaleMergeLicenseeIds,
   isEligibleWholesaleMergeTarget,
   rankWholesaleMergeCandidates,
@@ -183,7 +183,7 @@ describe('wholesale merge destination discovery', () => {
       },
     } as unknown as PrismaClient;
 
-    const result = await getWholesaleMergeCandidates({ db, query: '', source });
+    const result = await loadMergeService(db).getWholesaleMergeCandidates({ db, query: '', source });
 
     assert.equal(findManyArgs?.take, undefined);
     assert.equal(result.eligibleCount, 61);

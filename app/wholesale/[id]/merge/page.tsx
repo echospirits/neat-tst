@@ -5,7 +5,7 @@ import { SubmitButton } from '../../../components/SubmitButton';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { buildPageMetadata } from '../../../../lib/appBrand';
-import { requireAdmin } from '../../../../lib/auth';
+import { requirePlatformAdmin } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
 import {
   getWholesaleAccountMergePreview,
@@ -21,6 +21,7 @@ export const metadata = buildPageMetadata('Merge Wholesale Account');
 const statusMessages: Record<string, string> = {
   'already-merged': 'This manual account has already been merged.',
   'confirmation-required': 'Confirm that you understand the merge is permanent before continuing.',
+  forbidden: 'Only an active platform administrator can merge shared accounts.',
   'invalid-source': 'The manual account could not be found.',
   'invalid-target': 'The official account could not be found.',
   'same-account': 'Choose a different destination account.',
@@ -44,7 +45,7 @@ export default async function MergeWholesaleAccountPage({
   params: Promise<{ id: string }>;
   searchParams?: Promise<{ q?: string; status?: string; targetId?: string }>;
 }) {
-  await requireAdmin();
+  await requirePlatformAdmin();
   const { id: sourceId } = await params;
   const query = (await searchParams) ?? {};
   const q = (query.q ?? '').trim();
@@ -82,8 +83,8 @@ export default async function MergeWholesaleAccountPage({
     <>
       <PageHeader
         actions={<Link className="btn secondary" href={`/wholesale/${sourceId}`}>Back to account</Link>}
-        description="Move activity from a manually created account into its official OHLQ account. The manual record will become an inactive redirect."
-        eyebrow="Administrative workflow"
+        description="Merge shared accounts across all organizations. Linked activity keeps its organization ownership, and the manual account becomes an inactive redirect."
+        eyebrow="Platform administration"
         title="Merge wholesale account"
       />
 
@@ -250,8 +251,8 @@ export default async function MergeWholesaleAccountPage({
                   <input name="sourceId" type="hidden" value={sourceId} />
                   <input name="targetId" type="hidden" value={preview.target.id} />
                   <label>
-                    <input name="confirmation" required type="checkbox" value="MERGE" /> I understand that all linked
-                    activity will move to {preview.target.name}.
+                    <input name="confirmation" required type="checkbox" value="MERGE" /> I approve moving linked
+                    activity from every organization to {preview.target.name}. This merge is permanent.
                   </label>
                   <SubmitButton className="compact-btn danger-btn" type="submit">
                     Merge into official account

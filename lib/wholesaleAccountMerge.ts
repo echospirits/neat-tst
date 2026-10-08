@@ -1,4 +1,5 @@
-import { Prisma, type PrismaClient } from '@prisma/client';
+import { Prisma, UserRole, type PrismaClient } from '@prisma/client';
+import { requirePlatformAdmin } from './auth';
 import { prisma } from './prisma';
 import {
   getWholesaleLicenseeIdValues,
@@ -165,6 +166,7 @@ export async function getWholesaleMergeCandidates({
   query: string;
   source: WholesaleMergeCandidate;
 }) {
+  await requirePlatformAdmin();
   const allCandidates = await db.wholesaleAccount.findMany({
     where: {
       id: { not: source.id },
@@ -197,6 +199,7 @@ export async function getWholesaleMergeCandidates({
 
 export type WholesaleMergeErrorCode =
   | 'already-merged'
+  | 'forbidden'
   | 'invalid-source'
   | 'invalid-target'
   | 'same-account'
@@ -286,6 +289,7 @@ const getAccountForMerge = (db: Prisma.TransactionClient | typeof prisma, id: st
   });
 
 export async function getWholesaleAccountMergePreview(sourceId: string, targetId: string) {
+  await requirePlatformAdmin();
   const [source, target] = await Promise.all([
     getAccountForMerge(prisma, sourceId),
     getAccountForMerge(prisma, targetId),
@@ -367,16 +371,23 @@ function assertMergeTarget(
 }
 
 export async function mergeWholesaleAccounts({
-  mergedByUserId,
   sourceId,
   targetId,
 }: {
-  mergedByUserId: string;
   sourceId: string;
   targetId: string;
 }) {
+  const actor = await requirePlatformAdmin();
   return prisma.$transaction(
     async (tx) => {
+      // Recheck current authority in the same transaction as the shared-record writes.
+      const currentActor = await tx.user.findUnique({
+        where: { id: actor.id },
+        select: { isActive: true, role: true },
+      });
+      if (!currentActor?.isActive || currentActor.role !== UserRole.PLATFORM_ADMIN) {
+        throw new WholesaleMergeError('forbidden', 'Only an active platform administrator can merge shared accounts.');
+      }
       const [source, target] = await Promise.all([
         getAccountForMerge(tx, sourceId),
         getAccountForMerge(tx, targetId),
@@ -398,88 +409,88 @@ export async function mergeWholesaleAccounts({
         );
       }
 
-      const targetTagIds = (
-        await tx.locationTag.findMany({
-          where: { wholesaleAccountId: targetId },
-          select: { tagId: true },
-        })
-      ).map(({ tagId }) => tagId);
-      const targetRecipeIds = (
-        await tx.recipeSuggestion.findMany({
-          where: { wholesaleAccountId: targetId },
-          select: { recipeId: true },
-        })
-      ).map(({ recipeId }) => recipeId);
+      const targetTags = await tx.locationTag.findMany({
+        where: { wholesaleAccountId: targetId },
+        select: { organizationId: true, tagId: true },
+      });
+      const targetRecipes = await tx.recipeSuggestion.findMany({
+        where: { wholesaleAccountId: targetId },
+        select: { organizationId: true, recipeId: true },
+      });
 
-      if (targetTagIds.length > 0) {
-        await tx.locationTag.deleteMany({
-          where: { wholesaleAccountId: sourceId, tagId: { in: targetTagIds } },
-        });
-      }
-      if (targetRecipeIds.length > 0) {
-        await tx.recipeSuggestion.deleteMany({
-          where: { wholesaleAccountId: sourceId, recipeId: { in: targetRecipeIds } },
-        });
-      }
+      // The unique keys include organizationId; another tenant's row is never a duplicate.
+      const removedTags = targetTags.length > 0
+        ? await tx.locationTag.deleteMany({
+            where: { wholesaleAccountId: sourceId, OR: targetTags },
+          })
+        : { count: 0 };
+      const removedRecipes = targetRecipes.length > 0
+        ? await tx.recipeSuggestion.deleteMany({
+            where: { wholesaleAccountId: sourceId, OR: targetRecipes },
+          })
+        : { count: 0 };
 
-      await tx.loggedVisit.updateMany({
+      // Platform-authorized global moves deliberately preserve every organizationId.
+      const movedRecords: Record<string, number> = {};
+
+      movedRecords.loggedVisit = (await tx.loggedVisit.updateMany({
         where: { wholesaleAccountId: sourceId },
         data: { wholesaleAccountId: targetId },
-      });
-      await tx.worklistItem.updateMany({
+      })).count;
+      movedRecords.worklistItem = (await tx.worklistItem.updateMany({
         where: { wholesaleAccountId: sourceId },
         data: { wholesaleAccountId: targetId },
-      });
-      await tx.locationContact.updateMany({
+      })).count;
+      movedRecords.locationContact = (await tx.locationContact.updateMany({
         where: { wholesaleAccountId: sourceId },
         data: { wholesaleAccountId: targetId },
-      });
-      await tx.locationTag.updateMany({
+      })).count;
+      movedRecords.locationTag = (await tx.locationTag.updateMany({
         where: { wholesaleAccountId: sourceId },
         data: { wholesaleAccountId: targetId },
-      });
-      await tx.menuPlacement.updateMany({
+      })).count;
+      movedRecords.menuPlacement = (await tx.menuPlacement.updateMany({
         where: { wholesaleAccountId: sourceId },
         data: { wholesaleAccountId: targetId },
-      });
-      await tx.recipeSuggestion.updateMany({
+      })).count;
+      movedRecords.recipeSuggestion = (await tx.recipeSuggestion.updateMany({
         where: { wholesaleAccountId: sourceId },
         data: { wholesaleAccountId: targetId },
-      });
+      })).count;
 
       if (sourceTargetRecords > 0) {
-        await tx.targetAccountProfile.updateMany({
+        movedRecords.targetAccountProfile = (await tx.targetAccountProfile.updateMany({
           where: { wholesaleAccountId: sourceId },
           data: { wholesaleAccountId: targetId },
-        });
-        await tx.targetAccountScoreHistory.updateMany({
+        })).count;
+        movedRecords.targetAccountScoreHistory = (await tx.targetAccountScoreHistory.updateMany({
           where: { wholesaleAccountId: sourceId },
           data: { wholesaleAccountId: targetId },
-        });
-        await tx.targetAccountMetric.updateMany({
+        })).count;
+        movedRecords.targetAccountMetric = (await tx.targetAccountMetric.updateMany({
           where: { wholesaleAccountId: sourceId },
           data: { wholesaleAccountId: targetId },
-        });
-        await tx.targetPublicResearch.updateMany({
+        })).count;
+        movedRecords.targetPublicResearch = (await tx.targetPublicResearch.updateMany({
           where: { wholesaleAccountId: sourceId },
           data: { wholesaleAccountId: targetId },
-        });
-        await tx.targetSkuOpportunity.updateMany({
+        })).count;
+        movedRecords.targetSkuOpportunity = (await tx.targetSkuOpportunity.updateMany({
           where: { wholesaleAccountId: sourceId },
           data: { wholesaleAccountId: targetId },
-        });
-        await tx.targetHeatLossAlert.updateMany({
+        })).count;
+        movedRecords.targetHeatLossAlert = (await tx.targetHeatLossAlert.updateMany({
           where: { wholesaleAccountId: sourceId },
           data: { wholesaleAccountId: targetId },
-        });
-        await tx.targetChainMembership.updateMany({
+        })).count;
+        movedRecords.targetChainMembership = (await tx.targetChainMembership.updateMany({
           where: { wholesaleAccountId: sourceId },
           data: { wholesaleAccountId: targetId },
-        });
-        await tx.targetOwnershipGroup.updateMany({
+        })).count;
+        movedRecords.targetOwnershipGroup = (await tx.targetOwnershipGroup.updateMany({
           where: { bestEntryWholesaleAccountId: sourceId },
           data: { bestEntryWholesaleAccountId: targetId },
-        });
+        })).count;
       }
 
       const licenseeIds = getWholesaleMergeLicenseeIds(source, target);
@@ -495,6 +506,14 @@ export async function mergeWholesaleAccounts({
           isActive: false,
           licenseeId: `merged-${sourceId}`,
           mergeSnapshot: {
+            mergeAudit: {
+              actorUserId: actor.id,
+              scope: 'all-organizations',
+              sourceId,
+              targetId,
+              movedRecords,
+              removedDuplicateRecords: { locationTag: removedTags.count, recipeSuggestion: removedRecipes.count },
+            },
             address: source.address,
             agencyId: source.agencyId,
             city: source.city,
@@ -510,7 +529,7 @@ export async function mergeWholesaleAccounts({
             zip: source.zip,
           },
           mergedAt: new Date(),
-          mergedByUserId,
+          mergedByUserId: actor.id,
           mergedIntoId: targetId,
         },
       });
