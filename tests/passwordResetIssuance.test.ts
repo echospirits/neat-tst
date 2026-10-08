@@ -29,6 +29,7 @@ function fixture(source = readFileSync('app/api/auth/forgot-password/route.ts', 
   const records: ResetRecord[] = [];
   const emails: SendEmailInput[] = [];
   const errors: string[] = [];
+  const afterCallbacks: Array<() => Promise<void>> = [];
   const lockTails = new Map<string, Promise<void>>();
   let now = Date.parse('2026-10-08T20:00:00Z');
   let nextId = 0;
@@ -127,7 +128,10 @@ function fixture(source = readFileSync('app/api/auth/forgot-password/route.ts', 
     }
   }
   const mocks: Record<string, unknown> = {
-    'next/server': { NextResponse: { json: (body: Response['body'], { status }: { status: number }) => ({ body, status }) } },
+    'next/server': {
+      NextResponse: { json: (body: Response['body'], { status }: { status: number }) => ({ body, status }) },
+      after: (callback: () => Promise<void>) => { afterCallbacks.push(callback); },
+    },
     '../../../../lib/prisma': { prisma: db },
     '../../../../lib/passwordReset': {
       ...passwordReset,
@@ -156,7 +160,13 @@ function fixture(source = readFileSync('app/api/auth/forgot-password/route.ts', 
   }, { filename });
   return {
     users, records, emails, errors,
-    post: (email = 'alex@example.com') => exports.POST({ json: async () => ({ email }) }) as Promise<Response>,
+    post: async (email = 'alex@example.com') => {
+      const response = await exports.POST({ json: async () => ({ email }) }) as Response;
+      // The response is available first. Drain queued work concurrently so the
+      // issuance assertions still exercise overlapping background transactions.
+      await Promise.all(afterCallbacks.splice(0).map(callback => callback()));
+      return response;
+    },
     advance: (milliseconds: number) => { now += milliseconds; },
     failDelivery: () => { failDelivery = true; },
     failInvalidation: () => { failInvalidation = true; },

@@ -49,6 +49,17 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 - Validation: 623/623 tests and TypeScript check passed on the isolated fix; after preserving concurrent security fixes, the combined suite passed 636/636. Coverage includes unauthorized direct service/page/action calls, stale authority, forged actor, tenant duplicate preservation, conflict and success/replay. Build, responsive mock rendering and TST deployment evidence are recorded in [validation](0.2.0-validation.md).
 - Production readiness: Security fix locally validated; stable v0.2 release candidate gates remain pending.
 - Rollout notes: TST-only delivery for v0.2. No migration, backfill, provider activation, production push or production tag. Existing historical merges are not repaired by this change; review their existing actor/snapshot evidence separately if needed.
+### Prevent password-recovery account enumeration through response timing
+
+- Description: Every valid forgot-password request schedules the full account lookup, cooldown check, token transaction and email delivery with Next.js `after`. The generic 202 response is sent before any account-dependent database or provider I/O; eligible, missing, inactive, passwordless and cooldown accounts share the same public response path.
+- Relevant commit(s): Commit titled Prevent password reset response timing enumeration.
+- Security finding: `csf_23dbd4c9bc6d0567ca8998e5`, occurrence `occ_0a70f77cd798368047145955` (CWE-208). Verified against current TST source; report and repository content treated as untrusted evidence.
+- Feature flag/default state: None / N/A.
+- Migration(s): None.
+- Environment/config: None; uses the existing Next.js/Vercel post-response lifecycle and current email delivery policy.
+- User-visible: Password-recovery acknowledgement no longer waits for lookup, persistence or email delivery. Invalid-input validation, serialized issuance, cooldown, one-hour hashed tokens, prior-token invalidation and failed-delivery consumption with cooldown retention are preserved.
+- Production readiness: TST verification recorded in [v0.2 validation](0.2.0-validation.md); separate production release approval required.
+- Rollout notes: neat-tst/tst only, in the owner-confirmed 0.2.0-dev cycle. Background delivery remains subject to the platform invocation duration; no durable retry queue is introduced.
 
 ### Enforce organization ownership when attaching location tags
 
