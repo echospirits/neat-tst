@@ -1,13 +1,15 @@
-# Unreleased — 0.14.0 candidates
+# Unreleased — frozen 0.14.0 release package
 
-The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in Neat TST that may be included in 0.14.0. Production promotion is a separate, explicitly authorized release task.
+The development cycle opened on 2026-09-29. The owner explicitly requested production/main promotion on 2026-10-08. The complete fetched TST state is included, reconciled against current production 0.13.3; unrelated local files and divergent ancestry are excluded. Historical development entries below preserve their original delivery boundaries; the current release evidence supersedes their pending candidate status.
 
-- TST development version: `0.14.0-dev`.
-- Verified production baseline: `0.13.0`, tag `v0.13.0`, commit `3703a1b8f77065c0105005e6a4ad63d2619fe4e8`.
+- Frozen release version: `0.14.0`.
+- Verified production baseline: `0.13.3`, tag `v0.13.3`, commit `54a37d13125d3c95f9b0526114f31f7553cbbad3`.
 - TST opening base: `94fe624b7ab14d0cfdf4e4367c7b8d8c9ff35e70`; its complete Git tree matches the production baseline.
 - Previous release: [0.13.0 archive](0.13.0.md), [validation](0.13.0-validation.md), and [completed checklist](0.13.0-checklist.md).
 - Current cycle: [release plan](0.14.0-plan.md), [pending release checklist](0.14.0-checklist.md), and [validation record](0.14.0-validation.md).
-- Release candidate: not selected. No product features are committed to this release at cycle opening.
+- Frozen runtime candidate: `d2f955d7ae595af5755a20c06bca9110d86bf17b`; source TST `af14d856` (source identity in validation).
+- User-facing notes: [Neat 0.14 user update](0.14.0-user-notes.md).
+- Current readiness: 611 tests, typecheck, production build, schema rehearsal and tenant-isolation checks passed; final responsive checks and production promotion are recorded in the validation checklist.
 
 ## Entry template
 
