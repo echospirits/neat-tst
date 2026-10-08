@@ -50,6 +50,18 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 - Production readiness: Security fix locally validated; stable v0.2 release candidate gates remain pending.
 - Rollout notes: TST-only delivery for v0.2. No migration, backfill, provider activation, production push or production tag. Existing historical merges are not repaired by this change; review their existing actor/snapshot evidence separately if needed.
 
+### Enforce organization ownership when attaching location tags
+
+- Description: `addLocationTag` resolves the submitted tag ID within the authenticated organization before either agency or wholesale attachment. Foreign and nonexistent tag IDs return the existing invalid status without creating/updating an assignment or invalidating caches. Valid tags retain idempotent note updates and account-specific refreshes.
+- Relevant commit(s): Commit titled Validate location tag ownership before account attachment.
+- Security evidence: Codex Security Cloud finding `csf_7d4f95a4a58a4ccaaea8ee8a`, occurrence `occ_059cbf59e896800b9cbe328d`; confirmed against current TST source. [Validation](0.2.0-location-tag-authorization-validation.md).
+- Feature flag/default state: None / N/A; existing authenticated action remains available.
+- Migration(s): None; the fix enforces ownership in the action without changing database relationships.
+- Environment/config: None.
+- User-visible: Valid account tagging is unchanged; inaccessible tag submissions return the existing invalid status.
+- Production readiness: Local validation recorded in the linked record; a frozen production candidate and release approval remain separate.
+- Rollout notes: neat-tst/tst only, within the owner-confirmed 0.2.0-dev cycle. No database migration or data repair performed.
+
 ### Open the v0.2 development cycle
 
 - Description: Starts the owner-selected next cycle at 0.2.0-dev with a release plan, pending candidate checklist and validation record.
