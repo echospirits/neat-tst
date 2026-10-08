@@ -37,6 +37,18 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 - Production readiness: Validated for TST; frozen 0.14.0 candidate gates remain pending.
 - Rollout notes: Apply this migration before deploying. Successful sign-ins atomically create a session and increment the daily login count. Foreground navigation/interaction records ordinary usage once per UTC day; idle/background activity does not. No IP, device, URL, session token, or event payload is retained. History has no expiry or deletion cascade. Tracking begins at deployment with no fabricated historical backfill. Support View uses the actor's home organization, not the viewed customer. Daily summaries preserve the organization captured when the day's record is first created. See [activity validation and storage notes](0.14.0-user-activity-validation.md). Existing older migration-ledger discrepancies remain separate from this migration.
 
+### Reliable two-way Google Calendar schedule sync
+
+- Description: Pulls unseen Google changes before outbound retries; validates current task owner, active status and exact calendar link before schedule updates. Serializes calendar operations and reserves provider event IDs before creation to prevent duplicate retries. Retains old links on failed reassignment/disconnect/calendar-switch cleanup. Reconnect cannot silently replace the Google account or move linked events to a fallback calendar. Explicit removed-event restoration creates a fresh event. Calendar settings distinguish successful, partial, busy, paused and reconnect-required checks, refresh Worklist views, and show the last successful check rather than a failed attempt.
+- Relevant commit(s): Commit titled `Harden two-way Google Calendar synchronization`.
+- Feature flag: Existing `CALENDAR_SYNC_ENABLED` and `CRON_JOBS_ENABLED` environment safeguards; no new tenant entitlement.
+- Default flag state: Existing values preserved. TST calendar sync remains disabled; no Google account was connected for this change.
+- Migration(s): None; uses existing event/connection fields and a transaction-scoped PostgreSQL advisory lock.
+- Environment/config: No new variables; daily `0 10 * * *` schedule unchanged. Partial/failed cron checks return HTTP 503 with accurate counts.
+- User-visible: Yes; honest Calendar settings feedback and safer two-way scheduling/recovery.
+- Production readiness: Automated and synthetic UI checks validated for TST. Live isolated Google round-trip and frozen 0.14.0 candidate gates remain pending; not promoted to production.
+- Rollout notes: No schema migration, backfill, historical orphan deletion, credential activation or main push. A real round-trip requires isolated TST Google configuration and user OAuth authorization; a `SYNCED` label alone is not proof. See [calendar validation](0.14.0-calendar-validation.md) and [integration behavior/QA](../google-calendar.md).
+
 ### Outstanding work on account pages
 
 - Description: Wholesale and retail account pages show outstanding team Worklist items directly below Notes + contacts, grouped by Overdue, Today, Upcoming, and Unscheduled, with status, due date/time, and owner (including Unassigned). The section uses the shared rounded card boundary, padding, and a faint theme-aware sage tint for clear visual separation. The shared Worklist controls support Log Visit, Complete, Reschedule, Edit, Reassign, and Cancel without navigating away. Visit logging retains account/task/product context and returns to the account section after confirmation.

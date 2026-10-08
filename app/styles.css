@@ -4516,6 +4516,21 @@ legend {
   margin: 0;
 }
 
+.calendar-settings-card .integration-summary dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.calendar-settings-card .error-text {
+  color: var(--theme-danger-ink, #a52a2a);
+}
+
+.calendar-sync-notice {
+  background: var(--theme-warning-surface, #fff7ed) !important;
+  color: var(--theme-warning-ink, #854d0e) !important;
+  border-color: var(--theme-warning-border, #a16207);
+}
+
 .worklist-edit-details {
   position: relative;
 }
