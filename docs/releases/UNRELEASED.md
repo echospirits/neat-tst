@@ -25,6 +25,17 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 
 ## Pending changes
 
+### Prevent shell injection in tenant OHLQ credential repair
+
+- Description: Verified Codex Security finding `csf_7228e69812aa138fc64f3d14` against the current workflow. Dispatch input now enters Bash through `TENANT_ORGANIZATION_ID` and is passed as one quoted argument. Both the workflow and repair script reject IDs outside generated CUIDs and the two existing seeded organization IDs before invoking repair or querying the database.
+- Relevant commit(s): Commit titled Prevent shell injection in tenant credential repair.
+- Feature flag/default state: None / N/A; existing `ohlqImport` side-effect gate remains required.
+- Migration(s): None.
+- Environment/config: Step-local `TENANT_ORGANIZATION_ID` binds the existing dispatch input; no new secret or deployment configuration.
+- User-visible: No application UI change. Invalid repair dispatch IDs fail before the repair command runs.
+- Production readiness: Implementation and focused security tests verified; pending the normal release candidate review and separately authorized production promotion.
+- Rollout notes: TST only. Existing `--apply`, selected-environment match and organization-existence checks remain required. No workflow dispatch, database access or credential mutation was performed during verification.
+
 ### Open the v0.2 development cycle
 
 - Description: Starts the owner-selected next cycle at 0.2.0-dev with a release plan, pending candidate checklist and validation record.

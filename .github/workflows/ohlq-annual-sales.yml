@@ -167,7 +167,15 @@ jobs:
 
       - name: Repair selected tenant OHLQ credentials
         if: steps.schedule_window.outputs.should_run == 'true' && github.event_name == 'workflow_dispatch' && inputs.repairTenantCredentials == true
-        run: npm run repair:ohlq-tenant-credentials -- --environment "$APP_ENV" --organization "${{ inputs.tenantOrganizationId }}" --apply
+        shell: bash
+        env:
+          TENANT_ORGANIZATION_ID: ${{ inputs.tenantOrganizationId }}
+        run: |
+          if [[ ! "$TENANT_ORGANIZATION_ID" =~ ^(c[a-z0-9]{24}|org_echo_spirits|org_neat_staging)$ ]]; then
+            echo "Pass a generated organization CUID or an existing seeded organization ID." >&2
+            exit 1
+          fi
+          npm run repair:ohlq-tenant-credentials -- --environment "$APP_ENV" --organization "$TENANT_ORGANIZATION_ID" --apply
 
       - name: Download and import current OHLQ Account Master
         if: steps.schedule_window.outputs.should_run == 'true' && (github.event_name == 'schedule' || inputs.purchaseStateOnly != true)
