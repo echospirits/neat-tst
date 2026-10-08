@@ -28,7 +28,7 @@ The 0.14.0 development cycle opened on 2026-09-29. This manifest records work in
 ### Compact user login and daily usage auditing
 
 - Description: Adds User activity under administration and mobile More, plus a platform dashboard link. Organization admins see only their organization's users; platform admins can compare all organizations and filter to one. Live name/email/organization search, UTC date range, login-day filtering, newest/oldest/most-login sorting, and 50-record pagination support permanent daily history. Organization summaries show active users, login counts, days with activity, and average active days per active user, including explicit no-recorded-activity states.
-- Relevant commit(s): Commit titled `Add compact user login and daily usage auditing`.
+- Relevant commit(s): `d5416eb0` (`Add compact user login and daily usage auditing`).
 - Feature flag: None; administration permission checks apply independently of Analytics entitlements.
 - Default flag state: Available to organization and platform admins. All signed-in roles contribute activity.
 - Migration(s): `prisma/migrations/20261008120000_user_activity_days`; additive daily activity table with a composite user/day primary key and organization/day and day indexes. Applied and registered only on `neon-neat-tst`.
