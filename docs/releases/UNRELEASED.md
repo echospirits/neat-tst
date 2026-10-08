@@ -25,6 +25,17 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 
 ## Pending changes
 
+### Keep authenticated OHLQ exports out of Actions artifacts
+
+- Description: Confirms and fixes Codex Security finding `csf_96a7e38554f8a796188f399d` / `occ_91e5c24770291ad1ac616140`. All authenticated report downloads and browser screenshots use private `RUNNER_TEMP/ohlq-private` storage in GitHub Actions, including caller-supplied output overrides. Failure artifacts contain only a newly generated `status.json` with fixed step names and allowlisted status values, retained for one day. Successful runs publish no diagnostic artifact.
+- Relevant commit(s): Commit titled Keep authenticated OHLQ exports out of Actions artifacts.
+- Feature flag/default state: None / N/A.
+- Migration(s): None.
+- Environment/config: Existing GitHub Actions `GITHUB_ACTIONS` and absolute `RUNNER_TEMP` are required for CI private storage; no new secret or operator configuration. Local and serverless download defaults remain supported.
+- User-visible: No application UI change. Actions artifacts change from raw debug files to sanitized failure statuses.
+- Production readiness: Pending v0.2 candidate review; regression tests and local verification recorded in the v0.2 validation record.
+- Rollout notes: v0.2 development scope. This prevents future raw artifact uploads; previously published debug artifacts retain their existing expiry and access settings. No live OHLQ import or workflow dispatch is required for verification.
+
 ### Prevent shell injection in tenant OHLQ credential repair
 
 - Description: Verified Codex Security finding `csf_7228e69812aa138fc64f3d14` against the current workflow. Dispatch input now enters Bash through `TENANT_ORGANIZATION_ID` and is passed as one quoted argument. Both the workflow and repair script reject IDs outside generated CUIDs and the two existing seeded organization IDs before invoking repair or querying the database.

@@ -1,4 +1,3 @@
-import path from 'path';
 import { appendFileSync } from 'node:fs';
 import { loadLocalEnvironmentFile } from '../lib/environmentFile';
 import { runOhlqAnnualSalesWorkflow } from '../lib/ohlqAnnualSalesWorkflow';
@@ -7,6 +6,7 @@ import { runOpportunityIntelligenceAfterImport } from '../lib/opportunityEngine'
 import { runAgencyMarketIntelligenceAfterImport } from '../lib/agencyMarketIntelligenceService';
 import { pruneOhlqAnnualSalesRows } from '../lib/ohlqAnnualSalesRetention';
 import { toOhlqDateOnlyUtc } from '../lib/ohlqDataStatus';
+import { getOhlqReportStorageDirectories } from '../lib/ohlqReportStorage';
 
 const easternTimeZone = 'America/New_York';
 
@@ -86,8 +86,7 @@ async function main() {
     console.log(`Starting OHLQ annual sales backfill for ${reportDate}.`);
     const result = await runOhlqAnnualSalesWorkflow({
       downloadOptions: {
-        debugDir: path.join(process.cwd(), 'output', 'playwright'),
-        downloadDir: path.join(process.cwd(), 'output', 'ohlq-downloads'),
+        ...getOhlqReportStorageDirectories(),
         headless: true,
         useServerlessChromium: false,
       },

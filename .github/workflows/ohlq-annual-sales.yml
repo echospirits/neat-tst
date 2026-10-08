@@ -234,11 +234,13 @@ jobs:
           npm run repair:ohlq-tenant-credentials -- --environment "$APP_ENV" --organization "$TENANT_ORGANIZATION_ID" --apply
 
       - name: Download and import current OHLQ Account Master
+        id: account_master
         if: steps.schedule_window.outputs.should_run == 'true' && (github.event_name == 'schedule' || inputs.purchaseStateOnly != true)
         timeout-minutes: 50
         run: npm run sync:ohlq-account-master -- --environment "$APP_ENV" --apply
 
       - name: Download and import current OHLQ Brand Master
+        id: brand_master
         if: steps.schedule_window.outputs.should_run == 'true' && (github.event_name == 'schedule' || inputs.purchaseStateOnly != true)
         timeout-minutes: 15
         run: npm run sync:ohlq-brand-master -- --environment "$APP_ENV" --apply
@@ -271,11 +273,13 @@ jobs:
           fi
 
       - name: Download and import tenant OHLQ inventory
+        id: tenant_inventory
         if: ${{ !cancelled() && steps.sales_import.outcome != 'skipped' && steps.schedule_window.outputs.should_run == 'true' && (github.event_name == 'schedule' || inputs.purchaseStateOnly != true) }}
         timeout-minutes: 30
         run: npm run sync:ohlq-tenant-inventory -- --environment "$APP_ENV"
 
       - name: Refresh post-import intelligence and retention
+        id: intelligence
         if: ${{ !cancelled() && steps.sales_import.outcome == 'success' && (github.event_name == 'schedule' || inputs.purchaseStateOnly != true) }}
         timeout-minutes: 100
         shell: bash
@@ -285,14 +289,26 @@ jobs:
           test -n "$REPORT_DATE"
           npm run backfill:ohlq-annual-sales -- --date "$REPORT_DATE" --intelligence-only
 
-      - name: Upload OHLQ debug artifacts
-        if: always() && steps.schedule_window.outputs.should_run == 'true'
+      - name: Generate sanitized OHLQ failure summary
+        id: artifact_summary
+        if: failure() && steps.schedule_window.outputs.should_run == 'true'
+        env:
+          OHLQ_JOB_STATUS: ${{ job.status }}
+          OHLQ_ACCOUNT_MASTER_STATUS: ${{ steps.account_master.outcome }}
+          OHLQ_BRAND_MASTER_STATUS: ${{ steps.brand_master.outcome }}
+          OHLQ_SALES_IMPORT_STATUS: ${{ steps.sales_import.outcome }}
+          OHLQ_TENANT_INVENTORY_STATUS: ${{ steps.tenant_inventory.outcome }}
+          OHLQ_INTELLIGENCE_STATUS: ${{ steps.intelligence.outcome }}
+        run: node scripts/write-ohlq-artifact-summary.cjs
+
+      - name: Upload sanitized OHLQ failure summary
+        if: failure() && steps.artifact_summary.outcome == 'success' && steps.schedule_window.outputs.should_run == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: ohlq-sales-debug-${{ github.run_id }}
-          path: output/
-          if-no-files-found: ignore
-          retention-days: 7
+          name: ohlq-sales-status-${{ github.run_id }}
+          path: ${{ runner.temp }}/ohlq-artifacts/status.json
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Report skipped scheduled slot
         if: steps.schedule_window.outputs.should_run != 'true'
