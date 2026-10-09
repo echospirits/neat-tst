@@ -37,6 +37,7 @@ export const navigationItems: NavigationItem[] = [
   { key: 'pipeline', href: '/pipeline', label: 'Pipeline', section: 'accounts', moreOrder: 5, featureKey: 'ACCOUNT_SALES_STATUS' },
   { key: 'tags', href: '/tags', label: 'Tags', section: 'utility', moreOrder: 5 },
   { key: 'profile', href: '/profile', label: 'Profile', section: 'utility', moreOrder: 6 },
+  { key: 'support', href: '/support', label: 'Support', section: 'utility', moreOrder: 6.5 },
   { key: 'users', href: '/users', label: 'Users', section: 'admin', adminGroup: 'Organization', adminOnly: true, moreOrder: 7 },
   { key: 'user-activity', href: '/admin/user-activity', label: 'User activity', section: 'admin', adminGroup: 'Organization', adminOnly: true, moreOrder: 9 },
   { key: 'organization-setup', href: '/admin/organization', label: 'Organization Setup', section: 'admin', adminGroup: 'Organization', adminOnly: true },

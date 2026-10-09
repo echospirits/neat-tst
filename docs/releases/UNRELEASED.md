@@ -25,6 +25,18 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 
 ## Pending changes
 
+### In-app support reporting and platform queue
+
+- Description: Adds Support outside the sales Worklist: four report categories, an optional reviewed screenshot and recent-page/browser context, ticket history, organization-admin visibility, and a tenant-safe global Platform Admin queue with live filters and optional urgency. Platform responses include status and an optional anticipated fix date. Reporters see the answer in an authenticated banner until acknowledging it; replies can reopen completed tickets. Private platform notes are never exposed to tenants.
+- Relevant commit(s): Commit titled `Add in-app support reporting and platform queue` on neat-tst/tst.
+- Feature flag/default state: None / available to every authenticated role, including tasters. Existing `FILE_UPLOADS_ENABLED` controls optional screenshots; text reports remain available when uploads are disabled.
+- Migration(s): `prisma/migrations/20261009010000_support_tickets/migration.sql`; additive support tables, enums, indexes and foreign keys, plus a 600 KiB raster-image database constraint. Apply before deploying the support code.
+- Environment/config: No new variable, dependency, provider or secret. Screenshots are stored in a separate database table and delivered through authenticated private/no-store routes, with no public Blob URL.
+- User-visible: Yes. Support appears in desktop navigation/mobile More and on the Platform dashboard. Organization admins can review their users' reports; only the reporter and Platform Admin can reply. Status/date/response history is preserved. Complete requires an answer; Fix planned requires an estimated date.
+- Validation: 725/725 tests passed, including 19 focused support authorization, lifecycle, privacy and HTTP tests. Typecheck and the optimized application build passed. Browser checks used the built app with local fixture users/database at 390 × 844 and 1440 × 900; details are in [support validation](0.2.0-support-validation.md).
+- Production readiness: TST implementation validated; the normal frozen v0.2 candidate and separately authorized production promotion remain pending.
+- Rollout notes: Support migration applied and registered only on the host-verified `neon-neat-tst` target. The pre-existing `20260923123000_password_reset_tokens` migration-ledger gap was observed and left unchanged. No live support tickets or temporary shared-TST admin sessions were created. Screenshot storage is bounded per report and manually removable; no automatic retention job or session-replay provider is introduced. [Operator/user guide](../SUPPORT.md).
+
 ### Keep authenticated OHLQ exports out of Actions artifacts
 
 - Description: Confirms and fixes Codex Security finding `csf_96a7e38554f8a796188f399d` / `occ_91e5c24770291ad1ac616140`. All authenticated report downloads and browser screenshots use private `RUNNER_TEMP/ohlq-private` storage in GitHub Actions, including caller-supplied output overrides. Failure artifacts contain only a newly generated `status.json` with fixed step names and allowlisted status values, retained for one day. Successful runs publish no diagnostic artifact.
@@ -92,7 +104,7 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 - Migration(s): None; provenance and prior values use the existing businessHours JSON field.
 - Environment/config: None.
 - User-visible: Yes; tenant users can view shared hours, while platform administrators can save or research them.
-- Production readiness: TST fix; 18 focused hours regressions, 72 combined authorization/scheduling tests, standalone TypeScript checks and responsive previews pass. Local compilation passed but final local build checks hit shared-dependency corruption; normal hosted build verification is part of delivery evidence. Production promotion requires a separate release candidate.
+- Production readiness: TST fix; 19 focused hours regressions, 72 combined authorization/scheduling tests, standalone TypeScript checks and responsive previews pass. Local compilation passed but final local build checks hit shared-dependency corruption; normal hosted build verification is part of delivery evidence. Production promotion requires a separate release candidate.
 - Rollout notes: neat-tst/tst only. Existing hours remain readable; no backfill or live account changes. New history begins at the first curated update and preserves the value it replaces.
 
 ### OHLQ workflow dispatch input security

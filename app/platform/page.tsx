@@ -6,13 +6,14 @@ import { buildPageMetadata } from '../../lib/appBrand';
 import { requirePlatformAdmin } from '../../lib/auth';
 import { INTELLIGENCE_PACKAGE_FEATURE_KEYS, hasIntelligencePackage } from '../../lib/featureRegistry';
 import { prisma } from '../../lib/prisma';
+import { getPlatformSupportCounts } from '../../lib/support';
 import { PageHeader } from '../components/PageChrome';
 
 export const metadata = buildPageMetadata('Platform');
 
 export default async function PlatformDashboard() {
   await requirePlatformAdmin();
-  const [total, active, onboarding, disabled, recent, intelligenceOrganizations, importHealth] = await Promise.all([
+  const [total, active, onboarding, disabled, recent, intelligenceOrganizations, importHealth, support] = await Promise.all([
     prisma.organization.count(),
     prisma.organization.count({ where: { active: true, accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] } } }),
     prisma.organization.count({ where: { onboardingStatus: { not: 'READY' } } }),
@@ -20,6 +21,7 @@ export default async function PlatformDashboard() {
     prisma.organization.findMany({ orderBy: { createdAt: 'desc' }, take: 6, include: { vendorIdentifiers: { where: { active: true } }, features: { where: { enabled: true } } } }),
     prisma.organizationFeature.findMany({ where: { enabled: true, featureKey: { in: [...INTELLIGENCE_PACKAGE_FEATURE_KEYS] } }, distinct: ['organizationId'], select: { organizationId: true } }),
     prisma.ohlqReportImportStatus.findMany({ orderBy: { startedAt: 'desc' }, take: 3 }),
+    getPlatformSupportCounts(),
   ]);
   return <>
     <PageHeader eyebrow="Neat platform" title="Platform administration" description="Provision organizations, control entitlements, and inspect onboarding and shared-data health." actions={<Link className="btn" href="/platform/organizations/new">New organization</Link>} />
@@ -27,6 +29,7 @@ export default async function PlatformDashboard() {
       {[['Organizations', total], ['Active', active], ['Onboarding', onboarding], ['Disabled', disabled]].map(([label, value]) => <article className="card" key={label}><span>{label}</span><strong>{value}</strong></article>)}
     </section>
     <section className="platform-grid">
+      <article className="card"><h2>Support</h2><p>{support.active} active {support.active === 1 ? 'ticket' : 'tickets'}{support.urgent ? ` · ${support.urgent} urgent` : ''}</p><p className="muted">Review customer reports and send answers across organizations.</p><Link className="btn secondary" href="/support">Open support queue</Link></article>
       <article className="card"><h2>User activity</h2><p className="muted">Compare organization logins and active days, and filter daily user history.</p><Link className="btn secondary" href="/admin/user-activity">View user activity</Link></article>
       <article className="card"><div className="section-heading"><div><span className="page-eyebrow">Customers</span><h2>Recent organizations</h2></div><Link href="/platform/organizations">View all</Link></div>
         <div className="platform-list">{recent.map((organization) => <Link href={`/platform/organizations/${organization.id}`} key={organization.id}><span><strong>{organization.displayName}</strong><small>{organization.primaryState} · {organization.vendorIdentifiers.map((item) => item.vendorId).join(', ') || 'No Vendor ID'}</small></span><span className="pill">{hasIntelligencePackage(organization.features.filter((feature) => feature.enabled).map((feature) => feature.featureKey)) ? 'Core + Intelligence' : 'Core'}</span></Link>)}</div>

@@ -429,6 +429,8 @@ model User {
   image                       String?
   createdAt                   DateTime               @default(now())
   updatedAt                   DateTime               @updatedAt
+  supportTickets              SupportTicket[] @relation("SupportReporter")
+  supportMessages             SupportMessage[]
   sessions                    UserSession[]
   invitations                 UserInvitation[]
   passwordResetTokens         PasswordResetToken[]
@@ -494,6 +496,7 @@ model Organization {
   notes                   String?
   createdAt               DateTime                          @default(now())
   updatedAt               DateTime                          @updatedAt
+  supportTickets          SupportTicket[]
   vendorIdentifiers       OrganizationVendorIdentifier[]
   a3aStoreIdentifiers     OrganizationA3aStoreIdentifier[]
   products                OrganizationProduct[]
@@ -2550,4 +2553,81 @@ model WorklistCalendarEvent {
   @@unique([provider, externalEventId])
   @@index([connectionId])
   @@index([syncStatus])
+}
+
+
+// Support lives outside sales Worklist and its calendar/visit side effects.
+enum SupportCategory {
+  BUG
+  DATA
+  ENHANCEMENT
+  QUESTION
+}
+
+enum SupportStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_USER
+  PLANNED
+  COMPLETE
+}
+
+enum SupportPriority {
+  NORMAL
+  URGENT
+}
+
+model SupportTicket {
+  id                     String          @id @default(cuid())
+  number                 Int             @unique @default(autoincrement())
+  requestId              String          @unique
+  organizationId         String
+  reporterId             String
+  category               SupportCategory
+  title                  String
+  description            String
+  status                 SupportStatus   @default(OPEN)
+  priority               SupportPriority @default(NORMAL)
+  anticipatedFixDate     DateTime?       @db.Date
+  diagnostics            Json            @default("{}")
+  version                Int             @default(0)
+  responseVersion        Int             @default(0)
+  reporterReadVersion    Int             @default(0)
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  organization           Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  reporter               User            @relation("SupportReporter", fields: [reporterId], references: [id], onDelete: Restrict)
+  messages               SupportMessage[]
+  screenshot             SupportScreenshot?
+
+  @@index([organizationId, status, createdAt])
+  @@index([reporterId, createdAt])
+  @@index([status, priority, createdAt])
+}
+
+model SupportMessage {
+  id                     String        @id @default(cuid())
+  requestId              String        @unique
+  ticketId               String
+  authorId               String
+  body                   String
+  isInternal             Boolean       @default(false)
+  isPlatformReply        Boolean       @default(false)
+  status                 SupportStatus?
+  anticipatedFixDate     DateTime?      @db.Date
+  createdAt              DateTime      @default(now())
+  ticket                 SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author                 User          @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId, createdAt])
+}
+
+// One small screenshot per ticket, served only after ticket authorization.
+// Separate table keeps image bytes out of queue/detail/notification queries.
+model SupportScreenshot {
+  ticketId               String        @id
+  contentType            String
+  bytes                  Bytes
+  createdAt              DateTime      @default(now())
+  ticket                 SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 }
