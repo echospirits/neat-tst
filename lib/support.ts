@@ -2,7 +2,6 @@ import { Prisma, UserRole } from '@prisma/client';
 import { z } from 'zod';
 import { getCurrentSession } from './auth';
 import { isSideEffectEnabled } from './appEnvironment';
-import { requireOrganizationContext } from './organizations';
 import { prisma } from './prisma';
 import { createSupportSchema, sanitizeSupportDiagnostics, supportReplySchema, SUPPORT_PAGE_SIZE, validateSupportScreenshot } from './supportShared';
 
@@ -17,7 +16,7 @@ export async function getSupportActor() {
 }
 
 type Actor = Awaited<ReturnType<typeof getSupportActor>>;
-type SupportDb = Pick<Prisma.TransactionClient, 'user' | 'supportTicket' | 'supportMessage' | 'supportScreenshot' | '$queryRaw'>;
+type SupportDb = Pick<Prisma.TransactionClient, 'user' | 'organization' | 'supportTicket' | 'supportMessage' | 'supportScreenshot' | '$queryRaw'>;
 
 function scopeFor(actor: Actor, mine = false): Prisma.SupportTicketWhereInput {
   if (actor.role === UserRole.PLATFORM_ADMIN) return mine ? { reporterId: actor.id } : {};
@@ -87,13 +86,13 @@ export async function getSupportTicket(id: string) {
 
 export async function createSupportTicket(input: unknown, diagnostics: unknown, screenshot?: { bytes: Uint8Array; contentType: string }) {
   const previous = await getSupportActor();
-  const data = parse(createSupportSchema, input);
+  const { organizationId: requestedOrganizationId, ...data } = parse(createSupportSchema, input);
   if (screenshot && (!isSideEffectEnabled('fileUploads') || !validateSupportScreenshot(screenshot.bytes, screenshot.contentType))) throw new SupportError('The screenshot could not be accepted. Remove it or choose a smaller PNG, JPEG or WebP image.');
-  const organizationId = previous.role === UserRole.PLATFORM_ADMIN
-    ? (await requireOrganizationContext(previous)).organizationId : previous.organizationId;
-  if (!organizationId) throw new SupportError('Your account needs an organization before reporting a ticket.', 403);
   return prisma.$transaction(async tx => {
     const actor = await currentActor(tx, previous);
+    const organizationId = actor.role === UserRole.PLATFORM_ADMIN ? requestedOrganizationId : actor.organizationId;
+    if (!organizationId) throw new SupportError('Choose the organization this ticket belongs to.', 400, { organizationId: 'Choose an organization.' });
+    if (actor.role === UserRole.PLATFORM_ADMIN && !await tx.organization.findUnique({ where: { id: organizationId }, select: { id: true } })) throw new SupportError('Choose an available organization.', 400, { organizationId: 'This organization is unavailable. Choose another.' });
     const duplicate = await tx.supportTicket.findUnique({ where: { requestId: data.requestId } });
     if (duplicate) {
       if (duplicate.reporterId !== actor.id || duplicate.organizationId !== organizationId) throw new SupportError('This request could not be accepted.', 409);

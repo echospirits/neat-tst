@@ -25,6 +25,18 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 
 ## Pending changes
 
+### Ticket creation for every role and visible screenshot upload
+
+- Description: Fixes the missing new-ticket action for Platform Admin. Every Support queue now has a prominent New support ticket button, including My tickets; the Platform dashboard also links directly to creation. Platform Admin can search/select an organization on the form without entering Support View. Tenant users, org admins and tasters retain authenticated organization ownership. Screenshot upload is visible on the form, with preparation, preview and removal before sending.
+- Relevant commit(s): Commit titled `Enable support ticket creation for every role with visible screenshot upload` on neat-tst/tst.
+- Feature flag/default state: None / Core CRM. Existing `FILE_UPLOADS_ENABLED` remains the screenshot gate and was confirmed true on the live neat-tst project's hosting environment through the CLI's read-only API fallback.
+- Migration(s): None.
+- Environment/config: No new or modified variable, secret, dependency or provider.
+- User-visible: Yes. Support → New support ticket → Screenshot (optional) → Send ticket. Platform Admin selects an organization, with known context preselected when available. Changing the report organization omits recent-page context from the previous organization. Failed submission keeps the text, organization and screenshot.
+- Validation: Full suite 731/731, including 25 focused support/entry/HTTP tests, typecheck and optimized build passed. Actual built-app Playwright checks with local fixture users created and viewed screenshot tickets for regular users, Core-only users, org admins, tasters and platform admins at 390 × 844 and 1440 × 900. Platform without home/Support View context, organization live search, invalid-image validation, pending/disabled submission, retry recovery, private image delivery and no horizontal overflow passed. [Evidence](0.2.0-support-validation.md).
+- Production readiness: TST validation complete; the frozen v0.2 candidate and separately authorized production promotion remain pending.
+- Rollout notes: No live support tickets or temporary shared-TST sessions were created. Only Platform Admin may select the target organization; authority and organization existence are checked inside the write transaction. No migration/backfill required.
+
 ### Core CRM Support and desktop sidebar placement
 
 - Description: Moves desktop Support into the sidebar user card directly below Profile & preferences for every role, separating it from Intelligence navigation. Core CRM's canonical description and both Platform Admin plan forms explicitly include in-app Support. Authenticated Support remains available without the Intelligence add-on or a separate feature toggle.

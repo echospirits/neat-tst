@@ -125,7 +125,7 @@ const getBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
 
   const home = { href: '/', label: 'Home' };
   const routeMap: Array<{ prefix: string; crumbs: BreadcrumbItem[] }> = [
-    { prefix: '/support/new', crumbs: [{ href: '/support', label: 'Support' }, { href: pathname, label: 'Report an issue' }] },
+    { prefix: '/support/new', crumbs: [{ href: '/support', label: 'Support' }, { href: pathname, label: 'New support ticket' }] },
     { prefix: '/support/', crumbs: [{ href: '/support', label: 'Support' }, { href: pathname, label: 'Ticket' }] },
     { prefix: '/support', crumbs: [{ href: '/support', label: 'Support' }] },
     { prefix: '/analytics', crumbs: [{ href: '/analytics', label: 'Analytics' }] },

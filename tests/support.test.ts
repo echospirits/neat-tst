@@ -38,7 +38,7 @@ function harness(role: UserRole = UserRole.USER, organizationId: string | null =
     if (messageConfig) result.messages = messages.filter(item => item.ticketId === row.id && matches(item, messageConfig.where ?? {})).map(item => ({ ...item, author: { id: item.authorId, name: item.authorId } }));
     return result;
   };
-  const db: Row = { user: { findUnique: async () => current }, $queryRaw: async () => [] };
+  const db: Row = { user: { findUnique: async () => current }, organization: { findUnique: async ({ where }: Row) => ['org-a', 'org-b'].includes(where.id) ? { id: where.id } : null }, $queryRaw: async () => [] };
   db.supportTicket = {
     fields: { reporterReadVersion: { field: 'reporterReadVersion' } },
     findFirst: async (args: Row) => { calls.push({ model: 'ticket', method: 'findFirst', args }); return hydrate(tickets.find(row => matches(row, args.where)), args); },
@@ -106,6 +106,36 @@ test('anonymous and stale/disabled actors cannot create reports', async () => {
   await assert.rejects(h.service.createSupportTicket(report(), {}), (error: any) => error.status === 401);
   h.actor({ id: 'reporter-a', organizationId: 'org-a', role: 'USER', isActive: true }, { id: 'reporter-a', organizationId: 'org-b', role: 'USER', isActive: true });
   await assert.rejects(h.service.createSupportTicket(report(), {}), forbidden); assert.equal(h.tickets.length, 0);
+});
+
+test('users, organization admins and tasters can each report with a screenshot while forged tenant/reporter fields are ignored', async () => {
+  for (const role of [UserRole.USER, UserRole.ADMIN, UserRole.TASTER]) {
+    const h = harness(role);
+    await h.service.createSupportTicket({ ...report(), organizationId: 'org-b', reporterId: 'other-user' }, {}, { bytes: new Uint8Array([255, 216, 255, 0]), contentType: 'image/jpeg' });
+    assert.equal(h.tickets[0].reporterId, 'reporter-a'); assert.equal(h.tickets[0].organizationId, 'org-a');
+    assert.equal((await h.service.getSupportScreenshot(h.tickets[0].id)).contentType, 'image/jpeg');
+  }
+});
+
+test('a platform admin without home or Support View context can report for a chosen organization with a screenshot', async () => {
+  const h = harness(UserRole.PLATFORM_ADMIN, null, 'platform');
+  const input = { ...report(), organizationId: 'org-b', reporterId: 'forged-user' };
+  const result = await h.service.createSupportTicket(input, {}, { bytes: new Uint8Array([255, 216, 255, 0]), contentType: 'image/jpeg' });
+  assert.equal(h.tickets[0].organizationId, 'org-b'); assert.equal(h.tickets[0].reporterId, 'platform');
+  assert.equal((await h.service.getSupportScreenshot(result.id)).contentType, 'image/jpeg');
+  await h.service.createSupportTicket(input, {}); assert.equal(h.tickets.length, 1);
+  await assert.rejects(h.service.createSupportTicket({ ...input, organizationId: 'org-a' }, {}), (error: any) => error.status === 409);
+});
+
+test('platform creation validates the selected organization and locked platform authority before saving', async () => {
+  const h = harness(UserRole.PLATFORM_ADMIN, null, 'platform');
+  for (const organizationId of [undefined, '', 'missing-org']) {
+    await assert.rejects(h.service.createSupportTicket({ ...report(), organizationId }, {}), (error: any) => error.status === 400 && Boolean(error.fields.organizationId));
+  }
+  assert.equal(h.tickets.length, 0);
+  h.actor({ id: 'platform', organizationId: null, role: 'PLATFORM_ADMIN', isActive: true }, { id: 'platform', organizationId: 'org-a', role: 'ADMIN', isActive: true });
+  await assert.rejects(h.service.createSupportTicket({ ...report(), organizationId: 'org-b' }, {}), forbidden);
+  assert.equal(h.tickets.length, 0);
 });
 
 test('report rate limiting is serialized and idempotent retries still work at the limit', async () => {

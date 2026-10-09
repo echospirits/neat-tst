@@ -44,6 +44,7 @@ export function readSupportTrail(storage: Pick<Storage, 'getItem'>, scope: strin
 }
 
 export const createSupportSchema = z.object({
+  organizationId: z.string().trim().max(100).optional(),
   requestId: z.string().uuid(),
   category: z.enum(['BUG', 'DATA', 'ENHANCEMENT', 'QUESTION']),
   title: z.string().trim().min(3, 'Add a short summary (at least 3 characters).').max(160),

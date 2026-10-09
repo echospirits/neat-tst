@@ -12,6 +12,7 @@
 .support-details { border-top: 1px solid var(--border); padding-top: .7rem; }
 .support-details summary { cursor: pointer; min-height: 44px; display: list-item; align-content: center; font-weight: 600; }
 .support-details > p { margin-top: .4rem; }
+.support-attachment { display: grid; gap: .4rem; min-width: 0; }
 .support-field-error { color: #b42318; margin: 0; }
 html[data-theme="dark"] .support-field-error { color: var(--danger); }
 .support-ticket-row, .support-form, .support-report, .support-conversation { overflow-wrap: anywhere; }
