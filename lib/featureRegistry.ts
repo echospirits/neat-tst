@@ -33,7 +33,7 @@ export type FeatureDefinition = {
 export const FEATURE_REGISTRY: Record<FeatureKey, FeatureDefinition> = {
   ACCOUNT_SALES_STATUS: { key: 'ACCOUNT_SALES_STATUS', label: 'Account Sales Status / Pipeline', description: 'Tenant-owned relationship stages, buying state, and lightweight pipeline visibility.', category: 'Core', defaultEnabled: true, dependencies: ['CORE_CRM'] },
   ANALYTICS: { key: 'ANALYTICS', label: 'Analytics', description: 'Tenant sales, account performance, and activity reporting with CSV exports.', category: 'Core', defaultEnabled: true, dependencies: ['CORE_CRM'] },
-  CORE_CRM: { key: 'CORE_CRM', label: 'Core CRM', description: 'Users, shared accounts, private overlays, and core relationship workflows.', category: 'Core', defaultEnabled: true, dependencies: [] },
+  CORE_CRM: { key: 'CORE_CRM', label: 'Core CRM', description: 'Users, shared accounts, private overlays, core relationship workflows, and in-app Support.', category: 'Core', defaultEnabled: true, dependencies: [] },
   VISITS: { key: 'VISITS', label: 'Visits', description: 'Field visit capture and visit history.', category: 'Core', defaultEnabled: true, dependencies: ['CORE_CRM'] },
   WORKLIST: { key: 'WORKLIST', label: 'Worklist', description: 'Assignments, follow-ups, and personal work planning.', category: 'Core', defaultEnabled: true, dependencies: ['CORE_CRM'] },
   AGENCIES: { key: 'AGENCIES', label: 'Agencies', description: 'Ohio agency directory and shared reference data.', category: 'Ohio data', defaultEnabled: true, dependencies: ['CORE_CRM'] },

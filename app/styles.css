@@ -379,6 +379,10 @@ textarea:focus-visible {
   max-width: none;
 }
 
+.user-card-links {
+  display: grid;
+}
+
 .user-card .user-card-profile {
   margin: 0;
   padding: 0;

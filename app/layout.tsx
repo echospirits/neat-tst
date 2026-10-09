@@ -80,7 +80,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <span className="sr-only">Signed in as</span>
                 <strong>{getUserDisplayName(user)}</strong>
                 <span className="pill">{isPlatformAdmin ? 'Platform Admin' : user.role === 'ADMIN' ? 'Admin' : isTaster ? 'Taster' : 'User'}</span>
-                <Link className="user-card-profile" href="/profile">Profile &amp; preferences</Link>
+                <nav className="user-card-links" aria-label="Account and support">
+                  <Link className="user-card-profile" href="/profile">Profile &amp; preferences</Link>
+                  <Link className="user-card-profile" href="/support">Support</Link>
+                </nav>
                 <form action="/api/auth/logout" method="post">
                   <button className="secondary" type="submit">
                     Sign out

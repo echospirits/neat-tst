@@ -1,6 +1,6 @@
 # In-app Support
 
-Support is available to every authenticated role, including tasters, from desktop navigation and mobile More. It is independent of Neat's sales Worklist, scheduling, calendar sync and package entitlements.
+Support is included in Core CRM and available to every authenticated role, including tasters. On desktop, find it directly below **Profile & preferences** in the sidebar user card; on mobile, find it under More (or in the taster tab bar). It is independent of Neat's sales Worklist, scheduling and calendar sync. It does not require the Intelligence add-on or a separate feature toggle.
 
 ## Reporting and reviewing
 

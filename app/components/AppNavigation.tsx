@@ -93,7 +93,6 @@ export function AppSidebarNavigation({ enabledFeatures, isAdmin, isPlatformAdmin
           Log Visit
         </Link>
         <NavLink item={{ href: '/admin/data-status', key: 'data-health', label: 'Data Status', section: 'utility' }} pathname={pathname} />
-        <NavLink item={{ href: '/support', key: 'support', label: 'Support', section: 'utility' }} pathname={pathname} />
       </nav>
     );
   }
@@ -112,7 +111,6 @@ export function AppSidebarNavigation({ enabledFeatures, isAdmin, isPlatformAdmin
       <NavGroupLinks group={{ label: 'My Work', items: workItems }} pathname={pathname} />
       <NavGroupLinks group={{ label: 'Accounts', items: accountItems }} pathname={pathname} />
       <IntelligenceMenu enabledFeatures={enabledFeatures} isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} pathname={pathname} />
-      <NavLink item={{ href: '/support', key: 'support', label: 'Support', section: 'utility' }} pathname={pathname} />
       {!isAdmin && !isPlatformAdmin ? <NavLink item={{ href: '/admin/data-status', key: 'data-health', label: 'Data Status', section: 'utility' }} pathname={pathname} /> : null}
 
       {isAdmin || isPlatformAdmin ? <AdministrationMenu enabledFeatures={enabledFeatures} hasOrganizationAdminAccess={isAdmin} isPlatformAdmin={isPlatformAdmin} pathname={pathname} /> : null}

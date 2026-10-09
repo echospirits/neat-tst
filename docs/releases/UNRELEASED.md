@@ -25,6 +25,18 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 
 ## Pending changes
 
+### Core CRM Support and desktop sidebar placement
+
+- Description: Moves desktop Support into the sidebar user card directly below Profile & preferences for every role, separating it from Intelligence navigation. Core CRM's canonical description and both Platform Admin plan forms explicitly include in-app Support. Authenticated Support remains available without the Intelligence add-on or a separate feature toggle.
+- Relevant commit(s): Commit titled `Place Support beside Profile and clarify Core CRM inclusion` on neat-tst/tst.
+- Feature flag/default state: None / included with Core CRM and available to every authenticated role.
+- Migration(s): None.
+- Environment/config: None.
+- User-visible: Yes. Desktop Support is beside Profile & preferences; mobile More and the taster tab bar retain their existing Support links. Core CRM plan descriptions now list Support.
+- Validation: All 11 existing navigation/configuration tests, typecheck, optimized build and diff checks passed. Playwright checked the actual built app with local fixture users at 390 × 844 and 1440 × 900: desktop footer placement for regular, Core-only, platform and taster users, working links, separation from Intelligence, mobile More close-on-navigation, taster mobile access, Core plan copy and no horizontal page overflow. Mobile/desktop screenshots were visually reviewed.
+- Production readiness: TST validation complete; the normal frozen v0.2 candidate and separately authorized production promotion remain pending.
+- Rollout notes: No database, entitlement-row or provider change. Support already permits Core-only users; this change makes the package inclusion explicit and corrects desktop placement.
+
 ### In-app support reporting and platform queue
 
 - Description: Adds Support outside the sales Worklist: four report categories, an optional reviewed screenshot and recent-page/browser context, ticket history, organization-admin visibility, and a tenant-safe global Platform Admin queue with live filters and optional urgency. Platform responses include status and an optional anticipated fix date. Reporters see the answer in an authenticated banner until acknowledging it; replies can reopen completed tickets. Private platform notes are never exposed to tenants.
