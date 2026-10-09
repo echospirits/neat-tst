@@ -28,13 +28,13 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 ### In-app support reporting and platform queue
 
 - Description: Adds Support outside the sales Worklist: four report categories, an optional reviewed screenshot and recent-page/browser context, ticket history, organization-admin visibility, and a tenant-safe global Platform Admin queue with live filters and optional urgency. Platform responses include status and an optional anticipated fix date. Reporters see the answer in an authenticated banner until acknowledging it; replies can reopen completed tickets. Private platform notes are never exposed to tenants.
-- Relevant commit(s): Commit titled `Add in-app support reporting and platform queue` on neat-tst/tst.
+- Relevant commit(s): `5f08efec316ac81ed07b742234679b6f32e67523` (`Add in-app support reporting and platform queue`) on neat-tst/tst.
 - Feature flag/default state: None / available to every authenticated role, including tasters. Existing `FILE_UPLOADS_ENABLED` controls optional screenshots; text reports remain available when uploads are disabled.
 - Migration(s): `prisma/migrations/20261009010000_support_tickets/migration.sql`; additive support tables, enums, indexes and foreign keys, plus a 600 KiB raster-image database constraint. Apply before deploying the support code.
 - Environment/config: No new variable, dependency, provider or secret. Screenshots are stored in a separate database table and delivered through authenticated private/no-store routes, with no public Blob URL.
 - User-visible: Yes. Support appears in desktop navigation/mobile More and on the Platform dashboard. Organization admins can review their users' reports; only the reporter and Platform Admin can reply. Status/date/response history is preserved. Complete requires an answer; Fix planned requires an estimated date.
 - Validation: 725/725 tests passed, including 19 focused support authorization, lifecycle, privacy and HTTP tests. Typecheck and the optimized application build passed. Browser checks used the built app with local fixture users/database at 390 × 844 and 1440 × 900; details are in [support validation](0.2.0-support-validation.md).
-- Production readiness: TST implementation validated; the normal frozen v0.2 candidate and separately authorized production promotion remain pending.
+- Production readiness: TST deployment READY and live health verified against `environment=test` / `databaseTarget=neon-neat-tst`; the normal frozen v0.2 candidate and separately authorized production promotion remain pending.
 - Rollout notes: Support migration applied and registered only on the host-verified `neon-neat-tst` target. The pre-existing `20260923123000_password_reset_tokens` migration-ledger gap was observed and left unchanged. No live support tickets or temporary shared-TST admin sessions were created. Screenshot storage is bounded per report and manually removable; no automatic retention job or session-replay provider is introduced. [Operator/user guide](../SUPPORT.md).
 
 ### Keep authenticated OHLQ exports out of Actions artifacts
