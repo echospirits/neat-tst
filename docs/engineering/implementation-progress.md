@@ -56,3 +56,7 @@ Release gates and exact TST deployment receipt are maintained in [the validation
 ## Integrated base
 
 Before publication, TST advanced to 3009e9656244c889722073b7519c15b2f23bd5c3. The CRM branch was rebased and concurrent calibration, wholesale purchase pagination and external-link changes were preserved. Integrated regression suite: 808 passing tests.
+
+## Published checkpoint
+
+Application commit `b6d227caf8f707913d43c0ded4ecee2d2da61636` is on staging/tst and its Vercel deployment is READY. Live health confirms test / neon-neat-tst. The receipt-only documentation commit follows it. See the validation report for exact deployment identity. Local acceptance server is stopped; the isolated Neon rehearsal child is retained for reproducibility and may be removed when no longer needed. The main checkout's unrelated local files were preserved.
