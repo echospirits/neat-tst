@@ -75,4 +75,56 @@ Operational persistence, actual API/UI, tenant security, full tests, typecheck/b
 6. Increment calibration version for threshold changes and rerun acceptance/security/persistence tests and population comparisons.
 7. Retain historical snapshots/outcomes; conversion learning remains excluded.
 
-Final verified star distributions and old-to-new transitions are appended after the full TST run. Raw pre-fit percentiles above are not a substitute for that result.
+## Final Echo TST comparison (2026-10-10)
+
+The final persisted Echo assessment population contains 15,386 accounts, with historical comparison evidence for all 15,386. The current evidence modes are 12,184 sales-backed and 3,202 research-based. The sales foundation is September 9–26, 18 complete represented days. Calculation dates are later than this sales period; they must not be presented as additional sales coverage.
+
+| Current rating | Echo accounts |
+| --- | ---: |
+| 0 | 5,430 |
+| 1 | 1,122 |
+| 2 | 1,663 |
+| 3 | 943 |
+| 4 | 287 |
+| 5 | 57 |
+| null | 5,884 |
+| **Total** | **15,386** |
+
+There are 9,502 rated accounts. Zero represents 57.15% of the rated comparison population (35.29% of all accounts), rather than a forced 30% quota. The 5,884 null ratings comprise 5,883 UNRATED assessments and one INELIGIBLE assessment. Missing evidence is not included in the commercially unsuitable zero bucket.
+
+There were no legacy scores at or above 70 in the historical comparison; the new model identifies 344 accounts at four or five stars. This is not a claim of improved conversion: legacy scores mixed product opportunities, feasibility and strategy and can reflect a different sales window. Stars answer the new commercial question. Examples from the stable hash-selected, anonymized comparison include historical 14.4 becoming two stars (51.7 compatible equivalents/30 days, leading 26.7, core 46.7), historical 43.8 also becoming two stars (58.9 compatible, leading/core 53.3), and historical 12.7 becoming Unrated because missing attributes could change an otherwise zero result. These distinct transitions demonstrate that no score/20 conversion is used.
+
+Among rated accounts with a non-null compatible-volume measure, p10/p30/p50 equal zero, p90 is 86.1 and p99 is 240.6 equivalents per 30 represented days. These quantiles include rated zeroes and exclude Unrated accounts; they are context, not dynamic rating cutoffs. The earlier all-product raw-bottle percentiles and preliminary dry-run stars are not the final commercial distribution. In particular, the final missing-attribute safeguard moves uncertain apparent zeroes to Unrated without altering their stored purchasing quantities.
+
+## Authorized named records versus synthetic archetypes
+
+These are limited checks of authorized TST records, not audited complete histories or private account exports. The named synthetic acceptance cases above remain separate from these real records.
+
+| Actual TST record | Historical numeric value (audit only) | Current result | Explanation |
+| --- | ---: | --- | --- |
+| Denmark on High | 0 | Unrated | Known compatible rate 4.9 equivalents/30, leading 3.3, core 0 in the 18-day foundation. Essential missing product attributes could change the minimum tier, so the system cannot establish a true zero. The fully attributed synthetic 36-bottle shallow case still rates zero. |
+| Giuseppe’s Ritrovo Bexley | 26.8 | 1 star | Compatible rate 31.7, leading 11.7, core 26.1 and recurring core 0. Leading depth remains below the two-star minimum of 12, regardless of respectable aggregate volume. |
+| Columbus Zoo | 0 | Unrated | Sales identity is ambiguous and usable current research is insufficient. No identity data was changed to force a result. The synthetic seasonal venue with verified substantial suitable purchasing can still earn five. |
+
+The staging tenant has 15,386 null ratings because it has no included portfolio with which to establish current commercial fit; no synthetic portfolio was introduced to produce a distribution. Its one ineligible account remains separately classified rather than confused with missing portfolio evidence.
+
+## Final MWS TST comparison and whole-run verification
+
+MWS was recalculated against the same 15,386-account population and 18-day certified sales foundation, using its own included market portfolio and prices. It has 12,184 sales-backed and 3,202 research-based assessments, and historical comparison evidence for every account.
+
+| Current rating | MWS accounts |
+| --- | ---: |
+| 0 | 6,059 |
+| 1 | 1,207 |
+| 2 | 1,569 |
+| 3 | 702 |
+| 4 | 198 |
+| 5 | 38 |
+| null | 5,613 |
+| **Total** | **15,386** |
+
+MWS has 9,773 rated accounts; zero is 62.00% of that rated population. Null consists of 5,612 UNRATED and one INELIGIBLE assessment. Four/five stars identify 236 accounts, versus no historical legacy values at or above 70. Among rated accounts with a compatible-volume measure, p10/p30/p50 are zero, p90 is 71.1 and p99 is 211.1 equivalents per 30 represented days.
+
+A stable sampled location demonstrates tenant-specific fit: its historical value was 43.8 for both tenants. Echo now has 58.9 compatible equivalents/30 and core 53.3, giving two stars; MWS has 67.8 compatible and core 60.0, giving three. Leading product depth is 53.3 for both. The extra portfolio-compatible core meets the three-star threshold for MWS; relationship, assignment and pursuit state do not enter this comparison. The location is intentionally anonymous and no private record export is committed.
+
+The final full runs for Echo, MWS and staging all completed: each had 15,386 expected, evaluated, persisted and fresh current assessments, with 15,386 corresponding run snapshots, zero skipped, zero failed and one ineligible. Across the three tenants this verifies 46,158 actual persisted current assessments, including zero, unrated, no-purchase, no-pursuit and controlled-pursuit states. Independent research, pursuit, task and preference fingerprints were unchanged by recalculation. Exact run IDs, repeat-run evidence, checks and deployment details are retained in the 0.2 delivery validation record.
