@@ -30,7 +30,7 @@ test('state filters retain unique keys and the caller’s original OR and AND fi
   const where = combineWhere(original, stateWhere(['OH'])) as Record<string, unknown>;
   assert.equal(where.id, original.id);
   assert.deepEqual(where.OR, original.OR);
-  assert.deepEqual(where.AND, [original.AND, stateWhere(['OH'])]);
+  assert.deepEqual(where.AND, [...original.AND, stateWhere(['OH'])]);
 });
 
 test('contacts, audit overlays, visits, photos, calendar links and nested tag counts carry state restrictions', () => {
@@ -103,3 +103,16 @@ test('large Ohio directories use only each legacy table’s referenced IDs in re
   assert.ok(!policy.includes(ids[15999]));
   assert.ok(policy.length < 30000);
 });
+
+test('new event and playbook account references follow tenant state scope',()=>{
+ for(const model of ['EventShift','PlaybookRun']){
+  const where=JSON.stringify(modelStateWhere(model,florida));assert.ok(where.includes('fl-retail'));assert.ok(!where.includes('oh-retail'));
+  assert.throws(()=>assertStateWrite(model,{accountType:'AGENCY',[model==='EventShift'?'externalAccountId':'accountId']:'oh-retail'},florida,true));
+ }
+ assertStateWrite('EventShift',{accountType:null,externalAccountId:null},florida,true);
+ assert.ok(JSON.stringify(modelStateWhere('EventShift',florida)).includes('"externalAccountId":null'));
+});
+
+test('composing state restrictions preserves flat Prisma AND arrays across repeated scopes',()=>{const first=combineWhere({AND:[{status:'OPEN'},{organizationId:'tenant'}]},{agencyId:{in:['oh']}});const again=combineWhere(first,{dueDate:{not:null}});assert.equal(again.AND.length,4);assert.ok(again.AND.every(v=>!Array.isArray(v)));});
+
+test('optional composite account relations use nullable identity columns rather than a nullable tenant key',()=>{const policy=JSON.stringify(modelStateWhere('WorklistItem',ohio));assert.ok(policy.includes('"sourceActivityId":null'));assert.ok(policy.includes('"playbookRunId":null'));assert.ok(!policy.includes('"sourceActivity":null'));assert.ok(JSON.stringify(modelStateWhere('LoggedVisit',ohio)).includes('"eventShiftId":null'));});

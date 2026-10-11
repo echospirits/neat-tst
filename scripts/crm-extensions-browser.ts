@@ -1,4 +1,4 @@
-import{recordSmsConsent}from'../lib/crm/sms/service';
+import { recordSmsConsent } from "../lib/crm/sms/service";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
@@ -53,7 +53,21 @@ async function main() {
         });
       }
     }
-    const fixtureContact=await prisma.locationContact.findUniqueOrThrow({where:{id:f.smsContactId}});await prisma.$transaction(db=>recordSmsConsent(db,{organizationId:f.orgA,userId:f.userA},{phone:fixtureContact.phone!,status:'OPTED_IN',evidence:'Isolated browser mock repeat acceptance only',key:crypto.randomUUID()}));
+    const fixtureContact = await prisma.locationContact.findUniqueOrThrow({
+      where: { id: f.smsContactId },
+    });
+    await prisma.$transaction((db) =>
+      recordSmsConsent(
+        db,
+        { organizationId: f.orgA, userId: f.userA },
+        {
+          phone: fixtureContact.phone!,
+          status: "OPTED_IN",
+          evidence: "Isolated browser mock repeat acceptance only",
+          key: crypto.randomUUID(),
+        },
+      ),
+    );
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(base + "/recipes");
     await page.getByText("Create recipe", { exact: true }).click();
@@ -171,6 +185,7 @@ async function main() {
         name: "Review menu and choose a recipe",
         exact: true,
       })
+      .first()
       .waitFor();
     await page.getByText("Business text messages", { exact: true }).click();
     const contact = await prisma.locationContact.findUniqueOrThrow({
@@ -190,9 +205,8 @@ async function main() {
     await page
       .getByText("Demo: no external delivery", { exact: false })
       .waitFor();
-    await page
-      .getByLabel("Message", { exact: true })
-      .fill(`Browser demo message ${Date.now()}`);
+    const messageText = `Browser demo message ${Date.now()}`;
+    await page.getByLabel("Message", { exact: true }).fill(messageText);
     await page
       .getByLabel("I reviewed this message and authorize sending it", {
         exact: false,
@@ -201,7 +215,10 @@ async function main() {
     await page
       .getByRole("button", { name: "Send demo message", exact: true })
       .click();
-    await page.getByText("Browser demo message", { exact: false }).waitFor();
+    await page
+      .locator(".crm-prewrap")
+      .filter({ hasText: messageText })
+      .waitFor();
     await page.getByText("Simulate a reply", { exact: true }).click();
     await page.getByLabel("Reply", { exact: true }).fill("STOP");
     await page

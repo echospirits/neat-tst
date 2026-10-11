@@ -1,79 +1,37 @@
-# Extended CRM implementation progress
+# Integrated CRM implementation progress
 
-## Active continuation — 2026-10-11
+## Current state — 2026-10-11
 
-Owner correction: integrate all remaining work into established workflows. Separate Deals and Activities screens are being retired under ADR 0012. The full brief remains in progress; the old checkpoint below is historical.
+The remaining application areas from the master brief have been implemented by extending canonical workflows. This is **0.2.3-dev for TST**, not production promotion. Historical v0.2.0/v0.2.1/v0.2.2 artifacts remain untouched. The owner correction is permanent in AGENTS.md and ADR 0012: Pipeline replaces the duplicate Deals surface; Log Visit replaces the duplicate Activities entry surface.
 
-Implemented locally in this continuation:
+See the [complete feature inventory](../product/feature-inventory.md) for source locations, implemented scope and deliberate source-data limits. Source remains authoritative. No live provider success is inferred from a mock.
 
-- Existing Log Visit now records physical visits or phone/email/text/video/note interactions, with tenant/private visibility, atomic follow-ups and retry protection. Separate Activities/Deals entry points redirect to canonical workflows.
-- Pipeline uses the existing account status overlay, with versioned account plans, forecast assumptions and configurable relationship health. Contacts support aliases, role/authority, linked people and audited duplicate merges.
-- Communications adds business SMS with encrypted Twilio configuration, consent/opt-out ledger, bounded signed webhooks, delivery states, explicit send review, uncertain-send protection and nonproduction mock conversations. Mail adds original-message links, aliases, internal-domain policy, retention sweeps and retry backoff.
-- Playbooks create canonical Worklist tasks through the same transactional service as contextual follow-ups. Concurrent starts deduplicate; stopping preserves started/edited/completed tasks. Organization Setup owns reusable templates.
-- Existing Recipe records now have catalog/editing, batch costing, pricing assumptions, account recommendations, administrator approval and branded public training sheets. Public snapshots exclude costs, expire after 30 days and are revoked on edits/imports.
-- Existing EventShift records are extended with nullable tenant ownership (legacy records are not guessed into a tenant), staff scheduling/conflict checks, account context, products/results/costs, linked Log Visit evidence and coverage-aware observed purchase comparisons. Eventbrite supports encrypted tenant credentials, bounded page imports and a mock adapter; local edits are preserved for review.
+## Completed application work
 
-Evidence so far: 821 automated tests pass. Isolated PostgreSQL checks pass for integrated workflows, contacts/mail, SMS, playbooks, recipes and events. Initial integrated workflow browser checks passed; final extended responsive/browser acceptance is in progress. No new changes in this continuation have yet been published to shared TST.
+- Canonical interaction logging, contacts/person links/merges/aliases, authorized timeline filters, transparent health, account briefing and versioned Pipeline plans/configurable stages.
+- Google/Graph operational recovery, occurrence windows, completed-rescan deletion reconciliation, private matching, internal exclusions, retention and backoff.
+- Reviewed two-way business SMS with consent/signed callbacks and uncertain-send handling; nonproduction mock.
+- Canonical Worklist playbooks and transactional contextual follow-ups; guarded cancellation.
+- Tenant account categories/parents/territories/teams/custom fields/documents; guided visits, opt-in local drafts and reviewed route ordering.
+- Existing Recipe catalog/costing/approval/public sheets; existing EventShift operations/staff conflicts/Eventbrite and coverage-aware sales comparisons.
+- Permission-aware reviewed AI adapter/mock, expanded existing Analytics continuity/execution/territory reports and CSV exports.
+- Current TST Retail/Restaurants wording and state-access changes integrated. New event/playbook references and signed callbacks participate in that state policy.
+- Source documentation, activation instructions, migration/recovery guidance and regression scripts updated.
 
-Still active: remaining tenant/general-account/team/territory/custom-field requirements; guided field/offline/route work; reporting and permission-aware AI; comprehensive mail rescan/recurrence behavior; final docs/security/build/browser/migration/TST release gates. The full brief is not complete.
+## Validation / release work in progress
 
-## Historical scope and checkpoint
+Current merged automated suite: **847 passing tests, 75 suites, no failures/skips**. Additive migrations and isolated DB rehearsals pass. Final merged typecheck, optimized build and all three responsive browser scripts pass. Shared-TST migration/deployment receipt is being completed; exact results live in [v0.2-test-report](../releases/v0.2-test-report.md). Do not replace pending receipt fields with assumed success.
 
-The complete 2026-10-10 sales operating system brief remains **incomplete**. This checkpoint implements the first working communication/activity/deal increment; it is not a frozen release candidate. Branch: `codex/echo-crm-v02`. Base: `5faee9df930bd76b5e56b669f58a57210527f7d5`. Production baseline: `af1f396726e3b15e1167f5af2aa6ba426cae9bf9`, package 0.14.0.
+## External activation and source limits
 
-Development version is **0.2.3-dev** because historical v0.2.0, v0.2.1 and v0.2.2 artifacts already exist. The owner-opened 0.2.0 cycle records remain intact. No stable artifact or production tag is replaced.
+- Live Google/Microsoft OAuth, Twilio registration/delivery, Eventbrite access, road routing and AI credentials/model quality require provider acceptance and explicit environment configuration. The application and mocks are implemented. No new live OpenAI key was provisioned.
+- Personal-device SMS capture, full mailbox bodies/attachments, arbitrary Graph folders and full offline synchronization are not claimed. Original-message links and opt-in local text drafts provide bounded alternatives.
+- Daily bottles cannot establish transaction order counts or observed revenue forecast accuracy. Reports label retained-history purchase-day observations and unknown coverage honestly.
+- Six dependency package findings remain; see security review. Production credential remediation and production promotion remain separate tasks.
 
-## Implemented in this increment
+## Exact finishing steps
 
-- Source audit and permanent architecture/product/design/engineering documentation, root agent guidance and eleven ADRs.
-- Extended existing AccountActivity with provider identity, deduplication, private visibility, association confidence, corrections and audit history. Existing physical visits and completed Worklist tasks are projected into the account timeline without copying them.
-- Mobile activity entry with known-account context, live account search, optional outcome/direction, completed-time validation and retry idempotency. Separate last contact, meaningful interaction, physical visit and completed follow-up.
-- Gmail/Google Calendar and Microsoft Graph metadata adapters; OAuth state/PKCE, encrypted tokens, scope validation, refresh, checkpoints, tombstones, bounded pages, sync leases, disconnect and optional history deletion. Owner-private matching review and a working nonproduction mock connection.
-- Tenant-configurable deal stages, nine-stage beverage default, creation, owner/admin progress updates, won/lost/paused/reopen, optimistic concurrency, reason/history, pipeline cards, search and USD weighted estimates. Closed/paused deals are excluded from open forecast.
-- Deterministic relationship briefing with explained recency/contact/overdue signals. Canonical contextual follow-up and visit actions retain the account and return path.
-- Next.js upgraded to 16.3.8; compatible dependency security fixes applied. Remaining vulnerabilities are explicitly tracked in the security review.
-- Unit/provider fixture tests, real PostgreSQL isolation/replay/OAuth-race rehearsal and mobile/desktop browser acceptance scripts.
-
-## Current work / release state
-
-Release gates and exact TST deployment receipt are maintained in [the validation report](../releases/v0.2-test-report.md). New schema was rehearsed on an isolated child of the verified TST database. No shared-TST fixture users or private mailbox authorizations were created. No production mutation is authorized.
-
-## Remaining application work
-
-| Area | Missing scope / next action |
-|---|---|
-| Communications | Attachments/original-message access, aliases/internal-domain policy, conversation history matching, comprehensive cursor-expiry deletion reconciliation, recurring-calendar occurrence policy, scheduled retry/backoff and disconnected retention sweeper. UI filters currently cover activity type; contact/owner/source predicates exist in the service but date/deal/contact filter UI remains unfinished. |
-| Contacts/relationships | Multi-account person graph, authority/influence/preferences, duplicate detection and audited merge. |
-| SMS | Twilio/provider abstraction, consent/opt-out ledger, sending identity, signed webhook ingestion, delivery receipts, two-way UI and functional provider fixture. Manual external SMS logging works. No integrated SMS is implemented or sent. |
-| Deals | Editing full deal details after creation, reassignment, multiple contacts, activity/task relations, historical forecast/conversion reports and richer board interactions. |
-| Health/recommendations | Tenant-configurable health for agencies/restaurants/chains, purchase coverage and last-purchase evidence, multi-signal recommendations/feedback and recovery measurement. Existing Ohio recommendations remain authoritative; the new briefing is not a purchasing-health score. |
-| Playbooks | Configurable sequences, idempotent canonical Worklist creation, execution audit and cancellation safeguards. |
-| Tenant model | General accounts/parent organizations, multiple memberships/teams, territories, custom fields and generalized non-Ohio account types. |
-| Field/territory | Guided account templates, photo categories, offline drafts, geographic assignment and route-provider optimization. Existing visits/photos/maps/scheduling remain functional. |
-| Recipes | Costing, pricing assumptions, tenant catalog UI, approved branded sell sheets, shareable pages and printable materials. |
-| Events | Event operations, staff scheduling expansion, Eventbrite adapter/mock, costs/attendance/products, configurable observational attribution. |
-| AI/reporting | Shared permission-aware provider abstraction, reviewed communication summaries/drafts, expanded outcome KPIs, exports and full requested E2E coverage. |
-| Security/release | Remaining dependency findings, broader threat review and capacity tests, credential rotation, live provider acceptance, full frozen candidate checks. |
-
-## External activation gates
-
-- No live Google/Microsoft credentials/consent were assumed. Provider fixtures establish application behavior only. See [setup](integration-setup.md).
-- Reported compromised database password must be rotated before production; no rotation is claimed.
-- Production approval is absent. Do not merge/push production/main or create a production tag.
-
-## Exact continuation
-
-1. Read this file, [inventory](../product/feature-inventory.md), [validation](../releases/v0.2-test-report.md), [integration setup](integration-setup.md) and canonical UI/release instructions.
-2. Fetch TST and reconcile actual refs; preserve unrelated wholesale/security release entries and existing migration-ledger gaps. Use a fresh isolated worktree if the main checkout is dirty.
-3. Complete communication operational gaps, then the SMS consent/webhook/mock vertical. Add schema additively and test denial/replay before exposing messaging.
-4. Implement contact graph, configurable health and canonical Worklist-backed playbooks; then field/customer tools and reporting/AI. Continue through these areas; documentation alone is not completion.
-5. For database/browser regression, create an isolated Neon child and use the guarded scripts described in integration-testing.md. Never print connection strings, session cookies or token contents.
-6. Run tests, types, build, responsive acceptance, security review, migration rehearsal and TST deployment verification for each meaningful increment. Select a stable release candidate only after the complete inventory is reconciled.
-
-## Integrated base
-
-Before publication, TST advanced to 3009e9656244c889722073b7519c15b2f23bd5c3. The CRM branch was rebased and concurrent calibration, wholesale purchase pagination and external-link changes were preserved. Integrated regression suite: 808 passing tests.
-
-## Published checkpoint
-
-Application commit `b6d227caf8f707913d43c0ded4ecee2d2da61636` is on staging/tst and its Vercel deployment is READY. Live health confirms test / neon-neat-tst. The receipt-only documentation commit follows it. See the validation report for exact deployment identity. Local acceptance server is stopped; the isolated Neon rehearsal child is retained for reproducibility and may be removed when no longer needed. The main checkout's unrelated local files were preserved.
+1. Complete merged optimized-build and three browser scripts against the isolated TST child; inspect mobile/desktop screenshots and repair failures.
+2. Refresh refs, preserve concurrent release entries, apply/register only the nine reviewed new migrations to verified shared TST after a recovery snapshot.
+3. Commit/push to staging/tst only; wait for exact-SHA Vercel READY and health test/neon-neat-tst. Record receipt and final security/test evidence.
+4. Stop the local acceptance server. No main push/merge, production tag, live provider activation or shared-TST fixture account.

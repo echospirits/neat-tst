@@ -37,6 +37,7 @@ export function AccountAssistant({
       <label>
         Review
         <select
+          aria-label="Review purpose"
           value={purpose}
           onChange={(e) => setPurpose(e.target.value as typeof purpose)}
         >

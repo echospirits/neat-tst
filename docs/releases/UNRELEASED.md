@@ -284,20 +284,13 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 - Production readiness: TST validation recorded in [v0.2 validation](0.2.0-validation.md); future production candidate review remains pending.
 - Rollout notes: neat-tst/tst only; no database migration, provider activation or production promotion.
 
-### Integrate extended CRM into existing account workflows
+### Integrated CRM in existing workflows — 0.2.3-dev
 
-- Description: Retires duplicate Deals/Activities surfaces. Pipeline gains account plans/forecast; Log Visit gains completed conversation channels; existing account Activity and Contacts gain correspondence, briefings, aliases and reviewed person links/merges. Organization Setup controls relationship thresholds. Mail sync gains backoff, internal-domain exclusions, original-message links and retention cleanup.
-- Relevant commits: pending current continuation.
-- Feature flags: existing Core CRM and ACCOUNT_SALES_STATUS entitlements. Live mail still requires CRM_MAIL_ENABLED and provider configuration.
-- Migrations: 20261011153000_integrated_account_workflows; 20261011160000_contact_relationship_mail_operations. Additive only; dormant Deal tables retained.
-- User-visible: yes; no separate Deals or Activities navigation.
-- Production readiness: not selected as a complete candidate. Full remaining brief and final acceptance still in progress. Production remains unchanged.
-- Rollout: isolated TST-child rehearsal, then verified shared TST only. See ADR 0012 and implementation-progress.md.
-
-### Integrated CRM continuation (local, awaiting final TST validation)
-
-- Reuse canonical Log Visit, Pipeline, Contacts and Worklist; retire duplicate Deals/Activities UI.
-- Add business SMS consent/signed callbacks/reviewed sending with mock acceptance, contact relationships, relationship health and mail operation improvements.
-- Add Worklist playbooks, Recipe costing/approved sharing, and EventShift staff scheduling/Eventbrite/observational comparisons.
-- Additive migrations: `20261011153000_integrated_account_workflows`, `20261011160000_contact_relationship_mail_operations`, `20261011170000_business_sms`, `20261011180000_worklist_playbooks`, `20261011190000_recipe_sales_materials`, `20261011200000_event_schedule_operations`.
-- Rehearsed only on isolated TST child at this point. Full automated suite: 821 passing tests. Extended build/browser checks in progress; no production changes or live SMS delivery.
+- Description: Replace duplicate Deals/Activities surfaces with existing Pipeline and Log Visit. Add configurable stages/plans/forecasts, contact relationships/aliases/merges, authorized timeline filters, health and reviewed briefing assistance. Existing Worklist owns playbook tasks and contextual follow-ups; My Schedule owns routes and event staffing. Existing Recipe records gain costing, approval and branded sharing. Account overlays gain categories/parents/territories/teams/custom fields/documents. Analytics adds observed purchasing continuity, staff execution and territory CSV reports.
+- Integrations: Google/Graph gain private matching, label/deletion recovery, complete-rescan reconciliation, recurring occurrence windows, retry backoff and retention. Business SMS adds consent/STOP/signed callbacks/reviewed sends and a mock. Eventbrite, Google Routes and AI have bounded adapters and local acceptance/fallbacks. No live provider is activated.
+- Relevant commits: integrated implementation `a8c8d8f7`; final validation/state-policy repair follows. Rebased onto current TST `165ae527849327e8b223581440885ee6092accc4`, preserving Retail/Restaurants, Florida directory data, state access and all existing release entries.
+- Feature gates: existing Core CRM, Pipeline and Analytics entitlements; mail/SMS/Routes/AI require explicit deployment configuration, plus provider/tenant consent as applicable. Teams/territories do not grant privileges. New account references and signed callbacks honor tenant state access. Fixed flat AND composition and nullable composite relation handling in the shared state guard.
+- Migrations: nine additive migrations from `20261011153000_integrated_account_workflows` through `20261011230000_mail_snapshot_reconciliation`; exact ordered list in the migration runbook. Dormant Deal tables and legacy unowned events are retained.
+- Dependencies: Twilio SDK; patched devalue/nanoid overrides. Remaining audit: six package findings (3 high, 2 moderate, 1 low, 0 critical), documented in security review.
+- Validation/rollout: isolated TST-child database and optimized browser acceptance; final exact shared-TST receipt in [v0.2-test-report](v0.2-test-report.md). No production/main push, migration, credential rotation, tag or live customer message.
+- Limits: metadata-only mailbox capture, provider-linked attachments, opt-in local text drafts rather than full offline sync, daily purchase observations rather than individual order/revenue claims. Live integration acceptance and production activation remain separate.

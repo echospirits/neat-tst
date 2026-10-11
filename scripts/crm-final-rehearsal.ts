@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { prisma } from "../lib/prisma";
+import { prisma, runWithOrganizationStateAccess } from "../lib/prisma";
 import { reconcileMailSnapshot } from "../lib/crm/mail/sync";
 import { loadAssistantEvidence } from "../lib/crm/aiEvidence";
 import { saveSalesPlan, readSalesPlan } from "../lib/crm/pipeline";
@@ -16,9 +16,22 @@ if (
 async function main() {
   const f = JSON.parse(readFileSync("output/crm-rehearsal.json", "utf8")),
     actor = { organizationId: f.orgA, userId: f.userA };
-  const priorFixtures=await prisma.mailboxConnection.findMany({where:{organizationId:f.orgA,provider:{startsWith:'FIXTURE_'}},select:{id:true}});
-  await prisma.accountActivity.deleteMany({where:{organizationId:f.orgA,connectionId:{in:priorFixtures.map(c=>c.id)}}});
-  await prisma.mailboxConnection.deleteMany({where:{organizationId:f.orgA,id:{in:priorFixtures.map(c=>c.id)}}});
+  const priorFixtures = await prisma.mailboxConnection.findMany({
+    where: { organizationId: f.orgA, provider: { startsWith: "FIXTURE_" } },
+    select: { id: true },
+  });
+  await prisma.accountActivity.deleteMany({
+    where: {
+      organizationId: f.orgA,
+      connectionId: { in: priorFixtures.map((c) => c.id) },
+    },
+  });
+  await prisma.mailboxConnection.deleteMany({
+    where: {
+      organizationId: f.orgA,
+      id: { in: priorFixtures.map((c) => c.id) },
+    },
+  });
   const c = await prisma.mailboxConnection.create({
     data: {
       organizationId: f.orgA,
@@ -167,6 +180,19 @@ async function main() {
       }),
     ),
   );
+  const taskWhere = {
+    organizationId: f.orgA,
+    agencyId: f.account.accountId,
+    status: { in: ["OPEN", "IN_PROGRESS"] as ("OPEN" | "IN_PROGRESS")[] },
+  };
+  const expectedTasks = await prisma.worklistItem.count({ where: taskWhere });
+  assert.ok(expectedTasks > 0);
+  assert.equal(
+    await runWithOrganizationStateAccess(f.orgA, () =>
+      prisma.worklistItem.count({ where: taskWhere }),
+    ),
+    expectedTasks,
+  );
   const report = await operationsReport(
     prisma,
     f.orgA,
@@ -174,8 +200,15 @@ async function main() {
     "2026-10-11",
   );
   assert.equal(report.organizationId, f.orgA);
-  await prisma.accountActivity.deleteMany({where:{id:{in:[seen.id,old.id,peer.id]},organizationId:{in:[f.orgA,f.orgB]}}});
-  await prisma.mailboxConnection.deleteMany({where:{id:c.id,organizationId:f.orgA}});
+  await prisma.accountActivity.deleteMany({
+    where: {
+      id: { in: [seen.id, old.id, peer.id] },
+      organizationId: { in: [f.orgA, f.orgB] },
+    },
+  });
+  await prisma.mailboxConnection.deleteMany({
+    where: { id: c.id, organizationId: f.orgA },
+  });
   console.log(
     "PASS complete-rescan absence cleanup, retained/outside/foreign preservation, AI private and cross-tenant retrieval, canonical Pipeline reopening and stale saves, operational report.",
   );

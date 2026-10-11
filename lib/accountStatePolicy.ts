@@ -6,7 +6,7 @@ export type StateScope = { states: string[]; agencyIds: string[]; restaurantIds:
 const models = new Map(Prisma.dmmf.datamodel.models.map(model => [model.name, model]));
 const directories = new Set(['Agency', 'WholesaleAccount', 'Account']);
 const ohioOnly = new Set(['OhlqAnnualSalesRow','OhlqAnnualSalesByWholesaleRow','OhlqAgencyInventoryCurrent','OhlqAgencyInventorySnapshot']);
-const externalModels = new Set(['OrganizationAccountOverlay','AccountTargetingHistory','AccountSalesStatusHistory','ContactImportSession']);
+const externalModels = new Set(['OrganizationAccountOverlay','AccountTargetingHistory','AccountSalesStatusHistory','ContactImportSession','PlaybookRun','EventShift']);
 const referenceIds = (scope: StateScope, model: string, kind: 'agency' | 'restaurant', legacy = false) => {
   const allowed = kind === 'agency' ? (legacy ? [...scope.agencyIds, ...scope.agencyNumbers] : scope.agencyIds) : scope.restaurantIds;
   const references = scope.referencesByModel?.[model]?.[kind];
@@ -15,7 +15,7 @@ const referenceIds = (scope: StateScope, model: string, kind: 'agency' | 'restau
   return references.filter(id => available.has(id));
 };
 const obj = (value: unknown): ObjectValue => value && typeof value === 'object' && !Array.isArray(value) ? value as ObjectValue : {};
-export const combineWhere = (original: unknown, policy: ObjectValue) => ({ ...obj(original), AND: [obj(original).AND ?? {}, policy] });
+export const combineWhere = (original: unknown, policy: ObjectValue) => { const existing=obj(original).AND; return { ...obj(original), AND: [...(Array.isArray(existing)?existing:existing?[existing]:[]), policy] }; };
 
 export function stateWhere(states: readonly string[]) {
   // Legacy Ohio sources sometimes use the state name or have a blank state.
@@ -31,8 +31,9 @@ export function modelStateWhere(model: string, scope: StateScope, visited = new 
   if (directories.has(model)) return stateWhere(scope.states);
   if (ohioOnly.has(model)) return scope.states.includes('OH') ? null : { OR: [] };
   if (externalModels.has(model)) {
-    const idField = model === 'ContactImportSession' ? 'accountId' : 'externalAccountId';
+    const idField = ['ContactImportSession','PlaybookRun'].includes(model) ? 'accountId' : 'externalAccountId';
     return { OR: [
+      ...(model==='EventShift' ? [{externalAccountId:null,accountType:null}] : []),
       { accountType: { in: ['AGENCY'] }, [idField]: { in: referenceIds(scope, model, 'agency') } },
       { accountType: { in: ['WHOLESALE'] }, [idField]: { in: referenceIds(scope, model, 'restaurant') } },
     ] };
@@ -50,7 +51,13 @@ export function modelStateWhere(model: string, scope: StateScope, visited = new 
   for (const relation of metadata?.fields ?? []) {
     if (relation.kind !== 'object' || !relation.relationFromFields?.length || relation.relationFromFields.some(f => ['agencyId','wholesaleAccountId'].includes(f))) continue;
     const parentPolicy = modelStateWhere(relation.type, scope, nextVisited);
-    if (parentPolicy) restrictions.push(relation.isRequired ? { [relation.name]: { is: parentPolicy } } : { OR: [{ [relation.name]: null }, { [relation.name]: { is: parentPolicy } }] });
+    if (parentPolicy) {
+      // Optional composite relations also contain non-null organizationId. A
+      // relation:null filter can incorrectly require that tenant key to be null.
+      const nullableKeys=(relation.relationFromFields??[]).filter(key=>metadata?.fields.some(f=>f.name===key&&!f.isRequired));
+      const absent=nullableKeys.length?nullableKeys.map(key=>({[key]:null})):[{[relation.name]:null}];
+      restrictions.push(relation.isRequired ? { [relation.name]: { is: parentPolicy } } : { OR: [...absent, { [relation.name]: { is: parentPolicy } }] });
+    }
   }
   return restrictions.length ? { AND: restrictions } : null;
 }
@@ -103,7 +110,7 @@ export function assertStateWrite(model: string, value: unknown, scope: StateScop
     if (typeof raw === 'string' && !(field === 'agencyId' ? (model === 'LoggedVisit' ? [...scope.agencyIds, ...scope.agencyNumbers] : scope.agencyIds) : scope.restaurantIds).includes(raw)) throw new Error('This account is outside your organization’s states.');
   }
   if (externalModels.has(model)) {
-    const id = data[model === 'ContactImportSession' ? 'accountId' : 'externalAccountId'];
+    const id = data[['ContactImportSession','PlaybookRun'].includes(model) ? 'accountId' : 'externalAccountId'];
     if (typeof id === 'string') {
       const allowed = ['AGENCY','agency'].includes(String(data.accountType)) ? scope.agencyIds : ['WHOLESALE','wholesale'].includes(String(data.accountType)) ? scope.restaurantIds : [];
       if (!allowed.includes(id)) throw new Error('This account is outside your organization’s states.');

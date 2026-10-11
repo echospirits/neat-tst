@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "../../../../../lib/prisma";
+import { prisma, runWithOrganizationStateAccess } from "../../../../../lib/prisma";
 import { decryptCalendarToken } from "../../../../../lib/calendar/crypto";
 import {
   validSmsSignature,
@@ -74,6 +74,7 @@ export async function POST(
     )
   )
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  return runWithOrganizationStateAccess(connection.organizationId,async()=>{
   const messageId = request.nextUrl.searchParams.get("messageId");
   try {
     if (messageId) {
@@ -157,4 +158,5 @@ export async function POST(
       { status: e instanceof z.ZodError ? 400 : 503 },
     );
   }
+  });
 }

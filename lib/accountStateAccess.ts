@@ -52,9 +52,9 @@ async function assertParentReferences(base: PrismaClient, model: string, value: 
 const referenceQueries = Prisma.dmmf.datamodel.models.flatMap(model => {
   if (['Agency','WholesaleAccount','Account','AccountSalesEvent'].includes(model.name) || model.name.startsWith('Ohlq')) return [];
   const table = model.dbName ?? model.name;
-  if (['OrganizationAccountOverlay','AccountTargetingHistory','AccountSalesStatusHistory','ContactImportSession'].includes(model.name)) {
-    const field = model.name === 'ContactImportSession' ? 'accountId' : 'externalAccountId';
-    return [`SELECT "${field}" AS id, CASE WHEN "accountType"::text='AGENCY' THEN 'agency' ELSE 'restaurant' END AS kind, '${model.name}' AS model FROM "${table}"`];
+  if (['OrganizationAccountOverlay','AccountTargetingHistory','AccountSalesStatusHistory','ContactImportSession','PlaybookRun','EventShift'].includes(model.name)) {
+    const field = ['ContactImportSession','PlaybookRun'].includes(model.name) ? 'accountId' : 'externalAccountId';
+    return [`SELECT "${field}" AS id, CASE WHEN "accountType"::text='AGENCY' THEN 'agency' ELSE 'restaurant' END AS kind, '${model.name}' AS model FROM "${table}" WHERE "${field}" IS NOT NULL`];
   }
   return model.fields.filter(field => ['agencyId','wholesaleAccountId'].includes(field.name)
     && !model.fields.some(relation => relation.kind === 'object' && relation.relationFromFields?.includes(field.name)))

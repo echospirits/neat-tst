@@ -92,16 +92,24 @@ async function main() {
   process.env.APP_BASE_URL = "https://crm.example.invalid";
   process.env.CALENDAR_TOKEN_ENCRYPTION_KEY ||= randomBytes(32).toString("hex");
   const token = randomBytes(24).toString("hex");
-  const twilio = await prisma.smsConnection.create({
-    data: {
-      organizationId: actor.organizationId,
-      provider: "TWILIO",
-      accountSid: `AC${randomBytes(16).toString("hex")}`,
-      sender: `+1${String(Date.now()).slice(-10)}`,
-      credentialsEncrypted: encryptCalendarToken(token),
-      createdByUserId: actor.userId,
-      enabled: false,
+  const twilioData = {
+    organizationId: actor.organizationId,
+    provider: "TWILIO",
+    accountSid: `AC${randomBytes(16).toString("hex")}`,
+    sender: `+1${String(Date.now()).slice(-10)}`,
+    credentialsEncrypted: encryptCalendarToken(token),
+    createdByUserId: actor.userId,
+    enabled: false,
+  };
+  const twilio = await prisma.smsConnection.upsert({
+    where: {
+      organizationId_provider: {
+        organizationId: actor.organizationId,
+        provider: "TWILIO",
+      },
     },
+    create: twilioData,
+    update: twilioData,
   });
   const fields = {
     AccountSid: twilio.accountSid!,

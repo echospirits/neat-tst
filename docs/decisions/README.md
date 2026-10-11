@@ -9,7 +9,9 @@ Use sequential ADRs with context, decision, alternatives/trade-offs, status and 
 - [0005 Jobs and retries](0005-background-jobs.md)
 - [0006 AI abstraction](0006-ai.md)
 - [0007 Account health](0007-health.md)
-- [0008 Deal pipeline](0008-deals.md)
+- [0008 Superseded deal pipeline](0008-deals.md)
 - [0009 Retention and privacy](0009-retention.md)
 - [0010 Migration strategy](0010-migrations.md)
 - [0011 Release identity](0011-release.md)
+
+- [0012 Integrate existing workflows](0012-integrate-existing-workflows.md)

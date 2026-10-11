@@ -43,7 +43,10 @@ async function main() {
       for (const [route, label] of [
         [`/agencies/${fixture.account.accountId}`, "account"],
         ["/pipeline", "pipeline"],
-        [`/visits/new?type=agency&agencyId=${fixture.account.accountId}`, "log-visit"],
+        [
+          `/visits/new?type=agency&agencyId=${fixture.account.accountId}`,
+          "log-visit",
+        ],
         ["/settings/communications", "communications"],
       ]) {
         const response = await page.goto(base + route);
@@ -71,30 +74,63 @@ async function main() {
     await page.waitForURL(new RegExp(`/agencies/${fixture.account.accountId}`));
     await page.goto(`${base}/deals`);
     await page.waitForURL(/\/pipeline/);
-    const visitCount = await db.loggedVisit.count({ where: { organizationId: fixture.orgA } });
+    const visitCount = await db.loggedVisit.count({
+      where: { organizationId: fixture.orgA },
+    });
     for (const title of [firstTitle, secondTitle]) {
-      await page.goto(`${base}/visits/new?type=agency&agencyId=${fixture.account.accountId}`);
-      await page.getByRole('button', { name: 'Phone', exact: true }).click();
-      await page.getByLabel('Conversation notes').fill(title);
-      await page.getByLabel('Visibility').selectOption('PRIVATE');
-      await page.getByLabel('Meaningful exchange with the customer').check();
-      await page.getByRole('button', { name: 'Save interaction', exact: true }).click();
+      await page.goto(
+        `${base}/visits/new?type=agency&agencyId=${fixture.account.accountId}`,
+      );
+      await page.getByRole("button", { name: "Phone", exact: true }).click();
+      await page.getByLabel("Conversation notes").fill(title);
+      await page.getByLabel("Visibility").selectOption("PRIVATE");
+      await page.getByLabel("Meaningful exchange with the customer").check();
+      for (const choice of await page
+        .getByLabel("No, leave open", { exact: true })
+        .all())
+        await choice.check();
+      await page
+        .getByRole("button", { name: "Save interaction", exact: true })
+        .click();
       await page.waitForURL(/interaction=saved/);
       await page.getByText(title, { exact: false }).first().waitFor();
     }
-    assert.equal(await db.loggedVisit.count({ where: { organizationId: fixture.orgA } }), visitCount, 'Calls must not count as visits');
-    assert.equal(await db.accountActivity.count({ where: { organizationId: fixture.orgA, summary: { in: [firstTitle, secondTitle] }, visibility: 'PRIVATE', meaningful: true } }), 2);
+    assert.equal(
+      await db.loggedVisit.count({ where: { organizationId: fixture.orgA } }),
+      visitCount,
+      "Calls must not count as visits",
+    );
+    assert.equal(
+      await db.accountActivity.count({
+        where: {
+          organizationId: fixture.orgA,
+          summary: { in: [firstTitle, secondTitle] },
+          visibility: "PRIVATE",
+          meaningful: true,
+        },
+      }),
+      2,
+    );
     await page.goto(`${base}/agencies/${fixture.account.accountId}`);
-    await page.getByText('Account plan & forecast', { exact: true }).click();
-    await page.getByLabel('Estimated revenue (USD)').fill('4000');
-    await page.getByLabel('Probability (%)').fill('50');
-    await page.getByRole('button', { name: 'Save account plan', exact: true }).click();
-    await page.getByRole('status').filter({ hasText: 'Account plan saved' }).waitFor();
-    await page.getByLabel('Change status', { exact: true }).selectOption('ENGAGED');
-    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await page.getByText("Account plan & forecast", { exact: true }).click();
+    await page.getByLabel("Estimated revenue (USD)").fill("4000");
+    await page.getByLabel("Probability (%)").fill("50");
+    await page
+      .getByRole("button", { name: "Save account plan", exact: true })
+      .click();
+    await page
+      .getByRole("status")
+      .filter({ hasText: "Account plan saved" })
+      .waitFor();
+    await page
+      .getByLabel("Change status", { exact: true })
+      .selectOption("ENGAGED");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await page.waitForURL(/salesStatus=saved/);
     await page.goto(`${base}/pipeline`);
-    await page.getByText('Forecast · $2,000 weighted estimate', { exact: true }).waitFor();
+    await page
+      .getByText("Forecast · $2,000 weighted estimate", { exact: true })
+      .waitFor();
     await page.goto(`${base}/settings/communications`);
     await page.getByText("Try fixture mode", { exact: true }).click();
     await page.getByRole("button", { name: "Create demo connection" }).click();

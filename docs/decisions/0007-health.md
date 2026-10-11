@@ -8,7 +8,7 @@ Extend the existing multi-tenant Neat application without changing the meaning o
 
 ## Decision
 
-Keep recency, purchasing and commitments separate and explain thresholds. Missing input remains unknown. Status: generic health enhancements pending.
+Keep recency, purchasing and commitments separate and explain thresholds. Missing input remains unknown. Implemented with configurable agency/restaurant/chain contact thresholds, purchase recency, contact coverage and overdue Worklist penalties. Missing contact/purchase history prevents a misleading numeric score.
 
 ## Alternatives and trade-offs
 
