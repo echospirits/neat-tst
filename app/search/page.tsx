@@ -102,7 +102,7 @@ export default async function SearchPage({ searchParams }: { searchParams?: Prom
         <div>
           <span className="page-eyebrow">Universal search</span>
           <h1>Find accounts and work</h1>
-          <p className="muted">Search retail retail accounts, restaurant accounts, active Opportunities, and work in one place.</p>
+          <p className="muted">Search retail accounts, restaurant accounts, active Opportunities, and work in one place.</p>
         </div>
       </header>
 

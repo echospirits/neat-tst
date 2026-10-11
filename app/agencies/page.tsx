@@ -115,7 +115,7 @@ export default async function AgenciesPage({
         <div>
           <span className="page-eyebrow">Accounts</span>
           <h1>Retail</h1>
-          <p className="muted">Find retail retail accounts, review account context, and start a visit.</p>
+          <p className="muted">Find retail accounts, review account context, and start a visit.</p>
         </div>
       </header>
       <AccountViewNavigation active="agencies" />
@@ -125,6 +125,7 @@ export default async function AgenciesPage({
       </LiveFilterForm>
       <AgencyCsvImportPanel role={user.role} action={importAgencies} status={params.status} error={params.error} count={params.count} />
 
+      {agencies.length === 0 ? <p className="notice">No retail accounts match your search in the states enabled for your organization.</p> : null}
       <div className="table-scroll"><table className="responsive-table account-directory-table">
         <thead>
           <tr>

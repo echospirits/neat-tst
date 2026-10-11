@@ -28,7 +28,7 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 ### Retail / Restaurants terminology and tenant state access
 
 - Description: Renamed CRM account categories and added independent multi-state tenant access, enforced for account reads and writes. Platform Admin can configure states separately from Core CRM / Intelligence. Echo Spirits gets Ohio and Florida; other existing tenants get Ohio.
-- Relevant commit(s): Commit titled Add Retail and Restaurants with tenant state access for v0.2.
+- Relevant commit(s): bdb54e2c (feature and migrations), e6324fa7 (large-directory query correction), and follow-up validation/wording polish.
 - Feature flag/default: Independent Organization.enabledStates; OH by default, Echo OH+FL. Existing feature plans preserved.
 - Migrations: 20261011130000_tenant_account_states and 20261011131000_abc_florida_retail_seed. The latter creates all 126 ABC retail stores and Echo directory contacts/audit notes/tags on production release; it preserves existing rows.
 - Environment/config: None. Development remains 0.2.3-dev within v0.2.
