@@ -18,9 +18,11 @@ See the [complete feature inventory](../product/feature-inventory.md) for source
 - Current TST Retail/Restaurants wording and state-access changes integrated. New event/playbook references and signed callbacks participate in that state policy.
 - Source documentation, activation instructions, migration/recovery guidance and regression scripts updated.
 
-## Validation / release work in progress
+## Validation and TST delivery
 
-Current merged automated suite: **847 passing tests, 75 suites, no failures/skips**. Additive migrations and isolated DB rehearsals pass. Final merged typecheck, optimized build and all three responsive browser scripts pass. Shared-TST migration/deployment receipt is being completed; exact results live in [v0.2-test-report](../releases/v0.2-test-report.md). Do not replace pending receipt fields with assumed success.
+**847 passing tests, 75 suites, no failures/skips**. Typecheck, optimized build, schema validation, isolated database rehearsals and all three browser scripts pass at 390×844 and 1440×900. Nine additive migrations were applied to shared TST after a recovery snapshot; their checksums match source and existing activity data is unchanged.
+
+Tested application commit `f9819f2c74003048c58e12378afd3184a78159d5` is pushed to staging/tst and its Vercel deployment is READY. Health verifies test/neon-neat-tst. See the exact [release receipt](../releases/v0.2-test-report.md). The local acceptance server is stopped. Production/main remains `af1f396726e3b15e1167f5af2aa6ba426cae9bf9`.
 
 ## External activation and source limits
 
@@ -29,9 +31,6 @@ Current merged automated suite: **847 passing tests, 75 suites, no failures/skip
 - Daily bottles cannot establish transaction order counts or observed revenue forecast accuracy. Reports label retained-history purchase-day observations and unknown coverage honestly.
 - Six dependency package findings remain; see security review. Production credential remediation and production promotion remain separate tasks.
 
-## Exact finishing steps
+## Application continuation complete
 
-1. Complete merged optimized-build and three browser scripts against the isolated TST child; inspect mobile/desktop screenshots and repair failures.
-2. Refresh refs, preserve concurrent release entries, apply/register only the nine reviewed new migrations to verified shared TST after a recovery snapshot.
-3. Commit/push to staging/tst only; wait for exact-SHA Vercel READY and health test/neon-neat-tst. Record receipt and final security/test evidence.
-4. Stop the local acceptance server. No main push/merge, production tag, live provider activation or shared-TST fixture account.
+The authorized application implementation, migration rehearsal, integrated acceptance, TST migrations, commit/push and deployment verification are complete. The items above are live activation and production gates, not claims of completed live-provider acceptance. Production promotion remains a distinct release task.
