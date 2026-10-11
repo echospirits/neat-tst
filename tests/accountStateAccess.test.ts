@@ -3,7 +3,7 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
-import { OrganizationAuditAction } from '@prisma/client';
+import { OrganizationAuditAction, Prisma } from '@prisma/client';
 import { parseEnabledStates } from '../lib/stateOptions';
 import { assertStateWrite, combineWhere, modelStateWhere, scopeReadArgs, stateWhere, type StateScope } from '../lib/accountStatePolicy';
 import { extendWithAccountStateAccess, withAccountStateScope } from '../lib/accountStateAccess';
@@ -88,4 +88,18 @@ test('only a platform admin can save state access; successful changes are audite
   form.delete('enabledStates');
   await assert.rejects(stateAction(async () => ({ id: 'platform' }), transaction)(form), /select-at-least-one-valid-state/);
   assert.equal(writes, 1);
+});
+
+test('large Ohio directories use only each legacy table’s referenced IDs in recursive policies', () => {
+  const ids = Array.from({length: 16000}, (_, i) => 'restaurant-' + i);
+  const scope: StateScope = {...ohio, restaurantIds: ids, referencesByModel: { ...Object.fromEntries(Prisma.dmmf.datamodel.models.map(model => [model.name, {agency: [], restaurant: []}])) ,
+    LoggedVisit: {agency: [], restaurant: [ids[0], 'outside-state']},
+    WorklistItem: {agency: [], restaurant: [ids[1]]},
+    OrganizationAccountOverlay: {agency: [], restaurant: ids},
+  }};
+  const policy = JSON.stringify(modelStateWhere('LoggedVisitContact', scope));
+  assert.ok(policy.includes(ids[0]));
+  assert.ok(!policy.includes('outside-state'));
+  assert.ok(!policy.includes(ids[15999]));
+  assert.ok(policy.length < 30000);
 });

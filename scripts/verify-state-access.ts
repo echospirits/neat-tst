@@ -34,13 +34,13 @@ async function main() {
    assert.equal(account?.tags.length,1);
   });
   const exercised:string[]=[];
-  await withAccountStateScope(fl,async()=>{
-   assert.equal(await db.agency.count({where:{state:'OH'}}),0);
+  for (const checkScope of [fl, ohio]) await withAccountStateScope(checkScope,async()=>{
+   if (checkScope === fl) assert.equal(await db.agency.count({where:{state:'OH'}}),0);
    for(const model of Prisma.dmmf.datamodel.models.filter(m=>modelHasStatePolicy(m.name))){
     const key=model.name[0].toLowerCase()+model.name.slice(1);
     try {
       const include = Object.fromEntries(model.fields.filter(f=>f.kind==='object' && f.relationFromFields?.length).map(f=>[f.name,true]));
-      await (db as any)[key].findMany({take:1,include});exercised.push(model.name);
+      await (db as any)[key].findMany({take:1,include});exercised.push(checkScope.states.join('+') + ':' + model.name);
     }
     catch(error){throw new Error(`${model.name}: ${String(error)}`);}
    }

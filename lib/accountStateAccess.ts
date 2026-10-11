@@ -45,16 +45,47 @@ async function assertParentReferences(base: PrismaClient, model: string, value: 
     }
   }
 }
+// Scalar account references predate foreign keys. Limit their IN predicates to
+// IDs actually referenced by those tables, rather than repeating every account
+// in the statewide directory through each parent relation. This remains an
+// allow-list: orphan/unknown and newly concurrent references fail closed.
+const referenceQueries = Prisma.dmmf.datamodel.models.flatMap(model => {
+  if (['Agency','WholesaleAccount','Account','AccountSalesEvent'].includes(model.name) || model.name.startsWith('Ohlq')) return [];
+  const table = model.dbName ?? model.name;
+  if (['OrganizationAccountOverlay','AccountTargetingHistory','AccountSalesStatusHistory','ContactImportSession'].includes(model.name)) {
+    const field = model.name === 'ContactImportSession' ? 'accountId' : 'externalAccountId';
+    return [`SELECT "${field}" AS id, CASE WHEN "accountType"::text='AGENCY' THEN 'agency' ELSE 'restaurant' END AS kind, '${model.name}' AS model FROM "${table}"`];
+  }
+  return model.fields.filter(field => ['agencyId','wholesaleAccountId'].includes(field.name)
+    && !model.fields.some(relation => relation.kind === 'object' && relation.relationFromFields?.includes(field.name)))
+    .map(field => `SELECT "${field.dbName ?? field.name}" AS id, '${field.name === 'agencyId' ? 'agency' : 'restaurant'}' AS kind, '${model.name}' AS model FROM "${table}" WHERE "${field.dbName ?? field.name}" IS NOT NULL`);
+});
+function rememberReferences(scope: StateScope, value: unknown) {
+  if (!value || typeof value !== 'object') return;
+  for (const [key, raw] of Object.entries(value)) {
+    const id = raw && typeof raw === 'object' && 'set' in raw ? raw.set : raw;
+    const type = (value as Record<string, unknown>).accountType;
+    const kind = key === 'agencyId' ? 'agency' : key === 'wholesaleAccountId' ? 'restaurant'
+      : ['externalAccountId','accountId'].includes(key) ? type === 'AGENCY' ? 'agency' : type === 'WHOLESALE' ? 'restaurant' : null : null;
+    if (kind && typeof id === 'string') for (const references of Object.values(scope.referencesByModel ?? {})) {
+      if (!references[kind].includes(id)) references[kind].push(id);
+    }
+    if (raw && typeof raw === 'object') rememberReferences(scope, raw);
+  }
+}
 const emptyScope = (): StateScope => ({states:[],agencyIds:[],restaurantIds:[],agencyNumbers:[]});
 
 export async function loadStateScope(base: PrismaClient, organizationId: string): Promise<StateScope> {
   const organization = await base.organization.findUnique({where:{id:organizationId},select:{enabledStates:true,active:true,accountStatus:true}});
   const states = organization?.active && !['SUSPENDED','CANCELLED'].includes(organization.accountStatus) ? organization.enabledStates : [];
-  const [retail, restaurants] = await Promise.all([
+  const [retail, restaurants, references] = await Promise.all([
     base.agency.findMany({where:stateWhere(states),select:{id:true,agencyId:true}}),
     base.wholesaleAccount.findMany({where:stateWhere(states),select:{id:true}}),
+    base.$queryRawUnsafe<Array<{ id: string; kind: 'agency' | 'restaurant'; model: string }>>(`SELECT DISTINCT id, kind, model FROM (${referenceQueries.join(' UNION ALL ')}) account_references`),
   ]);
-  return {states,agencyIds:retail.map(a=>a.id),agencyNumbers:retail.map(a=>a.agencyId),restaurantIds:restaurants.map(a=>a.id)};
+  const referencesByModel: NonNullable<StateScope['referencesByModel']> = Object.fromEntries(Prisma.dmmf.datamodel.models.map(model => [model.name, {agency: [], restaurant: []}]));
+  for (const row of references) referencesByModel[row.model][row.kind].push(row.id);
+  return {states,agencyIds:retail.map(a=>a.id),agencyNumbers:retail.map(a=>a.agencyId),restaurantIds:restaurants.map(a=>a.id), referencesByModel};
 }
 
 async function resolveRequestScope(base: PrismaClient): Promise<StateScope | null> {
@@ -121,6 +152,7 @@ export function extendWithAccountStateAccess(base: PrismaClient) {
     for (const key of ['include','select']) if (key in values) (values as Record<string, unknown>)[key] = readSelection[key];
     const result=await query(args);
     remember(scope,model,result);
+    for (const key of ['data','create','update']) rememberReferences(scope, values[key]);
     if(['Agency','WholesaleAccount'].includes(model) && ['create','upsert'].includes(operation) && result && typeof result==='object' && 'id' in result && typeof result.id==='string') {
       const ids=model==='Agency'?scope.agencyIds:scope.restaurantIds;
       if(!ids.includes(result.id))ids.push(result.id);

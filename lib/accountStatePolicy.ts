@@ -2,11 +2,18 @@ import { Prisma } from '@prisma/client';
 import { accountStateValues } from './stateOptions';
 
 type ObjectValue = Record<string, unknown>;
-export type StateScope = { states: string[]; agencyIds: string[]; restaurantIds: string[]; agencyNumbers: string[] };
+export type StateScope = { states: string[]; agencyIds: string[]; restaurantIds: string[]; agencyNumbers: string[]; referencesByModel?: Record<string, { agency: string[]; restaurant: string[] }> };
 const models = new Map(Prisma.dmmf.datamodel.models.map(model => [model.name, model]));
 const directories = new Set(['Agency', 'WholesaleAccount', 'Account']);
 const ohioOnly = new Set(['OhlqAnnualSalesRow','OhlqAnnualSalesByWholesaleRow','OhlqAgencyInventoryCurrent','OhlqAgencyInventorySnapshot']);
 const externalModels = new Set(['OrganizationAccountOverlay','AccountTargetingHistory','AccountSalesStatusHistory','ContactImportSession']);
+const referenceIds = (scope: StateScope, model: string, kind: 'agency' | 'restaurant', legacy = false) => {
+  const allowed = kind === 'agency' ? (legacy ? [...scope.agencyIds, ...scope.agencyNumbers] : scope.agencyIds) : scope.restaurantIds;
+  const references = scope.referencesByModel?.[model]?.[kind];
+  if (!references) return allowed;
+  const available = new Set(allowed);
+  return references.filter(id => available.has(id));
+};
 const obj = (value: unknown): ObjectValue => value && typeof value === 'object' && !Array.isArray(value) ? value as ObjectValue : {};
 export const combineWhere = (original: unknown, policy: ObjectValue) => ({ ...obj(original), AND: [obj(original).AND ?? {}, policy] });
 
@@ -26,8 +33,8 @@ export function modelStateWhere(model: string, scope: StateScope, visited = new 
   if (externalModels.has(model)) {
     const idField = model === 'ContactImportSession' ? 'accountId' : 'externalAccountId';
     return { OR: [
-      { accountType: { in: ['AGENCY'] }, [idField]: { in: scope.agencyIds } },
-      { accountType: { in: ['WHOLESALE'] }, [idField]: { in: scope.restaurantIds } },
+      { accountType: { in: ['AGENCY'] }, [idField]: { in: referenceIds(scope, model, 'agency') } },
+      { accountType: { in: ['WHOLESALE'] }, [idField]: { in: referenceIds(scope, model, 'restaurant') } },
     ] };
   }
   const metadata = models.get(model);
@@ -37,7 +44,7 @@ export function modelStateWhere(model: string, scope: StateScope, visited = new 
     // A sales event belongs to its restaurant; agencyId is the supplying OHLQ store number.
     if (model === 'AccountSalesEvent' && field.name === 'agencyId') continue;
     const relation = metadata!.fields.find(f => f.kind === 'object' && f.relationFromFields?.includes(field.name) && ['Agency','WholesaleAccount'].includes(f.type));
-    const allowed = relation ? { [relation.name]: { is: stateWhere(scope.states) } } : { [field.name]: { in: field.name === 'agencyId' ? (model === 'LoggedVisit' ? [...scope.agencyIds, ...scope.agencyNumbers] : scope.agencyIds) : scope.restaurantIds } };
+    const allowed = relation ? { [relation.name]: { is: stateWhere(scope.states) } } : { [field.name]: { in: field.name === 'agencyId' ? referenceIds(scope, model, 'agency', model === 'LoggedVisit') : referenceIds(scope, model, 'restaurant') } };
     restrictions.push(field.isRequired ? allowed : { OR: [{ [field.name]: null }, allowed] });
   }
   for (const relation of metadata?.fields ?? []) {
