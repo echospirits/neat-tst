@@ -27,12 +27,14 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 
 ### ABC Fine Wine & Spirits Florida directory import (TST data only)
 
+- Retail correction: All 126 stores now use Agency records with ABC-FL identifiers and preserved addresses, phones, coordinates, source evidence and hours. All 126 Echo contacts, overlays/notes and tag assignments moved without changing their identities or contents. Wholesale copies are inactive for reversible audit history. No linked activity was present. Dry-run, atomic apply with field-level preservation assertions, and no-op replay passed; original wholesale importer disabled. See [correction evidence](../data-imports/abc-florida-2026-10-11/CORRECTION.md).
+
 - Description: Imported 126 active Florida ABC stores with addresses, 39 counties, store phones, source coordinates and regular weekly hours. Echo Spirits received 123 named managers plus three store-team contacts, audit notes and a chain tag on every account. Source, county evidence, audit CSV, reproducible TST-only script and receipts are in [the import package](../data-imports/abc-florida-2026-10-11/README.md).
 - Relevant commit(s): Commit titled Record ABC Florida store import and audit evidence.
 - Feature flag/default state: None / N/A; no account targeting, sales status, deal, Worklist or purchase history was created.
 - Migration(s): None. This was an explicit insert-only data operation on verified neon-neat-tst, not a deployment migration.
 - Environment/config: No changes. Import script requires an explicit private TST env file and refuses production or any other database host.
-- User-visible: Yes, 126 stores in Wholesale; Echo Spirits notes/contacts/tags; source-backed regular hours. Three missing manager identities and seven Panhandle weather-hour advisories remain flagged for audit. Licenses, buyer authority and store-specific email remain unknown.
+- User-visible: Yes, 126 stores in Agencies (corrected from Wholesale at the owner's request); Echo Spirits notes/contacts/tags; source-backed regular hours. Three missing manager identities and seven Panhandle weather-hour advisories remain flagged for audit. Licenses, buyer authority and store-specific email remain unknown.
 - Validation: Five focused tests; dry run; atomic serializable apply; replay preserved all records; every persisted core field, hours/source snapshot and tenant-owned contact/overlay/tag verified. Live TST list shows 126 results.
 - Production readiness: Owner audit pending. Git promotion will not move these records. A separate authorized production data import must reconcile audited TST values and production duplicates; do not copy the whole TST database.
 - Rollout notes: User-authorized neat-tst only. Contacts and notes explicitly scoped to org_echo_spirits. Production/main and production data remain untouched.

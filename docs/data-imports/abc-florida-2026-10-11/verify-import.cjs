@@ -1,3 +1,4 @@
+throw new Error('Historical wholesale verifier is superseded; use correct-to-agencies.cjs without --apply. See CORRECTION.md.');
 const fs=require('node:fs'), assert=require('node:assert/strict'), path=require('node:path');
 const {prepare,accountData,knownManager,assertTarget}=require('./import-abc-florida-stores.cjs');
 const env=require('dotenv').parse(fs.readFileSync(process.argv[2])); assertTarget(env);

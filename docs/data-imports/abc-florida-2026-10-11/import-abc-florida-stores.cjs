@@ -111,6 +111,7 @@ function overlayData(row) {
 }
 
 async function run() {
+  throw new Error('Superseded: ABC stores are retail agencies. Do not reimport as Wholesale. See CORRECTION.md.');
   const args = process.argv.slice(2);
   const value = key => args[args.indexOf(key) + 1];
   assert.ok(args.includes('--env-file') && value('--env-file'), 'An explicit --env-file is required; never loads .env implicitly');

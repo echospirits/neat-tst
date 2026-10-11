@@ -1,8 +1,8 @@
 # ABC Florida store import - 2026-10-11
 
-Imported all **126 active Florida stores** in the [ABC directory](https://abcfws.com/stores) into **neat-tst**. Private contacts, notes and tags belong to **Echo Spirits Distilling Co.**, as explicitly selected by the owner. Shared store records follow Neat's existing wholesale/manual account model.
+Imported all **126 active Florida stores** in the [ABC directory](https://abcfws.com/stores) into **neat-tst**. Private contacts, notes and tags belong to **Echo Spirits Distilling Co.**, as explicitly selected by the owner. All 126 stores are now retail agencies, corrected at the owner's request. [Correction and verification](CORRECTION.md). Original wholesale records are inactive audit copies.
 
-[Review the stores in TST](https://neat-tst.vercel.app/wholesale?q=ABC%20Fine%20Wine). Select Echo Spirits Support View to see its contacts and notes. [Audit CSV](audit.csv) contains a direct account link for every store.
+[Review the stores in TST](https://neat-tst.vercel.app/agencies?q=ABC%20Fine%20Wine). Select Echo Spirits Support View to see its contacts and notes. [Audit CSV](audit.csv) contains a direct account link for every store.
 
 ## Data and provenance
 
@@ -18,7 +18,7 @@ Imported all **126 active Florida stores** in the [ABC directory](https://abcfws
 
 Actual Florida liquor-license identifiers, store/buyer-specific emails, buying authority, delivery day, account owner and sales history remain unknown. `MANUAL-ABC-FL-###` is a stable Neat-generated placeholder, not a license. ABC numbers remain in names and source metadata. No Ohio agency/official account link, target status, sales stage, visits, tasks, deals, ratings or purchase history was fabricated. Imported research is labelled **owner audit pending**, not a completed comprehensive assessment.
 
-## Operation and validation
+## Original import operation and validation (historical)
 
 - Verified TST health: `ok=true`, `environment=test`, `databaseTarget=neon-neat-tst`.
 - Neon project `dawn-frog-33352119` (`neat-crm-tst`), branch `br-divine-forest-avwq2b3g`; its Neon branch name `main` belongs to the isolated TST project and is unrelated to production Git `main`.
@@ -30,7 +30,9 @@ Actual Florida liquor-license identifiers, store/buyer-specific emails, buying a
 - Live browser acceptance used the existing Staging Admin session (no session/user creation): TST list showed 126 records; Echo Spirits Support View displayed the imported manager, notes, chain tag, county and all seven daily hours on #003. Mobile 390x844 had document width 375px; desktop 1440x900 had document width 1425px, with no horizontal page overflow. Sales Status remained Not set. Neat currently labels Buying State as Never purchased from its absent purchase ledger; this is not evidence that ABC has never purchased outside that ledger.
 - This package changes data and operational documentation only; application code, schema and dependencies are unchanged. App-wide typecheck/build and synthetic empty/error UI tests are not applicable to this data operation.
 
-## Reproduction
+## Original reproduction (superseded; do not run)
+
+The original wholesale importer and verifier now refuse execution. Use [the retail correction procedure](CORRECTION.md). Commands below are retained only as historical evidence.
 
 The script requires an explicit env file and validates the exact TST identity before constructing a Prisma client. It never loads the repository's `.env`, which may point at production. Use installed project dependencies. From the repository root:
 
