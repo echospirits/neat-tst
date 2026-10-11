@@ -27,3 +27,15 @@ For every implementation that changes user-facing UI:
 - Clearly distinguish clickable, editable, disabled, and static elements, and explain unavailable actions or data.
 - Do not allow unintended horizontal page scrolling on mobile.
 - Verify the UI at 390 x 844 and a representative desktop viewport, including loading, empty, error, disabled, and success states relevant to the change.
+
+## Product and architecture
+
+Neat is a multi-tenant beverage sales operating system. Optimize durable relationships, retention and completed commitments rather than raw activity volume. Capture evidence automatically when practical; preserve human judgment. Read docs/README.md and docs/engineering/implementation-progress.md before substantial work.
+
+- Stack: Next.js App Router, React, strict TypeScript, Prisma, Neon PostgreSQL, Vercel. app/ contains routes and UI; lib/ owns domain services; prisma/ owns schema/migrations; tests/ uses node:test through tsx.
+- Resolve authenticated user and organization on the server. Scope private reads, writes, jobs, imports, exports and AI retrieval. Shared Ohio directories are platform-curated. Support View does not authorize private mailbox access.
+- Preserve backwards compatibility and raw external IDs. Prefer additive migrations; no destructive shared database changes without explicit approval. Verify target identity and rehearse migrations.
+- Providers use typed adapters, encrypted tokens, bounded retries, persisted checkpoints and idempotency. Mock mode must be visibly distinct from live mode. Never log secrets or send AI correspondence automatically.
+- Worklist is the follow-up source of truth. Email initiation is not completed contact and is never a physical visit. Missing data is unknown, not zero. No CFAO engine; manual analytical tags remain supported.
+- Validate inputs with Zod, retain strict types, reuse UI/domain components, and preserve source provenance. Update relevant docs, ADRs and UNRELEASED for significant changes.
+- Definition of done: persisted data and backend behavior, usable authorized UI, error states, passing relevant behavioral/security tests, typecheck/build, migration checks, mobile/desktop acceptance and honest release evidence. Never claim mocked providers are live or the full project complete while substantive inventory gaps remain.

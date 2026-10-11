@@ -2,7 +2,7 @@
 
 The v0.2 development cycle opened on 2026-10-08, immediately after the verified 0.14 production release. Normal development targets only neat-tst/tst. A future production release requires separate explicit authorization.
 
-- TST development version: `0.2.0-dev`.
+- TST development version: `0.2.3-dev` (extended CRM work; historical 0.2 artifacts retained).
 - Verified production baseline: `0.14.0`, tag `v0.14.0`, commit `574bfd0c02c4246ae2a966d86a8a1f96264b3c40`.
 - TST opening base: `1d66a79ce361f2b6a3aee8f6a9f2865927682f54`; complete tree matches production `cde62a7b3470631069bd519dfd2a1c6147bee052`.
 - Previous release: [archive](0.14.0.md), [user notes](0.14.0-user-notes.md), [validation](0.14.0-validation.md), [checklist](0.14.0-checklist.md).
@@ -46,6 +46,20 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 - User-visible: Yes. Paging preserves the open account and purchase disclosure, returns focus to the list navigation, and retains whole-window summary totals.
 - Production readiness: TST verification recorded in [v0.2 validation](0.2.0-validation.md); future production candidate review remains separate.
 - Rollout notes: neat-tst/tst only. The existing account/window query already loads all matching purchase rows; all aggregated product summaries now reach the client, which displays 50 at a time without additional network requests. No database changes or live account mutations.
+
+### CRM relationship activity, mailbox metadata and configurable deals
+
+- Description: Adds account-context activity logging/timeline/privacy, separate relationship timestamps and deterministic briefing actions; Google/Microsoft read-only metadata adapters with owner-private review and nonproduction fixture mode; tenant-configurable deal stages, lifecycle/history and bounded weighted USD estimates. Permanent architecture/product/design/engineering guides and eleven ADRs record actual coverage and gaps.
+- Relevant commit(s): Commits titled `Document CRM architecture and implementation coverage`, `Implement tenant-private relationship activity and deal workflows`, and `Update Next.js and compatible dependency security fixes` on neat-tst/tst; exact deployment receipt is in [validation](v0.2-test-report.md).
+- Feature flag/default state: Existing CORE_CRM applies to new CRM pages. CRM_MAIL_ENABLED is unset/false by default and required for live provider authorization/sync. Fixture creation/sync is nonproduction-only. No entitlement grants, live provider authorizations or scheduled mailbox job are created.
+- Migration(s): `20261011021000_crm_activity_mail_deals`: additive AccountActivity metadata/enum/nullable contact and six tenant-owned mailbox/audit/deal tables. Rehearsed on an isolated child; applied/registered only to host-verified neon-neat-tst. Both pre-existing activity rows/values were preserved by matching fingerprints.
+- Environment/config: CRM_GOOGLE_CLIENT_ID/SECRET, CRM_MICROSOFT_CLIENT_ID/SECRET, CRM_MAIL_ENABLED, existing CALENDAR_TOKEN_ENCRYPTION_KEY, APP_BASE_URL/OAUTH_ENVIRONMENT and CRON_SECRET/CRON_JOBS_ENABLED. [Activation guide](../engineering/integration-setup.md). Development version 0.2.3-dev avoids overwriting historical 0.2 artifacts. Next.js 16.3.8 and compatible lockfile security fixes.
+- User-visible: Yes. Activities/Deals navigation, Communications under More, account Timeline/Deals links, validated forms, private review, contextual follow-up/visit actions and responsive stage cards.
+- Validation: Full suite 807/807; clean install, schema validation/generation, TypeScript and optimized build; isolated PostgreSQL replay/tenant/privacy/correction/OAuth-disconnect/deal-concurrency checks; browser acceptance at 390×844 and 1440×900. Exact final browser/deployment status is recorded in the linked report.
+- Production readiness: **Blocked/incomplete**. This is an implementation checkpoint, not the full requested release candidate. Live provider acceptance/verification and credential rotation are outstanding. Dependency audit retains 17 high, 2 moderate and 1 low findings. SMS, contact graph, configurable health/playbooks, generalized territories/accounts, event operations, recipe sales tools and broader AI/reporting remain incomplete.
+- Rollout notes: Deploy only staging/tst. Existing Worklist calendar consent is separate. Keep real mailbox reads disabled until configured/verified. Preserve additive schema on rollback and retain privacy/null-safe readers; do not blindly roll back to an older binary after new activity types exist. No production/main mutation or stable tag.
+
+
 
 ### Wholesale commercial opportunity stars
 
