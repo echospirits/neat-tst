@@ -1,5 +1,7 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { prisma } from './prisma';
+import { getGeocodeResetForAddressChange } from './location/geocode';
+import { getWholesaleAddressValuesForMerge, type WholesaleAddressProtection } from './wholesaleAddressProtection';
 import {
   getWholesaleLicenseeIdValues,
   isGeneratedWholesaleLicenseeId,
@@ -7,7 +9,7 @@ import {
   syncWholesaleAccountLicenseeIds,
 } from './wholesaleAccounts';
 
-export type MergeAccountValues = {
+export type MergeAccountValues = WholesaleAddressProtection & {
   address: string | null;
   agencyId: string | null;
   city: string | null;
@@ -218,16 +220,14 @@ export const getWholesaleMergeDestinationFallbacks = (
   source: MergeAccountValues,
   destination: MergeAccountValues,
 ) => ({
-  address: preferDestinationValue(destination.address, source.address),
+  ...getWholesaleAddressValuesForMerge(source, destination),
   agencyId: preferDestinationValue(destination.agencyId, source.agencyId),
-  city: preferDestinationValue(destination.city, source.city),
   county: preferDestinationValue(destination.county, source.county),
   deliveryDay: preferDestinationValue(destination.deliveryDay, source.deliveryDay),
   districtId: preferDestinationValue(destination.districtId, source.districtId),
   ownership: preferDestinationValue(destination.ownership, source.ownership),
   phone: preferDestinationValue(destination.phone, source.phone),
   state: preferDestinationValue(destination.state, source.state) ?? 'OH',
-  zip: preferDestinationValue(destination.zip, source.zip),
 });
 
 export const getWholesaleMergeLicenseeIds = (
@@ -261,8 +261,10 @@ const getAccountForMerge = (db: Prisma.TransactionClient | typeof prisma, id: st
     where: { id },
     select: {
       address: true,
+      addressImportProtected: true,
       agencyId: true,
       city: true,
+      cityImportProtected: true,
       county: true,
       deliveryDay: true,
       districtId: true,
@@ -282,6 +284,7 @@ const getAccountForMerge = (db: Prisma.TransactionClient | typeof prisma, id: st
       phone: true,
       state: true,
       zip: true,
+      zipImportProtected: true,
     },
   });
 
@@ -496,8 +499,10 @@ export async function mergeWholesaleAccounts({
           licenseeId: `merged-${sourceId}`,
           mergeSnapshot: {
             address: source.address,
+            addressImportProtected: source.addressImportProtected,
             agencyId: source.agencyId,
             city: source.city,
+            cityImportProtected: source.cityImportProtected,
             county: source.county,
             deliveryDay: source.deliveryDay,
             districtId: source.districtId,
@@ -508,6 +513,7 @@ export async function mergeWholesaleAccounts({
             phone: source.phone,
             state: source.state,
             zip: source.zip,
+            zipImportProtected: source.zipImportProtected,
           },
           mergedAt: new Date(),
           mergedByUserId,
@@ -520,6 +526,7 @@ export async function mergeWholesaleAccounts({
         where: { id: targetId },
         data: {
           ...destinationFallbacks,
+          ...getGeocodeResetForAddressChange(target, destinationFallbacks),
           isActive: true,
           ...(sourceHasNewerEchoPurchase
             ? {

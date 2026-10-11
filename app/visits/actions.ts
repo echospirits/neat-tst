@@ -14,6 +14,7 @@ import {
 import { prisma } from '../../lib/prisma';
 import { hasFeature, requireOrganizationContext } from '../../lib/organizations';
 import { getGeocodeResetForAddressChange } from '../../lib/location/geocode';
+import { getWholesaleAddressProtectionForEdit } from '../../lib/wholesaleAddressProtection';
 import { parseTimeInputToMinutes } from '../../lib/dateTime';
 import { syncWorklistItemCalendar } from '../../lib/calendar/worklistSync';
 import { parseSalesStatus, setAccountSalesStatus } from '../../lib/accountSalesStatus';
@@ -416,6 +417,11 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
               ownership: toOptional(formData.get('newWholesaleOwnership')),
               districtId: toOptional(formData.get('newWholesaleDistrictId')),
               deliveryDay: toOptional(formData.get('newWholesaleDeliveryDay')),
+              ...getWholesaleAddressProtectionForEdit(null, {
+                address: toOptional(formData.get('newWholesaleAddress')),
+                city: toOptional(formData.get('newWholesaleCity')),
+                zip: toOptional(formData.get('newWholesaleZip')),
+              }),
               createdByUserId: user.id,
             },
           });
@@ -435,6 +441,7 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
             name,
             state,
             agencyId: toOptional(formData.get('newWholesaleAgencyId')) ?? undefined,
+            ...getWholesaleAddressProtectionForEdit(existingAccount, nextAddress),
             address: toOptional(formData.get('newWholesaleAddress')) ?? undefined,
             city: toOptional(formData.get('newWholesaleCity')) ?? undefined,
             county: toOptional(formData.get('newWholesaleCounty')) ?? undefined,

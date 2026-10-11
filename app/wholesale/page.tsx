@@ -16,6 +16,7 @@ import { requireUser } from '../../lib/auth';
 import { getDirectionsHref } from '../../lib/crmActionContext';
 import { formatEasternDate } from '../../lib/dateTime';
 import { getGeocodeResetForAddressChange } from '../../lib/location/geocode';
+import { getWholesaleAddressProtectionForEdit } from '../../lib/wholesaleAddressProtection';
 import { prisma } from '../../lib/prisma';
 import { getOrganizationFeatures, requireOrganizationContext } from '../../lib/organizations';
 import {
@@ -325,7 +326,8 @@ async function createWholesale(formData: FormData) {
     : [];
   const matchingAccounts = await prisma.wholesaleAccount.findMany({
     where: getWholesaleLicenseeIdConflictWhere(licenseeIds),
-    select: { id: true, address: true, city: true, state: true, zip: true },
+    select: { id: true, address: true, city: true, state: true, zip: true,
+      addressImportProtected: true, cityImportProtected: true, zipImportProtected: true },
     take: 2,
   });
   const matchingAccountIds = Array.from(new Set(matchingAccounts.map((account) => account.id)));
@@ -366,6 +368,7 @@ async function createWholesale(formData: FormData) {
         where: { id: existingAccountId },
         data: {
           ...accountData,
+          ...getWholesaleAddressProtectionForEdit(existingAccount, accountData),
           ...getGeocodeResetForAddressChange(existingAccount, {
             address: accountData.address,
             city: accountData.city,
@@ -383,6 +386,7 @@ async function createWholesale(formData: FormData) {
     return tx.wholesaleAccount.create({
       data: {
         ...accountData,
+        ...getWholesaleAddressProtectionForEdit(null, accountData),
         licenseeId,
         licenseeIds: { create: getWholesaleLicenseeIdCreateData(licenseeIds) },
         createdByUserId: user.id,

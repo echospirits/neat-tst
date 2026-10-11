@@ -1,6 +1,6 @@
 # Unreleased
 
-No pending production changes after the verified 0.14.0 release. The owner selected v0.2 as the next development cycle; initialize its plan, pending checklist and validation in neat-tst before new feature work.
+The owner authorized wholesale import protection as an immediate patch to the current production version, 0.14.0. TST continues its separate 0.2.0-dev cycle. The existing v0.14.0 tag is unchanged; this patch is recorded separately below.
 
 Previous release: [0.14.0 archive](0.14.0.md), [user notes](0.14.0-user-notes.md), [validation](0.14.0-validation.md), [completed checklist](0.14.0-checklist.md).
 
@@ -21,3 +21,18 @@ Previous release: [0.14.0 archive](0.14.0.md), [user notes](0.14.0-user-notes.md
 ## Pending changes
 
 None.
+
+## Current-version patch — 2026-10-10
+
+### Wholesale names and manual address corrections survive imports
+
+- Description: Preserve existing wholesale names regardless of active status; retain manual street address, city and ZIP corrections independently, including deliberate clearing and existing differences from stored OHLQ records.
+- Relevant commit(s): Selective production adaptation of TST `52dff23d0eefb6d5198eadf676b50264e58744a9`, based on production `574bfd0c02c4246ae2a966d86a8a1f96264b3c40`.
+- Feature flag: None; existing entitlements unchanged.
+- Default flag state: N/A; applies to wholesale import/edit/merge paths.
+- Migration(s): `prisma/migrations/20261010160000_wholesale_address_import_protection/migration.sql`.
+- Environment/config: None. Verify the existing production target before the additive migration; no broad migrate deploy.
+- User-visible: Yes; protected edits stay saved and the edit form explains persistence.
+- Production readiness: 623/623 tests, clean types, optimized build, responsive previews and production-data migration rehearsal passed. Exact live deployment and migration evidence is recorded after push in the linked delivery receipt.
+- Rollout notes: Owner explicitly requested current live versions, overriding the normal hotfix increment. Production stays 0.14.0 and TST stays 0.2.0-dev. Production migration applied and registered at 2026-10-11 01:43:09.784 UTC: 109 address, 109 city and 97 ZIP flags, zero consistency mismatches, every existing value unchanged. Keep flags on application rollback and pause the old importer until protection is restored.
+- Validation: [Current-version production patch](0.14.0-wholesale-import-protection-validation.md); [live delivery receipt](https://github.com/echospirits/neat-tst/blob/tst/docs/releases/0.2.0-wholesale-import-protection-validation.md#current-version-production-delivery).

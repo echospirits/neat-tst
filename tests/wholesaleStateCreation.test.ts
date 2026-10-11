@@ -5,6 +5,7 @@ import test from 'node:test';
 import ts from 'typescript';
 import { normalizeUsState, stateScopedLicenseeIds } from '../lib/usStates';
 import { parseWholesaleLicenseeIds, getPrimaryWholesaleLicenseeId, getWholesaleLicenseeIdCreateData } from '../lib/wholesaleAccounts';
+import { getWholesaleAddressProtectionForEdit } from '../lib/wholesaleAddressProtection';
 
 function loadCreate(existing = false) {
   const source = readFileSync(new URL('../app/wholesale/page.tsx', import.meta.url), 'utf8');
@@ -17,6 +18,7 @@ function loadCreate(existing = false) {
     result: undefined as unknown,
     requireUser: async () => ({ id: 'rep' }), requireOrganizationContext: async () => ({ organizationId: 'tenant' }),
     normalizeUsState, stateScopedLicenseeIds, parseWholesaleLicenseeIds, getPrimaryWholesaleLicenseeId, getWholesaleLicenseeIdCreateData,
+    getWholesaleAddressProtectionForEdit,
     randomUUID: () => 'unique-test', getSelectedTagIds: () => [], getWholesaleLicenseeIdConflictWhere: (ids: string[]) => ({ ids }),
     AccountType: { BAR_RESTAURANT: 'BAR_RESTAURANT' }, toOptional: (value: string) => value.trim() || null,
     getGeocodeResetForAddressChange: () => ({}), syncWholesaleAccountLicenseeIds: async () => {},
@@ -56,6 +58,16 @@ test('invalid states fail without writes and existing forms retain Ohio as the d
   await assert.rejects(run(data), /REDIRECT/);
   assert.equal(writes[0].state, 'OH');
   assert.equal(officialLookups(), 1);
+});
+
+test('production manual creation and matching-account corrections protect entered public address fields', async () => {
+  for (const existing of [false, true]) {
+    const { run, writes } = loadCreate(existing);
+    const data = new FormData();
+    for (const [key, value] of Object.entries({ name: 'Public name', state: 'OH', licenseeIds: '12345', address: '10 Public St', city: 'Columbus', zip: '43215' })) data.set(key, value);
+    await assert.rejects(run(data), /REDIRECT:/);
+    for (const field of ['address', 'city', 'zip']) assert.equal(writes[0][`${field}ImportProtected`], true);
+  }
 });
 
 test('manual creation ignores agency and district IDs without clearing them on a matched account', async () => {
