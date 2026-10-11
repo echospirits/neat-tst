@@ -25,6 +25,18 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 
 ## Pending changes
 
+### Preserve shared wholesale identity during account and visit creation
+
+- Description: Fixes Codex Security Cloud finding `csf_833295095d8454e0959a5569`. The wholesale creation and visit creation actions now reuse a matched shared account without updating canonical fields, reactivating the record, resetting geocodes, replacing its official link, or synchronizing its licensee IDs. Dedicated canonical editing and merging retain their Platform Admin authorization.
+- Relevant commit(s): Commit titled `Preserve shared wholesale identity during creation` on neat-tst/tst.
+- Feature flag/default state: None / N/A; preservation is mandatory for every caller, including Platform Admin submissions through these creation flows.
+- Migration(s): None.
+- Environment/config: None; dependencies and version `0.2.0-dev` unchanged.
+- User-visible: Existing accounts keep their canonical identity when matched by primary/secondary licensee IDs or the visit flow's manual name/address lookup. Tenant visits, contacts, tags, sales status and targeting still attach to the matched account. Nonmatching prospect creation retains its existing behavior. Account corrections use the Platform Admin edit workflow.
+- Validation: Actual action regressions across two organizations and USER/ADMIN/PLATFORM_ADMIN callers, signed-out/taster controls, conflicting/ambiguous matches, inactive records and new prospects are recorded in [v0.2 validation](0.2.0-validation.md).
+- Production readiness: TST implementation validation recorded below; frozen v0.2 candidate review and production promotion remain pending.
+- Rollout notes: neat-tst/tst only. No historical data recovery, migration, backfill, new prospect-ownership schema or tenant canonical-correction overlay is introduced. Submitted canonical corrections and additional licensee IDs are ignored when creation matches an existing account; platform curation must apply any intended correction.
+
 ### Ticket creation for every role and visible screenshot upload
 
 - Description: Fixes the missing new-ticket action for Platform Admin. Every Support queue now has a prominent New support ticket button, including My tickets; the Platform dashboard also links directly to creation. Platform Admin can search/select an organization on the form without entering Support View. Tenant users, org admins and tasters retain authenticated organization ownership. Screenshot upload is visible on the form, with preparation, preview and removal before sending.

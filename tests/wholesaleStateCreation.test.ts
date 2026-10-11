@@ -64,9 +64,11 @@ test('manual creation ignores agency and district IDs without clearing them on a
     const data = new FormData();
     for (const [key, value] of Object.entries({ name: 'Account', state: 'OH', licenseeIds: '12345', agencyId: 'ignored', districtId: 'ignored' })) data.set(key, value);
     await assert.rejects(run(data), /REDIRECT/);
-    assert.equal(writes.length, 1);
-    assert.equal(Object.hasOwn(writes[0], 'agencyId'), false);
-    assert.equal(Object.hasOwn(writes[0], 'districtId'), false);
+    assert.equal(writes.length, existing ? 0 : 1);
+    if (!existing) {
+      assert.equal(Object.hasOwn(writes[0], 'agencyId'), false);
+      assert.equal(Object.hasOwn(writes[0], 'districtId'), false);
+    }
   }
 });
 

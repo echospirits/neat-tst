@@ -15,7 +15,6 @@ import { buildPageMetadata } from '../../lib/appBrand';
 import { requireUser } from '../../lib/auth';
 import { getDirectionsHref } from '../../lib/crmActionContext';
 import { formatEasternDate } from '../../lib/dateTime';
-import { getGeocodeResetForAddressChange } from '../../lib/location/geocode';
 import { prisma } from '../../lib/prisma';
 import { getOrganizationFeatures, requireOrganizationContext } from '../../lib/organizations';
 import {
@@ -25,7 +24,6 @@ import {
   getWholesaleLicenseeIdCreateData,
   getWholesaleLicenseeIdTextSearchWhere,
   parseWholesaleLicenseeIds,
-  syncWholesaleAccountLicenseeIds,
 } from '../../lib/wholesaleAccounts';
 import { LiveFilterForm } from '../components/LiveFilterForm';
 import { AccountViewNavigation } from '../components/AccountViewNavigation';
@@ -325,7 +323,7 @@ async function createWholesale(formData: FormData) {
     : [];
   const matchingAccounts = await prisma.wholesaleAccount.findMany({
     where: getWholesaleLicenseeIdConflictWhere(licenseeIds),
-    select: { id: true, address: true, city: true, state: true, zip: true },
+    select: { id: true, state: true },
     take: 2,
   });
   const matchingAccountIds = Array.from(new Set(matchingAccounts.map((account) => account.id)));
@@ -337,7 +335,7 @@ async function createWholesale(formData: FormData) {
     redirect('/wholesale?status=duplicate-licensee');
   }
 
-  const officialAccount = state === 'OH' ? await prisma.account.findFirst({
+  const officialAccount = !matchingAccountIds.length && state === 'OH' ? await prisma.account.findFirst({
     where: {
       licenseeId: { equals: licenseeId, mode: 'insensitive' },
       type: AccountType.BAR_RESTAURANT,
@@ -361,23 +359,9 @@ async function createWholesale(formData: FormData) {
     const existingAccountId = matchingAccountIds[0];
 
     if (existingAccountId) {
-      const existingAccount = matchingAccounts.find((candidate) => candidate.id === existingAccountId);
-      const updatedAccount = await tx.wholesaleAccount.update({
-        where: { id: existingAccountId },
-        data: {
-          ...accountData,
-          ...getGeocodeResetForAddressChange(existingAccount, {
-            address: accountData.address,
-            city: accountData.city,
-            state,
-            zip: accountData.zip,
-          }),
-          licenseeId,
-        },
-        select: { id: true },
-      });
-      await syncWholesaleAccountLicenseeIds(tx, updatedAccount.id, licenseeIds);
-      return updatedAccount;
+      // Creating tenant activity does not authorize changes to shared identity.
+      // Canonical corrections belong in the Platform Admin edit workflow.
+      return { id: existingAccountId };
     }
 
     return tx.wholesaleAccount.create({

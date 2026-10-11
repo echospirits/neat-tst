@@ -13,7 +13,6 @@ import {
 } from '../../lib/blob';
 import { prisma } from '../../lib/prisma';
 import { hasFeature, requireOrganizationContext } from '../../lib/organizations';
-import { getGeocodeResetForAddressChange } from '../../lib/location/geocode';
 import { parseTimeInputToMinutes } from '../../lib/dateTime';
 import { syncWorklistItemCalendar } from '../../lib/calendar/worklistSync';
 import { parseSalesStatus, setAccountSalesStatus } from '../../lib/accountSalesStatus';
@@ -32,9 +31,7 @@ import {
 import {
   getWholesaleLicenseeIdCreateData,
   getWholesaleLicenseeIdLookupWhere,
-  getWholesaleLicenseeIdValues,
   normalizeWholesaleLicenseeId,
-  syncWholesaleAccountLicenseeIds,
 } from '../../lib/wholesaleAccounts';
 
 const photoTypes: PhotoType[] = [PhotoType.DISPLAY, PhotoType.MENU, PhotoType.OTHER];
@@ -353,26 +350,12 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
         normalizeWholesaleLicenseeId(newWholesaleLicenseeId) ?? toManualLicenseeId(newWholesaleName ?? 'Wholesale account'),
       ], state!)[0];
       const name = newWholesaleName ?? `Wholesale ${licenseeId}`;
-      const officialAccount = newWholesaleLicenseeId && state === 'OH'
-        ? await tx.account.findFirst({
-            where: {
-              licenseeId: { equals: licenseeId, mode: 'insensitive' },
-              type: AccountType.BAR_RESTAURANT,
-            },
-            select: { id: true },
-          })
-        : null;
       const existingAccount = newWholesaleLicenseeId
         ? await tx.wholesaleAccount.findFirst({
             where: getWholesaleLicenseeIdLookupWhere(licenseeId),
             select: {
               id: true,
-              licenseeId: true,
-              licenseeIds: { select: { licenseeId: true } },
-              address: true,
-              city: true,
               state: true,
-              zip: true,
             },
           })
         : await tx.wholesaleAccount.findFirst({
@@ -385,18 +368,24 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
             },
             select: {
               id: true,
-              licenseeId: true,
-              licenseeIds: { select: { licenseeId: true } },
-              address: true,
-              city: true,
               state: true,
-              zip: true,
             },
           });
 
       if (existingAccount && (normalizeUsState(existingAccount.state) ?? 'OH') !== state) {
         redirectVisitWithStatus(formOrigin, 'conflicting-state', locationType);
       }
+      const officialAccount = !existingAccount && newWholesaleLicenseeId && state === 'OH'
+        ? await tx.account.findFirst({
+            where: {
+              licenseeId: { equals: licenseeId, mode: 'insensitive' },
+              type: AccountType.BAR_RESTAURANT,
+            },
+            select: { id: true },
+          })
+        : null;
+      // Reuse shared identity without changing it or synchronizing licensee IDs.
+      // Canonical corrections belong in the Platform Admin edit workflow.
       const wholesaleAccount = existingAccount
         ? existingAccount
         : await tx.wholesaleAccount.create({
@@ -419,40 +408,6 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
               createdByUserId: user.id,
             },
           });
-
-      if (existingAccount) {
-        const nextAddress = {
-          address: toOptional(formData.get('newWholesaleAddress')) ?? existingAccount.address,
-          city: toOptional(formData.get('newWholesaleCity')) ?? existingAccount.city,
-          state,
-          zip: toOptional(formData.get('newWholesaleZip')) ?? existingAccount.zip,
-        };
-        await tx.wholesaleAccount.update({
-          where: { id: existingAccount.id },
-          data: {
-            isActive: true,
-            officialAccountId: officialAccount?.id ?? undefined,
-            name,
-            state,
-            agencyId: toOptional(formData.get('newWholesaleAgencyId')) ?? undefined,
-            address: toOptional(formData.get('newWholesaleAddress')) ?? undefined,
-            city: toOptional(formData.get('newWholesaleCity')) ?? undefined,
-            county: toOptional(formData.get('newWholesaleCounty')) ?? undefined,
-            zip: toOptional(formData.get('newWholesaleZip')) ?? undefined,
-            phone: toOptional(formData.get('newWholesalePhone')) ?? undefined,
-            ownership: toOptional(formData.get('newWholesaleOwnership')) ?? undefined,
-            districtId: toOptional(formData.get('newWholesaleDistrictId')) ?? undefined,
-            deliveryDay: toOptional(formData.get('newWholesaleDeliveryDay')) ?? undefined,
-            ...getGeocodeResetForAddressChange(existingAccount, nextAddress),
-          },
-        });
-        if (newWholesaleLicenseeId) {
-          await syncWholesaleAccountLicenseeIds(tx, existingAccount.id, [
-            ...getWholesaleLicenseeIdValues(existingAccount),
-            licenseeId,
-          ]);
-        }
-      }
 
       wholesaleAccountId = wholesaleAccount.id;
     }
