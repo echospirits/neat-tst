@@ -236,7 +236,7 @@ describe('iPhone Shortcut contact import', () => {
     assert.match(review, /setEmail\(parsed\.emails\[0\]/);
     assert.match(review, /Email \(optional\)/);
     assert.match(review, /Phone \(optional\)/);
-    assert.match(review, />Update Shortcut<\/a>/);
+    assert.match(review, />Update Shortcut<span className="sr-only"> \(opens in a new tab\)<\/span><\/a>/);
     assert.match(review, /action=\{createAccountContact\}/);
   });
 

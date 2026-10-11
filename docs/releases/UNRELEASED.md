@@ -25,6 +25,17 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 
 ## Pending changes
 
+### Keep Neat open when following external website links
+
+- Description: Audited application anchors, Next links and programmatic navigation. Shared agency/wholesale address links now open Google or Apple Maps in a separate tab/window; Shortcut installation/update links on the profile, contact-import setup and review screens do the same. Links include opener isolation and accessible new-tab notices.
+- Relevant commit(s): Commit titled Open external website links separately for v0.2.
+- Feature flag/default state: None / N/A.
+- Migration(s): None.
+- Environment/config: None; version remains `0.2.0-dev`.
+- User-visible: Yes; external browsing preserves the open account or contact form. Browser preferences determine whether the new browsing context is a tab or window. Android's native maps handoff, phone/text/email actions, internal navigation, downloads and Google Calendar OAuth keep their existing workflows.
+- Production readiness: Local build, typecheck, contact regressions and responsive browser checks verified; pending the normal v0.2 release candidate gates. See [validation](0.2.0-external-links-validation.md).
+- Rollout notes: neat-tst/tst only. Existing Directions, research/evidence and website links already opened separately and required no change.
+
 ### Browse every recent wholesale purchase
 
 - Description: Recent wholesale purchases now rank aggregated bottle totals highest first, then product name A-Z, with item code breaking exact ties. Both tracked products and all purchases support independent Previous/Next navigation in groups of 50 through the final item, with visible ranges and controls above and below each list.

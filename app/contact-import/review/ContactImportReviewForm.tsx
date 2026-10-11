@@ -58,7 +58,7 @@ export function ContactImportReviewForm({ accountId, accountType, installUrl, re
     <p>The Shortcut was cancelled or returned data Neat could not read. No contact was saved.</p>
     <div className="contact-import-review-actions">
       <Link className="btn" href={returnTo}>Return to account</Link>
-      {installUrl ? <a className="btn secondary" href={installUrl}>Update Shortcut</a> : null}
+      {installUrl ? <a className="btn secondary" href={installUrl} target="_blank" rel="noopener noreferrer">Update Shortcut<span className="sr-only"> (opens in a new tab)</span></a> : null}
     </div>
   </div>;
 
@@ -66,7 +66,7 @@ export function ContactImportReviewForm({ accountId, accountType, installUrl, re
   return <>
     {needsUpdate ? <div className="toast-notice" role="status">
       Your Send to Neat Shortcut is version {contact.shortcutVersion || 'unknown'}; version {requiredVersion} is recommended.
-      {installUrl ? <> <a href={installUrl}>Update Shortcut</a></> : null}
+      {installUrl ? <> <a href={installUrl} target="_blank" rel="noopener noreferrer">Update Shortcut<span className="sr-only"> (opens in a new tab)</span></a></> : null}
     </div> : null}
     <form action={createAccountContact} className="contact-form contact-import-review-form">
       <input name="accountId" type="hidden" value={accountId} />

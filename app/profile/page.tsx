@@ -134,7 +134,7 @@ export default async function ProfilePage({
           <h2>{IPHONE_SHORTCUT_NAME} — iPhone Shortcut</h2>
           <p className="muted">Select an Apple Contact from an account in Neat, then review it before saving.</p>
           {shortcutConfig.installUrl
-            ? <a className="button-link secondary" href={shortcutConfig.installUrl}>Install or update Shortcut</a>
+            ? <a className="button-link secondary" href={shortcutConfig.installUrl} target="_blank" rel="noopener noreferrer">Install or update Shortcut<span className="sr-only"> (opens in a new tab)</span></a>
             : <p className="muted">The installation link has not been configured yet.</p>}
           <small>Recommended version: {shortcutConfig.version}</small>
         </div>
