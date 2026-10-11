@@ -1,3 +1,5 @@
+import { CommercialOpportunityStars } from '../components/CommercialOpportunityStars';
+import { evidenceModeLabel, type EvidenceMode } from '../../lib/wholesaleAssessment';
 import { AddressLink } from '../components/AccountContactLinks';
 ﻿export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -43,8 +45,7 @@ type WholesaleSortKey =
   | 'address'
   | 'city'
   | 'mostRecentVisit'
-  | 'opportunityPriority'
-  | 'opportunityScore'
+  | 'commercialRating'
   | 'nextAction';
 
 type WholesalePageParams = {
@@ -67,9 +68,11 @@ type WholesaleTableRow = {
   name: string;
   nameHref: string | null;
   nextAction: string | null;
-  opportunityPriority: string | null;
-  opportunityScore: number | null;
+  commercialRating: number | null;
   evidenceMode?: string;
+  assessmentStatus?: string;
+  pending?: boolean;
+  stale?: boolean;
   phone: string | null;
   directionsHref: string | null;
   locationText: string | null;
@@ -85,34 +88,24 @@ const wholesaleSortColumns: Array<{ key: WholesaleSortKey; label: string }> = [
   { key: 'city', label: 'City' },
   { key: 'agencyId', label: 'Agency ID' },
   { key: 'mostRecentVisit', label: 'Most Recent Visit' },
-  { key: 'opportunityPriority', label: 'Opportunity Priority' },
-  { key: 'opportunityScore', label: 'Account Priority' },
+  { key: 'commercialRating', label: 'Commercial opportunity' },
   { key: 'nextAction', label: 'Next Action' },
   { key: 'actions', label: 'Actions' },
 ];
 
 const numericSortKeys = new Set<WholesaleSortKey>([
-  'opportunityScore',
-  'opportunityPriority',
+  'commercialRating',
 ]);
 
 const descendingDefaultSortKeys = new Set<WholesaleSortKey>([
   'mostRecentVisit',
-  'opportunityScore',
+  'commercialRating',
 ]);
-
-const opportunityPriorityRanks: Record<string, number> = {
-  HIGH: 1,
-  MEDIUM: 2,
-  LOW: 3,
-};
 
 const toOptional = (value: string | undefined) => {
   const trimmed = (value ?? '').trim();
   return trimmed.length > 0 ? trimmed : null;
 };
-
-const formatMetric = (value: number | null, suffix = '') => (value === null ? 'n/a' : `${value.toFixed(1)}${suffix}`);
 
 const isWholesaleSortKey = (value: string | undefined, columns = wholesaleSortColumns): value is WholesaleSortKey =>
   columns.some((column) => column.key === value);
@@ -240,10 +233,8 @@ const compareDate = (left: Date | null, right: Date | null, direction: SortDirec
 
 const getSortNumberValue = (row: WholesaleTableRow, sortKey: WholesaleSortKey) => {
   switch (sortKey) {
-    case 'opportunityScore':
-      return row.opportunityScore;
-    case 'opportunityPriority':
-      return row.opportunityPriority ? opportunityPriorityRanks[row.opportunityPriority.toUpperCase()] ?? 99 : null;
+    case 'commercialRating':
+      return row.commercialRating;
     default:
       return null;
   }
@@ -272,10 +263,6 @@ const getSortTextValue = (row: WholesaleTableRow, sortKey: WholesaleSortKey) => 
 
 const sortWholesaleRows = (rows: WholesaleTableRow[], sortKey: WholesaleSortKey, direction: SortDirection) =>
   [...rows].sort((left, right) => {
-    if (numericSortKeys.has(sortKey)) {
-      const mode = (left.evidenceMode ?? '').localeCompare(right.evidenceMode ?? '');
-      if (mode) return mode;
-    }
     const primary =
       sortKey === 'mostRecentVisit'
         ? compareDate(left.mostRecentVisit, right.mostRecentVisit, direction)
@@ -427,11 +414,12 @@ export default async function WholesalePage({
   const hasWholesaleOpportunities = enabledFeatures.has('WHOLESALE_OPPORTUNITIES');
   const visibleSortColumns = hasWholesaleOpportunities
     ? wholesaleSortColumns
-    : wholesaleSortColumns.filter((column) => !['opportunityPriority', 'opportunityScore', 'nextAction'].includes(column.key));
+    : wholesaleSortColumns.filter((column) => !['commercialRating', 'nextAction'].includes(column.key));
 
   const params = (await searchParams) ?? {};
   const q = (params.q ?? '').trim();
-  const sortKey = isWholesaleSortKey(params.sort, visibleSortColumns) ? params.sort : 'name';
+  const requestedSort = ['opportunityScore', 'opportunityPriority'].includes(params.sort ?? '') ? 'commercialRating' : params.sort;
+  const sortKey = isWholesaleSortKey(requestedSort, visibleSortColumns) ? requestedSort : 'name';
   const sortDirection = getSortDirection(params.dir, sortKey);
   const requestedPage = Number.parseInt(params.page ?? '1', 10);
   const accountWhere: Prisma.WholesaleAccountWhereInput = {
@@ -473,11 +461,13 @@ export default async function WholesalePage({
               organizationId,
               wholesaleAccountId: { in: accountIds },
             },
-            orderBy: [{ priority: 'desc' }],
+            orderBy: [{ rating: { sort: 'desc', nulls: 'last' } }],
             select: {
               wholesaleAccountId: true,
-              priorityBand: true,
-              priority: true,
+              rating: true,
+              assessmentStatus: true,
+              refreshRequestedAt: true,
+              calculatedAt: true,
               action: true,
               evidenceMode: true,
             },
@@ -511,9 +501,11 @@ export default async function WholesalePage({
       name: account.name,
       nameHref: `/wholesale/${account.id}`,
       nextAction: opportunity?.action ?? null,
-      opportunityPriority: opportunity?.priorityBand ?? null,
-      opportunityScore: opportunity?.priority ?? null,
-      evidenceMode: opportunity?.evidenceMode.replaceAll('_', ' ').toLowerCase(),
+      commercialRating: opportunity?.rating ?? null,
+      assessmentStatus: opportunity?.assessmentStatus,
+      pending: Boolean(opportunity?.refreshRequestedAt),
+      stale: Boolean(opportunity && Date.now() - opportunity.calculatedAt.getTime() > 48 * 3_600_000),
+      evidenceMode: opportunity ? evidenceModeLabel[opportunity.evidenceMode as EvidenceMode] : undefined,
       phone: account.phone,
       directionsHref: getDirectionsHref(locationText),
       locationText: locationText || null,
@@ -635,7 +627,7 @@ export default async function WholesalePage({
                     {row.locationText ? <AddressLink address={row.locationText} /> : (row.licenseeIdsText ? `Licensee ${row.licenseeIdsText}` : 'Location unavailable')}
                   </span>
                   <span className="account-directory-mobile-only account-directory-context">
-                    {row.opportunityPriority ? <span className={`priority priority-${row.opportunityPriority.toLowerCase()}`}>{row.opportunityPriority}</span> : null}
+                    {hasWholesaleOpportunities ? <CommercialOpportunityStars rating={row.commercialRating} status={row.assessmentStatus} pending={row.pending} stale={row.stale} /> : null}
                     <span>{row.nextAction ?? (row.mostRecentVisit ? `Last visit ${formatEasternDate(row.mostRecentVisit)}` : 'Not visited yet')}</span>
                   </span>
                 </td>
@@ -644,10 +636,7 @@ export default async function WholesalePage({
                 <td className="account-directory-secondary-cell" data-label="City">{row.city}</td>
                 <td className="account-directory-secondary-cell" data-label="Agency ID">{row.agencyId}</td>
                 <td className="account-directory-secondary-cell" data-label="Most Recent Visit">{formatEasternDate(row.mostRecentVisit)}</td>
-                {hasWholesaleOpportunities ? <><td className="account-directory-secondary-cell" data-label="Opportunity Priority">
-                  {row.opportunityPriority ? <span className={`priority priority-${row.opportunityPriority.toLowerCase()}`}>{row.opportunityPriority}</span> : <span className="muted">None active</span>}
-                </td>
-                <td className="account-directory-secondary-cell" data-label="Account priority">{formatMetric(row.opportunityScore)}{row.evidenceMode ? <small className="muted"> {row.evidenceMode}</small> : null}</td>
+                {hasWholesaleOpportunities ? <><td className="account-directory-secondary-cell" data-label="Commercial opportunity"><CommercialOpportunityStars rating={row.commercialRating} status={row.assessmentStatus} pending={row.pending} stale={row.stale} />{row.evidenceMode ? <small className="muted"> {row.evidenceMode}</small> : null}</td>
                 <td className="account-directory-secondary-cell" data-label="Next Action">{row.nextAction ?? '—'}</td>
                 </> : null}
                 <td className="account-directory-actions-cell" data-label="Actions">

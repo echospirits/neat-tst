@@ -11,8 +11,9 @@ import {
   validateAccountResearchRows,
 } from '../lib/accountResearch';
 
-const candidate = ({ name, status, score = 50, refreshedAt }: { name: string; status?: OpportunityStatus; score?: number; refreshedAt?: Date }) => ({
+const candidate = ({ name, status, score = 2, refreshedAt }: { name: string; status?: OpportunityStatus; score?: number; refreshedAt?: Date }) => ({
   name,
+  currentAssessments: [{ rating: score, evidenceMode: 'SALES_BACKED' }],
   opportunities: status ? [{ status, productionScore: score }] : [],
   targetPublicResearch: refreshedAt ? { lastRefreshedAt: refreshedAt } : null,
 });
@@ -38,13 +39,13 @@ it('bounds account research export size', () => {
   assert.equal(normalizeResearchExportLimit('999'), 250);
 });
 
-it('prioritizes pursued accounts, then open opportunities, then opportunity score', () => {
+it('prioritizes pursued accounts then current commercial stars, independent of alphabetical order', () => {
   const candidates = [
-    candidate({ name: 'Medium open', status: OpportunityStatus.OPEN, score: 50 }),
-    candidate({ name: 'High open', status: OpportunityStatus.OPEN, score: 90 }),
-    candidate({ name: 'Pursued', status: OpportunityStatus.ACTIONED, score: 20 }),
+    candidate({ name: 'A limited open', status: OpportunityStatus.OPEN, score: 1 }),
+    candidate({ name: 'Z exceptional open', status: OpportunityStatus.OPEN, score: 5 }),
+    candidate({ name: 'Pursued', status: OpportunityStatus.ACTIONED, score: 0 }),
   ].sort(compareResearchCandidates);
-  assert.deepEqual(candidates.map((item) => item.name), ['Pursued', 'High open', 'Medium open']);
+  assert.deepEqual(candidates.map((item) => item.name), ['Pursued', 'Z exceptional open', 'A limited open']);
 });
 
 it('prioritizes never-researched and oldest accounts before workflow status', () => {

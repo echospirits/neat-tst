@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import Link from 'next/link';
 import { formatEasternDate, formatEasternDateTime } from '../../lib/dateTime';
 import { getTenantAccountSalesEventWhere } from '../../lib/ohlqSalesData';
+import { commercialRatingOrder } from '../../lib/commercialOpportunity';
 import { opportunityFactors } from '../../lib/opportunityPresentation';
 import { prisma } from '../../lib/prisma';
 import { ContextualActions } from '../components/ContextualActions';
@@ -66,7 +67,7 @@ function SourceLine({ names }: { names: string[] }) {
 
 function ResearchSummary({ research, researchOnly = false }: { research: AccountResearch | null; researchOnly?: boolean }) {
   if (!research) return <section className="account-research-summary is-empty" aria-label="Account research summary">
-    <div><h3>Public research</h3><p className="muted">{researchOnly ? 'Research is needed before a provisional fit score can be calculated. Add a complete street address, city, state and ZIP to make this account eligible. Purchase data is unavailable for this assessment.' : 'This account has not been researched yet. The current assessment identifies any available purchase evidence and qualification needs.'}</p></div>
+    <div><h3>Public research</h3><p className="muted">{researchOnly ? 'Research is needed before a commercial rating can be calculated. Add a complete street address, city, state and ZIP to make this account eligible. Purchase data is unavailable for this assessment.' : 'This account has not been researched yet. The current assessment identifies any available purchase evidence and qualification needs.'}</p></div>
   </section>;
   const brands = opportunityFactors(research.localBrandsOnMenu);
   const sources = opportunityFactors(research.sourceUrls);
@@ -130,8 +131,8 @@ export async function OpportunityAccountPanel({ agencyId, wholesaleAccountId, cu
     ? { organizationId, wholesaleAccountId, ...chosenPursuitWhere }
     : { organizationId, ...chosenPursuitWhere, wholesaleAccount: { agencyId: { equals: agencyId, mode: 'insensitive' } } };
   if (isAgencyRollup) {
-    const assessments = await prisma.wholesaleAccountAssessment.findMany({ where: { organizationId, wholesaleAccount: { agencyId: { equals: agencyId, mode: 'insensitive' }, mergedIntoId: null } }, orderBy: [{ evidenceMode: 'asc' }, { priority: 'desc' }], take: 12, include: { wholesaleAccount: { select: { name: true } } } });
-    return <section className="card"><h2>Linked wholesale intelligence</h2>{assessments.map(a => <div key={a.id}><h3><Link href={`/wholesale/${a.wholesaleAccountId}`}>{a.wholesaleAccount.name}</Link></h3><WholesaleAssessmentSummary value={a.assessment} pending={Boolean(a.refreshRequestedAt)} /></div>)}{!assessments.length ? <p>Current assessments are unavailable for linked accounts.</p> : null}</section>;
+    const assessments = await prisma.wholesaleAccountAssessment.findMany({ where: { organizationId, wholesaleAccount: { agencyId: { equals: agencyId, mode: 'insensitive' }, mergedIntoId: null } }, orderBy: commercialRatingOrder(), take: 12, include: { wholesaleAccount: { select: { name: true } } } });
+    return <section className="card"><h2>Linked wholesale intelligence</h2>{assessments.map(a => <div key={a.id}><h3><Link href={`/wholesale/${a.wholesaleAccountId}`}>{a.wholesaleAccount.name}</Link></h3><WholesaleAssessmentSummary value={a.assessment} status={a.assessmentStatus} reason={a.assessmentReason} pending={Boolean(a.refreshRequestedAt)} /></div>)}{!assessments.length ? <p>Current assessments are unavailable for linked accounts.</p> : null}</section>;
   }
 
   if (!wholesaleAccountId) return null;
@@ -165,7 +166,7 @@ export async function OpportunityAccountPanel({ agencyId, wholesaleAccountId, cu
   ].sort((a, b) => b.at.getTime() - a.at.getTime()).slice(0, 40);
   return <>
     <section className="card account-opportunity-panel"><div className="section-heading account-opportunity-heading"><div><span className="page-eyebrow">Why care right now?</span><h2>Opportunity intelligence</h2></div><Link className="btn secondary compact-btn" href="/opportunities">View inbox</Link></div>
-      <WholesaleAssessmentSummary value={currentAssessment?.assessment} pending={Boolean(currentAssessment?.refreshRequestedAt)} />
+      <WholesaleAssessmentSummary value={currentAssessment?.assessment} status={currentAssessment?.assessmentStatus} reason={currentAssessment?.assessmentReason} pending={Boolean(currentAssessment?.refreshRequestedAt)} />
       <IntelligenceFacts facts={[
         { label: 'Chosen pursuits', value: opportunities.length },
         { label: 'Purchase timeline', value: 'Latest 30 entries below' },

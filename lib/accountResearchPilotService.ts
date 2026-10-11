@@ -101,8 +101,8 @@ export async function createAccountResearchPilot({
       jobs: {
         create: candidates.map((candidate, index) => {
           const waterfall = chooseResearchTier([
-            ...candidate.opportunities.map(p => ({ status: p.status, productionScore: 0 })),
-            ...(candidate.currentAssessments ?? []).map(a => ({ status: 'CURRENT', productionScore: a.priority })),
+            ...candidate.opportunities.map(p => ({ status: p.status, rating: null })),
+            ...(candidate.currentAssessments ?? []).map(a => ({ status: 'CURRENT', rating: a.rating })),
           ]);
           const inputSnapshot: AccountResearchInputSnapshot = {
             wholesaleAccountId: candidate.id,

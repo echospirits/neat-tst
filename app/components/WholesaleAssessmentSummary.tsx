@@ -1,34 +1,36 @@
 import type { ReactNode } from 'react';
 import { formatEasternDateTime } from '../../lib/dateTime';
-import { evidenceModeLabel, effortLabel, pathLabel, readAssessment } from '../../lib/wholesaleAssessment';
+import { evidenceModeLabel, readAssessment } from '../../lib/wholesaleAssessment';
+import { CommercialOpportunityStars } from './CommercialOpportunityStars';
 
-export function WholesaleAssessmentSummary({ value, actions, pending = false }: { value: unknown; actions?: ReactNode; pending?: boolean }) {
+export function WholesaleAssessmentSummary({ value, actions, pending = false, status, reason }: {
+  value: unknown; actions?: ReactNode; pending?: boolean; status?: string | null; reason?: string | null;
+}) {
   const assessment = readAssessment(value);
-  if (!assessment) return <p className="muted" role="status">Current assessment unavailable. The next intelligence refresh will assess this account.</p>;
-  const best = assessment.candidates[0];
+  if (!assessment) return <div className="wholesale-assessment"><CommercialOpportunityStars rating={null} status={status ?? 'PENDING'} pending={pending} /><p className="muted">{reason ?? 'Current commercial assessment unavailable. The next refresh will assess this account.'}</p>{actions}</div>;
   const stale = Date.now() - Date.parse(assessment.calculatedAt) > 48 * 3_600_000;
+  const commercial = assessment.commercial;
+  const periods = assessment.coverage.contextPeriods;
+  const quantity = (value: number | null | undefined) => value == null ? 'Unavailable' : value.toLocaleString(undefined, { maximumFractionDigits: 1 });
   return <div className="wholesale-assessment">
-    <div className="assessment-heading"><strong>{assessment.priority.toFixed(0)} / 100 priority</strong><span className="pill">{evidenceModeLabel[assessment.evidenceMode]}</span><span>{assessment.band}</span></div>
-    {stale || pending ? <p role="status" className="muted">{pending ? 'Evidence changed; recalculation is pending.' : 'Assessment is stale; a refresh is due.'}</p> : null}
+    <div className="assessment-heading"><span>Commercial opportunity</span><CommercialOpportunityStars rating={assessment.rating} status={status} pending={pending} stale={stale} /><span className="pill">{evidenceModeLabel[assessment.evidenceMode]}</span></div>
     <strong>{assessment.title}</strong>
-    <p>{best ? pathLabel[best.path] : assessment.state.replaceAll('_', ' ')} · {effortLabel[assessment.effort]}</p>
-    <p>{best?.upside ?? assessment.action}{best ? ` · ${best.confidence.toLowerCase()} confidence in supporting evidence` : ''}</p>
     <ul>{assessment.reasons.slice(0, 2).map(reason => <li key={reason}>{reason}</li>)}</ul>
     {actions}
-    <details className="compact-details"><summary>Why this recommendation?</summary>
-      <p>Priority is a heuristic for sales attention. Compare within the evidence mode; equal scores do not mean equal measured commercial value.</p>
-      <p>Last scored {formatEasternDateTime(new Date(assessment.calculatedAt))} · Last researched {assessment.researchAt ? formatEasternDateTime(new Date(assessment.researchAt)) : 'Unavailable'}</p>
-      <p>Purchases through {assessment.coverage.through ?? 'Unavailable'} · {assessment.coverage.completeDays}/{assessment.coverage.expectedDays} verified report days. Window ends {assessment.asOf}.</p>
-      <p>Observed physical bottles, 30 / 60 / 90 days: {[assessment.observed.bottles30, assessment.observed.bottles60, assessment.observed.bottles90].map(n => n === null ? 'Unavailable' : n.toLocaleString()).join(' / ')}.</p>
-      <p>Observed 750 ml equivalents / 90 days: {assessment.observed.equivalents75090 ?? 'Unavailable'} · Tenant share: {assessment.observed.tenantShare === null ? 'Unavailable' : `${assessment.observed.tenantShare}%`}. Purchases are not observed consumption.</p>
-      {best ? <><p>Observed compatible stream: {best.observedCompatible750 ?? 'Unquantified'} 750 ml equivalents / 90 days. Estimated attainable additional volume: unavailable. Contribution: unavailable.</p>
-        <p>Calculation: potential {best.components.potential} × feasibility {best.components.feasibility} × strategy {best.components.strategy}; policy and coverage caps may apply. Model {assessment.version}.</p>
-        <ul>{best.assumptions.map(s => <li key={s}>{s}</li>)}</ul>
-        {best.evidence.map((e,i) => <p key={i}>{e.claim} · {e.kind} · {e.observedAt.slice(0,10)} · Poured product: {e.pouredProduct ?? 'Unconfirmed'} · {/^https?:\/\//.test(e.source) ? <a href={e.source} target="_blank" rel="noreferrer">Source</a> : e.source}</p>)}
-        <p><strong>What would change this?</strong> {best.changes.join(' ')}</p></> : null}
-      {assessment.limitations.length ? <><strong>Limitations and qualification needs</strong><ul>{assessment.limitations.map((s,i) => <li key={i}>{s}</li>)}</ul></> : null}
-      {assessment.maintenance.length ? <><strong>Relationship and reorder needs</strong><ul>{assessment.maintenance.map(s => <li key={s}>{s}</li>)}</ul></> : null}
-      {assessment.candidates.length > 1 ? <><strong>Alternatives</strong><ul>{assessment.candidates.slice(1).map(c => <li key={c.key}>{c.product.name}: {pathLabel[c.path]} · {c.score} priority · {c.upside}</li>)}</ul><p>Alternatives may overlap; their potential is never added together.</p></> : null}
+    <details className="compact-details"><summary>Commercial evidence and details</summary>
+      <p>Commercial tiers describe portfolio fit and meaningful purchasing depth. They do not predict an order or attainable revenue. Buyer access and pursuit preferences are separate.</p>
+      <p>Last calculated {formatEasternDateTime(new Date(assessment.calculatedAt))} · Last researched {assessment.researchAt ? formatEasternDateTime(new Date(assessment.researchAt)) : 'Unavailable'}</p>
+      <p>Sales foundation: {assessment.coverage.representedFrom ?? 'Unavailable'} through {assessment.coverage.through ?? 'Unavailable'} · {commercial.representedDays ? `${commercial.representedDays} represented days` : 'No sales period'}. Latest source date {assessment.coverage.latestSourceDate ?? 'Unavailable'}. Assessment effective date {assessment.asOf}.</p>
+      {assessment.evidenceMode !== 'RESEARCH_ONLY' ? <>
+        <p>Compatible purchasing: {quantity(commercial.compatible750)} 750 ml equivalents in the represented period; {quantity(commercial.compatible750Per30)} per 30 days.</p>
+        <p>Strongest compatible product: {quantity(commercial.leadingProduct750Per30)} 750 ml equivalents per 30 days. Meaningful core: {quantity(commercial.core750Per30)}; recurring core: {quantity(commercial.recurringCore750Per30)} per 30 days.</p>
+        {periods ? <><p>Recent purchasing context (physical bottles):</p><ul>{([['Latest 30 days', periods.latest30], ['Earlier 30 days', periods.previous30]] as const).map(([label, period]) => <li key={label}>{label}: {period.from} through {period.through}; {period.coveredDays > 0 ? `${quantity(period.bottles)} bottles on ${period.coveredDays} represented days` : 'Source unavailable'}.</li>)}</ul>{periods.latest30.coveredDays !== 30 || periods.previous30.coveredDays !== 30 ? <p>These context periods are not directly comparable unless both have complete, equal coverage. Unavailable days are not zero sales.</p> : null}</> : null}
+        <p>Purchases are observed purchasing, not measured consumer consumption. Distinct purchase dates describe ordering history only when available.</p>
+      </> : <p>Research supports a qualitative commercial tier; it does not establish bottle volumes or invoice costs.</p>}
+      <p>Price basis: {commercial.priceBasis === 'CATALOG_RETAIL_PROXY' ? 'Published catalog retail positioning proxy; not invoice costs' : commercial.priceBasis === 'PUBLISHED_WHOLESALE' ? 'Published account-facing wholesale prices' : commercial.priceBasis === 'MIXED' ? 'Comparable published price bases; see limitations' : 'Unavailable'}.</p>
+      <p>Assessment: {reason ?? assessment.ratingReason} Model {assessment.version}; calibration {assessment.calibrationVersion}.</p>
+      {assessment.limitations.length ? <><strong>Evidence limitations</strong><ul>{assessment.limitations.map((s,i) => <li key={i}>{s}</li>)}</ul></> : null}
+      {assessment.maintenance.length ? <><strong>Existing customer service</strong><ul>{assessment.maintenance.map(s => <li key={s}>{s}</li>)}</ul></> : null}
     </details>
   </div>;
 }

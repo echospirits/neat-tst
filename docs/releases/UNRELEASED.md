@@ -25,6 +25,17 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 
 ## Pending changes
 
+### Wholesale commercial opportunity stars
+
+- Description: Replaces the active wholesale attention score with tenant-specific integer 0–5 commercial opportunity stars and a separate unrated state. Sales-backed ratings use absolute compatible product depth, repeated purchasing where observed, and supporting core volume. Research-only ratings use saved location-scale and price-fit evidence. Buyer access, activity, pursuit state, strategic multipliers and automatic product pitches do not affect commercial grading. Retail-agency scoring is unchanged.
+- Relevant commit(s): Commit titled `Implement wholesale commercial opportunity stars` on neat-tst/tst.
+- Feature flag/default state: Existing `WHOLESALE_OPPORTUNITIES` entitlements; no new grants or defaults.
+- Migration(s): `20261011010000_wholesale_commercial_stars`, additive rating/status/reason/run fields, account-level follow-up enum and audit snapshots, including preserved legacy assessments.
+- Environment/config: Version remains `0.2.0-dev`; no new secrets or provider permissions. Model and fixed calibration boundaries are documented under [wholesale-scoring](../wholesale-scoring/00-WHOLESALE-SCORING-CHARTER.md).
+- User-visible: Shared read-only stars in wholesale directory, account and linked summaries, search, opportunity discovery and dashboard summaries. Rating-based sorting spans evidence modes; zero/unrated remain explicitly discoverable. Default actions retain snooze/dismissal and tenant/account boundaries.
+- Production readiness: Pending a separately authorized frozen release; implementation validation is recorded in [v0.2 validation](0.2.0-validation.md).
+- Rollout notes: Apply only the reviewed additive migration, verify TST host, and recalculate all enabled tenants from saved inputs. Preserve ledger, research, manual tasks and chosen pursuits. Failed refreshes retain last valid assessments. Roll back application writers only with jobs paused; keep schema/snapshots and prefer a forward scoring repair.
+
 ### Preserve shared wholesale identity during account and visit creation
 
 - Description: Fixes Codex Security Cloud finding `csf_833295095d8454e0959a5569`. The wholesale creation and visit creation actions now reuse a matched shared account without updating canonical fields, reactivating the record, resetting geocodes, replacing its official link, or synchronizing its licensee IDs. Dedicated canonical editing and merging retain their Platform Admin authorization.

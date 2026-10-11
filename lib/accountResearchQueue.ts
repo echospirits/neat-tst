@@ -46,7 +46,7 @@ export type ResearchQueueCandidate = {
   createdAt: Date;
   isTargeting?: boolean;
   targetPublicResearch: { lastRefreshedAt: Date | null; identitySnapshot: unknown } | null;
-  currentAssessments?: Array<{ priority: number; evidenceMode: string }>;
+  currentAssessments?: Array<{ rating: number | null; evidenceMode: string }>;
   opportunities: Array<{ productionScore: number; status: OpportunityStatus; actionedAt: Date | null; lastDetectedAt: Date }>;
   upcomingWork: Array<{ dueDate: Date | null; createdAt: Date }>;
   accountResearchJobs?: Array<{
@@ -247,7 +247,7 @@ export async function getPrioritizedAccountResearchQueue({
       createdAt: true,
       targetPublicResearch: { select: { lastRefreshedAt: true, identitySnapshot: true } },
       opportunities: { where: scope, select: { productionScore: true, status: true, actionedAt: true, lastDetectedAt: true } },
-      currentAssessments: { where: scope, select: { priority: true, evidenceMode: true } },
+      currentAssessments: { where: scope, select: { rating: true, evidenceMode: true } },
       accountResearchJobs: {
         where: { status: { in: TERMINAL_RESEARCH_RETRY_STATUSES } },
         orderBy: { createdAt: 'desc' },
@@ -288,13 +288,13 @@ export async function getPrioritizedAccountResearchQueue({
       const rightRefresh = right.targetPublicResearch?.lastRefreshedAt?.getTime() ?? 0;
       const leftIsRetry = left.accountResearchJobs?.length ? 1 : 0;
       const rightIsRetry = right.accountResearchJobs?.length ? 1 : 0;
-      const leftScore = Math.max(0, ...(left.currentAssessments ?? []).map((item) => item.priority));
-      const rightScore = Math.max(0, ...(right.currentAssessments ?? []).map((item) => item.priority));
+      const leftRating = Math.max(-1, ...(left.currentAssessments ?? []).map((item) => item.rating ?? -1));
+      const rightRating = Math.max(-1, ...(right.currentAssessments ?? []).map((item) => item.rating ?? -1));
       return left.priorityBucket - right.priorityBucket
         || leftIsRetry - rightIsRetry
         || rightCoverageDeficit - leftCoverageDeficit
         || leftRefresh - rightRefresh
-        || rightScore - leftScore
+        || rightRating - leftRating
         || left.name.localeCompare(right.name);
     });
   return limit === null ? queue : queue.slice(0, Math.max(0, limit));

@@ -20,6 +20,7 @@ export const opportunityRules = {
     CATEGORY_CONQUEST: false,
     CROSS_SELL: false,
     NO_RECENT_TOUCH: true,
+    COMMERCIAL_FOLLOW_UP: false,
   },
 } as const;
 

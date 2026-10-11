@@ -33,7 +33,7 @@ type ResearchCandidate = {
   licenseeId: string;
   isTargeting?: boolean;
   targetPublicResearch: { lastRefreshedAt: Date | null } | null;
-  currentAssessments?: Array<{ priority: number; evidenceMode: string }>;
+  currentAssessments?: Array<{ rating: number | null; evidenceMode: string }>;
   opportunities: Array<{ productionScore: number; status: OpportunityStatus }>;
 };
 
@@ -134,7 +134,7 @@ export const getResearchPriority = (candidate: Pick<ResearchCandidate, 'opportun
   const refreshInterval = statuses.has(OpportunityStatus.ACTIONED) ? PURSUED_RESEARCH_DAYS : STANDARD_RESEARCH_DAYS;
   return {
     workflowPriority,
-    opportunityScore: Math.max(0, ...(candidate.currentAssessments ?? []).map((item) => item.priority)),
+    commercialRating: Math.max(-1, ...(candidate.currentAssessments ?? []).map((item) => item.rating ?? -1)),
     dueAt: refreshedAt === 0 ? 0 : refreshedAt + refreshInterval * DAY,
     name: candidate.name,
   };
@@ -146,7 +146,7 @@ export const compareResearchCandidates = (
 ) => {
   const a = getResearchPriority(left);
   const b = getResearchPriority(right);
-  return a.dueAt - b.dueAt || a.workflowPriority - b.workflowPriority || b.opportunityScore - a.opportunityScore || a.name.localeCompare(b.name);
+  return a.dueAt - b.dueAt || a.workflowPriority - b.workflowPriority || b.commercialRating - a.commercialRating || a.name.localeCompare(b.name);
 };
 
 export const normalizeResearchExportLimit = (value: string | number | null | undefined): number => {
@@ -187,7 +187,7 @@ export async function getAccountResearchQueue({ db = prisma, now = new Date(), l
     select: {
       id: true, name: true, address: true, city: true, state: true, zip: true, licenseeId: true,
       targetPublicResearch: { select: { lastRefreshedAt: true } },
-      currentAssessments: { where: opportunityScope, select: { priority: true, evidenceMode: true } },
+      currentAssessments: { where: opportunityScope, select: { rating: true, evidenceMode: true } },
       opportunities: { where: { ...opportunityScope, status: { in: activeStatuses } }, select: { productionScore: true, status: true } },
     },
   });

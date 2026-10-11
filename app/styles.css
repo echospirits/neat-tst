@@ -6157,3 +6157,22 @@ legend {
 .account-worklist-item button, .account-worklist-item summary { min-height: 44px; }
 
 .account-worklist-item .inline-meta { display: flex; flex-wrap: wrap; gap: .35rem .75rem; margin-top: .25rem; }
+
+/* Read-only commercial tiers share the same compact treatment in every wholesale view. */
+.commercial-opportunity-rating { display:inline-flex; align-items:center; flex-wrap:wrap; gap:.25rem .45rem; max-width:100%; vertical-align:middle; }
+.commercial-opportunity-stars { font-size:1.2rem; letter-spacing:.06em; line-height:1.2; white-space:nowrap; }
+.commercial-opportunity-stars .is-filled { color:var(--text); }
+.commercial-opportunity-stars .is-empty { color:var(--muted); }
+.commercial-opportunity-state { font-size:.78rem; line-height:1.35; }
+.assessment-heading { display:flex; align-items:center; flex-wrap:wrap; gap:.4rem .65rem; margin-bottom:.65rem; }
+.wholesale-assessment, .opportunities-page, .opportunity-row { min-width:0; }
+.wholesale-assessment p, .wholesale-assessment li { overflow-wrap:anywhere; }
+.wholesale-assessment ul { padding-left:1.25rem; }
+.assessment-actions { display:flex; align-items:flex-start; flex-wrap:wrap; gap:.65rem; margin-block:.75rem; }
+.assessment-actions > p, .assessment-actions > details { flex-basis:100%; margin-block:.25rem; }
+.assessment-actions form { min-width:0; max-width:100%; }
+.opportunities-page .opportunity-filters { flex-wrap:wrap; overflow-x:visible; }
+.opportunities-page .opportunity-filters a[aria-current="page"] { background:var(--accent); border-color:var(--accent); color:var(--theme-text, #111827); font-weight:800; }
+.assessment-actions button, .assessment-actions summary, .opportunities-page .opportunity-filters a { min-height:44px; }
+.assessment-actions summary { display:flex; align-items:center; }
+.assessment-actions input, .assessment-actions select { max-width:100%; }

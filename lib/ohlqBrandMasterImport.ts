@@ -182,6 +182,11 @@ export async function importOhlqBrandMasterCsv({
         });
         importedRows += created.count;
       }
+      // Material catalog changes affect portfolio inclusion, normalized prices,
+      // identities and sizes. Queue saved-input recalculation in the same commit.
+      if (changes.createdItems || changes.updatedItems || changes.removedItems) {
+        await tx.wholesaleAccountAssessment.updateMany({ data: { refreshRequestedAt: new Date() } });
+      }
 
       return {
         ...changes,

@@ -1,3 +1,5 @@
+import { CommercialOpportunityStars } from '../components/CommercialOpportunityStars';
+import { evidenceModeLabel, type EvidenceMode } from '../../lib/wholesaleAssessment';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -71,7 +73,7 @@ export default async function SearchPage({ searchParams }: { searchParams?: Prom
             currentAssessments: {
               where: { organizationId },
               take: 1,
-              select: { priorityBand: true, action: true, evidenceMode: true },
+              select: { rating: true, assessmentStatus: true, refreshRequestedAt: true, calculatedAt: true, action: true, evidenceMode: true },
             },
           },
         }),
@@ -147,7 +149,7 @@ export default async function SearchPage({ searchParams }: { searchParams?: Prom
                   <Link className="search-result-row" href={`/wholesale/${account.id}`} key={account.id}>
                     <span><strong>{account.name}</strong><small>{[account.address, account.city].filter(Boolean).join(', ') || 'No address'}</small></span>
                     <span>
-                      {hasWholesaleOpportunities && account.currentAssessments[0] ? <small>{account.currentAssessments[0].priorityBand} priority · {account.currentAssessments[0].evidenceMode.replaceAll('_', ' ').toLowerCase()} · {account.currentAssessments[0].action}</small> : <small>Wholesale</small>}
+                      {hasWholesaleOpportunities ? <span><CommercialOpportunityStars rating={account.currentAssessments[0]?.rating} status={account.currentAssessments[0]?.assessmentStatus ?? 'PENDING'} pending={Boolean(account.currentAssessments[0]?.refreshRequestedAt)} stale={Boolean(account.currentAssessments[0] && Date.now() - account.currentAssessments[0].calculatedAt.getTime() > 48 * 3_600_000)} />{account.currentAssessments[0] ? <small>{evidenceModeLabel[account.currentAssessments[0].evidenceMode as EvidenceMode]}</small> : null}</span> : <small>Wholesale</small>}
                       <strong>{account.licenseeId}</strong>
                     </span>
                   </Link>

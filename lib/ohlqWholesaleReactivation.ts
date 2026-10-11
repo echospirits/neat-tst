@@ -636,7 +636,22 @@ export async function syncOhlqWholesaleReactivationWorklist({
     recentBuyerPurchaseDatesByLicenseeId: analysis.recentBuyerPurchaseDatesByLicenseeId,
   });
 
-  for (const candidate of plan.createCandidates) {
+  // Commercial grading never creates tasks. This separate existing automation
+  // may create a reactivation only with current positive commercial evidence and
+  // no salesperson suppression. Existing service work remains intact below.
+  const candidateIds = plan.createCandidates.map(c => c.wholesaleAccountId);
+  const [assessments, overlays, heldPursuits] = candidateIds.length ? await Promise.all([
+    db.wholesaleAccountAssessment.findMany({ where: { organizationId, wholesaleAccountId: { in: candidateIds }, rating: { gte: 1 }, assessmentStatus: 'READY', state: 'READY', refreshRequestedAt: null,
+      dismissedKey: null, OR: [{ snoozedUntil: null }, { snoozedUntil: { lte: runAt } }] },
+      select: { wholesaleAccountId: true, wholesaleAccount: { select: { isActive: true, tags: { where: { organizationId }, select: { tag: { select: { name: true } } } } } } } }),
+    db.organizationAccountOverlay.findMany({ where: { organizationId, accountType: 'WHOLESALE', externalAccountId: { in: candidateIds }, OR: [{ opportunitySuppressed: true }, { active: false }] }, select: { externalAccountId: true } }),
+    db.salesOpportunity.findMany({ where: { organizationId, wholesaleAccountId: { in: candidateIds }, OR: [{ status: 'DISMISSED' }, { status: 'SNOOZED', OR: [{ snoozedUntil: null }, { snoozedUntil: { gt: runAt } }] }] }, select: { wholesaleAccountId: true } }),
+  ]) : [[], [], []];
+  const held = new Set([...overlays.map(o => o.externalAccountId), ...heldPursuits.map(p => p.wholesaleAccountId)]);
+  const eligible = new Set(assessments.filter(a => a.wholesaleAccount.isActive !== false && !a.wholesaleAccount.tags.some(t => /DO.NOT.PURSUE/i.test(t.tag.name)) && !held.has(a.wholesaleAccountId)).map(a => a.wholesaleAccountId));
+  const createCandidates = plan.createCandidates.filter(c => eligible.has(c.wholesaleAccountId));
+
+  for (const candidate of createCandidates) {
     await db.worklistItem.create({
       data: {
         organizationId,
@@ -677,14 +692,15 @@ export async function syncOhlqWholesaleReactivationWorklist({
 
   return {
     cancelledItems: 0,
-    createdItems: plan.createCandidates.length,
+    createdItems: createCandidates.length,
     dueDate: formatOhlqDate(analysis.windows.dueDate),
     flaggedPurchasedAgainItems: plan.reviewItems.length,
     matchedAccountsNeedingAction: analysis.candidates.length,
     openItemsAfterSync:
-      plan.createCandidates.length + plan.updateItems.length + plan.reviewItems.length,
+      createCandidates.length + plan.updateItems.length + plan.reviewItems.length,
     recentStartDate: formatOhlqDate(analysis.windows.recentStartDate),
     skippedRecentlyClosedItems: plan.skippedCandidates.length,
+    skippedCommercialOrPursuitState: plan.createCandidates.length - createCandidates.length,
     unmatchedLicenseeIds: analysis.unmatchedLicenseeIds,
     updatedItems: plan.updateItems.length,
     windowStartDate: formatOhlqDate(analysis.windows.ninetyDayStartDate),

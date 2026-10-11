@@ -81,10 +81,10 @@ it('allows guarded manual research in test and production but automatic research
   assert.throws(() => assertAccountResearchAutomationEnabled({ ...staging(), ACCOUNT_RESEARCH_AUTOMATION_ENABLED: 'true' }), /APP_ENV=production/);
 });
 
-it('assigns deep research only to pursued and high-provisional-score accounts', () => {
-  assert.equal(chooseResearchTier([{ status: 'ACTIONED', productionScore: 20 }]).tier, 'DEEP');
-  assert.equal(chooseResearchTier([{ status: 'OPEN', productionScore: 70 }]).tier, 'DEEP');
-  assert.equal(chooseResearchTier([{ status: 'OPEN', productionScore: 69 }]).tier, 'LIGHTWEIGHT');
+it('assigns deep research only to pursued and solid-or-stronger commercial accounts', () => {
+  assert.equal(chooseResearchTier([{ status: 'ACTIONED', rating: 0 }]).tier, 'DEEP');
+  assert.equal(chooseResearchTier([{ status: 'OPEN', rating: 3 }]).tier, 'DEEP');
+  assert.equal(chooseResearchTier([{ status: 'OPEN', rating: 2 }]).tier, 'LIGHTWEIGHT');
 });
 
 it('requires exact street number, city, ZIP, model verdict, and location evidence', () => {

@@ -76,6 +76,7 @@ enum WorklistSource {
 }
 
 enum OpportunityType {
+  COMMERCIAL_FOLLOW_UP
   LAPSED_BUYER
   FIRST_ORDER_FOLLOW_UP
   CATEGORY_CONQUEST
@@ -2459,6 +2460,9 @@ model WholesaleAccountAssessment {
   researchAt         DateTime?
   evidenceMode       String
   state              String
+  rating             Int?
+  assessmentStatus   String @default("PENDING")
+  assessmentReason   String?
   priority           Float
   priorityBand       String
   effort             String
@@ -2476,6 +2480,8 @@ model WholesaleAccountAssessment {
   @@unique([organizationId, wholesaleAccountId])
   @@index([organizationId, evidenceMode, priority])
   @@index([organizationId, state, priority])
+  @@index([organizationId, rating])
+  @@index([organizationId, assessmentStatus, rating])
 }
 
 model WholesaleAssessmentRun {
@@ -2494,6 +2500,7 @@ model WholesaleAssessmentRun {
   evaluated       Int @default(0)
   persisted       Int @default(0)
   ineligible      Int @default(0)
+  skipped         Int @default(0)
   failed          Int @default(0)
   evidenceCounts  Json
   sourceCoverage  Json
@@ -2503,6 +2510,26 @@ model WholesaleAssessmentRun {
 
   @@index([organizationId, startedAt])
   @@index([organizationId, fullSweep, status, completedAt])
+}
+
+// Immutable commercial results by run. Historical legacy scores stay in existing
+// opportunity snapshots; migration never maps them into commercial stars.
+model WholesaleAssessmentSnapshot {
+  id                 String @id
+  organizationId     String
+  wholesaleAccountId String
+  runId              String
+  modelVersion       String
+  configurationId    String
+  asOfDate           DateTime @db.Date
+  calculatedAt       DateTime
+  rating             Int?
+  assessmentStatus   String
+  assessmentReason   String?
+  assessment         Json
+
+  @@unique([runId, wholesaleAccountId])
+  @@index([organizationId, wholesaleAccountId, calculatedAt])
 }
 
 model WholesaleSalesLedgerDay {

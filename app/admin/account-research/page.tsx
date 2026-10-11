@@ -35,7 +35,7 @@ const AGENCY_HOURS_QUEUE_PAGE_SIZE = 25;
 
 const statusMessage = (params: PageParams) => {
   if (params.status === 'dry-run') return `Dry run passed for ${params.rows ?? '0'} rows. Re-upload the same file and choose Import research.`;
-  if (params.status === 'completed') return `${params.imported ?? params.rows ?? '0'} accounts updated and opportunity scores recalculated.`;
+  if (params.status === 'completed') return `${params.imported ?? params.rows ?? '0'} accounts updated and commercial ratings recalculated.`;
   if (params.status === 'failed') return `Import blocked${params.errors ? ` with ${params.errors} validation error(s)` : ''}. Nothing was changed.`;
   if (params.status === 'missing-file') return 'Choose a research CSV before continuing.';
   if (params.status === 'invalid-file') return 'Upload a .csv file generated from the research queue.';
@@ -43,8 +43,8 @@ const statusMessage = (params: PageParams) => {
   if (params.status === 'pilot-continued') return `The next wave of ${params.submitted ?? '0'} account research jobs was submitted.`;
   if (params.status === 'pilot-paused') return `Test run paused after ${params.submitted ?? '0'} submissions and ${params.failed ?? '0'} unsuccessful attempt(s). ${params.remaining ?? '0'} queued accounts were not sent.`;
   if (params.status === 'pilot-checked') return `Checked ${params.checked ?? '0'} jobs: ${params.applied ?? '0'} automatically applied, ${params.rejected ?? '0'} declined by validation, ${params.pending ?? '0'} still running, and ${params.failed ?? '0'} unsuccessful.`;
-  if (params.status === 'pilot-approved') return 'Research approved, saved to the account, and its opportunity score recalculated.';
-  if (params.status === 'pilot-rejected') return 'Research rejected. No account research or opportunity score was changed.';
+  if (params.status === 'pilot-approved') return 'Research approved, saved to the account, and its commercial rating recalculated.';
+  if (params.status === 'pilot-rejected') return 'Research rejected. No account research or commercial rating was changed.';
   if (params.status === 'pilot-failed') return 'The test run action could not be completed. No unvalidated research was applied.';
   return null;
 };
@@ -234,7 +234,7 @@ export default async function AccountResearchPage({ searchParams }: { searchPara
       </div>
 
       <section className="dashboard-section">
-        <SectionHeading description={`Production checks the queue once daily and durably paces requests in ${ACCOUNT_RESEARCH_SUBMISSION_WAVE_SIZE}-account waves. Each scheduled or manually invoked workflow run submits no more than ${ACCOUNT_RESEARCH_AUTOMATIC_DAILY_LIMIT} accounts or reserves more than ${formatUsdMicros(ACCOUNT_RESEARCH_AUTOMATIC_DAILY_BUDGET_MICROS)}. Opportunity scoring continues independently when sales and CRM activity change.`} title="Automatic research" />
+        <SectionHeading description={`Production checks the queue once daily and durably paces requests in ${ACCOUNT_RESEARCH_SUBMISSION_WAVE_SIZE}-account waves. Each scheduled or manually invoked workflow run submits no more than ${ACCOUNT_RESEARCH_AUTOMATIC_DAILY_LIMIT} accounts or reserves more than ${formatUsdMicros(ACCOUNT_RESEARCH_AUTOMATIC_DAILY_BUDGET_MICROS)}. Commercial recalculation continues independently using saved sales, portfolio prices and research.`} title="Automatic research" />
         <article className="card research-workflow-card">
           <div className="research-pilot-summary">
             <div><span className={`status-badge ${automationAvailability.available ? '' : 'muted'}`}>{automationAvailability.available ? 'Enabled' : 'Disabled here'}</span><strong>{automaticStatus.queueCount.toLocaleString()} accounts queued</strong><small>{automaticStatus.submittedToday.toLocaleString()} attempts today · {automaticStatus.uniqueAccountsSubmittedToday.toLocaleString()} unique accounts</small></div>
