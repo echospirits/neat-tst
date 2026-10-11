@@ -1,3 +1,3 @@
 export default function Loading() {
-  return <p role="status">Loading your visible relationship activity…</p>;
+  return <p role="status">Loading mailbox connections and review queue…</p>;
 }

@@ -52,3 +52,7 @@ Release gates and exact TST deployment receipt are maintained in [the validation
 4. Implement contact graph, configurable health and canonical Worklist-backed playbooks; then field/customer tools and reporting/AI. Continue through these areas; documentation alone is not completion.
 5. For database/browser regression, create an isolated Neon child and use the guarded scripts described in integration-testing.md. Never print connection strings, session cookies or token contents.
 6. Run tests, types, build, responsive acceptance, security review, migration rehearsal and TST deployment verification for each meaningful increment. Select a stable release candidate only after the complete inventory is reconciled.
+
+## Integrated base
+
+Before publication, TST advanced to 3009e9656244c889722073b7519c15b2f23bd5c3. The CRM branch was rebased and concurrent calibration, wholesale purchase pagination and external-link changes were preserved. Integrated regression suite: 808 passing tests.
