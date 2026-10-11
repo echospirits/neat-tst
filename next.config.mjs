@@ -2,6 +2,7 @@ import { withWorkflow } from 'workflow/next';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  agentRules: false,
   experimental: {
     serverActions: {
       bodySizeLimit: '20mb',
