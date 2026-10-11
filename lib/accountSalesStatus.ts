@@ -1,3 +1,4 @@
+import { healthRules } from './crm/health';
 import {
   AccountSalesStatus,
   AccountSalesStatusSource,
@@ -69,9 +70,9 @@ export function parseSalesStatus(value: FormDataEntryValue | string | null | und
   return Object.values(AccountSalesStatus).includes(value as AccountSalesStatus) ? value as AccountSalesStatus : null;
 }
 
-export function getBuyingState(lastPurchaseAt: Date | null, now = new Date()): BuyingState {
+export function getBuyingState(lastPurchaseAt: Date | null, now = new Date(), activePurchaseDays: number = SALES_STATUS_THRESHOLDS.activePurchaseDays): BuyingState {
   if (!lastPurchaseAt) return 'NEVER_PURCHASED';
-  const activeCutoff = new Date(now.getTime() - SALES_STATUS_THRESHOLDS.activePurchaseDays * 86_400_000);
+  const activeCutoff = new Date(now.getTime() - activePurchaseDays * 86_400_000);
   return lastPurchaseAt >= activeCutoff ? 'ACTIVE' : 'LAPSED';
 }
 
@@ -81,6 +82,7 @@ export function getNeedsAttentionReasons({
   lastActivityAt,
   lastPurchaseAt,
   nextActionAt,
+  thresholds = SALES_STATUS_THRESHOLDS,
   now = new Date(),
 }: {
   status: AccountSalesStatus;
@@ -88,15 +90,16 @@ export function getNeedsAttentionReasons({
   lastActivityAt: Date | null;
   lastPurchaseAt: Date | null;
   nextActionAt: Date | null;
+  thresholds?: { noMeaningfulActivityDays: number; waitingOnOrderDays: number };
   now?: Date;
 }) {
   const daysSince = (value: Date | null) => value ? Math.floor((now.getTime() - value.getTime()) / 86_400_000) : null;
   const reasons: string[] = [];
   if ((ACTIVE_SALES_STATUSES as readonly AccountSalesStatus[]).includes(status) && (!nextActionAt || nextActionAt < now)) reasons.push('No future next step');
   const activityDays = daysSince(lastActivityAt);
-  if (activityDays === null || activityDays >= SALES_STATUS_THRESHOLDS.noMeaningfulActivityDays) reasons.push(`No meaningful activity in ${SALES_STATUS_THRESHOLDS.noMeaningfulActivityDays} days`);
-  if (status === AccountSalesStatus.WAITING_ON_ORDER && daysSince(statusUpdatedAt)! >= SALES_STATUS_THRESHOLDS.waitingOnOrderDays && (!lastPurchaseAt || lastPurchaseAt < statusUpdatedAt)) {
-    reasons.push(`Waiting on Order for ${SALES_STATUS_THRESHOLDS.waitingOnOrderDays} days without a purchase`);
+  if (activityDays === null || activityDays >= thresholds.noMeaningfulActivityDays) reasons.push(`No meaningful activity in ${thresholds.noMeaningfulActivityDays} days`);
+  if (status === AccountSalesStatus.WAITING_ON_ORDER && daysSince(statusUpdatedAt)! >= thresholds.waitingOnOrderDays && (!lastPurchaseAt || lastPurchaseAt < statusUpdatedAt)) {
+    reasons.push(`Waiting on Order for ${thresholds.waitingOnOrderDays} days without a purchase`);
   }
   return reasons;
 }
@@ -169,14 +172,15 @@ export async function getLatestPurchaseAt({ accountType, externalAccountId, orga
 
 export async function getAccountSalesStatusSummary({ accountType, externalAccountId, organizationId, db = prisma, now = new Date() }: { accountType: SalesAccountType; externalAccountId: string; organizationId: string; db?: SalesStatusDb; now?: Date }) {
   await assertEntitled(db, organizationId);
-  const [overlay, lastPurchaseAt] = await Promise.all([
+  const [overlay, lastPurchaseAt, preferences] = await Promise.all([
     db.organizationAccountOverlay.findUnique({ where: { organizationId_accountType_externalAccountId: { organizationId, accountType, externalAccountId } }, select: { assignedUserId: true, salesStatus: true, salesStatusUpdatedAt: true, salesStatusUpdatedBy: true } }),
     getLatestPurchaseAt({ accountType, externalAccountId, organizationId, db }),
+    db.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { crmPreferences: true } }),
   ]);
   const changedBy = overlay?.salesStatusUpdatedBy ? await db.user.findFirst({ where: { id: overlay.salesStatusUpdatedBy, organizationId }, select: { email: true, name: true, firstName: true, lastName: true } }) : null;
   return {
     assignedUserId: overlay?.assignedUserId ?? null,
-    buyingState: getBuyingState(lastPurchaseAt, now),
+    buyingState: getBuyingState(lastPurchaseAt, now, healthRules((preferences.crmPreferences as Record<string, unknown>).health).purchaseDays),
     changedBy,
     lastPurchaseAt,
     status: overlay?.salesStatus ?? AccountSalesStatus.TARGET,

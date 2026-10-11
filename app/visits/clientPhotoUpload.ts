@@ -229,7 +229,11 @@ export function useVisitPhotoFormAction(action: (formData: FormData) => void | P
       return;
     }
 
-    await action(formData);
+    try {
+      await action(formData);
+    } catch {
+      setPhotoUploadError('Could not save. Your entries are retained. Check your connection and try again.');
+    }
   };
 
   return { formAction, photoUploadError };

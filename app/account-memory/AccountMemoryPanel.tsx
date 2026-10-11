@@ -1,3 +1,6 @@
+import { SmsConversation } from './SmsConversation';
+import { RecordPicker } from '../components/RecordPicker';
+import { ContactRelationships } from './ContactRelationships';
 import { SubmitButton } from '../components/SubmitButton';
 import { getCommunicationHref } from '../../lib/accountMemory';
 import { getIPhoneShortcutConfig } from '../../lib/contactImport';
@@ -7,6 +10,7 @@ import { saveAccountNotes, updateAccountContact } from './actions';
 
 export type AccountMemoryContact = {
   id: string; name: string; role: string | null; email: string | null; phone: string | null;
+  relationshipOwnerId?: string | null; emailAliases?: string[]; phoneAliases?: string[]; preferredChannel?: string | null; decisionAuthority?: string | null; influenceLevel?: string | null; personKey?: string | null;
   notes: string | null; isPrimary: boolean; active: boolean;
 };
 
@@ -14,6 +18,7 @@ type Props = {
   accountId: string;
   accountType: 'AGENCY' | 'WHOLESALE';
   contacts: AccountMemoryContact[];
+  users?: Array<{ id: string; name: string }>;
   notes: string | null;
   returnTo: string;
 };
@@ -24,7 +29,7 @@ const LocationFields = ({ accountId, accountType, returnTo }: Pick<Props, 'accou
   <input name="returnTo" type="hidden" value={returnTo} />
 </>;
 
-export function AccountMemoryPanel({ accountId, accountType, contacts, notes, returnTo }: Props) {
+export function AccountMemoryPanel({ accountId, accountType, contacts, notes, returnTo, users = [] }: Props) {
   const shortcutConfig = getIPhoneShortcutConfig();
   const active = contacts.filter((contact) => contact.active);
   const inactive = contacts.filter((contact) => !contact.active);
@@ -48,12 +53,18 @@ export function AccountMemoryPanel({ accountId, accountType, contacts, notes, re
           <label>Role / title<input defaultValue={contact.role ?? ''} name="role" /></label>
           <label>Email<input defaultValue={contact.email ?? ''} inputMode="email" name="email" type="email" /></label>
           <label>Phone<input defaultValue={contact.phone ?? ''} inputMode="tel" name="phone" type="tel" /></label>
+          <RecordPicker label="Relationship owner" name="relationshipOwnerId" options={users.map(user => ({ value: user.id, label: user.name }))} defaultValue={contact.relationshipOwnerId ?? ""} placeholder="Unassigned" clearLabel="Unassigned" />
+          <label>Other phone numbers<input name="phoneAliases" defaultValue={contact.phoneAliases?.join(', ') ?? ''} placeholder="Separate with commas" /></label><label>Other email addresses<input name="emailAliases" defaultValue={contact.emailAliases?.join(', ') ?? ''} placeholder="Separate with commas" /></label>
+          <label>Preferred channel<select name="preferredChannel" defaultValue={contact.preferredChannel ?? ''}><option value="">Not recorded</option><option value="EMAIL">Email</option><option value="PHONE">Phone</option><option value="SMS">Text</option><option value="IN_PERSON">In person</option></select></label>
+          <label>Decision role<select name="decisionAuthority" defaultValue={contact.decisionAuthority ?? ''}><option value="">Not recorded</option><option value="DECISION_MAKER">Decision maker</option><option value="BUYER">Buyer</option><option value="INFLUENCER">Influencer</option><option value="COORDINATOR">Event coordinator</option><option value="OTHER">Other</option></select></label>
+          <label>Influence<select name="influenceLevel" defaultValue={contact.influenceLevel ?? ''}><option value="">Not recorded</option><option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option></select></label>
           <label className="contact-form-wide">Contact notes<textarea defaultValue={contact.notes ?? ''} name="notes" rows={3} /></label>
           <label className="checkbox-label"><input defaultChecked={contact.isPrimary} name="isPrimary" type="checkbox" value="true" /> Primary contact</label>
           <label className="checkbox-label"><input defaultChecked={contact.active} name="active" type="checkbox" value="true" /> Active</label>
           <SubmitButton type="submit">Save contact</SubmitButton>
         </form>
       </details>
+      {contact.active ? <ContactRelationships id={contact.id} email={contact.email} personKey={contact.personKey} /> : null}
     </div>
   </article>;
 
@@ -73,6 +84,7 @@ export function AccountMemoryPanel({ accountId, accountType, contacts, notes, re
       <div className="section-heading"><h2>Contacts</h2><span className="pill">{active.length}</span></div>
       <div className="contact-list">{active.length ? active.map(renderContact) : <p className="muted">No contacts yet.</p>}</div>
       {inactive.length ? <details className="inactive-contacts"><summary>{inactive.length} inactive</summary><div className="contact-list">{inactive.map(renderContact)}</div></details> : null}
+      <SmsConversation contacts={active.map(contact => ({ id: contact.id, name: contact.name, phone: contact.phone }))} />
       <details className="contact-import-disclosure"><summary>Add or import a contact</summary><ContactImportForm accountId={accountId} accountType={accountType} installUrl={shortcutConfig.installUrl} returnTo={returnTo} shortcutVersion={shortcutConfig.version} /></details>
     </article>
   </section>;

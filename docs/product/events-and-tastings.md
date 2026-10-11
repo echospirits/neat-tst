@@ -1,15 +1,11 @@
-# Events and tastings
+# Events, tastings and staff scheduling
 
-Audit baseline: TST `5faee9df930bd76b5e56b669f58a57210527f7d5`, inspected 2026-10-10.
+Events extend EventShift inside My Schedule. Supported types are tasting, training, consumer/account event, tour, sampling and promotion. Capture date/time, location, account, staff, products/quantities, attendance, samples, costs and outcomes. Edits use optimistic versions; repeated creates deduplicate. Overlapping open/confirmed staff assignments are rejected. A cancelled event remains in history.
 
-Tasting visits and event-related legacy models exist, but a full event-management workspace, Eventbrite adapter, attendance/cost management and staff scheduling are not complete. Before/after comparisons must state the window, data coverage and confounders; they cannot establish causality.
+Account events link to canonical Log Visit for uploaded photo proof and Worklist follow-ups. Event pages display those existing visits through the shared activity component. External HTTPS photo links can also be recorded. Event entry does not itself count as a physical visit.
 
-## Implementation references
+Eventbrite uses a tenant-owned encrypted token and organization ID, verified by read access before saving. Each explicit import processes one bounded page and persists its cursor; failures retain the cursor. A nonproduction mock is provided. New provider records enter My Schedule; subsequent provider values are retained for review without overwriting local schedules, staff or outcomes. Attendance is entered from verified event results; attendee personal information is not imported. Disconnect removes the stored credential and retains CRM history.
 
-- `prisma/schema.prisma`
-- `app/visits`
-- `lib/visitWorkflow.ts`
+Observational comparison supports 7–90 day windows immediately before/after the event or the same prior-year period. The event date is excluded. Totals use tenant-product DAILY_V3 wholesale ledger events and require full daily coverage. Missing/future coverage stays unknown. Report dates are not exact order timestamps. These observations do not establish causation. Agency event attribution is unavailable until an equivalent daily tenant-product coverage source is supported.
 
-## Validation and remaining work
-
-See [implementation progress](../engineering/implementation-progress.md), [feature inventory](../product/feature-inventory.md), and [test report](../releases/v0.2-test-report.md). Existing behavior above is source-audited; it is not a claim of fresh live verification. Changes must update this document and the inventory.
+Legacy EventShift rows remain unassigned to tenants until their ownership is verified. Tenant pages never display unassigned rows.

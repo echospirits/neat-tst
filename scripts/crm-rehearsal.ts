@@ -12,7 +12,9 @@ import {
   disconnectMailbox,
   syncMailbox,
 } from "../lib/crm/mail/sync";
-import { initializeDealStages, createDeal, moveDeal } from "../lib/crm/deals";
+import { saveSalesPlan } from "../lib/crm/pipeline";
+import { setAccountSalesStatus } from "../lib/accountSalesStatus";
+import { relateContacts } from "../lib/crm/contacts";
 import { getAccountBriefing } from "../lib/crm/briefing";
 import { MockMailAdapter } from "../lib/crm/mail/mock";
 import { beginMailboxOAuth, finishMailboxOAuth } from "../lib/crm/mail/oauth";
@@ -200,64 +202,10 @@ async function main() {
       .matchStatus,
     "CORRECTED",
   );
-  await db.$transaction((tx) => initializeDealStages(tx, actor));
-  await db.$transaction((tx) => initializeDealStages(tx, other));
-  const stages = await db.dealStage.findMany({
-      where: { organizationId: orgA },
-      orderBy: { position: "asc" },
-    }),
-    foreignStage = await db.dealStage.findFirstOrThrow({
-      where: { organizationId: orgB },
-    });
-  await assert.rejects(() =>
-    db.$transaction((tx) =>
-      createDeal(tx, actor, {
-        ...account,
-        title: "Foreign stage",
-        stageId: foreignStage.id,
-        submissionKey: randomUUID(),
-      }),
-    ),
-  );
-  const deal = await db.$transaction((tx) =>
-    createDeal(tx, actor, {
-      ...account,
-      title: "Fixture menu placement",
-      stageId: stages[0].id,
-      revenueCents: 125000,
-      submissionKey: randomUUID(),
-      nextAction: "Arrange a sample presentation",
-    }),
-  );
-  await assert.rejects(() =>
-    db.$transaction((tx) =>
-      moveDeal(tx, other, {
-        id: deal.id,
-        version: 1,
-        stageId: foreignStage.id,
-        status: "OPEN",
-      }),
-    ),
-  );
-  await db.$transaction((tx) =>
-    moveDeal(tx, actor, {
-      id: deal.id,
-      version: 1,
-      stageId: stages[1].id,
-      status: "OPEN",
-    }),
-  );
-  await assert.rejects(() =>
-    db.$transaction((tx) =>
-      moveDeal(tx, actor, {
-        id: deal.id,
-        version: 1,
-        stageId: stages[2].id,
-        status: "OPEN",
-      }),
-    ),
-  );
-  assert.equal(await db.dealEvent.count({ where: { dealId: deal.id } }), 2);
+  await db.$transaction(tx => setAccountSalesStatus({ db: tx, organizationId: orgA, accountType: 'AGENCY', externalAccountId: agency.id, status: 'CONTACTED', source: 'USER', changedByUserId: userA }));
+  await db.$transaction(tx => saveSalesPlan(tx, actor, { ...account, version: 0, estimatedRevenue: 1250, probability: 30 }));
+  await assert.rejects(() => db.$transaction(tx => saveSalesPlan(tx, actor, { ...account, version: 0, estimatedRevenue: 900 })));
+  assert.equal(await db.organizationAccountOverlay.count({ where: { organizationId: orgB, externalAccountId: agency.id } }), 0);
   const briefing = await getAccountBriefing(db, actor, account);
   assert.equal(
     briefing.lastVisit,
@@ -371,6 +319,15 @@ async function main() {
       if (!(key in priorEnv)) delete process.env[key];
     Object.assign(process.env, priorEnv);
   }
+  const duplicate = await db.locationContact.create({ data: { organizationId: orgA, agencyId: agency.id, name: 'Duplicate buyer', email: 'alias@example.invalid' } });
+  const duplicateActivity = await db.$transaction(tx => logActivity(tx, actor, { ...manual, contactId: duplicate.id, submissionKey: randomUUID() }));
+  await assert.rejects(() => db.$transaction(tx => relateContacts(tx, other, { id: aContact.id, otherId: duplicate.id, operation: 'MERGE' })));
+  await db.$transaction(tx => relateContacts(tx, actor, { id: aContact.id, otherId: duplicate.id, operation: 'MERGE' }));
+  assert.equal((await db.locationContact.findUniqueOrThrow({ where: { id: duplicate.id } })).active, false);
+  assert.equal((await db.accountActivity.findUniqueOrThrow({ where: { id: duplicateActivity.id } })).contactId, aContact.id);
+  const merged = await db.locationContact.findUniqueOrThrow({ where: { id: aContact.id } });
+  assert.ok(merged.emailAliases.includes('alias@example.invalid'));
+  assert.ok(merged.personKey);
   // Browser acceptance uses only these synthetic users and their newly-created rows in this isolated branch.
   const token = randomBytes(32).toString("base64url");
   await db.userSession.create({
@@ -391,12 +348,11 @@ async function main() {
       colleague,
       account,
       accountName: agency.name,
-      dealId: deal.id,
       sessionToken: token,
     }),
   );
   console.log(
-    "PASS: database persistence, replay, private visibility, tenant isolation, correction audit, stage ownership, optimistic concurrency, mailbox lease/checkpoint, OAuth ownership/replay/encryption/disconnect race and visit semantics.",
+    "PASS: database persistence, replay, private visibility, tenant isolation, correction audit, canonical Pipeline and account-plan concurrency, mailbox lease/checkpoint, OAuth ownership/replay/encryption/disconnect race and visit semantics.",
   );
 }
 main()

@@ -111,7 +111,7 @@ test("Gmail calendar incremental sync never combines syncToken and timeMin", asy
       ],
       urls,
     ),
-  ).readPage({ ...input, cursor: { turn: "calendar", calendarSync: "old" } });
+  ).readPage({ ...input, cursor: { turn: "calendar", calendarSync: "old", calendarEnd:"2027-01-08T00:00:00.000Z" } });
   assert.ok(urls[0].includes("syncToken=old"));
   assert.ok(!urls[0].includes("timeMin"));
   assert.equal(page.changes[0].deleted, true);
@@ -192,4 +192,24 @@ test("fixture adapter is deterministic and resumable without any network depende
   assert.equal(a.changes.length, 20);
   assert.equal(b.changes.length, 5);
   assert.equal(b.more, false);
+});
+
+test("Gmail rescan carries one stable boundary and only completes after the last page", async()=>{
+ const adapter=new GoogleMailAdapter(fixture([{historyId:"10"},{messages:[],nextPageToken:"p2"},{messages:[]}]));
+ const first=await adapter.readPage(input); assert.equal(first.snapshot?.complete,false);
+ const last=await adapter.readPage({...input,now:new Date("2026-10-11"),cursor:first.cursor});
+ assert.equal(last.snapshot?.complete,true); assert.equal(last.snapshot?.startedAt,input.now.toISOString()); assert.equal(last.cursor.mailScanStart,undefined);
+});
+test("Google expands recurring occurrences and reconciles cancellations in a fixed window", async()=>{
+ const urls:string[]=[];
+ const p=await new GoogleMailAdapter(fixture([{nextSyncToken:"s",items:[{id:"series_20261010",status:"confirmed",start:{dateTime:"2026-10-10T12:00:00Z"}},{id:"series_20261011",status:"cancelled"}]}],urls)).readPage({...input,cursor:{turn:"calendar"}});
+ const u=new URL(urls[0]); assert.equal(u.searchParams.get("singleEvents"),"true"); assert.ok(u.searchParams.has("timeMax")); assert.equal(p.snapshot?.complete,true); assert.equal(p.changes[1].deleted,true);
+});
+test("Graph mail snapshot covers inbox AND sent before absence reconciliation",async()=>{
+ const delta=(folder:string)=>`https://graph.microsoft.com/v1.0/me/mailFolders/${folder}/messages/delta?$deltatoken=x`;
+ const adapter=new MicrosoftMailAdapter(fixture([{value:[],"@odata.deltaLink":delta("inbox")},{value:[],"@odata.deltaLink":delta("sentitems")}])) ;
+ const inbox=await adapter.readPage(input); assert.equal(inbox.snapshot?.complete,false);
+ const sent=await adapter.readPage({...input,cursor:inbox.cursor}); assert.equal(sent.snapshot?.complete,true); assert.equal(sent.snapshot?.startedAt,inbox.snapshot?.startedAt);
+ const reset=await new MicrosoftMailAdapter(fixture([new Response("",{status:410})])).readPage({...input,cursor:{stream:"sentitems",inbox:delta("inbox"),sentitems:delta("sentitems"),calendar:"keep"}});
+ assert.equal(reset.cursor.inbox,undefined);assert.equal(reset.cursor.sentitems,undefined);assert.equal(reset.cursor.calendar,"keep");assert.equal(reset.cursor.stream,"inbox");
 });

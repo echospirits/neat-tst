@@ -1,19 +1,7 @@
-# Multi-tenant configuration
+# Tenant configuration
 
-Audit baseline: TST `5faee9df930bd76b5e56b669f58a57210527f7d5`, inspected 2026-10-10.
+Existing Organization, User.organizationId/role, feature registry, products, branding, tags, data sources and Support View remain authoritative. Configuration is extended in Organization.crmPreferences for relationship thresholds, visit guides, detailed Pipeline stages, account categories/custom fields, teams and territories. Separate credential models hold mail, SMS and Eventbrite connections with tenant ownership and encryption.
 
-Organization, OrganizationFeature, product decisions, supplier identifiers and account overlays already configure tenant behavior. CORE_CRM and advanced intelligence entitlements are distinct. Pipeline stages, communications and scoring settings should add tenant-owned configuration without reopening platform-locked organization fields. Teams, custom roles and broad custom fields are not yet present.
+Account profile data lives on OrganizationAccountOverlay, leaving shared directory names/external identifiers and source imports intact. Parent references are validated and checked for cycles. Custom text/number/date/boolean values preserve null, zero and false. Removing a field hides it while retaining prior values; deleting assigned territories/teams/categories is rejected. Active team/territory owners must belong to the organization. Teams do not grant new privileges.
 
-## Implementation references
-
-- `lib/featureRegistry.ts`
-- `lib/organizationConfiguration.ts`
-- `app/platform/organizations`
-
-## Validation and remaining work
-
-See [implementation progress](../engineering/implementation-progress.md), [feature inventory](../product/feature-inventory.md), and [test report](../releases/v0.2-test-report.md). Existing behavior above is source-audited; it is not a claim of fresh live verification. Changes must update this document and the inventory.
-
-## Added configuration
-
-Organization admins configure deal stage names, order and probability. Individual mailbox owners configure history/retention/internal-message exclusion and explicit activity visibility. Core CRM entitlement applies throughout; no organization-feature grants are created by reads. Generic custom fields, teams, multiple memberships and health rules remain unimplemented.
+Organization Setup owns reusable playbooks and AI opt-in. User Communications owns mailbox consent and sending-identity setup. Recipe approval/public sharing is explicitly reviewed. Geography is a suggestion until an account is assigned; no boundary polygon or ownership is inferred automatically.

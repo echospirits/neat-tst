@@ -2,8 +2,9 @@
 import { useEffect, useId, useState } from "react";
 type AccountOption = { id: string; name: string; city: string | null };
 export function CrmAccountPicker({
-  initial,
+  initial, fieldPrefix = "",
 }: {
+  fieldPrefix?: string;
   initial?: {
     accountType: "AGENCY" | "WHOLESALE";
     accountId: string;
@@ -58,8 +59,8 @@ export function CrmAccountPicker({
   }, [query, type, selected]);
   return (
     <div className="crm-picker">
-      <input type="hidden" name="accountType" value={type} />
-      <input type="hidden" name="accountId" value={selected?.id ?? ""} />
+      <input type="hidden" name={fieldPrefix ? `${fieldPrefix}AccountType` : "accountType"} value={type} />
+      <input type="hidden" name={fieldPrefix ? `${fieldPrefix}AccountId` : "accountId"} value={selected?.id ?? ""} />
       {selected ? (
         <p>
           <strong>{selected.name}</strong>{" "}

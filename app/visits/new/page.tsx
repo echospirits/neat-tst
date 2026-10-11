@@ -1,3 +1,4 @@
+import { readVisitGuides } from '../../../lib/crm/visitGuides';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -45,6 +46,7 @@ export default async function NewVisitPage({
   searchParams,
 }: {
   searchParams?: Promise<{
+    eventId?: string;
     status?: string;
     type?: string;
     agencyId?: string;
@@ -160,7 +162,7 @@ export default async function NewVisitPage({
       {params.status ? <p className="toast-notice page-status">{statusMessages[params.status] ?? params.status}</p> : null}
 
       <div className="workflow-shell"><div className="card">
-        <LogVisitForm
+        <LogVisitForm organizationId={organizationId} visitGuides={readVisitGuides(organization.crmPreferences)}
           allowedStates={organization.enabledStates}
           action={createVisit}
           actorName={getUserDisplayName(user)}
@@ -169,6 +171,7 @@ export default async function NewVisitPage({
           assignedWorklistItems={assignedWorklistItems}
           contacts={contacts}
           initialValues={{
+              eventId: params.eventId,
             locationType: initialLocationType,
             agencyId: params.agencyId ?? null,
             locationLocked: Boolean(params.agencyId || params.wholesaleAccountId),

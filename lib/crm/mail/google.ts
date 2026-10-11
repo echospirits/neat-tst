@@ -36,6 +36,8 @@ const historySchema = z.object({
         messagesAdded: z
           .array(z.object({ message: z.object({ id: z.string() }) }))
           .optional(),
+        labelsAdded: z.array(z.object({message:z.object({id:z.string()})})).optional(),
+        labelsRemoved: z.array(z.object({message:z.object({id:z.string()})})).optional(),
         messagesDeleted: z
           .array(z.object({ message: z.object({ id: z.string() }) }))
           .optional(),
@@ -63,6 +65,7 @@ export class GoogleMailAdapter implements MailAdapter {
           .parse(
             await providerJson(`${ROOT}/profile`, input.token, this.fetcher),
           ).historyId;
+      cursor.mailScanStart ||= input.now.toISOString();
       cursor.snapshotSince ||= String(Math.floor(input.since.getTime() / 1000));
       const params = new URLSearchParams({
         maxResults: "20",
@@ -83,7 +86,7 @@ export class GoogleMailAdapter implements MailAdapter {
         cursor.history = cursor.baseline;
         delete cursor.baseline;
         delete cursor.page;
-        delete cursor.snapshotSince;
+
       }
     } else {
       const params = new URLSearchParams({
@@ -114,7 +117,7 @@ export class GoogleMailAdapter implements MailAdapter {
       ids = [
         ...new Set(
           page.history?.flatMap(
-            (h) => h.messagesAdded?.map((m) => m.message.id) ?? [],
+            (h) => [...(h.messagesAdded??[]),...(h.labelsAdded??[]),...(h.labelsRemoved??[])].map(m=>m.message.id),
           ) ?? [],
         ),
       ];
@@ -174,6 +177,7 @@ export class GoogleMailAdapter implements MailAdapter {
         kind: "EMAIL",
         deleted: hidden,
         threadId: m.threadId,
+        url: `https://mail.google.com/mail/u/${encodeURIComponent(input.email)}/#all/${encodeURIComponent(m.threadId ?? m.id)}`,
         at: at.toISOString(),
         subject: header("subject").slice(0, 500),
         participants: extractEmails(["from", "to", "cc"].map(header).join(",")),
@@ -184,15 +188,25 @@ export class GoogleMailAdapter implements MailAdapter {
           : "INBOUND",
       });
     });
-    if (!more) cursor.turn = "calendar";
-    return { changes, cursor, more: true };
+    const snapshot = cursor.mailScanStart ? { kind: "EMAIL" as const, startedAt: cursor.mailScanStart, from: new Date(Number(cursor.snapshotSince)*1000).toISOString(), complete: !more } : undefined;
+    if (!more) { cursor.turn = "calendar"; delete cursor.mailScanStart; delete cursor.snapshotSince; }
+    return { changes, cursor, more: true, snapshot };
   }
   private async calendar(input: MailSyncInput): Promise<MailPage> {
     const cursor = { ...input.cursor };
     const params = new URLSearchParams({
       maxResults: "50",
       showDeleted: "true",
+      singleEvents: "true",
     });
+    if (cursor.calendarSync && (!cursor.calendarEnd || new Date(cursor.calendarEnd).getTime() < input.now.getTime()+7*86400000)) {
+      delete cursor.calendarSync; delete cursor.calendarPage; delete cursor.calendarSince; delete cursor.calendarEnd; delete cursor.calendarScanStart;
+    }
+    if (!cursor.calendarSync) {
+      cursor.calendarScanStart ||= input.now.toISOString();
+      cursor.calendarEnd ||= new Date(input.now.getTime()+90*86400000).toISOString();
+      params.set("timeMax", cursor.calendarEnd);
+    }
     if (cursor.calendarSync) params.set("syncToken", cursor.calendarSync);
     else
       params.set(
@@ -215,7 +229,7 @@ export class GoogleMailAdapter implements MailAdapter {
       ) {
         delete cursor.calendarSync;
         delete cursor.calendarPage;
-        delete cursor.calendarSince;
+        delete cursor.calendarSince; delete cursor.calendarEnd; delete cursor.calendarScanStart;
         return { changes: [], cursor, more: true };
       }
       throw error;
@@ -231,6 +245,7 @@ export class GoogleMailAdapter implements MailAdapter {
               status: z.string().optional(),
               summary: z.string().optional(),
               visibility: z.string().optional(),
+              htmlLink: z.string().optional(),
               start: z
                 .object({
                   dateTime: z.string().optional(),
@@ -257,6 +272,7 @@ export class GoogleMailAdapter implements MailAdapter {
         e.visibility === "confidential",
       private: e.visibility === "private" || e.visibility === "confidential",
       subject: e.summary?.slice(0, 500),
+      url: e.htmlLink,
       at:
         e.start?.dateTime ||
         (e.start?.date ? `${e.start.date}T12:00:00.000Z` : undefined),
@@ -265,14 +281,15 @@ export class GoogleMailAdapter implements MailAdapter {
           a.email ? [normalizeEmail(a.email)] : [],
         ) ?? [],
     }));
+    const snapshot = cursor.calendarScanStart ? { kind: "CALENDAR_MEETING" as const, startedAt: cursor.calendarScanStart, from: cursor.calendarSince, to: cursor.calendarEnd, complete: !page.nextPageToken } : undefined;
     if (page.nextPageToken) cursor.calendarPage = page.nextPageToken;
     else {
       if (!page.nextSyncToken) throw new MailProviderError("INVALID_RESPONSE");
       cursor.calendarSync = page.nextSyncToken;
       delete cursor.calendarPage;
-      delete cursor.calendarSince;
+      delete cursor.calendarSince; delete cursor.calendarScanStart;
       cursor.turn = "mail";
     }
-    return { changes, cursor, more: Boolean(page.nextPageToken) };
+    return { changes, cursor, more: Boolean(page.nextPageToken), snapshot };
   }
 }

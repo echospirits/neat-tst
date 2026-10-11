@@ -8,12 +8,14 @@ export function CrmForm({
   submitLabel,
   confirm,
   reset = false,
+  onSuccess,
 }: {
   action: (data: FormData) => Promise<CrmActionResult>;
   children?: ReactNode;
   submitLabel: string;
   confirm?: string;
   reset?: boolean;
+  onSuccess?: () => void;
 }) {
   const router = useRouter(),
     inFlight = useRef(false);
@@ -40,6 +42,7 @@ export function CrmForm({
           setResult(response);
           if (response.success) {
             if (reset) form.reset();
+            onSuccess?.();
             if (response.href) router.push(response.href);
             else router.refresh();
           }

@@ -1,3 +1,4 @@
+import * as visitGuides from '../lib/crm/visitGuides';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
@@ -52,6 +53,7 @@ function loadFlow(flow: Flow, role: enums.UserRole | null, organizationId: strin
   };
   const tx = {
     wholesaleAccount,
+    organization:{findUniqueOrThrow:async()=>({crmPreferences:{}})},
     account: { findFirst: async () => { effects.push('official-read'); return { id: 'official-submitted' }; } },
     locationTag: { createMany: async ({ data }: { data: RecordData[] }) => { tags.push(...data); } },
     locationContact: { create: async ({ data }: { data: RecordData }) => {
@@ -64,7 +66,7 @@ function loadFlow(flow: Flow, role: enums.UserRole | null, organizationId: strin
   };
   const context: RecordData = {
     URLSearchParams,
-    ...enums, ...wholesaleAccounts, ...visitWorkflow, normalizeUsState, stateScopedLicenseeIds, isTasterRole,
+    ...enums, ...visitGuides, ...wholesaleAccounts, ...visitWorkflow, normalizeUsState, stateScopedLicenseeIds, isTasterRole,
     getWholesaleAddressProtectionForEdit,
     getCurrentSession: async () => user ? { user } : null,
     requireOrganizationContext: async (actor: typeof user) => ({ organizationId: actor!.organizationId, organization: { enabledStates: ['OH','FL'] } }),

@@ -1,15 +1,13 @@
-# AI architecture
+# Reviewed AI architecture
 
-Audit baseline: TST `5faee9df930bd76b5e56b669f58a57210527f7d5`, inspected 2026-10-10.
+`lib/crm/ai.ts` defines the replaceable CommunicationAssistant contract, deterministic MockCommunicationAssistant and OpenAI Responses adapter. Existing weekly digest and account-research AI remain separate established use cases. They are not replaced by a second background agent.
 
-Existing AI assists public account research, voice visit notes and weekly digest narrative. These are bounded feature-specific integrations, not a common conversation agent. Future communication intelligence must receive only records visible to the requesting user, preserve source identifiers and require human review. Deterministic recommendations and manual workflows must remain usable without AI credentials.
+Account retrieval in `aiEvidence.ts` validates the shared account identity and scopes all private rows to the authenticated organization. TEAM records are the default; only the requesting owner may opt their private communications into a request. Platform Support View cannot invoke this private-capable assistant. Worklist retrieval honors existing feature exclusions.
 
-## Implementation references
+A request supplies at most 20 activity excerpts, 10 visits, 10 open tasks and one planning snapshot. Inputs are bounded and treated as untrusted evidence. There are no tools or autonomous actions. Strict output schemas and server validation reject unknown citation IDs, refusals and incomplete outputs. AI interpretation is visibly labeled; reviewed drafts remain editable, with no send action. Task creation remains the existing account Worklist action.
 
-- `lib/accountResearch.ts`
-- `lib/voiceVisitNote.ts`
-- `lib/weeklyDigestNarrative.ts`
+Live use requires `CRM_AI_ENABLED=true`, `OPENAI_API_KEY`, `CRM_AI_MODEL`, tenant administrator opt-in and per-request member acknowledgment. Otherwise the same UI uses local excerpts and a generic draft, explicitly labeled MOCK. No live model calls were made for implementation acceptance. `store:false` requests no persisted Responses application state; it does not establish a contractual zero-retention policy. Review provider terms before activation.
 
-## Validation and remaining work
+The audit records request mode/count and actor/tenant, not prompts, generated prose or credentials. An advisory-lock-protected 20 requests/member/hour limit bounds requests. Provider requests deny redirects and time out after 45 seconds. Failures display a safe retry message without altering CRM records.
 
-See [implementation progress](../engineering/implementation-progress.md), [feature inventory](../product/feature-inventory.md), and [test report](../releases/v0.2-test-report.md). Existing behavior above is source-audited; it is not a claim of fresh live verification. Changes must update this document and the inventory.
+Tests: `tests/crmAi.test.ts`, `scripts/crm-final-rehearsal.ts`, final responsive browser acceptance. API contract: [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses).

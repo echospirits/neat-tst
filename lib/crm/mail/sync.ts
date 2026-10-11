@@ -16,6 +16,7 @@ import {
   type MailAdapter,
   type MailChange,
   type MailCursor,
+  type MailPage,
 } from "./types";
 
 export async function ingestMailChanges(
@@ -27,6 +28,7 @@ export async function ingestMailChanges(
     provider: string;
     excludeInternal: boolean;
     retentionDays: number;
+    internalDomains?: string[];
   },
   changes: MailChange[],
   now = new Date(),
@@ -43,11 +45,12 @@ export async function ingestMailChanges(
       where: {
         organizationId: actor.organizationId,
         active: true,
-        email: { in: participantEmails, mode: "insensitive" },
+        OR: [{ email: { in: participantEmails, mode: "insensitive" } }, { emailAliases: { hasSome: participantEmails } }],
       },
       select: {
         id: true,
         email: true,
+        emailAliases: true,
         agencyId: true,
         wholesaleAccountId: true,
       },
@@ -78,6 +81,7 @@ export async function ingestMailChanges(
           participants,
           users.map((u) => u.email),
           connection.email,
+          connection.internalDomains,
         ))
     ) {
       await db.accountActivity.deleteMany({ where: identity });
@@ -89,10 +93,18 @@ export async function ingestMailChanges(
     if (at.getTime() < now.getTime() - connection.retentionDays * 86400000)
       continue;
     // A meeting invitation/future appointment does not prove that contact occurred.
-    const match = matchParticipants(
+    let match = matchParticipants(
       participants.filter((p) => p !== normalizeEmail(connection.email)),
       contacts,
     );
+    if (change.threadId && match.status === 'REVIEW') {
+      const history = await db.accountActivity.findMany({ where: { organizationId: actor.organizationId, connectionId: connection.id, createdByUserId: actor.userId, threadId: change.threadId, matchStatus: 'CORRECTED' }, orderBy: { updatedAt: 'desc' }, take: 10, select: { agencyId: true, wholesaleAccountId: true, participants: true } });
+      const accounts = new Set(history.map(row => `${row.agencyId ?? ''}:${row.wholesaleAccountId ?? ''}`));
+      const prior = history[0];
+      if (prior && accounts.size === 1 && Boolean(prior.agencyId) !== Boolean(prior.wholesaleAccountId) && participants.every(email => prior.participants.includes(email))) {
+        match = { status: 'MATCHED', confidence: 0.95, agencyId: prior.agencyId, wholesaleAccountId: prior.wholesaleAccountId, contactId: null, reason: 'Owner-corrected conversation with unchanged participants.' };
+      }
+    }
     const existing = await db.accountActivity.findUnique({
       where: {
         organizationId_sourceKey: {
@@ -103,11 +115,13 @@ export async function ingestMailChanges(
       select: { id: true, matchStatus: true },
     });
     const data = {
+      providerSeenAt: now,
       summary: (change.subject || "(No subject)").slice(0, 500),
       occurredAt: at,
       threadId: change.threadId ?? null,
       participants,
       direction: change.direction ?? null,
+      externalUrl: safeOriginalUrl(change.url),
     };
     await db.accountActivity.upsert({
       where: {
@@ -163,6 +177,7 @@ export async function syncMailbox(
     },
   });
   if (!owned) throw new CrmError("Active mailbox connection not found.");
+  if (owned.nextRetryAt && owned.nextRetryAt > now) throw new CrmError("Provider retry is scheduled. Please wait before synchronizing again.");
   if (!adapterOverride) mailConfig(providerInput.parse(owned.provider));
   if (owned.lastSyncAt && now.getTime() - owned.lastSyncAt.getTime() < 10000)
     throw new CrmError("Please wait a few seconds before synchronizing again.");
@@ -222,6 +237,7 @@ export async function syncMailbox(
           page.changes,
           now,
         );
+        await reconcileMailSnapshot(tx, actor.organizationId, id, page.snapshot);
         await tx.accountActivity.deleteMany({
           where: {
             organizationId: actor.organizationId,
@@ -236,6 +252,8 @@ export async function syncMailbox(
           data: {
             cursor: page.cursor as Prisma.InputJsonValue,
             errorCode: null,
+            failureCount: 0,
+            nextRetryAt: null,
             leaseId: null,
             leaseUntil: null,
           },
@@ -252,6 +270,8 @@ export async function syncMailbox(
         leaseId: null,
         leaseUntil: null,
         errorCode: error instanceof MailProviderError ? error.code : "RETRY",
+        failureCount: { increment: 1 },
+        nextRetryAt: new Date(Date.now() + Math.min(3600, 30 * 2 ** Math.min(owned.failureCount, 7)) * 1000),
       },
     });
     throw error instanceof CrmError
@@ -291,4 +311,31 @@ export async function disconnectMailbox(
       await tx.mailboxConnection.deleteMany({ where: { id, ...actor } });
     }
   });
+}
+
+export function safeOriginalUrl(value?: string): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && !url.username && !url.password && ['mail.google.com', 'calendar.google.com', 'www.google.com', 'outlook.office.com', 'outlook.office365.com', 'outlook.live.com'].includes(url.hostname) ? url.href : null;
+  } catch { return null; }
+}
+export async function sweepMailboxRetention(limit = 20, now = new Date()) {
+  const connections = await prisma.mailboxConnection.findMany({ where: { OR: [{ lastRetentionAt: null }, { lastRetentionAt: { lt: new Date(now.getTime() - 86400000) } }] }, orderBy: { lastRetentionAt: { sort: 'asc', nulls: 'first' } }, take: Math.min(100, Math.max(1, limit)), select: { id: true, organizationId: true, retentionDays: true } });
+  let removed = 0;
+  for (const connection of connections) removed += await prisma.$transaction(async tx => {
+    const result = await tx.accountActivity.deleteMany({ where: { organizationId: connection.organizationId, connectionId: connection.id, occurredAt: { lt: new Date(now.getTime() - connection.retentionDays * 86400000) } } });
+    await tx.mailboxConnection.updateMany({ where: { id: connection.id, organizationId: connection.organizationId }, data: { lastRetentionAt: now } });
+    return result.count;
+  });
+  return removed;
+}
+
+/** Sweep only after every page commits; absence during a partial scan is not a deletion. */
+export async function reconcileMailSnapshot(db: CrmDb, organizationId:string, connectionId:string, snapshot:MailPage["snapshot"]) {
+  if (!snapshot?.complete) return 0;
+  const start=new Date(snapshot.startedAt), from=new Date(snapshot.from), to=snapshot.to ? new Date(snapshot.to) : undefined;
+  if(!Number.isFinite(start.getTime()) || !Number.isFinite(from.getTime()) || (to && !Number.isFinite(to.getTime()))) throw new MailProviderError("INVALID_RESPONSE");
+  const result=await db.accountActivity.deleteMany({where:{organizationId,connectionId,activityType:snapshot.kind,occurredAt:{gte:from,...(to?{lt:to}:{})},OR:[{providerSeenAt:null},{providerSeenAt:{lt:start}}]}});
+  return result.count;
 }

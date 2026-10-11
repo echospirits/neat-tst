@@ -1,15 +1,9 @@
-# Automation engine
+# Worklist playbooks
 
-Audit baseline: TST `5faee9df930bd76b5e56b669f58a57210527f7d5`, inspected 2026-10-10.
+Worklist remains the only task queue. Organization Setup owns versioned playbook templates with up to 12 steps, relative due days and instructions. Starter templates support introductions, lapsed-account recovery and menu placement. Editing templates does not change runs already in progress.
 
-Existing deterministic opportunity detection and wholesale reactivation produce recommended actions and Worklist items. Preserve source links and idempotency keys. User-configurable playbooks, generalized rule authoring and a generic durable queue are not yet implemented. No automation may send customer messages without explicit authorization.
+Starting a playbook on an account snapshots its steps and creates canonical Worklist tasks in one database transaction. The same domain service powers ordinary contextual follow-ups, including source-opportunity lifecycle events. Calendar synchronization occurs after commit and failures do not turn a saved task into a failed request.
 
-## Implementation references
+Tenant/account/template locking prevents duplicate active runs across concurrent requests. Per-run step keys make retries idempotent. Cancellation uses saved task versions and conditional updates: only untouched OPEN tasks are cancelled. Started, edited, reassigned and completed work is preserved. Tasks remain editable/completable through the existing Worklist actions. Start/stop/template changes are audited.
 
-- `lib/opportunityEngine.ts`
-- `lib/ohlqWholesaleReactivation.ts`
-- `lib/visitWorkflow.ts`
-
-## Validation and remaining work
-
-See [implementation progress](../engineering/implementation-progress.md), [feature inventory](../product/feature-inventory.md), and [test report](../releases/v0.2-test-report.md). Existing behavior above is source-audited; it is not a claim of fresh live verification. Changes must update this document and the inventory.
+Playbooks do not send messages. Every outbound business SMS requires a separately reviewed and authorized send with current consent. No autonomous email/SMS marketing or runaway rescheduling is enabled.

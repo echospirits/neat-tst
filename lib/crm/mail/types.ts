@@ -13,6 +13,7 @@ export type MailChange = {
 };
 export type MailCursor = Record<string, string>;
 export type MailPage = {
+  snapshot?: { kind: "EMAIL" | "CALENDAR_MEETING"; startedAt: string; from: string; to?: string; complete: boolean };
   changes: MailChange[];
   cursor: MailCursor;
   more: boolean;
@@ -50,7 +51,7 @@ export async function providerJson(
     response = await fetcher(url, {
       headers: {
         authorization: `Bearer ${token}`,
-        Prefer: 'IdType="ImmutableId"',
+        Prefer: 'IdType="ImmutableId", outlook.timezone="UTC"',
       },
       signal: AbortSignal.timeout(15000),
       redirect: "error",

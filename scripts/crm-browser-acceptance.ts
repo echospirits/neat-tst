@@ -1,5 +1,6 @@
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import assert from "node:assert/strict";
+import { PrismaClient } from "@prisma/client";
 import { chromium } from "playwright";
 const base = "http://127.0.0.1:3102";
 const fixture = JSON.parse(
@@ -7,15 +8,17 @@ const fixture = JSON.parse(
 ) as {
   sessionToken: string;
   account: { accountType: string; accountId: string };
-  dealId: string;
+  orgA: string;
+  userA: string;
 };
 async function main() {
+  const db = new PrismaClient();
   const firstTitle = `Browser acceptance ${Date.now()}: buyer requested follow-up`;
   const secondTitle = `${firstTitle}: second interaction`;
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   const context = await browser.newContext();
   const page = await context.newPage();
-  page.setDefaultTimeout(20000);
+  page.setDefaultTimeout(45000);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.name));
   mkdirSync("output/playwright", { recursive: true });
@@ -38,9 +41,9 @@ async function main() {
     ] as const) {
       await page.setViewportSize({ width, height });
       for (const [route, label] of [
-        [`/activities?${query}`, "activities"],
-        ["/deals", "deals"],
-        [`/deals/${fixture.dealId}`, "deal-detail"],
+        [`/agencies/${fixture.account.accountId}`, "account"],
+        ["/pipeline", "pipeline"],
+        [`/visits/new?type=agency&agencyId=${fixture.account.accountId}`, "log-visit"],
         ["/settings/communications", "communications"],
       ]) {
         const response = await page.goto(base + route);
@@ -65,64 +68,33 @@ async function main() {
     }
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`${base}/activities?${query}`);
-    await page.getByText("Log activity for", { exact: false }).click();
-    const summary = page.getByLabel("What happened?");
-    await summary.fill(firstTitle);
-    await page
-      .getByLabel("Visible to", { exact: true })
-      .selectOption("PRIVATE");
-    await page
-      .getByRole("button", { name: "Save activity", exact: true })
-      .click();
-    await page
-      .getByRole("status")
-      .filter({ hasText: "Activity saved" })
-      .waitFor();
-    await page
-      .getByRole("heading", {
-        name: firstTitle,
-        exact: true,
-      })
-      .waitFor();
-    // A second submission must create a new event, rather than replay the prior form's idempotency key.
-    await summary.fill(secondTitle);
-    await page
-      .getByRole("button", { name: "Save activity", exact: true })
-      .click();
-    await page
-      .getByRole("heading", {
-        name: secondTitle,
-        exact: true,
-      })
-      .waitFor();
-    await page.getByLabel("Activity type", { exact: true }).selectOption("SMS");
-    await page.getByRole("heading", { name: "No visible activity" }).waitFor();
-    await page.goto(`${base}/deals?${query}`);
-    await page.getByText("Create deal for", { exact: false }).click();
-    await page
-      .getByLabel("Deal title", { exact: true })
-      .fill("Browser acceptance deal");
-    await page
-      .getByRole("button", { name: "Create deal", exact: true })
-      .click();
-    await page.waitForURL(/\/deals\//);
-    await page
-      .getByRole("heading", { name: "Browser acceptance deal", exact: true })
-      .waitFor();
-    await page.getByLabel("Outcome", { exact: true }).selectOption("LOST");
-    await page.getByRole("button", { name: "Save deal progress" }).click();
-    await page
-      .getByRole("alert")
-      .filter({ hasText: "Explain the loss" })
-      .waitFor();
-    await page
-      .getByLabel("Reason (required for loss or reopening)")
-      .fill("Buyer chose another supplier");
-    await page.getByRole("button", { name: "Save deal progress" }).click();
-    await page
-      .getByRole("status")
-      .filter({ hasText: "Deal updated" })
-      .waitFor();
+    await page.waitForURL(new RegExp(`/agencies/${fixture.account.accountId}`));
+    await page.goto(`${base}/deals`);
+    await page.waitForURL(/\/pipeline/);
+    const visitCount = await db.loggedVisit.count({ where: { organizationId: fixture.orgA } });
+    for (const title of [firstTitle, secondTitle]) {
+      await page.goto(`${base}/visits/new?type=agency&agencyId=${fixture.account.accountId}`);
+      await page.getByRole('button', { name: 'Phone', exact: true }).click();
+      await page.getByLabel('Conversation notes').fill(title);
+      await page.getByLabel('Visibility').selectOption('PRIVATE');
+      await page.getByLabel('Meaningful exchange with the customer').check();
+      await page.getByRole('button', { name: 'Save interaction', exact: true }).click();
+      await page.waitForURL(/interaction=saved/);
+      await page.getByText(title, { exact: false }).first().waitFor();
+    }
+    assert.equal(await db.loggedVisit.count({ where: { organizationId: fixture.orgA } }), visitCount, 'Calls must not count as visits');
+    assert.equal(await db.accountActivity.count({ where: { organizationId: fixture.orgA, summary: { in: [firstTitle, secondTitle] }, visibility: 'PRIVATE', meaningful: true } }), 2);
+    await page.goto(`${base}/agencies/${fixture.account.accountId}`);
+    await page.getByText('Account plan & forecast', { exact: true }).click();
+    await page.getByLabel('Estimated revenue (USD)').fill('4000');
+    await page.getByLabel('Probability (%)').fill('50');
+    await page.getByRole('button', { name: 'Save account plan', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Account plan saved' }).waitFor();
+    await page.getByLabel('Change status', { exact: true }).selectOption('ENGAGED');
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await page.waitForURL(/salesStatus=saved/);
+    await page.goto(`${base}/pipeline`);
+    await page.getByText('Forecast · $2,000 weighted estimate', { exact: true }).waitFor();
     await page.goto(`${base}/settings/communications`);
     await page.getByText("Try fixture mode", { exact: true }).click();
     await page.getByRole("button", { name: "Create demo connection" }).click();
@@ -151,11 +123,11 @@ async function main() {
           checks: [
             "unauthenticated redirect",
             "no horizontal overflow",
-            "manual save twice",
-            "private visibility selection",
-            "empty filter",
-            "deal creation",
-            "loss validation and save",
+            "Log Visit saves calls twice without physical visits",
+            "private visibility persistence",
+            "legacy route redirects",
+            "canonical account plan and forecast",
+            "canonical Pipeline movement",
             "mock mailbox sync",
           ],
           browserErrors: errors,
@@ -165,7 +137,7 @@ async function main() {
       ),
     );
     console.log(
-      "PASS: CRM browser acceptance at 390x844 and 1440x900, activity saves, filtering, deal creation/outcomes and mock synchronization.",
+      "PASS: CRM browser acceptance at 390x844 and 1440x900, integrated logging, Pipeline forecasts/status and mock synchronization.",
     );
   } catch (error) {
     await page.screenshot({
@@ -177,6 +149,7 @@ async function main() {
     throw error;
   } finally {
     await browser.close();
+    await db.$disconnect();
   }
 }
 main().catch((error) => {

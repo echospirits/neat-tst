@@ -1,3 +1,4 @@
+import { SmsSettings } from './SmsSettings';
 import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
 import { requireCrmActor } from "../../../lib/crm/auth";
@@ -51,6 +52,7 @@ export default async function CommunicationsPage({
         errorCode: true,
         historyDays: true,
         retentionDays: true,
+      internalDomains: true,
         excludeInternal: true,
       },
     }),
@@ -90,6 +92,7 @@ export default async function CommunicationsPage({
       {params.status && statuses[params.status] ? (
         <p role="status">{statuses[params.status]}</p>
       ) : null}
+      <SmsSettings organizationId={actor.organizationId} admin={user.role === "ADMIN"} />
       <section className="card crm-panel">
         <h2>Mailbox privacy</h2>
         <p>
@@ -170,6 +173,8 @@ export default async function CommunicationsPage({
             <summary>Scope and retention</summary>
             <CrmForm action={mailboxSettingsAction} submitLabel="Save scope">
               <input type="hidden" name="id" value={c.id} />
+              <label>Internal email domains<input name="internalDomains" defaultValue={c.internalDomains.join(", ")} placeholder="example.com, subsidiary.com" /></label>
+              <p className="field-note">Only internal conversations are excluded. Domains never assign a customer account.</p>
               <label htmlFor={`history-${c.id}`}>Historical days (1–90)</label>
               <input
                 id={`history-${c.id}`}

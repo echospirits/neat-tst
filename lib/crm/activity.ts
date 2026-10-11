@@ -165,6 +165,7 @@ export async function correctActivity(
     wholesaleAccountId:
       input.accountType === "WHOLESALE" ? input.accountId : null,
     contactId: input.contactId || null,
+    contactIds: input.contactId ? [input.contactId] : [],
     visibility: input.visibility,
     matchStatus: "CORRECTED",
   };

@@ -1,6 +1,23 @@
 # Extended CRM implementation progress
 
-## Scope and checkpoint
+## Active continuation — 2026-10-11
+
+Owner correction: integrate all remaining work into established workflows. Separate Deals and Activities screens are being retired under ADR 0012. The full brief remains in progress; the old checkpoint below is historical.
+
+Implemented locally in this continuation:
+
+- Existing Log Visit now records physical visits or phone/email/text/video/note interactions, with tenant/private visibility, atomic follow-ups and retry protection. Separate Activities/Deals entry points redirect to canonical workflows.
+- Pipeline uses the existing account status overlay, with versioned account plans, forecast assumptions and configurable relationship health. Contacts support aliases, role/authority, linked people and audited duplicate merges.
+- Communications adds business SMS with encrypted Twilio configuration, consent/opt-out ledger, bounded signed webhooks, delivery states, explicit send review, uncertain-send protection and nonproduction mock conversations. Mail adds original-message links, aliases, internal-domain policy, retention sweeps and retry backoff.
+- Playbooks create canonical Worklist tasks through the same transactional service as contextual follow-ups. Concurrent starts deduplicate; stopping preserves started/edited/completed tasks. Organization Setup owns reusable templates.
+- Existing Recipe records now have catalog/editing, batch costing, pricing assumptions, account recommendations, administrator approval and branded public training sheets. Public snapshots exclude costs, expire after 30 days and are revoked on edits/imports.
+- Existing EventShift records are extended with nullable tenant ownership (legacy records are not guessed into a tenant), staff scheduling/conflict checks, account context, products/results/costs, linked Log Visit evidence and coverage-aware observed purchase comparisons. Eventbrite supports encrypted tenant credentials, bounded page imports and a mock adapter; local edits are preserved for review.
+
+Evidence so far: 821 automated tests pass. Isolated PostgreSQL checks pass for integrated workflows, contacts/mail, SMS, playbooks, recipes and events. Initial integrated workflow browser checks passed; final extended responsive/browser acceptance is in progress. No new changes in this continuation have yet been published to shared TST.
+
+Still active: remaining tenant/general-account/team/territory/custom-field requirements; guided field/offline/route work; reporting and permission-aware AI; comprehensive mail rescan/recurrence behavior; final docs/security/build/browser/migration/TST release gates. The full brief is not complete.
+
+## Historical scope and checkpoint
 
 The complete 2026-10-10 sales operating system brief remains **incomplete**. This checkpoint implements the first working communication/activity/deal increment; it is not a frozen release candidate. Branch: `codex/echo-crm-v02`. Base: `5faee9df930bd76b5e56b669f58a57210527f7d5`. Production baseline: `af1f396726e3b15e1167f5af2aa6ba426cae9bf9`, package 0.14.0.
 

@@ -39,3 +39,7 @@ Neat is a multi-tenant beverage sales operating system. Optimize durable relatio
 - Worklist is the follow-up source of truth. Email initiation is not completed contact and is never a physical visit. Missing data is unknown, not zero. No CFAO engine; manual analytical tags remain supported.
 - Validate inputs with Zod, retain strict types, reuse UI/domain components, and preserve source provenance. Update relevant docs, ADRs and UNRELEASED for significant changes.
 - Definition of done: persisted data and backend behavior, usable authorized UI, error states, passing relevant behavioral/security tests, typecheck/build, migration checks, mobile/desktop acceptance and honest release evidence. Never claim mocked providers are live or the full project complete while substantive inventory gaps remain.
+
+## Integrate before extending
+
+Reuse existing workflows and their canonical actions. Pipeline owns account sales progress; Log Visit owns manual interaction capture; account Contacts owns relationship management; Worklist owns tasks and next actions. Do not reintroduce standalone Deals or Activities workflows. Preserve physical visit semantics, tenant scope, idempotency, history, calendar side effects, and return context when extending a flow. See docs/decisions/0012-integrate-existing-workflows.md.

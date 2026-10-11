@@ -1,3 +1,8 @@
+import { accountWorkAndEvents } from '../../../lib/crm/accountTimeline';
+import { AccountProfile } from '../../components/AccountProfile';
+import { AccountRecipes } from '../../components/AccountRecipes';
+import { AccountBriefing } from '../../components/AccountBriefing';
+import { activityLabels } from '../../../lib/crm/activity';
 import { Suspense } from 'react';
 import { AccountWorklist } from '../../components/AccountWorklist';
 import { AddressLink, PhoneLink } from '../../components/AccountContactLinks';
@@ -19,7 +24,7 @@ import { formatWholesaleLicenseeIds, getWholesaleLicenseeIdValues } from '../../
 import { MenuPlacementPanel } from '../../menu-placements/MenuPlacementPanel';
 import { AccountTagPanel } from '../../tags/AccountTagPanel';
 import { TagBadges } from '../../tags/TagBadges';
-import { VisitActivityTable } from '../../visits/VisitActivityTable';
+import { VisitActivityTable, type SupplementalActivity } from '../../visits/VisitActivityTable';
 import { WholesaleRecentPurchasesCard } from '../WholesaleRecentPurchasesCard';
 import { AccountWorkspaceNavigation } from '../../components/AccountWorkspaceNavigation';
 import { OpportunityAccountPanel } from '../OpportunityAccountPanel';
@@ -173,7 +178,7 @@ export default async function WholesaleActivityPage({
       orderBy: [{ active: 'desc' }, { isPrimary: 'desc' }, { name: 'asc' }],
     }),
     prisma.accountActivity.findMany({
-      where: { organizationId, wholesaleAccountId: id, activityType: { in: ['EMAIL_INITIATED', 'CALL_INITIATED'] }, OR: [{ visibility: 'TEAM' }, { createdByUserId: user.id }] },
+      where: { organizationId, wholesaleAccountId: id, OR: [{ visibility: 'TEAM' }, { createdByUserId: user.id }] },
       include: { contact: { select: { name: true } }, createdByUser: { select: { email: true, name: true } } },
       orderBy: { occurredAt: 'desc' }, take: 50,
     }),
@@ -262,6 +267,7 @@ export default async function WholesaleActivityPage({
   const userNames = new Map(users.map((entry) => [entry.id, getUserDisplayName(entry)]));
   const targetingHistory = await prisma.accountTargetingHistory.findMany({ where: { organizationId, accountType: SalesAccountType.WHOLESALE, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 });
 
+  const workAndEvents = await accountWorkAndEvents({organizationId,accountType:"WHOLESALE",accountId:account.id,enabledFeatures});
   return (
     <>
       <header className="page-heading page-header account-workspace-heading">
@@ -304,7 +310,9 @@ export default async function WholesaleActivityPage({
         { href: '#activity', label: 'Activity' },
       ]} />
 
-      <AccountMemoryPanel accountId={account.id} accountType="WHOLESALE" contacts={accountContacts} notes={overlay?.notes ?? null} returnTo={`/wholesale/${account.id}`} />
+      <AccountRecipes organizationId={organizationId} accountId={account.id} />
+      <AccountProfile organizationId={organizationId} accountType="WHOLESALE" accountId={account.id} />
+      <AccountMemoryPanel users={actionUsers} accountId={account.id} accountType="WHOLESALE" contacts={accountContacts} notes={overlay?.notes ?? null} returnTo={`/wholesale/${account.id}`} />
 
       <Suspense fallback={<section id="account-worklist" className="card account-workspace-section account-worklist" aria-busy="true"><h2>Outstanding work</h2><p role="status">Loading outstanding work…</p></section>}>
         <AccountWorklist accountId={account.id} accountName={account.name} accountType="WHOLESALE" currentUserId={user.id} actorName={getUserDisplayName(user)} organizationId={organizationId} enabledFeatures={enabledFeatures} />
@@ -387,21 +395,22 @@ export default async function WholesaleActivityPage({
 
       <section className="dashboard-section account-workspace-section" id="activity">
         <div className="section-heading">
-          <h2>Activity</h2><Link className="btn secondary" href={`/activities?accountType=WHOLESALE&accountId=${account.id}`}>Log contact &amp; relationship timeline</Link><Link className="btn secondary" href={`/deals?accountType=WHOLESALE&accountId=${account.id}`}>Deals</Link>
-          <span className="pill">{visits.length + filedOrders.length + communicationActivities.length + salesStatusHistory.length + targetingHistory.length}</span>
+          <h2>Activity</h2>
+          <span className="pill">{visits.length + filedOrders.length + communicationActivities.length + salesStatusHistory.length + targetingHistory.length + workAndEvents.length}</span>
         </div>
-        <VisitActivityTable contactMap={contactMap} visits={visits} supplementalEvents={filedOrders.map((order) => ({
+        <AccountBriefing account={{ accountType: "WHOLESALE", accountId: account.id }} actor={{ organizationId, userId: user.id }} lastPurchaseAt={salesStatusSummary?.lastPurchaseAt} />
+        <VisitActivityTable contactMap={contactMap} visits={visits} supplementalEvents={filedOrders.map((order): SupplementalActivity => ({
           actor: order.filedSource === WholesaleOrderFiledSource.MANUAL ? order.filedBy?.displayName : 'OHLQ sales match',
           at: order.filedAt!,
           detail: `${formatDateOnly(order.saleDate)} · ${formatOrderCurrency(order.totalCents)} · ${order.lines.length} item${order.lines.length === 1 ? '' : 's'}`,
           href: `/wholesale-orders/${order.id}`,
           id: order.id,
           title: 'Direct restaurant order filed',
-        })).concat(communicationActivities.map((activity) => ({
+        })).concat(communicationActivities.map((activity): SupplementalActivity => ({
           actor: getUserDisplayName(activity.createdByUser), at: activity.occurredAt,
-          detail: getCommunicationTitle(activity.activityType === 'EMAIL_INITIATED' ? 'EMAIL_INITIATED' : 'CALL_INITIATED', activity.contact?.name ?? 'Contact'), id: activity.id,
-          href: '',
-          title: activity.activityType === 'EMAIL_INITIATED' ? 'Email initiated' : 'Call initiated',
+          detail: [activity.summary ?? (['EMAIL_INITIATED', 'CALL_INITIATED'].includes(activity.activityType) ? getCommunicationTitle(activity.activityType === 'EMAIL_INITIATED' ? 'EMAIL_INITIATED' : 'CALL_INITIATED', activity.contact?.name ?? 'Contact') : activity.contact?.name), activity.outcome, activity.visibility === 'PRIVATE' ? 'Only you' : null].filter(Boolean).join(' · '), id: activity.id,
+          href: activity.createdByUserId === user.id ? activity.externalUrl ?? "" : "",
+          title: activityLabels[activity.activityType], type: activityLabels[activity.activityType], source: activity.source, contactIds: activity.contactIds.length ? activity.contactIds : activity.contactId ? [activity.contactId] : [],
         }))).concat(salesStatusHistory.map((event) => ({
           actor: event.changedByUserId ? userNames.get(event.changedByUserId) ?? 'Former team member' : 'Neat',
           at: event.changedAt,
@@ -416,7 +425,7 @@ export default async function WholesaleActivityPage({
           href: '',
           id: `targeting-${event.id}`,
           title: event.isTargeting ? 'Account targeted' : 'Targeting stopped',
-        })))} />
+        }))).concat(workAndEvents)} />
       </section>
     </>
   );

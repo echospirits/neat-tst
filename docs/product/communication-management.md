@@ -1,19 +1,11 @@
 # Communication management
 
-## Shipped workflow
+Use Log Visit for physical or manually recorded phone/email/text/video/note interactions. Existing account Contacts expose business SMS and person relationships. Communications settings owns mailbox authorization, matching review, retention and business sending identity. Legacy Activities URLs redirect into these established workflows.
 
-Communications is under More/settings. A normal organization member can configure one Google and one Microsoft mailbox, or try a visibly marked MOCK connection in development/TST. Support View cannot read or connect another user's mailbox.
+Google and Microsoft adapters synchronize bounded metadata pages with owner-private defaults, exact aliases, internal-address/domain exclusions, correction history and original provider links. Domain similarity alone cannot assign an account. Completed snapshots reconcile absent records only inside their scanned window. Partial/failed scans do not delete absent records. Calendars capture occurrences rather than asserting completed contact.
 
-Real authorization requires explicit environment configuration. The app requests read-only email/calendar scopes, never send permission. Imported metadata is owner-private. The owner reviews unmatched/ambiguous messages, chooses an account with live search, and may explicitly share the entry with the team. Corrections are audited and survive provider replay. Earlier imported entries are paginated.
+The account timeline combines existing visits, communications, completed Worklist tasks, order/status history and events. Type/date/contact/staff/opportunity/source filters apply to the authorized loaded history. It is intentionally bounded and is not an unlimited mailbox archive.
 
-Settings expose history window, retention and exact-user-address internal-message exclusion. Sync shows a page checkpoint/error and can continue. Disconnect clears tokens immediately; optionally delete history. Pending OAuth callbacks are invalidated on disconnect. Fixture mode creates an unmatched synthetic email and uses the same ingestion/review services.
+Business SMS supports tenant identities, consent evidence, opt-out ledger, reviewed outbound messages, signed inbound/delivery callbacks and duplicate protection. STOP applies even if normal sending is disabled. Unknown delivery is not automatically resent. Personal phone messages require manual logging; there is no device interception.
 
-Account Activities also logs SMS, calls and email performed outside the application. This is completed-activity capture, not message transmission.
-
-## Provider coverage and limits
-
-Gmail supports bounded metadata history and history-ID changes; Graph supports Inbox/Sent deltas. Both read primary-calendar metadata and exclude private/confidential/cancelled meetings. Ambiguous or absent exact-contact matches stay in review; email domains never establish account identity.
-
-Live providers have not been authorized/tested in this implementation. Attachments, original-message links, aliases, advanced matching, communication AI and integrated SMS are incomplete. No personal-phone capture or unsupported messaging-platform capture is claimed.
-
-See [activation and operational limitations](../engineering/integration-setup.md), [privacy](../architecture/security-privacy.md) and [test evidence](../releases/v0.2-test-report.md).
+The optional reviewed assistant cites authorized excerpts. Provider message bodies are not ingested, so body-only commitments are unavailable. AI output does not create tasks or send correspondence. See integration-setup for activation and provider limits.

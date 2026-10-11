@@ -1,4 +1,5 @@
 'use server';
+import { contactProfileInput } from '../../lib/crm/contacts';
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -16,7 +17,7 @@ const value = (formData: FormData, name: string) => {
 
 const returnPath = (formData: FormData) => {
   const requested = value(formData, 'returnTo');
-  return requested?.startsWith('/') && !requested.startsWith('//') ? requested : '/accounts';
+  return requested?.startsWith('/') && !requested.startsWith('//') && !requested.includes('\\') && !/[\r\n]/.test(requested) ? requested : '/accounts';
 };
 
 const getLocation = (formData: FormData) => {
@@ -116,12 +117,15 @@ export async function updateAccountContact(formData: FormData) {
   if (!contact) redirect(`${path}?memoryStatus=invalid`);
   const isPrimary = formData.get('isPrimary') === 'true';
   const active = formData.get('active') === 'true';
+  const profile = contactProfileInput.safeParse(Object.fromEntries(formData));
+  if (!profile.success) redirect(`${path}?memoryStatus=invalid`);
+  if (profile.data.relationshipOwnerId && !(await prisma.user.findFirst({ where: { id: profile.data.relationshipOwnerId, organizationId, isActive: true, role: { notIn: ['TASTER', 'PLATFORM_ADMIN'] } }, select: { id: true } }))) redirect(`${path}?memoryStatus=invalid`);
 
   await prisma.$transaction(async (tx) => {
     if (isPrimary) await tx.locationContact.updateMany({ where: { ...getAccountContactWhere(organizationId, location), id: { not: id } }, data: { isPrimary: false } });
     await tx.locationContact.update({
-      where: { id },
-      data: { name, role: value(formData, 'role'), email: value(formData, 'email'), phone: value(formData, 'phone'), notes: value(formData, 'notes'), isPrimary, active },
+      where: { id, organizationId, mergedIntoContactId: null },
+      data: { ...profile.data, relationshipOwnerId: profile.data.relationshipOwnerId || null, name, role: value(formData, 'role'), email: value(formData, 'email'), phone: value(formData, 'phone'), notes: value(formData, 'notes'), isPrimary, active },
     });
   });
   revalidatePath(path);

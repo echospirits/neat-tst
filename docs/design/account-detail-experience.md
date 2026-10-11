@@ -17,4 +17,6 @@ See [implementation progress](../engineering/implementation-progress.md), [featu
 
 ## Current implementation
 
-Existing account pages keep contacts, notes, visit history and outstanding Worklist. Activity headings now include contextual Timeline and Deals links. The timeline briefing provides follow-up/visit actions and account return links. The full requested single-page tabbed workspace, purchase briefing, document/event/AI sections remain future work; do not claim this increment completed them.
+Existing notes, Contacts and outstanding Worklist retain their order and context. Account profile/territory/team/documents are disclosed in an expandable section. Account plans extend the sales status panel. Playbooks sit within Worklist; SMS sits with Contacts. Recipe recommendations use the existing wholesale account context.
+
+The existing activity component projects communication, physical visits, completed work, status/order history and events, with filters over loaded authorized records. The briefing separates meaningful contact, physical visits, completed follow-ups and purchase evidence, then offers optional reviewed assistance. Log Visit is the only interaction-entry route. Existing account tabs and workspace navigation remain intact rather than being replaced by another workspace.

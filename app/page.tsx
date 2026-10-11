@@ -1,3 +1,5 @@
+import { ScheduleRoute } from './my-week/ScheduleRoute';
+import { ScheduleEvents } from './events/ScheduleEvents';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -378,6 +380,8 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
         </div>
       </section>
 
+      <ScheduleRoute organizationId={organizationId} userId={user.id} date={anchorDate} />
+      <ScheduleEvents organizationId={organizationId} />
       <details className="dashboard-section dashboard-details">
         <summary><span><strong>Explore opportunities</strong><small>Restaurant recommendations and retail signals</small></span></summary>
         <div className="dashboard-details-content">

@@ -130,7 +130,7 @@ test('Pipeline, status writes, visit integration, and sales import are server ga
   assert.match(pipeline, /requireFeatureForUser\(user, 'ACCOUNT_SALES_STATUS'\)/);
   assert.match(actions, /requireFeatureForUser\(user, 'ACCOUNT_SALES_STATUS'\)/);
   assert.match(visits, /hasFeature\(organizationId, 'ACCOUNT_SALES_STATUS'\)/);
-  assert.match(visits, /source: AccountSalesStatusSource\.VISIT/);
+  assert.match(visits, /source: physicalVisit \? AccountSalesStatusSource\.VISIT : AccountSalesStatusSource\.USER/);
   assert.match(visitForm, /defaultChecked name="salesStatus" type="radio" value=""/);
   assert.match(workflow, /reconcileAccountSalesStatusAfterImport/);
   assert.match(service, /purchaseSourceKey/);
@@ -141,7 +141,7 @@ test('Pipeline defaults to Kanban with collapsed native groups and visible filte
   const pipeline = readFileSync('app/pipeline/page.tsx', 'utf8');
   const journey = readFileSync('app/components/SalesStatusJourney.tsx', 'utf8');
   const styles = readFileSync('app/components/salesStatus.css', 'utf8');
-  assert.match(pipeline, /const view = params\?\.view === 'list' \? 'list' : 'board'/);
+  assert.match(pipeline, /const view = params\?\.view === 'list' \? 'list' : params\?\.view === 'stages' \? 'stages' : 'board'/);
   assert.ok(pipeline.indexOf("href={pipelineHref('board')}") < pipeline.indexOf("href={pipelineHref('list')}"));
   assert.match(pipeline, /<details className="pipeline-kanban-column"/);
   assert.doesNotMatch(pipeline, /<details[^>]*\sopen(?:[\s=>])/);

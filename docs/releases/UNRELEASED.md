@@ -283,3 +283,21 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 - User-visible: Reset requests retain the generic 202 response. Concurrent requests receive at most one reset email per account during the cooldown. After delivery failure, retry is available once the 60-second cooldown expires.
 - Production readiness: TST validation recorded in [v0.2 validation](0.2.0-validation.md); future production candidate review remains pending.
 - Rollout notes: neat-tst/tst only; no database migration, provider activation or production promotion.
+
+### Integrate extended CRM into existing account workflows
+
+- Description: Retires duplicate Deals/Activities surfaces. Pipeline gains account plans/forecast; Log Visit gains completed conversation channels; existing account Activity and Contacts gain correspondence, briefings, aliases and reviewed person links/merges. Organization Setup controls relationship thresholds. Mail sync gains backoff, internal-domain exclusions, original-message links and retention cleanup.
+- Relevant commits: pending current continuation.
+- Feature flags: existing Core CRM and ACCOUNT_SALES_STATUS entitlements. Live mail still requires CRM_MAIL_ENABLED and provider configuration.
+- Migrations: 20261011153000_integrated_account_workflows; 20261011160000_contact_relationship_mail_operations. Additive only; dormant Deal tables retained.
+- User-visible: yes; no separate Deals or Activities navigation.
+- Production readiness: not selected as a complete candidate. Full remaining brief and final acceptance still in progress. Production remains unchanged.
+- Rollout: isolated TST-child rehearsal, then verified shared TST only. See ADR 0012 and implementation-progress.md.
+
+### Integrated CRM continuation (local, awaiting final TST validation)
+
+- Reuse canonical Log Visit, Pipeline, Contacts and Worklist; retire duplicate Deals/Activities UI.
+- Add business SMS consent/signed callbacks/reviewed sending with mock acceptance, contact relationships, relationship health and mail operation improvements.
+- Add Worklist playbooks, Recipe costing/approved sharing, and EventShift staff scheduling/Eventbrite/observational comparisons.
+- Additive migrations: `20261011153000_integrated_account_workflows`, `20261011160000_contact_relationship_mail_operations`, `20261011170000_business_sms`, `20261011180000_worklist_playbooks`, `20261011190000_recipe_sales_materials`, `20261011200000_event_schedule_operations`.
+- Rehearsed only on isolated TST child at this point. Full automated suite: 821 passing tests. Extended build/browser checks in progress; no production changes or live SMS delivery.

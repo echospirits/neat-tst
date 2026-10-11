@@ -1,23 +1,21 @@
-# Integration testing
+# Integration acceptance
 
-## Provider fixtures
+Run `npm test`, `npx tsc --noEmit`, `npm run build`, Prisma validation and `git diff --check`. Provider tests inject responses; they never prove live consent or external delivery.
 
-Run `npm test` for the existing suite plus CRM domain and mail-adapter fixtures. Adapter tests inject fetch and assert metadata pagination, cursor recovery, deletion/private exclusions, provider-safe errors and Graph continuation URL allowlisting. Fixtures do not call Google/Microsoft or prove provider consent/verification.
+Use a verified isolated child of TST with `APP_ENV=development`, `CRM_REHEARSAL=true`, `DATABASE_TARGET_ID=crm-isolated-rehearsal`, a private child-host environment loader, and external side effects disabled. Never print the connection string or generated session token. Apply only the exact CRM additive migrations; preserve unrelated historical migration-ledger gaps.
 
-## Real database rehearsal
+Run the guarded scripts in order when preparing fresh fixtures:
 
-1. Create a temporary isolated child of verified TST. Record project/parent/child identity privately. Do not use production or the shared TST branch for fixture users.
-2. Inject a child DATABASE_URL through a private environment loader; verify its hostname against the child endpoint before execution. Keep DATABASE_ENVIRONMENT consistent with APP_ENV. Set `APP_ENV=development`, `DATABASE_TARGET_ID=crm-isolated-rehearsal`, `CRM_REHEARSAL=true`; disable outbound email, uploads, imports, cron and live mailbox reads.
-3. Apply the exact additive CRM migration after inspecting migration history. Do not blindly deploy unrelated pending historical migrations.
-4. Run `node --import tsx scripts/crm-rehearsal.ts`. It creates synthetic organizations/users/contact/activity/deal fixtures, tests foreign-tenant denial/private visibility/replay/correction preservation, optimistic deal transitions, sync lease/checkpoint and OAuth ownership/replay/encryption/disconnect race. OAuth HTTP responses are injected fixtures.
-5. The script writes ignored `output/crm-rehearsal.json` with a short-lived synthetic session for browser acceptance. This contains a credential: never commit or print it. Delete the isolated child after acceptance evidence is retained and no continuation needs it.
+1. `scripts/crm-rehearsal.ts` — tenant/private isolation, contacts, ingestion, canonical plans and OAuth races; creates ignored fixture/session metadata.
+2. `scripts/crm-sms-rehearsal.ts` — signed callbacks, consent, STOP, replay and ambiguous-send behavior.
+3. `scripts/crm-playbooks-rehearsal.ts` — concurrent starts and cancellation preservation.
+4. `scripts/crm-recipes-rehearsal.ts` — costs, approval, private/public boundaries and revocation.
+5. `scripts/crm-events-rehearsal.ts` — staff conflict, tenant denial, idempotency, versions and coverage.
+6. `scripts/crm-field-profile-rehearsal.ts` — typed profiles, geography, parent-cycle/removal guards and route versions/ownership.
+7. `scripts/crm-final-rehearsal.ts` — complete rescan absence reconciliation, AI evidence privacy and canonical Pipeline reopening.
 
-## Browser acceptance
+Start the optimized build at localhost:3102 against that child. `crm-browser-acceptance.ts` verifies canonical redirects, responsive account/Pipeline/Log Visit/Communications, private conversation saves and mock matching. `crm-extensions-browser.ts` covers recipes, approval/public privacy, playbook Worklist, SMS/STOP and scheduled events. The final-fields browser script adds profiles, documents, guides/draft recovery, filtered history, detailed Pipeline, reviewed assistant and reporting. Screenshots remain ignored under output/playwright.
 
-Start the actual app against that isolated database at `http://127.0.0.1:3102`. Run `node --import tsx scripts/crm-browser-acceptance.ts` with installed Chrome. The script verifies signed-out redirect, activity/deal/communications routes at 390×844 and 1440×900, no page overflow, successful consecutive activity saves, private selection, empty filter, deal creation/loss validation and fixture synchronization/review. Screenshots and JSON are ignored under `output/playwright`.
+Repeat runs need fresh fixtures or explicitly restored mock SMS consent; STOP intentionally persists. No shared-TST admin session is created. Stop local servers before Prisma regeneration on Windows. Preserve the isolated branch until acceptance evidence is complete, then remove it through the normal branch lifecycle when no longer needed.
 
-Use the optimized build for final acceptance when possible. Stop local servers before Windows Prisma regeneration to avoid DLL locks. No temporary shared-TST administrative login is required.
-
-## Coverage gaps
-
-The new browser script is focused acceptance, not the entire requested regression matrix. It does not prove live mailbox OAuth, provider refresh policies, all existing visit/contact/admin/import workflows, real low-bandwidth/offline behavior, SMS, events, recipes or the unimplemented features. Expand it as each vertical becomes functional.
+Live Google/Microsoft OAuth, Twilio carrier delivery/registration, Eventbrite account access, road-routing quality and AI model quality remain separate activation acceptance. Browser emulation does not prove real-device offline synchronization, accessibility certification or production capacity.

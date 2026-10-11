@@ -1,6 +1,7 @@
 export type MatchContact = {
   id: string;
   email: string | null;
+  emailAliases?: string[];
   agencyId: string | null;
   wholesaleAccountId: string | null;
 };
@@ -31,8 +32,7 @@ export function matchParticipants(
   const emails = new Set(participants.map(normalizeEmail));
   const candidates = contacts.filter(
     (c) =>
-      c.email &&
-      emails.has(normalizeEmail(c.email)) &&
+      [c.email, ...(c.emailAliases ?? [])].some(email => email && emails.has(normalizeEmail(email))) &&
       Boolean(c.agencyId) !== Boolean(c.wholesaleAccountId),
   );
   const accounts = new Set(
@@ -65,10 +65,11 @@ export function isInternalMessage(
   participants: string[],
   internalEmails: string[],
   mailbox: string,
+  internalDomains: string[] = [],
 ) {
   const internal = new Set([...internalEmails, mailbox].map(normalizeEmail));
   return (
     participants.length > 0 &&
-    participants.every((p) => internal.has(normalizeEmail(p)))
+    participants.every((p) => internal.has(normalizeEmail(p)) || internalDomains.includes(normalizeEmail(p).split("@")[1]))
   );
 }

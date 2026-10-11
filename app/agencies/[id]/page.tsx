@@ -1,3 +1,7 @@
+import { accountWorkAndEvents } from '../../../lib/crm/accountTimeline';
+import { AccountProfile } from '../../components/AccountProfile';
+import { AccountBriefing } from '../../components/AccountBriefing';
+import { activityLabels } from '../../../lib/crm/activity';
 import { Suspense } from 'react';
 import { AccountWorklist } from '../../components/AccountWorklist';
 import { AddressLink, PhoneLink } from '../../components/AccountContactLinks';
@@ -18,7 +22,7 @@ import { AgencyRecentSalesCard } from '../AgencyRecentSalesCard';
 import { AgencyIntelligencePanel } from '../AgencyIntelligencePanel';
 import { AccountTagPanel } from '../../tags/AccountTagPanel';
 import { TagBadges } from '../../tags/TagBadges';
-import { VisitActivityTable } from '../../visits/VisitActivityTable';
+import { VisitActivityTable, type SupplementalActivity } from '../../visits/VisitActivityTable';
 import { AccountWorkspaceNavigation } from '../../components/AccountWorkspaceNavigation';
 import { OpportunityAccountPanel } from '../../wholesale/OpportunityAccountPanel';
 import { ContextualActions } from '../../components/ContextualActions';
@@ -118,7 +122,7 @@ export default async function AgencyActivityPage({
       orderBy: [{ active: 'desc' }, { isPrimary: 'desc' }, { name: 'asc' }],
     }),
     prisma.accountActivity.findMany({
-      where: { organizationId, agencyId: id, activityType: { in: ['EMAIL_INITIATED', 'CALL_INITIATED'] }, OR: [{ visibility: 'TEAM' }, { createdByUserId: currentUser.id }] },
+      where: { organizationId, agencyId: id, OR: [{ visibility: 'TEAM' }, { createdByUserId: currentUser.id }] },
       include: { contact: { select: { name: true } }, createdByUser: { select: { email: true, name: true } } },
       orderBy: { occurredAt: 'desc' },
       take: 50,
@@ -143,6 +147,7 @@ export default async function AgencyActivityPage({
   const contactMap = Object.fromEntries(contacts.map((contact) => [contact.id, contact.name]));
   const latestVisitAt = visits[0]?.visitAt;
 
+  const workAndEvents = await accountWorkAndEvents({organizationId,accountType:"AGENCY",accountId:agency.id,enabledFeatures});
   return (
     <>
       <header className="page-heading page-header account-workspace-heading">
@@ -178,7 +183,8 @@ export default async function AgencyActivityPage({
         ...(hasAgencyIntelligence ? [{ href: '#intelligence', label: 'Retail Intelligence' }] : hasWholesaleOpportunities ? [{ href: '#intelligence', label: 'Restaurant intelligence' }] : []),
       ]} />
 
-      <AccountMemoryPanel accountId={agency.id} accountType="AGENCY" contacts={accountContacts} notes={overlay?.notes ?? null} returnTo={`/agencies/${agency.id}`} />
+      <AccountProfile organizationId={organizationId} accountType="AGENCY" accountId={agency.id} />
+      <AccountMemoryPanel users={actionUsers} accountId={agency.id} accountType="AGENCY" contacts={accountContacts} notes={overlay?.notes ?? null} returnTo={`/agencies/${agency.id}`} />
 
       <Suspense fallback={<section id="account-worklist" className="card account-workspace-section account-worklist" aria-busy="true"><h2>Outstanding work</h2><p role="status">Loading outstanding work…</p></section>}>
         <AccountWorklist accountId={agency.id} accountName={agency.name} accountType="AGENCY" currentUserId={currentUser.id} actorName={getUserDisplayName(currentUser)} organizationId={organizationId} enabledFeatures={enabledFeatures} />
@@ -235,20 +241,23 @@ export default async function AgencyActivityPage({
 
       <section className="dashboard-section account-workspace-section" id="activity">
         <div className="section-heading">
-          <h2>Activity</h2><Link className="btn secondary" href={`/activities?accountType=AGENCY&accountId=${agency.id}`}>Log contact &amp; relationship timeline</Link><Link className="btn secondary" href={`/deals?accountType=AGENCY&accountId=${agency.id}`}>Deals</Link>
-          <span className="pill">{visits.length + communicationActivities.length + salesStatusHistory.length + targetingHistory.length}</span>
+          <h2>Activity</h2>
+          <span className="pill">{visits.length + communicationActivities.length + salesStatusHistory.length + targetingHistory.length + workAndEvents.length}</span>
         </div>
-        <VisitActivityTable contactMap={contactMap} visits={visits} supplementalEvents={communicationActivities.map((activity) => ({
+        <AccountBriefing account={{ accountType: "AGENCY", accountId: agency.id }} actor={{ organizationId, userId: currentUser.id }} lastPurchaseAt={salesStatusSummary?.lastPurchaseAt} />
+        <VisitActivityTable contactMap={contactMap} visits={visits} supplementalEvents={communicationActivities.map((activity): SupplementalActivity => ({
           actor: getUserDisplayName(activity.createdByUser),
           at: activity.occurredAt,
-          detail: getCommunicationTitle(activity.activityType === 'EMAIL_INITIATED' ? 'EMAIL_INITIATED' : 'CALL_INITIATED', activity.contact?.name ?? 'Contact'),
+          detail: [activity.summary ?? (['EMAIL_INITIATED', 'CALL_INITIATED'].includes(activity.activityType) ? getCommunicationTitle(activity.activityType === 'EMAIL_INITIATED' ? 'EMAIL_INITIATED' : 'CALL_INITIATED', activity.contact?.name ?? 'Contact') : activity.contact?.name), activity.outcome, activity.visibility === 'PRIVATE' ? 'Only you' : null].filter(Boolean).join(' · '),
           id: activity.id,
-          title: activity.activityType === 'EMAIL_INITIATED' ? 'Email initiated' : 'Call initiated',
+          href: activity.createdByUserId === currentUser.id ? activity.externalUrl ?? "" : "",
+          title: activityLabels[activity.activityType], type: activityLabels[activity.activityType], source: activity.source, contactIds: activity.contactIds.length ? activity.contactIds : activity.contactId ? [activity.contactId] : [],
         })).concat(salesStatusHistory.map((event) => ({
           actor: event.changedByUserId ? userNames.get(event.changedByUserId) ?? 'Former team member' : 'Neat',
           at: event.changedAt,
           detail: event.previousStatus ? `${SALES_STATUS_LABELS[event.previousStatus]} → ${SALES_STATUS_LABELS[event.newStatus]}` : `Set to ${SALES_STATUS_LABELS[event.newStatus]}`,
           id: `sales-status-${event.id}`,
+          href: "",
           title: event.source === 'SALES_DATA' ? 'Purchase detected' : 'Sales status changed',
         }))).concat(targetingHistory.map((event) => ({
           actor: event.changedByUserId ? userNames.get(event.changedByUserId) ?? 'Former team member' : 'Neat',
@@ -257,7 +266,7 @@ export default async function AgencyActivityPage({
           href: '',
           id: `targeting-${event.id}`,
           title: event.isTargeting ? 'Account targeted' : 'Targeting stopped',
-        })))} />
+        }))).concat(workAndEvents)} />
       </section>
       {hasAgencyIntelligence ? <AnchoredDetails className="account-overview-details account-workspace-section agency-retail-intelligence" id="intelligence" initialOpen summary="Retail Intelligence">
         <div className="retail-intelligence-content">

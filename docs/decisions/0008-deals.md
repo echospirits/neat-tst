@@ -1,5 +1,7 @@
 # Deal pipeline
 
+> Superseded by [ADR 0012](0012-integrate-existing-workflows.md). The separate Deals workflow is retired; Pipeline is canonical.
+
 Date: 2026-10-10. Status: accepted implementation direction, except explicitly proposed items.
 
 ## Context

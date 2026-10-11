@@ -22,7 +22,6 @@ export const navigationItems: NavigationItem[] = [
   { key: 'agency-intelligence', href: '/agency-focus', label: 'Retail Intelligence', section: 'intelligence', featureKey: 'AGENCY_INTELLIGENCE' },
   { key: 'visits', href: '/visits', label: 'Visit History', mobileLabel: 'Visits', section: 'work', mobileOrder: 4 },
   { key: 'analytics', href: '/analytics', label: 'Analytics', section: 'work', moreOrder: 1, featureKey: 'ANALYTICS' },
-  { key: 'activities', href: '/activities', label: 'Activities', section: 'work', moreOrder: 5.1, featureKey: 'CORE_CRM' },
   {
     key: 'accounts',
     href: '/search',
@@ -36,7 +35,7 @@ export const navigationItems: NavigationItem[] = [
   { key: 'wholesale', href: '/wholesale', label: 'Restaurants', section: 'accounts', moreOrder: 3 },
   { key: 'wholesale-orders', href: '/wholesale-orders', label: 'Wholesale Orders', section: 'accounts', moreOrder: 4, featureKey: 'OHIO_DIRECT_WHOLESALE_ORDERS' },
   { key: 'pipeline', href: '/pipeline', label: 'Pipeline', section: 'accounts', moreOrder: 5, featureKey: 'ACCOUNT_SALES_STATUS' },
-  { key: 'deals', href: '/deals', label: 'Deals', section: 'accounts', moreOrder: 5.2, featureKey: 'CORE_CRM' },
+  { key: 'recipes', href: '/recipes', label: 'Recipes', section: 'utility', moreOrder: 6.2, featureKey: 'CORE_CRM' },
   { key: 'communications', href: '/settings/communications', label: 'Communications', section: 'utility', moreOrder: 6.1, featureKey: 'CORE_CRM' },
   { key: 'tags', href: '/tags', label: 'Tags', section: 'utility', moreOrder: 5 },
   { key: 'profile', href: '/profile', label: 'Profile', section: 'utility', moreOrder: 6 },

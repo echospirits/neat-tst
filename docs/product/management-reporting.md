@@ -1,20 +1,11 @@
 # Management reporting
 
-Audit baseline: TST `5faee9df930bd76b5e56b669f58a57210527f7d5`, inspected 2026-10-10.
+Extend Analytics, Pipeline and existing intelligence views; do not add another dashboard with duplicate sales calculations.
 
-Analytics and CSV exports, user activity and opportunity performance exist. Separate usage/activity counts from sales outcomes. Weighted deal forecasts will be estimates based on user-entered revenue and probability, not observed sales. Every new KPI needs a defined numerator, denominator, period, null policy and provenance.
+Analytics retains coverage-aware market/product/channel/date filtering, quantities, growth/decline, SKU penetration, lapsed purchasing, first observed purchases, visited accounts and observed sales following visits. Existing Agency Intelligence owns inventory weeks of supply, stock risks and velocity; Wholesale Opportunities owns purchase cadence and recovery evidence.
 
-## Implementation references
+Purchasing continuity adds buyer retention across complete comparison periods; first-to-repeat purchase-day observations within fully observed 30-day cohorts; returns after a gap over 30 days; first retained account/product observations; mean observed interval and positive bottles per purchase day. These are daily observations, not transaction order counts. Missing coverage excludes the account/window, and immature cohorts remain pending. Main sales totals retain corrections; positive-purchase continuity measurements exclude negative corrections. All metrics document their denominator in the UI and have CSV exports.
 
-- `app/analytics`
-- `lib/analytics`
-- `lib/userActivityReport.ts`
-- `app/admin/opportunity-performance`
+Relationship execution on the same Analytics page groups physical visits, TEAM interactions and completed Worklist by staff for the selected UTC dates. Private communications are excluded. Current territory forecasts use existing Pipeline assumptions, disclose missing probabilities and cap large snapshots at 5,000 records with an explicit partial label. This report covers all organization accounts/products and clearly states that the other sales filters do not apply.
 
-## Validation and remaining work
-
-See [implementation progress](../engineering/implementation-progress.md), [feature inventory](../product/feature-inventory.md), and [test report](../releases/v0.2-test-report.md). Existing behavior above is source-audited; it is not a claim of fresh live verification. Changes must update this document and the inventory.
-
-## Added estimate
-
-Deals adds a bounded open-pursuit forecast: recorded USD cents summed and multiplied by each probability, rounded per deal. Missing value is counted separately from zero, and closed/paused deals are excluded. This is seller-estimated pipeline, not recognized revenue or evidence of a purchase. The board cap/search narrows the estimate and is labelled. Historical conversion/forecast accuracy reports remain incomplete.
+Event details compare configured pre/post windows against verified daily coverage, using account-local dates and tenant products; both wholesale and Ohio retail agency observations are supported. Same-day event sales are excluded. No report asserts causation. Revenue forecast accuracy and transaction order averages remain unavailable when their source facts are absent.

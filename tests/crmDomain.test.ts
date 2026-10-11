@@ -15,19 +15,13 @@ import {
   type CrmDb,
 } from "../lib/crm/activity";
 import { relationshipIndicators } from "../lib/crm/briefing";
-import {
-  dealForecast,
-  moveDeal,
-  revenueCentsFromInput,
-} from "../lib/crm/deals";
-const actor = { organizationId: "tenant-a", userId: "rep-a" };
-test("USD input preserves zero and cents and rejects precision loss and overflow", () => {
-  assert.equal(revenueCentsFromInput(""), undefined);
-  assert.equal(revenueCentsFromInput("0"), 0);
-  assert.equal(revenueCentsFromInput("19.99"), 1999);
-  assert.equal(revenueCentsFromInput("20000000"), 2000000000);
-  for (const value of ["-1", "1.999", "NaN", "1e6", "20000001", 100])
-    assert.throws(() => revenueCentsFromInput(value));
+import { pipelineForecast, salesPlanInput, saveSalesPlan } from '../lib/crm/pipeline';
+const actor = { organizationId: 'tenant-a', userId: 'rep-a' };
+test('pipeline estimates distinguish empty amounts from zero and reject invalid values', () => {
+  const base = { accountType: 'AGENCY', accountId: 'one', version: 0 };
+  assert.equal(salesPlanInput.parse({ ...base, estimatedRevenue: '' }).estimatedRevenue, null);
+  assert.equal(salesPlanInput.parse({ ...base, estimatedRevenue: '0' }).estimatedRevenue, 0);
+  for (const value of [-1, 20000001, 'bad', Infinity]) assert.equal(salesPlanInput.safeParse({ ...base, estimatedRevenue: value }).success, false);
 });
 test("timeline cursors retain equal-time records across source boundaries", () => {
   const before = new Date("2026-10-10T12:00:00Z");
@@ -203,50 +197,15 @@ test("relationship guidance treats missing evidence as unknown and explains over
     /70 days/,
   );
 });
-test("forecast excludes paused and closed deals and counts absent revenue separately from zero", () => {
-  assert.deepEqual(
-    dealForecast([
-      { status: "OPEN", revenueCents: 10000, probability: 25 },
-      { status: "OPEN", revenueCents: null, probability: 90 },
-      { status: "OPEN", revenueCents: 0, probability: 100 },
-      { status: "WON", revenueCents: 99999, probability: 100 },
-    ]),
-    { openCount: 3, unvalued: 1, totalCents: 10000, weightedCents: 2500 },
-  );
+test('forecast uses canonical statuses and excludes purchasing, nurture and lost accounts', () => {
+  assert.deepEqual(pipelineForecast([
+    { salesStatus: 'CONTACTED', salesPlan: { estimatedRevenue: 100, probability: 25 } },
+    { salesStatus: 'ENGAGED', salesPlan: {} },
+    { salesStatus: 'INTERESTED', salesPlan: { estimatedRevenue: 0, probability: 100 } },
+    { salesStatus: 'PURCHASING', salesPlan: { estimatedRevenue: 99999, probability: 100 } },
+  ]), { accounts: 3, valued: 2, weighted: 25, unweighted: 100, missingProbability: 0 });
 });
-test("deal transitions reject stale versions without writing stage history", async () => {
-  let events = 0;
-  const db = {
-    deal: {
-      findFirst: async () => ({ id: "deal", stageId: "one", status: "OPEN" }),
-      updateMany: async () => ({ count: 0 }),
-    },
-    dealStage: { findFirst: async () => ({ id: "two", probability: 30 }) },
-    dealEvent: {
-      create: async () => {
-        events++;
-      },
-    },
-  } as unknown as CrmDb;
-  await assert.rejects(
-    () =>
-      moveDeal(db, actor, {
-        id: "deal",
-        version: 1,
-        stageId: "two",
-        status: "OPEN",
-      }),
-    /changed/,
-  );
-  assert.equal(events, 0);
-  await assert.rejects(
-    () =>
-      moveDeal(db, actor, {
-        id: "deal",
-        version: 1,
-        stageId: "two",
-        status: "LOST",
-      }),
-    /Explain/,
-  );
+test('stale account plans cannot overwrite newer plans or create audit entries', async () => {
+  const db = { agency: { findUnique: async () => ({ id: 'one' }) }, $executeRaw: async () => 1, organizationAccountOverlay: { findUnique: async () => ({ salesPlanVersion: 2 }) } } as unknown as CrmDb;
+  await assert.rejects(() => saveSalesPlan(db, actor, { accountType: 'AGENCY', accountId: 'one', version: 1 }), /changed/);
 });

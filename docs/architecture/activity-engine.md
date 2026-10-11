@@ -14,7 +14,7 @@ Corrections require the owner, validate tenant contact/account association, and 
 
 Physical visits are recorded through the established Log Visit workflow. Imported calendar invitations are not proof of attendance and do not advance meaningful-interaction timestamps. Manual meaningful flags exclude internal notes. Last contact, meaningful interaction, physical visit and follow-up are computed separately in `lib/crm/briefing.ts`.
 
-The timeline is not yet a complete projection of purchase/order/status/legacy-note history. Contact and owner/source predicates exist in the service; the shipped filter UI is activity type. Deal/task scalar metadata is reserved but not fully wired through activity forms. No bodies/attachments are ingested.
+The account VisitActivityTable projects existing purchase/order/status history, completed Worklist, events, visits and authorized communication without copying those source rows. Date/type/contact/staff/opportunity/source filters operate on bounded loaded records. Physical visit outcomes cover samples/training/merchandising while nonphysical channels use AccountActivity. Legacy scalar deal metadata is not an active workflow. No message bodies or attachment bytes are ingested; original provider links retain provider authorization.
 
 ## Validation
 

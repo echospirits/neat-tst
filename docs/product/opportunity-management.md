@@ -1,21 +1,11 @@
-# Opportunity management
+# Pipeline and account plans
 
-## Three distinct records
+The existing Pipeline is the sales progression workflow. Legacy `/deals` links redirect to it. Dormant Deal tables are retained for reversible compatibility; no new Deal records or separate deal screens are used.
 
-Existing SalesOpportunity is generated analytical guidance; existing account Pipeline is account sales status. New `Deal` is a rep-owned pursuit with estimated value and configurable stages. These records are deliberately not merged: a pursuit, a recommendation, and verified purchasing evidence have different lifecycles.
+Canonical account sales status remains on OrganizationAccountOverlay with existing status history. Optional organization-configured detailed stages map to those statuses; a nine-stage beverage template is available. Board and list views remain, with an optional detailed-stage board, search, territory and team filters. Changing a detailed stage uses the canonical status service. A paused/lost or automatically changed account cannot display a stale incompatible detailed stage; selecting the old stage can explicitly reopen it.
 
-## Implemented Deals workflow
+Account plan stores objectives, target products, competitors, objections, placement evidence, estimated bottles, estimated USD, probability and close date. Optimistic versions prevent silent overwrites. Owner/contact relationships remain the existing account owner and Contacts; next actions are canonical Worklist items. Both status changes and detailed stage changes appear in the account timeline.
 
-An organization admin explicitly initializes the nine-stage beverage default and can rename/reorder/change probabilities or add stages. Reads never create stage records. Deals supports known-account creation or live account search, title, USD revenue estimate, volume, probability, expected close, target-product text, next action, competitors, objections and notes.
+Open forecast excludes Purchasing, Nurture and Lost. Missing estimated values remain missing; a valued account without probability contributes no weighted estimate and is disclosed. A plan or placement commitment is not verified product placement or purchase evidence. Existing buying-state history distinguishes first/repeat observations independently of the planning stage.
 
-The board groups by tenant stage; title search narrows results. Empty stages collapse on mobile. The current list caps at 250 and labels the cap. The open forecast sums recorded revenue and revenue multiplied by probability/100. Missing estimates are counted separately from zero; paused/won/lost records are excluded. This is an estimate, not recognized revenue.
-
-The owner or organization administrator can change stage/status. Loss or reopening requires a reason. Version checks reject stale updates before history is written. Each transition records actor, time, prior/new stage and outcome. A stage move applies configured stage probability. Winning does not create a sale, prove placement, or complete tasks.
-
-Deal details retain account/timeline links and canonical follow-up/visit actions. Worklist owns task scheduling and lifecycle.
-
-## Incomplete scope
-
-Full-detail editing/reassignment, multiple contacts, direct activity/deal joins, persisted forecast snapshots, conversion/aging reports and drag-and-drop are not implemented. Product fields are free-text estimates, not verified SKU placement. Existing account pipeline and Ohio recommendations remain intact.
-
-Code: `lib/crm/deals.ts`, `app/deals`, `app/crm/actions.ts`. Evidence: domain tests, isolated PostgreSQL rehearsal and browser creation/outcome acceptance.
+Wholesale Opportunities and Agency Intelligence continue to generate explainable recommendations and own their snooze/dismiss/feedback/resolve lifecycle. A Pipeline account is not a duplicate of their product-specific analytical evidence.

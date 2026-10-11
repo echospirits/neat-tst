@@ -1,16 +1,9 @@
 # Field execution
 
-Audit baseline: TST `5faee9df930bd76b5e56b669f58a57210527f7d5`, inspected 2026-10-10.
+Log Visit is the single interaction entry workflow. Physical visits keep canonical contacts, outcomes, photos, targeting/status transitions and follow-up behavior. Phone/email/text/video/internal-note channels use AccountActivity and never increment physical visit counts. Private notes are not copied into shared follow-up descriptions.
 
-Existing contextual visit logging, outcomes, follow-ups, photos, voice note structuring, My Day/My Week and nearby search are working foundations. Follow-ups retain account and task context. General visit-template authoring, offline draft sync and provider route optimization remain incomplete. Never invent travel times.
+Organization Setup configures agency and wholesale visit guides. Submitted answers save the exact prompt snapshot; stale guide submissions are rejected. Existing camera/upload and voice workflows remain available. Photo category selection uses the established shelf/display/menu/back-bar/competitor/other enum and object-storage upload path.
 
-## Implementation references
+On a trusted device, users may explicitly keep a local physical-visit draft. It is scoped to organization, user, account and initiating task/opportunity/event, expires after 24 hours, and is restored only on request. It contains text/selection fields, not photo blobs or a full offline queue. Restore never submits or sends. The original submission key prevents a retried draft from creating another visit. Users can remove it explicitly.
 
-- `app/visits`
-- `lib/visitWorkflow.ts`
-- `lib/myDayWeekScheduler.ts`
-- `lib/location`
-
-## Validation and remaining work
-
-See [implementation progress](../engineering/implementation-progress.md), [feature inventory](../product/feature-inventory.md), and [test report](../releases/v0.2-test-report.md). Existing behavior above is source-audited; it is not a claim of fresh live verification. Changes must update this document and the inventory.
+My Schedule offers route ordering for up to 27 current assigned Worklist stops. Timed appointments retain their order. The first/last stop are fixed for provider optimization. With explicit Google Routes configuration, the server requests and validates the returned order; without it, straight-line nearby ordering is labeled as a fallback with no travel estimate. Users review and save ordering; canonical due dates and calendar appointments are unchanged. Existing map browsing and external directions remain the navigation workflow.

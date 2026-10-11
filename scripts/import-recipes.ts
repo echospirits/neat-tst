@@ -35,10 +35,10 @@ const getImportKey = (row: RecipeSheetRow) => {
   return createHash('sha256').update(JSON.stringify(values)).digest('hex');
 };
 
-async function getImportUserId() {
+async function getImportUserId(organizationId: string) {
   const requestedEmail = process.env.RECIPE_IMPORT_USER_EMAIL ?? process.env.SEED_ADMIN_EMAIL ?? 'joe@echospirits.com';
-  const requestedUser = await prisma.user.findUnique({
-    where: { email: requestedEmail },
+  const requestedUser = await prisma.user.findFirst({
+    where: { email: requestedEmail, organizationId },
     select: { id: true },
   });
 
@@ -47,7 +47,7 @@ async function getImportUserId() {
   }
 
   const fallbackUser = await prisma.user.findFirst({
-    where: { role: UserRole.ADMIN },
+    where: { role: UserRole.ADMIN, organizationId },
     select: { id: true },
   });
 
@@ -55,7 +55,7 @@ async function getImportUserId() {
     return fallbackUser.id;
   }
 
-  const anyUser = await prisma.user.findFirst({ select: { id: true } });
+  const anyUser = await prisma.user.findFirst({ where: { organizationId }, select: { id: true } });
   return anyUser?.id ?? null;
 }
 
@@ -83,7 +83,7 @@ async function getSheetRows() {
 async function main() {
   const organizationId = process.env.ORGANIZATION_ID?.trim() || ECHO_ORGANIZATION_ID;
   const rows = await getSheetRows();
-  const importUserId = await getImportUserId();
+  const importUserId = await getImportUserId(organizationId);
   let created = 0;
   let updated = 0;
   let skipped = 0;
@@ -118,9 +118,10 @@ async function main() {
     };
 
     if (existingRecipe) {
-      await prisma.recipe.update({
-        where: { id: existingRecipe.id },
-        data: recipeData,
+      await prisma.$transaction(async db => {
+        await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`recipe:${organizationId}:${existingRecipe.id}`},0))`;
+        await db.recipe.update({ where: { id: existingRecipe.id }, data: { ...recipeData, version: { increment: 1 }, approvedAt: null, approvedByUserId: null } });
+        await db.recipeShare.updateMany({ where: { organizationId, recipeId: existingRecipe.id, revokedAt: null }, data: { revokedAt: new Date() } });
       });
       updated += 1;
     } else {

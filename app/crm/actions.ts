@@ -3,17 +3,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import { requireCrmActor } from "../../lib/crm/auth";
-import { CrmError, logActivity, correctActivity } from "../../lib/crm/activity";
-import {
-  createDeal,
-  moveDeal,
-  initializeDealStages,
-  revenueCentsFromInput,
-} from "../../lib/crm/deals";
+import { CrmError, correctActivity } from "../../lib/crm/activity";
 import { disconnectMailbox, syncMailbox } from "../../lib/crm/mail/sync";
 import { MockMailAdapter } from "../../lib/crm/mail/mock";
 import { getAppEnvironment } from "../../lib/appEnvironment";
-import { isAdminRole } from "../../lib/userAccess";
 export type CrmActionResult = {
   success?: string;
   error?: string;
@@ -29,28 +22,13 @@ const resultError = (e: unknown): CrmActionResult => ({
 });
 function refresh() {
   for (const path of [
-    "/activities",
-    "/deals",
+    "/visits",
+    "/pipeline",
     "/settings/communications",
     "/agencies/[id]",
     "/wholesale/[id]",
   ])
     revalidatePath(path, "page");
-}
-export async function saveActivityAction(
-  form: FormData,
-): Promise<CrmActionResult> {
-  const { actor } = await requireCrmActor();
-  try {
-    const data = Object.fromEntries(form);
-    await prisma.$transaction((tx) =>
-      logActivity(tx, actor, { ...data, meaningful: data.meaningful === "on" }),
-    );
-    refresh();
-    return { success: "Activity saved. Physical visit history is unchanged." };
-  } catch (e) {
-    return resultError(e);
-  }
 }
 export async function correctActivityAction(
   form: FormData,
@@ -62,93 +40,6 @@ export async function correctActivityAction(
     );
     refresh();
     return { success: "Association and visibility saved with an audit entry." };
-  } catch (e) {
-    return resultError(e);
-  }
-}
-export async function createDealAction(
-  form: FormData,
-): Promise<CrmActionResult> {
-  const { actor } = await requireCrmActor();
-  try {
-    const deal = await prisma.$transaction((tx) =>
-      createDeal(tx, actor, {
-        ...Object.fromEntries(form),
-        revenueCents: revenueCentsFromInput(form.get("revenueAmount")),
-      }),
-    );
-    refresh();
-    return { success: "Deal created.", href: `/deals/${deal.id}` };
-  } catch (e) {
-    return resultError(e);
-  }
-}
-export async function moveDealAction(form: FormData): Promise<CrmActionResult> {
-  const { actor, user } = await requireCrmActor();
-  try {
-    await prisma.$transaction((tx) =>
-      moveDeal(tx, actor, Object.fromEntries(form), isAdminRole(user.role)),
-    );
-    refresh();
-    revalidatePath(`/deals/${form.get("id")}`);
-    return { success: "Deal updated; stage history saved." };
-  } catch (e) {
-    return resultError(e);
-  }
-}
-export async function setupStagesAction(): Promise<CrmActionResult> {
-  const { actor, user } = await requireCrmActor();
-  if (!isAdminRole(user.role))
-    return {
-      error: "An organization administrator must configure deal stages.",
-    };
-  try {
-    await prisma.$transaction((tx) => initializeDealStages(tx, actor));
-    refresh();
-    return { success: "Default beverage sales stages are ready." };
-  } catch (e) {
-    return resultError(e);
-  }
-}
-export async function saveStageAction(
-  form: FormData,
-): Promise<CrmActionResult> {
-  const { actor, user } = await requireCrmActor();
-  if (!isAdminRole(user.role))
-    return { error: "Administrator access required." };
-  try {
-    const data = z
-      .object({
-        id: z.string().optional(),
-        name: z.string().trim().min(1).max(80),
-        position: z.coerce.number().int().min(0).max(1000),
-        probability: z.coerce.number().int().min(0).max(100),
-      })
-      .parse(Object.fromEntries(form));
-    if (data.id) {
-      const saved = await prisma.dealStage.updateMany({
-        where: { id: data.id, organizationId: actor.organizationId },
-        data: {
-          name: data.name,
-          position: data.position,
-          probability: data.probability,
-        },
-      });
-      if (!saved.count) throw new CrmError("Stage not found.");
-    } else
-      await prisma.dealStage.create({
-        data: {
-          organizationId: actor.organizationId,
-          name: data.name,
-          position: data.position,
-          probability: data.probability,
-        },
-      });
-    refresh();
-    return {
-      success:
-        "Stage saved. Existing deal probabilities remain unchanged until their next stage move.",
-    };
   } catch (e) {
     return resultError(e);
   }
@@ -252,6 +143,7 @@ export async function mailboxSettingsAction(
         id: z.string().min(1),
         historyDays: z.coerce.number().int().min(1).max(90),
         retentionDays: z.coerce.number().int().min(7).max(365),
+        internalDomains: z.preprocess(value => String(value ?? '').split(/[,;\n]/).map(s => s.trim().toLowerCase()).filter(Boolean), z.array(z.string().regex(/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/)).max(20)),
       })
       .parse(Object.fromEntries(form));
     if (input.historyDays > input.retentionDays)
@@ -261,6 +153,9 @@ export async function mailboxSettingsAction(
       data: {
         historyDays: input.historyDays,
         retentionDays: input.retentionDays,
+        internalDomains: input.internalDomains,
+        nextRetryAt: null,
+        failureCount: 0,
         excludeInternal: form.get("excludeInternal") === "on",
         cursor: Prisma.DbNull,
         leaseId: null,

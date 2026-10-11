@@ -15,4 +15,8 @@ See [implementation progress](../engineering/implementation-progress.md), [featu
 
 ## Implemented extension
 
-AccountActivity now has nullable contact, visibility, source identity, participants and provider/matching metadata. MailboxConnection and MailboxOAuthState separate mail authorization from the existing Worklist calendar integration. ActivityAudit records association/visibility corrections. DealStage, Deal and DealEvent implement tenant-owned pursuit history with optimistic versions. Tenant composite keys cover new mailbox/activity, stage/deal and history relations. See [migration runbook](../engineering/crm-migration-runbook.md) for backwards-compatibility and recovery limits.
+AccountActivity carries private/provider metadata and contacts; LoggedVisit continues to own physical visits. OrganizationAccountOverlay gains versioned salesPlan and crmDetails JSON, preserving canonical sales status/assignment. Organization.crmPreferences contains bounded validated tenant settings.
+
+MailboxConnection/OAuthState/ActivityAudit support private ingestion. SmsConnection/Consent/ConsentEvent/Message support tenant messaging. SalesPlaybook/PlaybookRun create existing Worklist tasks. RecipeShare stores token hashes and approved public snapshots; EventShift gains explicit nullable tenant ownership and EventbriteConnection holds encrypted read authorization. Existing unowned event rows are not guessed into an organization.
+
+Composite organization keys protect new relations. Explicit service validation remains necessary for shared directory references and existing legacy relations. New scalar metadata does not redefine authorization. Dormant Deal/DealStage/DealEvent tables from the superseded checkpoint are preserved but have no active workflow. See the migration runbook for exact additive migrations and rollback limits.

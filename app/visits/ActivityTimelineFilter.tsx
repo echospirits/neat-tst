@@ -1,0 +1,132 @@
+"use client";
+import { Children, useMemo, useState, type ReactNode } from "react";
+import { RecordPicker } from "../components/RecordPicker";
+export type TimelineFilterEntry = {
+  id: string;
+  type: string;
+  source: string;
+  at: string;
+  staff: string;
+  contacts: string[];
+  opportunity: string;
+};
+export function ActivityTimelineFilter({
+  entries,
+  children,
+  contacts,
+}: {
+  entries: TimelineFilterEntry[];
+  children: ReactNode;
+  contacts: Record<string, string>;
+}) {
+  const [type, setType] = useState(""),
+    [source, setSource] = useState(""),
+    [staff, setStaff] = useState(""),
+    [contact, setContact] = useState(""),
+    [opportunity, setOpportunity] = useState(""),
+    [start, setStart] = useState(""),
+    [end, setEnd] = useState("");
+  const nodes = Children.toArray(children);
+  const matches = entries
+    .map((e, i) => ({ e, node: nodes[i] }))
+    .filter(
+      ({ e }) =>
+        (!type || e.type === type) &&
+        (!source || e.source === source) &&
+        (!staff || e.staff === staff) &&
+        (!contact || e.contacts.includes(contact)) &&
+        (!opportunity || e.opportunity === opportunity) &&
+        (!start || e.at.slice(0, 10) >= start) &&
+        (!end || e.at.slice(0, 10) <= end),
+    );
+  const options = (key: "type" | "source" | "staff" | "opportunity") =>
+    [...new Set(entries.map((e) => e[key]).filter(Boolean))].map((value) => ({
+      value,
+      label: value,
+    }));
+  return (
+    <>
+      <details className="compact-details">
+        <summary>Filter account history</summary>
+        <div className="form-grid">
+          <RecordPicker
+            name="historyType"
+            label="Activity type"
+            options={options("type")}
+            placeholder="All types"
+            clearLabel="All types"
+            onChange={setType}
+          />
+          <RecordPicker
+            name="historySource"
+            label="Activity source"
+            options={options("source")}
+            placeholder="All sources"
+            clearLabel="All sources"
+            onChange={setSource}
+          />
+          <RecordPicker
+            name="historyStaff"
+            label="Staff member"
+            options={options("staff")}
+            placeholder="All staff"
+            clearLabel="All staff"
+            onChange={setStaff}
+          />
+          <RecordPicker
+            name="historyContact"
+            label="Contact"
+            options={[...new Set(entries.flatMap((e) => e.contacts))].map(
+              (id) => ({
+                value: id,
+                label: contacts[id] ?? "Archived contact",
+              }),
+            )}
+            placeholder="All contacts"
+            clearLabel="All contacts"
+            onChange={setContact}
+          />
+          <RecordPicker
+            name="historyOpportunity"
+            label="Opportunity"
+            options={options("opportunity")}
+            placeholder="All opportunities"
+            clearLabel="All opportunities"
+            onChange={setOpportunity}
+          />
+          <label>
+            From date (UTC)
+            <input
+              type="date"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+            />
+          </label>
+          <label>
+            Through date (UTC)
+            <input
+              type="date"
+              value={end}
+              onChange={(e) => setEnd(e.target.value)}
+            />
+          </label>
+        </div>
+        <p className="field-note">
+          Filters apply to the loaded history. Source permissions are enforced
+          before records reach this page.
+        </p>
+      </details>
+      <p aria-live="polite">
+        {matches.length} of {entries.length} loaded records
+      </p>
+      <div className="visit-activity-list">
+        {matches.map(({ e, node }) => (
+          <div key={e.id}>{node}</div>
+        ))}
+      </div>
+      {!matches.length ? (
+        <p className="muted">No loaded history matches these filters.</p>
+      ) : null}
+    </>
+  );
+}

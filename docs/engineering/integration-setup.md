@@ -38,14 +38,36 @@ See [Graph message delta](https://learn.microsoft.com/en-us/graph/delta-query-me
 
 ## Sync operations and limitations
 
-- Each invocation processes one bounded provider page. The UI offers continuation; `/api/cron/communications` processes up to two eligible connections. The route is implemented but is not automatically scheduled by this release. Configure an authenticated scheduler after provider acceptance and choose a cadence/capacity matching mailbox volume. No webhook subscription is registered.
-- A database lease excludes concurrent writers. Activity writes, retention cleanup and cursor advancement share a transaction. Provider HTTP failures preserve the prior checkpoint and store a safe error category. Transient failures are retried on the next invocation; there is no adaptive exponential retry scheduler yet.
-- Gmail history expiration restarts a bounded snapshot. Graph tracks Inbox and Sent Items, not arbitrary custom folders. Graph's provider-side restrictions on filtered delta volume still apply. Expired cursors recover recent metadata; a complete historical deletion reconciliation after cursor expiry remains a gap.
-- Default history is 30 days; retention is 90 days. Users can configure history 1–90 and retention 7–365 with history no larger than retention. Metadata older than retention is removed on the next successful sync. Disconnected accounts retain metadata until explicitly deleted; no standalone retention sweeper is installed yet.
-- New records are owner-private. The owner can associate/correct and explicitly share an activity. Internal exclusion uses exact organization-user email addresses; aliases and verified internal domains are not configured yet. Domain matching alone never automatically assigns an account.
-- Bodies, attachment references, original-message links, AI summaries, sent drafts and SMS are not implemented by this increment. No live mail or SMS can be sent from these features.
-- Disconnect immediately disables ingestion and destroys stored tokens. Optional history deletion removes imported metadata and its correction audit. Provider-side consent must also be revoked in Google/Microsoft account settings if desired.
+- Each invocation processes a bounded page. `/api/cron/communications` processes two eligible connections and a bounded retention sweep; activate an authenticated scheduler after provider acceptance. This release does not enable hosted cron or provider reads. UI continuation also remains available.
+- Leases and a final authorization check bind writes, retention and checkpoint advancement in one transaction. Safe error categories drive exponential backoff (30 seconds up to one hour). RECONNECT connections are excluded from background retries until reauthorized.
+- Full Gmail/Graph rescans retain one stable scan boundary; only a completed snapshot removes absent records in its history window. Graph waits for Inbox AND Sent before mail absence reconciliation. Older out-of-window records survive until retention. Failed or partial scans never sweep absence. Gmail label changes also re-read metadata to remove trash/spam.
+- Google uses recurring occurrences (`singleEvents=true`) in a historical cutoff to 90-day-ahead window. Incremental sync never combines syncToken with time bounds. Google and Graph rebuild near the end of the horizon. Invitations do not establish completed contact. Graph covers Inbox/Sent and primary calendar, not arbitrary folders.
+- Defaults: history 30 days, retention 90. History 1–90 and retention 7–365 are configurable, with history <= retention. The bounded daily sweep also expires metadata from disconnected mailboxes when the scheduler runs.
+- Imported records are owner-private. Exact email aliases and configured internal domains supplement organization-user exclusions. Domain resemblance never automatically assigns an account. Owner corrections survive replay and may support unchanged-participant thread matching.
+- Bodies and attachment bytes are not copied. Authorized original-message links provide access in the provider. Disconnect destroys tokens; optional history deletion also removes correction audit. Revoke provider-side consent in the provider account if required.
 
-## Mock mode
+## Business SMS
 
-In development/TST, Communications → Try fixture mode creates a visibly marked MOCK connection. Synchronization creates a synthetic unmatched email for association review. Repeated ingestion uses the same source key; choosing Create demo connection resets the fixture cursor for repeat testing. Production rejects demo creation and fixture synchronization.
+1. Configure `APP_BASE_URL` with this environment's HTTPS origin and the existing credential encryption key. Set `CRM_SMS_ENABLED=true` and `SMS_ENVIRONMENT` equal to the app's actual environment only when activation is authorized.
+2. An organization administrator enters the Twilio account SID, auth token and owned E.164 sending number in Communications. The adapter verifies the number belongs to the account; the administrator confirms completed business messaging registration. This confirmation is not a substitute for carrier approval.
+3. Configure inbound SMS webhook at `${APP_BASE_URL}/api/crm/sms/<connectionId>`. Outbound sends supply their signed delivery callback URL. Use Twilio request signing; the route rejects invalid signatures and oversized requests.
+4. Record consent/evidence for each recipient before sending. Every send requires a human review checkbox. The application includes organization identification and opt-out wording. Inbound STOP updates the ledger, including when ordinary sending is disabled. Unknown sends require manual provider reconciliation and are never automatically retried.
+5. Verify send, delivery, inbound reply, duplicate webhook, STOP and disabled-connection STOP with test recipients before activation. Personal phone texts are manually logged through Log Visit.
+
+In nonproduction, choose the mock sender and simulate replies from the account SMS panel. Mock messages never reach Twilio. See [Twilio request security](https://www.twilio.com/docs/usage/security) and [message callbacks](https://www.twilio.com/docs/messaging/guides/track-outbound-message-status).
+
+## Eventbrite
+
+Organization Setup accepts an Eventbrite read token and organizer ID, verifies ownership through the provider's organizations endpoint, then imports bounded event pages. Encrypted tokens are never displayed. Manual sync stores a continuation cursor; errors retain it. Existing local event/staff/result edits are preserved, with updated provider snapshots available for review. No attendees or attendee PII are imported. Record confirmed attendance manually. A nonproduction mock connection supports acceptance. See [Eventbrite API](https://www.eventbrite.com/platform/new/api).
+
+## Routes
+
+Enable Google Routes API and a server-restricted key; configure `CRM_ROUTES_ENABLED=true` and `GOOGLE_ROUTES_API_KEY`. The server uses Compute Routes waypoint optimization, validates the returned index permutation, times out provider calls, and bounds requests to ten/member/hour. Users review the order before saving. Missing credentials/failures use explicitly labeled straight-line ordering without road duration or ETA. See [Google waypoint optimization](https://developers.google.com/maps/documentation/routes/opt-way).
+
+## Reviewed AI
+
+Set `CRM_AI_ENABLED=true`, `OPENAI_API_KEY` and an approved `CRM_AI_MODEL` privately. Then enable optional AI in Organization Setup. A member must acknowledge each request and separately opt in to including their own private correspondence. Without all configuration, local mock excerpts/drafts are used. The Responses adapter has strict schema/source-ID validation, no tools, `store:false`, bounded evidence, timeouts and a 20/member/hour limit. Review provider processing/retention terms before enabling it. No live key or model request was created in this implementation.
+
+## Mail fixture mode
+
+In development/TST, Communications → Try fixture mode creates a visibly marked MOCK connection. Repeated ingestion uses the same source key; creating the demo connection again resets the fixture cursor. Production rejects demo creation and synchronization. Fixtures establish application behavior, not live provider acceptance.

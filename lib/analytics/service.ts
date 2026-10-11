@@ -1,3 +1,4 @@
+import{purchaseOutcomes}from'./outcomes';
 import type { PrismaClient } from '@prisma/client';
 import { prisma } from '../prisma';
 import { summarize, type AnalyticsData, type Filters, type Product } from './model';
@@ -21,7 +22,7 @@ export async function loadAnalytics(organizationId: string, filters: Filters, db
   const unavailable = enabledStates.filter(state => !supported.has(state) && (filters.market === 'all' || filters.market === state));
   if (unavailable.length) data.warnings.push(`Sales data unavailable for ${unavailable.join(', ')}. All Markets totals include supported sources only.`);
   if (!selected.length) data.warnings.push('No owned or represented products match these filters. Clear the product/market filter or review Organization products.');
-  return { ...summarize(data, filters), availableProducts: products, markets, organizationId };
+  return { ...summarize(data, filters), purchaseOutcomes:purchaseOutcomes(data,filters), availableProducts: products, markets, organizationId };
 }
 
 // One consistent read snapshot for coverage, facts and private CRM records.

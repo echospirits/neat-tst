@@ -29,6 +29,7 @@ const row = z.object({
   "@removed": z.unknown().optional(),
   conversationId: z.string().optional(),
   subject: z.string().optional(),
+  webLink: z.string().optional(),
   receivedDateTime: z.string().optional(),
   sentDateTime: z.string().optional(),
   from: email.optional(),
@@ -68,8 +69,11 @@ export class MicrosoftMailAdapter implements MailAdapter {
         ).toISOString();
       }
       initial = `${ROOT}/calendarView/delta?${new URLSearchParams({ startDateTime: cursor.calendarStart, endDateTime: cursor.calendarEnd })}`;
-    } else
-      initial = `${ROOT}/mailFolders/${stream}/messages/delta?${new URLSearchParams({ $select: "id,conversationId,subject,receivedDateTime,sentDateTime,from,toRecipients,ccRecipients,sensitivity", $filter: `receivedDateTime ge ${input.since.toISOString()}`, $top: "20" })}`;
+      if (!cursor.calendar) cursor.calendarScanStart ||= input.now.toISOString();
+    } else {
+      if (stream === "inbox" && !cursor.inbox) { cursor.mailScanStart ||= input.now.toISOString(); cursor.mailScanSince ||= input.since.toISOString(); }
+      initial = `${ROOT}/mailFolders/${stream}/messages/delta?${new URLSearchParams({ $select: "id,conversationId,subject,receivedDateTime,sentDateTime,from,toRecipients,ccRecipients,sensitivity,webLink", $filter: `receivedDateTime ge ${cursor.mailScanSince || input.since.toISOString()}`, $top: "20" })}`;
+    }
     let raw: unknown;
     try {
       raw = await providerJson(
@@ -82,7 +86,8 @@ export class MicrosoftMailAdapter implements MailAdapter {
         error instanceof MailProviderError &&
         error.code === "CURSOR_EXPIRED"
       ) {
-        delete cursor[stream];
+        if (calendar) { delete cursor.calendar; delete cursor.calendarScanStart; }
+        else { delete cursor.inbox; delete cursor.sentitems; delete cursor.mailScanStart; delete cursor.mailScanSince; cursor.stream="inbox"; }
         return { changes: [], cursor, more: true };
       }
       throw error;
@@ -118,6 +123,7 @@ export class MicrosoftMailAdapter implements MailAdapter {
           m.sensitivity === "private" ||
           m.sensitivity === "confidential",
         threadId: m.conversationId,
+        url: m.webLink,
         at,
         subject: m.subject?.slice(0, 500),
         participants: calendar
@@ -133,6 +139,8 @@ export class MicrosoftMailAdapter implements MailAdapter {
     const next = page["@odata.nextLink"],
       delta = page["@odata.deltaLink"];
     if (!next && !delta) throw new MailProviderError("INVALID_RESPONSE");
+    const snapshot = calendar && cursor.calendarScanStart ? { kind: "CALENDAR_MEETING" as const, startedAt:cursor.calendarScanStart, from:cursor.calendarStart, to:cursor.calendarEnd, complete:!next } : !calendar && cursor.mailScanStart ? { kind:"EMAIL" as const, startedAt:cursor.mailScanStart, from:cursor.mailScanSince, complete:stream==="sentitems" && !next } : undefined;
+    if(snapshot?.complete) { if(calendar) delete cursor.calendarScanStart; else { delete cursor.mailScanStart; delete cursor.mailScanSince; } }
     cursor[stream] = safeGraphCursor(next || delta!);
     if (!next)
       cursor.stream =
@@ -141,6 +149,6 @@ export class MicrosoftMailAdapter implements MailAdapter {
           : stream === "sentitems"
             ? "calendar"
             : "inbox";
-    return { changes, cursor, more: Boolean(next) || stream !== "calendar" };
+    return { changes, cursor, more: Boolean(next) || stream !== "calendar", snapshot };
   }
 }
