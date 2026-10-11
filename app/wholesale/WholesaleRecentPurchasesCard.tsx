@@ -1,7 +1,11 @@
+'use client';
+
+import { useId, useRef, useState } from 'react';
 import type { WholesalePurchaseList, WholesaleRecentPurchases } from '../../lib/ohlqSalesData';
 import { DataFreshnessBadge } from '../components/DataFreshnessBadge';
 
 const numberFormatter = new Intl.NumberFormat('en-US');
+const PAGE_SIZE = 50;
 
 function PurchaseSummary({ list }: { list: WholesalePurchaseList }) {
   return (
@@ -20,19 +24,57 @@ function PurchaseSummary({ list }: { list: WholesalePurchaseList }) {
 
 function PurchaseList({
   emptyText,
+  label,
   list,
 }: {
   emptyText: string;
+  label: string;
   list: WholesalePurchaseList;
 }) {
+  const [page, setPage] = useState(0);
+  const listId = useId();
+  const topNavigation = useRef<HTMLElement>(null);
+  const pageCount = Math.ceil(list.items.length / PAGE_SIZE);
+  const currentPage = Math.min(page, Math.max(0, pageCount - 1));
+  const start = currentPage * PAGE_SIZE;
+  const items = list.items.slice(start, start + PAGE_SIZE);
+
+  function changePage(nextPage: number) {
+    setPage(nextPage);
+    topNavigation.current?.focus({ preventScroll: true });
+    topNavigation.current?.scrollIntoView({ block: 'start' });
+  }
+
+  function navigation(position: 'top' | 'bottom') {
+    return (
+      <nav
+        className="pagination-row ohlq-purchase-pagination"
+        aria-label={`${label} pagination (${position})`}
+        ref={position === 'top' ? topNavigation : undefined}
+        tabIndex={-1}
+      >
+        <span className="muted" role={position === 'top' ? 'status' : undefined}>
+          Showing {numberFormatter.format(start + 1)}–{numberFormatter.format(start + items.length)} of {numberFormatter.format(list.count)} items
+        </span>
+        <button type="button" className="btn secondary" aria-controls={listId} disabled={currentPage === 0} onClick={() => changePage(currentPage - 1)}>
+          Previous
+        </button>
+        <button type="button" className="btn secondary" aria-controls={listId} disabled={currentPage >= pageCount - 1} onClick={() => changePage(currentPage + 1)}>
+          Next
+        </button>
+      </nav>
+    );
+  }
+
   if (list.items.length === 0) {
     return <p className="muted activity-empty">{emptyText}</p>;
   }
 
   return (
     <>
-      <div className="ohlq-purchase-list">
-        {list.items.map((item) => (
+      {pageCount > 1 ? navigation('top') : null}
+      <div className="ohlq-purchase-list" id={listId}>
+        {items.map((item) => (
           <article
             className="ohlq-purchase-row"
             key={item.itemCode}
@@ -55,11 +97,7 @@ function PurchaseList({
           </article>
         ))}
       </div>
-      {list.count > list.items.length ? (
-        <p className="muted view-more-note">
-          Showing {numberFormatter.format(list.items.length)} of {numberFormatter.format(list.count)} items.
-        </p>
-      ) : null}
+      {pageCount > 1 ? navigation('bottom') : null}
     </>
   );
 }
@@ -97,6 +135,7 @@ export function WholesaleRecentPurchasesCard({
         <summary>How these purchases relate to the timeline</summary>
         <p>The first list shows your organization&apos;s tracked products purchased by this account during the source-date window. All purchases includes other vendors at this location. The activity timeline shows only your organization&apos;s tracked products, so it can contain fewer purchase entries. CRM visits and tasks may also be newer than the latest OHLQ report.</p>
       </details>
+      <p className="muted">Most bottles first · Product name A–Z for ties</p>
 
       <div className="card ohlq-window-card">
         <div className="section-heading ohlq-purchase-window-heading">
@@ -107,6 +146,8 @@ export function WholesaleRecentPurchasesCard({
           <p className="muted">This account has recent OHLQ purchases, but none for {productPluralLabel}.</p>
         ) : null}
         <PurchaseList
+          key={`${purchases.licenseeId}:tracked:${purchases.endDate}`}
+          label={`${productLabel} purchases`}
           emptyText={`No ${productLabel} purchases found in the last 30 days.`}
           list={purchases.tracked}
         />
@@ -116,7 +157,7 @@ export function WholesaleRecentPurchasesCard({
           All purchases · 30 days
           <PurchaseSummary list={purchases.all} />
         </summary>
-        <PurchaseList emptyText="No purchases found in the last 30 days." list={purchases.all} />
+        <PurchaseList key={`${purchases.licenseeId}:all:${purchases.endDate}`} label="All purchases" emptyText="No purchases found in the last 30 days." list={purchases.all} />
       </details>
     </section>
   );

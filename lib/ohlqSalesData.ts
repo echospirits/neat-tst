@@ -329,10 +329,10 @@ const toPurchaseSummaryItems = (
   }));
 };
 
-const sortPurchaseItemsByName = (left: WholesalePurchaseSummaryItem, right: WholesalePurchaseSummaryItem) =>
+const sortPurchaseItems = (left: WholesalePurchaseSummaryItem, right: WholesalePurchaseSummaryItem) =>
+  right.totalBottlesSold - left.totalBottlesSold ||
   left.itemName.localeCompare(right.itemName) ||
-  left.itemCode.localeCompare(right.itemCode) ||
-  right.totalBottlesSold - left.totalBottlesSold;
+  left.itemCode.localeCompare(right.itemCode);
 
 export async function getWholesaleRecentPurchases({
   account,
@@ -340,16 +340,12 @@ export async function getWholesaleRecentPurchases({
   db = prisma,
   days = 30,
   licenseeId,
-  takeAll = 50,
-  takeTracked = 50,
 }: {
   account?: OhlqWholesaleLookupAccount;
   config: TenantConfig;
   db?: PrismaClient;
   days?: number;
   licenseeId?: string | null | undefined;
-  takeAll?: number;
-  takeTracked?: number;
 }) {
   const lookupAccount = account ?? { licenseeId };
   const lookup = await resolveOhlqWholesaleSalesLookup({ account: lookupAccount, db });
@@ -400,11 +396,11 @@ export async function getWholesaleRecentPurchases({
   const trackedRows = candidateRows.filter((row) => isConfiguredTenantItem(row.vendor, row.brand, config));
   const itemCodes = candidateRows.map((record) => record.brand);
   const skuLookup = await getSkuLookup(db, itemCodes);
-  const trackedItems = toPurchaseSummaryItems(trackedRows, skuLookup).sort(sortPurchaseItemsByName);
-  const allItems = toPurchaseSummaryItems(candidateRows, skuLookup).sort(sortPurchaseItemsByName);
+  const trackedItems = toPurchaseSummaryItems(trackedRows, skuLookup).sort(sortPurchaseItems);
+  const allItems = toPurchaseSummaryItems(candidateRows, skuLookup).sort(sortPurchaseItems);
   const tracked = {
     count: trackedItems.length,
-    items: trackedItems.slice(0, takeTracked),
+    items: trackedItems,
     purchaseLineCount: trackedRows.length,
     totalBottlesSold: trackedRows.reduce((total, row) => total + row.wholesaleBottlesSold, 0),
   };
@@ -412,7 +408,7 @@ export async function getWholesaleRecentPurchases({
   return {
     all: {
       count: allItems.length,
-      items: allItems.slice(0, takeAll),
+      items: allItems,
       purchaseLineCount: candidateRows.length,
       totalBottlesSold: candidateRows.reduce((total, row) => total + row.wholesaleBottlesSold, 0),
     },

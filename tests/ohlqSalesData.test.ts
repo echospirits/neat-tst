@@ -62,6 +62,36 @@ describe('OHLQ Echo item filtering', () => {
 });
 
 describe('getWholesaleRecentPurchases', () => {
+  it('returns every aggregated item in bottle-descending, name-ascending, stable code order', async () => {
+    const rows = Array.from({ length: 277 }, (_, index) => ({
+      agencyId: '10101', brand: `ITEM${String(index).padStart(3, '0')}`,
+      permitNumber: '00072045-1', vendor: ECHO_VENDOR_ID,
+      wholesaleBottlesSold: index === 276 ? 100 : 1,
+    }));
+    // Aggregation must happen before ranking, and identical names retain stable item-code order.
+    rows.push({ ...rows[275], wholesaleBottlesSold: 100 });
+    const db = {
+      account: { findMany: async () => [] },
+      ohlqAnnualSalesByWholesaleRow: {
+        findFirst: async () => ({ reportDate: new Date('2026-05-12T00:00:00.000Z') }),
+        findMany: async () => rows,
+      },
+      ohlqBrandMasterItem: { findMany: async () => rows.map((row, index) => ({
+        itemCode: row.brand, name: index < 2 ? 'Same name' : `Product ${String(277 - index).padStart(3, '0')}`,
+      })) },
+    } as unknown as PrismaClient;
+    const result = await getWholesaleRecentPurchases({ licenseeId: '72045', config: getTenantConfig(), db });
+    for (const list of [result.all, result.tracked]) {
+      assert.equal(list.count, 277);
+      assert.equal(list.items.length, 277);
+      assert.equal(list.purchaseLineCount, 278);
+      assert.equal(list.totalBottlesSold, 476);
+      assert.deepEqual(list.items.slice(0, 3).map((item) => item.itemCode), ['ITEM275', 'ITEM276', 'ITEM274']);
+      assert.deepEqual(list.items.slice(-2).map((item) => item.itemCode), ['ITEM000', 'ITEM001']);
+      assert.equal(list.items[0].purchaseLineCount, 2);
+    }
+  });
+
   it('matches permit suffix variants and aggregates purchases by item name', async () => {
     const whereClauses: unknown[] = [];
     const db = {

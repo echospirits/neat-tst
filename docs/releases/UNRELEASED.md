@@ -25,6 +25,17 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 
 ## Pending changes
 
+### Browse every recent wholesale purchase
+
+- Description: Recent wholesale purchases now rank aggregated bottle totals highest first, then product name A-Z, with item code breaking exact ties. Both tracked products and all purchases support independent Previous/Next navigation in groups of 50 through the final item, with visible ranges and controls above and below each list.
+- Relevant commit(s): Commit titled Sort and paginate recent wholesale purchases for v0.2.
+- Feature flag/default state: None / N/A; existing account access and tenant product filters are preserved.
+- Migration(s): None.
+- Environment/config: None; version remains `0.2.0-dev`.
+- User-visible: Yes. Paging preserves the open account and purchase disclosure, returns focus to the list navigation, and retains whole-window summary totals.
+- Production readiness: TST verification recorded in [v0.2 validation](0.2.0-validation.md); future production candidate review remains separate.
+- Rollout notes: neat-tst/tst only. The existing account/window query already loads all matching purchase rows; all aggregated product summaries now reach the client, which displays 50 at a time without additional network requests. No database changes or live account mutations.
+
 ### Wholesale commercial opportunity stars
 
 - Description: Replaces the active wholesale attention score with tenant-specific integer 0–5 commercial opportunity stars and a separate unrated state. Sales-backed ratings use absolute compatible product depth, repeated purchasing where observed, and supporting core volume. Research-only ratings use saved location-scale and price-fit evidence. Buyer access, activity, pursuit state, strategic multipliers and automatic product pitches do not affect commercial grading. Retail-agency scoring is unchanged.

@@ -2268,6 +2268,26 @@ fieldset {
   gap: 0;
 }
 
+.ohlq-purchase-pagination {
+  justify-content: flex-start;
+  margin: 12px 0;
+  scroll-margin-top: 100px;
+}
+
+.ohlq-purchase-pagination > span {
+  flex: 1 1 100%;
+}
+
+.ohlq-purchase-pagination .btn {
+  min-height: 44px;
+}
+
+@media (min-width: 641px) {
+  .ohlq-purchase-pagination > span {
+    flex: 1;
+  }
+}
+
 .ohlq-item-row,
 .ohlq-purchase-row {
   display: grid;
