@@ -286,6 +286,20 @@ enum OrganizationAuditAction {
 enum AccountActivityType {
   EMAIL_INITIATED
   CALL_INITIATED
+  EMAIL
+  SMS
+  PHONE_CALL
+  VIRTUAL_MEETING
+  CALENDAR_MEETING
+  INTERNAL_NOTE
+  CUSTOMER_INTERACTION
+  SAMPLE_DELIVERY
+  TASTING
+  TRAINING
+  SALES_PRESENTATION
+  MENU_PLACEMENT
+  MERCHANDISING
+  SYSTEM_EVENT
 }
 
 enum GeocodeStatus {
@@ -416,6 +430,9 @@ model UserActivityDay {
 }
 
 model User {
+  mailboxConnections MailboxConnection[]
+  mailboxOAuthStates MailboxOAuthState[]
+
   id                          String                 @id @default(cuid())
   organizationId              String?
   email                       String                 @unique
@@ -430,7 +447,7 @@ model User {
   image                       String?
   createdAt                   DateTime               @default(now())
   updatedAt                   DateTime               @updatedAt
-  supportTickets              SupportTicket[] @relation("SupportReporter")
+  supportTickets              SupportTicket[]        @relation("SupportReporter")
   supportMessages             SupportMessage[]
   sessions                    UserSession[]
   invitations                 UserInvitation[]
@@ -471,6 +488,11 @@ model User {
 }
 
 model Organization {
+  mailboxConnections MailboxConnection[]
+  mailboxOAuthStates MailboxOAuthState[]
+  dealStages         DealStage[]
+  deals              Deal[]
+
   id                      String                            @id @default(cuid())
   name                    String
   displayName             String
@@ -2018,18 +2040,40 @@ model LoggedVisitContact {
 }
 
 model AccountActivity {
+  source             String              @default("MANUAL")
+  sourceKey          String?
+  connectionId       String?
+  threadId           String?
+  summary            String?
+  outcome            String?
+  direction          String?
+  visibility         String              @default("TEAM")
+  meaningful         Boolean             @default(false)
+  matchStatus        String              @default("MATCHED")
+  matchConfidence    Float?
+  participants       String[]            @default([])
+  externalUrl        String?
+  taskId             String?
+  dealId             String?
+  updatedAt          DateTime            @default(now()) @updatedAt
+  connection         MailboxConnection?  @relation(fields: [organizationId, connectionId], references: [organizationId, id], onDelete: Restrict)
+  audit              ActivityAudit[]
   id                 String              @id @default(cuid())
   organizationId     String
   activityType       AccountActivityType
-  contactId          String
+  contactId          String?
   agencyId           String?
   wholesaleAccountId String?
   createdByUserId    String
   occurredAt         DateTime            @default(now())
   organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  contact            LocationContact     @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  contact            LocationContact?    @relation(fields: [contactId], references: [id], onDelete: Restrict)
   createdByUser      User                @relation("AccountActivityCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
 
+  @@unique([organizationId, sourceKey])
+  @@unique([organizationId, id])
+  @@index([organizationId, createdByUserId, visibility, occurredAt])
+  @@index([organizationId, connectionId, threadId])
   @@index([organizationId, agencyId, occurredAt])
   @@index([organizationId, wholesaleAccountId, occurredAt])
   @@index([organizationId, contactId, occurredAt])
@@ -2585,7 +2629,6 @@ model WorklistCalendarEvent {
   @@index([syncStatus])
 }
 
-
 // Support lives outside sales Worklist and its calendar/visit side effects.
 enum SupportCategory {
   BUG
@@ -2660,4 +2703,131 @@ model SupportScreenshot {
   bytes                  Bytes
   createdAt              DateTime      @default(now())
   ticket                 SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+// Read-only mailbox authorization is separate from existing Worklist calendar consent.
+model MailboxConnection {
+  id                    String            @id @default(cuid())
+  organizationId        String
+  userId                String
+  provider              String
+  providerAccountId     String
+  email                 String
+  accessTokenEncrypted  String?
+  refreshTokenEncrypted String?
+  tokenExpiresAt        DateTime?
+  scope                 String
+  enabled               Boolean           @default(true)
+  historyDays           Int               @default(30)
+  retentionDays         Int               @default(90)
+  excludeInternal       Boolean           @default(true)
+  cursor                Json?
+  lastSyncAt            DateTime?
+  errorCode             String?
+  leaseId               String?
+  leaseUntil            DateTime?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  organization          Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activities            AccountActivity[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, userId, provider])
+  @@index([enabled, leaseUntil])
+}
+
+model MailboxOAuthState {
+  id                String       @id @default(cuid())
+  organizationId    String
+  userId            String
+  provider          String
+  stateHash         String       @unique
+  verifierEncrypted String
+  expiresAt         DateTime
+  createdAt         DateTime     @default(now())
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+}
+
+model ActivityAudit {
+  id             String          @id @default(cuid())
+  organizationId String
+  activityId     String
+  actorUserId    String
+  action         String
+  before         Json?
+  after          Json?
+  createdAt      DateTime        @default(now())
+  activity       AccountActivity @relation(fields: [organizationId, activityId], references: [organizationId, id], onDelete: Cascade)
+
+  @@index([organizationId, activityId, createdAt])
+}
+
+// Deals are manually managed revenue opportunities; SalesOpportunity remains a detected signal.
+model DealStage {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  position       Int
+  probability    Int
+  active         Boolean      @default(true)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deals          Deal[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, name])
+  @@index([organizationId, position])
+}
+
+model Deal {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  agencyId           String?
+  wholesaleAccountId String?
+  contactId          String?
+  ownerUserId        String
+  stageId            String
+  title              String
+  status             String       @default("OPEN")
+  revenueCents       Int?
+  volume             Float?
+  probability        Int
+  expectedCloseAt    DateTime?
+  targetProducts     String[]     @default([])
+  nextAction         String?
+  competitors        String?
+  objections         String?
+  notes              String?
+  submissionKey      String
+  version            Int          @default(1)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stage              DealStage    @relation(fields: [organizationId, stageId], references: [organizationId, id], onDelete: Restrict)
+  events             DealEvent[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, submissionKey])
+  @@index([organizationId, status, stageId])
+  @@index([organizationId, agencyId])
+  @@index([organizationId, wholesaleAccountId])
+}
+
+model DealEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  dealId         String
+  actorUserId    String
+  fromStageId    String?
+  toStageId      String
+  fromStatus     String?
+  toStatus       String
+  note           String?
+  occurredAt     DateTime @default(now())
+  deal           Deal     @relation(fields: [organizationId, dealId], references: [organizationId, id], onDelete: Cascade)
+
+  @@index([organizationId, dealId, occurredAt])
 }
