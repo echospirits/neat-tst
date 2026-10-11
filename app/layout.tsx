@@ -9,6 +9,7 @@ import { AppBreadcrumbs, AppSidebarNavigation, FloatingVisitAction, MobileTabbar
 import { GlobalSearchForm } from './components/GlobalSearchForm';
 import { ActionNotice } from './components/ActionNotice';
 import './styles.css';
+import './crm/crm.css';
 import './redesign.css';
 import './theme.css';
 import { AppearanceSync } from './components/AppearanceSync';

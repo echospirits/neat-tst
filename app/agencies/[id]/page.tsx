@@ -118,7 +118,7 @@ export default async function AgencyActivityPage({
       orderBy: [{ active: 'desc' }, { isPrimary: 'desc' }, { name: 'asc' }],
     }),
     prisma.accountActivity.findMany({
-      where: { organizationId, agencyId: id },
+      where: { organizationId, agencyId: id, activityType: { in: ['EMAIL_INITIATED', 'CALL_INITIATED'] }, OR: [{ visibility: 'TEAM' }, { createdByUserId: currentUser.id }] },
       include: { contact: { select: { name: true } }, createdByUser: { select: { email: true, name: true } } },
       orderBy: { occurredAt: 'desc' },
       take: 50,
@@ -235,13 +235,13 @@ export default async function AgencyActivityPage({
 
       <section className="dashboard-section account-workspace-section" id="activity">
         <div className="section-heading">
-          <h2>Activity</h2>
+          <h2>Activity</h2><Link className="btn secondary" href={`/activities?accountType=AGENCY&accountId=${agency.id}`}>Log contact &amp; relationship timeline</Link><Link className="btn secondary" href={`/deals?accountType=AGENCY&accountId=${agency.id}`}>Deals</Link>
           <span className="pill">{visits.length + communicationActivities.length + salesStatusHistory.length + targetingHistory.length}</span>
         </div>
         <VisitActivityTable contactMap={contactMap} visits={visits} supplementalEvents={communicationActivities.map((activity) => ({
           actor: getUserDisplayName(activity.createdByUser),
           at: activity.occurredAt,
-          detail: getCommunicationTitle(activity.activityType, activity.contact.name),
+          detail: getCommunicationTitle(activity.activityType === 'EMAIL_INITIATED' ? 'EMAIL_INITIATED' : 'CALL_INITIATED', activity.contact?.name ?? 'Contact'),
           id: activity.id,
           title: activity.activityType === 'EMAIL_INITIATED' ? 'Email initiated' : 'Call initiated',
         })).concat(salesStatusHistory.map((event) => ({

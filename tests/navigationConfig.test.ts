@@ -11,7 +11,7 @@ import {
 test('desktop navigation keeps work and account areas intentionally grouped', () => {
   assert.deepEqual(
     getNavigationItems('work').map((item) => item.key),
-    ['home', 'worklist', 'visits', 'analytics'],
+    ['home', 'worklist', 'visits', 'analytics', 'activities'],
   );
   assert.deepEqual(
     getNavigationItems('work').find((item) => item.key === 'home'),
@@ -19,7 +19,7 @@ test('desktop navigation keeps work and account areas intentionally grouped', ()
   );
   assert.deepEqual(
     getNavigationItems('accounts').map((item) => item.key),
-    ['accounts', 'agencies', 'wholesale', 'wholesale-orders', 'pipeline'],
+    ['accounts', 'agencies', 'wholesale', 'wholesale-orders', 'pipeline', 'deals'],
   );
 });
 

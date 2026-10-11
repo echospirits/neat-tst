@@ -1,0 +1,126 @@
+.crm-panel {
+  padding: 1rem;
+  margin-block: 1rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.crm-form {
+  max-width: 42rem;
+  margin-block: 0.75rem;
+}
+.crm-form fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+}
+.crm-form label {
+  display: grid;
+  gap: 0.3rem;
+  font-weight: 600;
+}
+.crm-form input:not([type="checkbox"]),
+.crm-form select,
+.crm-form textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+}
+.crm-form button,
+.crm-picker button,
+.crm-panel summary,
+.crm-actions a {
+  min-height: 44px;
+}
+.crm-form .crm-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+}
+.crm-form .crm-check input {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+.crm-form details {
+  display: grid;
+  gap: 0.5rem;
+}
+.crm-panel summary {
+  cursor: pointer;
+  padding-block: 0.7rem;
+  font-weight: 600;
+}
+.crm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-block: 0.8rem;
+}
+.crm-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+.crm-facts dd {
+  margin: 0.2rem 0;
+  font-weight: 600;
+}
+.crm-timeline,
+.crm-picker-results {
+  list-style: none;
+  margin: 0.7rem 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+.crm-timeline > li {
+  padding: 1rem;
+  overflow-wrap: anywhere;
+}
+.crm-timeline h3 {
+  margin-block: 0.45rem;
+}
+.crm-entry-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+.crm-prewrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.crm-picker-results button {
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem;
+}
+.crm-feedback {
+  border-left: 3px solid currentColor;
+  padding: 0.6rem;
+  overflow-wrap: anywhere;
+}
+.crm-board {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+.crm-empty-stage { display: none; }
+.crm-deal {
+  border-top: 1px solid var(--border-color, #ddd);
+  padding-block: 0.75rem;
+}
+@media (min-width: 900px) {
+  .crm-empty-stage { display: block; }
+  .crm-board {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .crm-facts {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

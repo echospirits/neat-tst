@@ -173,7 +173,7 @@ export default async function WholesaleActivityPage({
       orderBy: [{ active: 'desc' }, { isPrimary: 'desc' }, { name: 'asc' }],
     }),
     prisma.accountActivity.findMany({
-      where: { organizationId, wholesaleAccountId: id },
+      where: { organizationId, wholesaleAccountId: id, activityType: { in: ['EMAIL_INITIATED', 'CALL_INITIATED'] }, OR: [{ visibility: 'TEAM' }, { createdByUserId: user.id }] },
       include: { contact: { select: { name: true } }, createdByUser: { select: { email: true, name: true } } },
       orderBy: { occurredAt: 'desc' }, take: 50,
     }),
@@ -387,7 +387,7 @@ export default async function WholesaleActivityPage({
 
       <section className="dashboard-section account-workspace-section" id="activity">
         <div className="section-heading">
-          <h2>Activity</h2>
+          <h2>Activity</h2><Link className="btn secondary" href={`/activities?accountType=WHOLESALE&accountId=${account.id}`}>Log contact &amp; relationship timeline</Link><Link className="btn secondary" href={`/deals?accountType=WHOLESALE&accountId=${account.id}`}>Deals</Link>
           <span className="pill">{visits.length + filedOrders.length + communicationActivities.length + salesStatusHistory.length + targetingHistory.length}</span>
         </div>
         <VisitActivityTable contactMap={contactMap} visits={visits} supplementalEvents={filedOrders.map((order) => ({
@@ -399,7 +399,7 @@ export default async function WholesaleActivityPage({
           title: 'Direct wholesale order filed',
         })).concat(communicationActivities.map((activity) => ({
           actor: getUserDisplayName(activity.createdByUser), at: activity.occurredAt,
-          detail: getCommunicationTitle(activity.activityType, activity.contact.name), id: activity.id,
+          detail: getCommunicationTitle(activity.activityType === 'EMAIL_INITIATED' ? 'EMAIL_INITIATED' : 'CALL_INITIATED', activity.contact?.name ?? 'Contact'), id: activity.id,
           href: '',
           title: activity.activityType === 'EMAIL_INITIATED' ? 'Email initiated' : 'Call initiated',
         }))).concat(salesStatusHistory.map((event) => ({
