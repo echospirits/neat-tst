@@ -5,6 +5,7 @@ import test from 'node:test';
 import ts from 'typescript';
 import { normalizeUsState, stateScopedLicenseeIds } from '../lib/usStates';
 import { parseWholesaleLicenseeIds, getPrimaryWholesaleLicenseeId, getWholesaleLicenseeIdCreateData } from '../lib/wholesaleAccounts';
+import { getWholesaleAddressProtectionForEdit } from '../lib/wholesaleAddressProtection';
 
 function loadCreate(existing = false) {
   const source = readFileSync(new URL('../app/wholesale/page.tsx', import.meta.url), 'utf8');
@@ -17,6 +18,7 @@ function loadCreate(existing = false) {
     result: undefined as unknown,
     requireUser: async () => ({ id: 'rep' }), requireOrganizationContext: async () => ({ organizationId: 'tenant' }),
     normalizeUsState, stateScopedLicenseeIds, parseWholesaleLicenseeIds, getPrimaryWholesaleLicenseeId, getWholesaleLicenseeIdCreateData,
+    getWholesaleAddressProtectionForEdit,
     randomUUID: () => 'unique-test', getSelectedTagIds: () => [], getWholesaleLicenseeIdConflictWhere: (ids: string[]) => ({ ids }),
     AccountType: { BAR_RESTAURANT: 'BAR_RESTAURANT' }, toOptional: (value: string) => value.trim() || null,
     getGeocodeResetForAddressChange: () => ({}), syncWholesaleAccountLicenseeIds: async () => {},

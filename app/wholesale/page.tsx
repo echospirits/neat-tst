@@ -15,6 +15,7 @@ import { buildPageMetadata } from '../../lib/appBrand';
 import { requireUser } from '../../lib/auth';
 import { getDirectionsHref } from '../../lib/crmActionContext';
 import { formatEasternDate } from '../../lib/dateTime';
+import { getWholesaleAddressProtectionForEdit } from '../../lib/wholesaleAddressProtection';
 import { prisma } from '../../lib/prisma';
 import { getOrganizationFeatures, requireOrganizationContext } from '../../lib/organizations';
 import {
@@ -367,6 +368,7 @@ async function createWholesale(formData: FormData) {
     return tx.wholesaleAccount.create({
       data: {
         ...accountData,
+        ...getWholesaleAddressProtectionForEdit(null, accountData),
         licenseeId,
         licenseeIds: { create: getWholesaleLicenseeIdCreateData(licenseeIds) },
         createdByUserId: user.id,

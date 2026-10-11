@@ -9,6 +9,7 @@ import ts from 'typescript';
 import { isTasterRole } from '../lib/userAccess';
 import { normalizeUsState, stateScopedLicenseeIds } from '../lib/usStates';
 import * as wholesaleAccounts from '../lib/wholesaleAccounts';
+import { getWholesaleAddressProtectionForEdit } from '../lib/wholesaleAddressProtection';
 
 const editSource = readFileSync('app/wholesale/[id]/edit/page.tsx', 'utf8');
 const authSource = readFileSync('lib/auth.ts', 'utf8');
@@ -22,7 +23,7 @@ function functionSource(source: string, names: string[]) {
   }).join('\n');
 }
 
-function loadEdit(role: UserRole | null) {
+function loadEdit(role: UserRole | null, accountOverrides: Record<string, unknown> = {}, official: object | null = null) {
   const effects: string[] = [];
   const updates: Array<Record<string, unknown>> = [];
   const account = {
@@ -30,17 +31,22 @@ function loadEdit(role: UserRole | null) {
     name: 'Original name', state: 'OH', mergedIntoId: null, officialAccountId: null,
     address: '1 Main St', city: 'Columbus', county: 'Franklin', zip: '43215',
     agencyId: '10', districtId: '2', deliveryDay: 'Monday', ownership: null, phone: null,
+    ...accountOverrides,
   };
   const context: Record<string, unknown> = {
     ...wholesaleAccounts, UserRole, isTasterRole, normalizeUsState, stateScopedLicenseeIds,
+    getWholesaleAddressProtectionForEdit,
     getCurrentSession: async () => role ? { user: { id: 'caller', role } } : null,
     toOptional: (value: unknown) => String(value ?? '').trim() || null,
-    findOfficialWholesaleAccountByLicenseeIds: async () => { effects.push('official-lookup'); return null; },
+    findOfficialWholesaleAccountByLicenseeIds: async () => { effects.push('official-lookup'); return official; },
     getGeocodeResetForAddressChange: () => ({ geocodeStatus: 'PENDING' }),
     syncWholesaleAccountLicenseeIds: async () => { effects.push('licensee-sync'); },
     prisma: {
       wholesaleAccount: {
-        findUnique: async () => { effects.push('account-read'); return account; },
+        findUnique: async ({ select }: { select?: Record<string, unknown> }) => {
+          effects.push('account-read');
+          return select ? Object.fromEntries(Object.keys(select).map(key => [key, account[key as keyof typeof account]])) : account;
+        },
         findFirst: async () => { effects.push('conflict-read'); return null; },
       },
       $transaction: async (callback: (tx: unknown) => Promise<unknown>) => {
@@ -115,6 +121,30 @@ test('platform admin validation errors still prevent mutation and assessment ref
   const data = submittedData(); data.set('state', 'invalid');
   assert.match(String((await action(data) as { error: string }).error), /valid US state/);
   assert.deepEqual(effects, []);
+});
+
+test('the actual edit action protects only corrected address fields and preserves existing protection', async () => {
+  for (const field of ['address', 'city', 'zip'] as const) {
+    const { action, updates } = loadEdit(UserRole.PLATFORM_ADMIN);
+    const data = submittedData(); data.set('address', '1 Main St'); data.set(field, 'Public correction');
+    await assert.rejects(action(data), /REDIRECT:/);
+    assert.equal(updates[0][`${field}ImportProtected`], true);
+    for (const other of ['address', 'city', 'zip'] as const) if (other !== field) assert.equal(updates[0][`${other}ImportProtected`], undefined);
+  }
+  const { action, updates } = loadEdit(UserRole.PLATFORM_ADMIN, { addressImportProtected: true });
+  const data = submittedData(); data.set('address', '1 Main St');
+  await assert.rejects(action(data), /REDIRECT:/);
+  assert.equal(updates[0].addressImportProtected, true);
+});
+
+test('official relinking does not refill a deliberately cleared public address', async () => {
+  const { action, updates } = loadEdit(UserRole.PLATFORM_ADMIN,
+    { address: null, addressImportProtected: true },
+    { id: 'official', address: 'Official address', city: 'Columbus', zip: '43215', state: 'OH' });
+  const data = submittedData(); data.set('address', '');
+  await assert.rejects(action(data), /REDIRECT:/);
+  assert.equal(updates[0].address, null);
+  assert.equal(updates[0].addressImportProtected, true);
 });
 
 test('wholesale detail renders the Edit link only for platform admins', () => {

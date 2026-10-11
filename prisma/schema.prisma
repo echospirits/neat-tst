@@ -1430,6 +1430,9 @@ model WholesaleAccount {
   county                        String?
   state                         String?                     @default("OH")
   zip                           String?
+  addressImportProtected        Boolean                     @default(false)
+  cityImportProtected           Boolean                     @default(false)
+  zipImportProtected            Boolean                     @default(false)
   districtId                    String?
   deliveryDay                   String?
   phone                         String?

@@ -113,9 +113,9 @@ test('uses the production identity decision for the one equal-frequency duplicat
   assert.equal(result.selected[0].name, 'LIBERTY WINE & LIQUOR');
 });
 
-test('preserves an active wholesale name and refreshes an inactive one', () => {
-  assert.equal(getImportedWholesaleName({ currentName: 'Custom Name', officialName: 'Official Name', wasActive: true }), 'Custom Name');
-  assert.equal(getImportedWholesaleName({ currentName: 'Licensee 123', officialName: 'Official Name', wasActive: false }), 'Official Name');
+test('preserves every existing wholesale name independently of activation state', () => {
+  assert.equal(getImportedWholesaleName({ currentName: 'Custom Name' }), 'Custom Name');
+  assert.equal(getImportedWholesaleName({ currentName: 'Licensee 123' }), 'Licensee 123');
 });
 
 test('counts only material Account Master changes to existing wholesale locations', () => {

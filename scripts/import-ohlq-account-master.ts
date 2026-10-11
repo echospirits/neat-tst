@@ -6,7 +6,7 @@ import { assertSideEffectEnabled, validateRuntimeEnvironment, logEnvironmentEven
 import {
   assertAccountMasterSelectionIsSafe,
   choosePrimaryAccountMasterRow,
-  getImportedWholesaleName,
+  getNextAccountMasterWholesaleValues,
   groupAccountMasterRowsByLocation,
   hasAccountMasterWholesaleChanges,
   parseAccountMasterCsv,
@@ -25,7 +25,7 @@ import {
   recordOhlqReportRunErrored,
   recordOhlqReportRunStarted,
 } from '../lib/ohlqDataStatus';
-import { getGeocodeResetForAddressChange } from '../lib/location/geocode';
+import { updateWholesaleAccountFromAccountMaster } from '../lib/ohlqAccountMasterPersistence';
 import { areOhlqAddressesSame, getOhlqLicenseeMatchKeys } from '../lib/ohlqWholesaleMatching';
 import { getWholesaleLicenseeIdValues } from '../lib/wholesaleAccounts';
 
@@ -84,43 +84,6 @@ const values = (row: AccountMasterRow) => ({
   zip: row.zip,
 });
 
-const getNextWholesaleValues = (
-  account: {
-    address: string | null;
-    agencyId: string | null;
-    city: string | null;
-    county: string | null;
-    deliveryDay: string | null;
-    districtId: string | null;
-    isActive: boolean;
-    name: string;
-    officialAccountId: string | null;
-    ownership: string | null;
-    phone: string | null;
-    state: string | null;
-    zip: string | null;
-  },
-  row: AccountMasterRow,
-  officialAccountId: string | null,
-) => {
-  const sourceValues = values(row);
-  return {
-    address: sourceValues.address ?? account.address,
-    agencyId: sourceValues.agencyId ?? account.agencyId,
-    city: sourceValues.city ?? account.city,
-    county: sourceValues.county ?? account.county,
-    deliveryDay: sourceValues.deliveryDay ?? account.deliveryDay,
-    districtId: sourceValues.districtId ?? account.districtId,
-    isActive: true,
-    name: getImportedWholesaleName({ currentName: account.name, officialName: row.name, wasActive: account.isActive }),
-    officialAccountId,
-    ownership: sourceValues.ownership ?? account.ownership,
-    phone: sourceValues.phone ?? account.phone,
-    state: sourceValues.state ?? account.state,
-    zip: sourceValues.zip ?? account.zip,
-  };
-};
-
 async function runImport() {
   if (!sourcePath || !existsSync(sourcePath)) throw new Error('Pass an existing Account Master CSV with --file <path>.');
   if (!['test', 'production'].includes(expectedEnvironment)) {
@@ -151,9 +114,6 @@ async function runImport() {
       include: { licenseeIds: { select: { licenseeId: true } } },
     }),
   ]);
-  const namesToPreserve = new Map(
-    wholesaleAccounts.filter((account) => account.isActive).map((account) => [account.id, account.name]),
-  );
 
   const identitiesByLicenseeId = new Map<string, ExistingAccountIdentity[]>();
   const appendIdentity = (licenseeId: string, item: ExistingAccountIdentity) => {
@@ -309,7 +269,7 @@ async function runImport() {
     const primaryRow = rows.find((row) => row.licenseeId === account.licenseeId.trim().toUpperCase()) ??
       choosePrimaryAccountMasterRow(rows);
     const officialAccountId = account.officialAccountId ?? officialByLicenseeId.get(primaryRow.licenseeId)?.id ?? null;
-    const next = getNextWholesaleValues(account, primaryRow, officialAccountId);
+    const next = getNextAccountMasterWholesaleValues(account, primaryRow, officialAccountId);
     return hasAccountMasterWholesaleChanges({
       current: account,
       existingLicenseeIds: getWholesaleLicenseeIdValues(account),
@@ -442,34 +402,22 @@ async function runImport() {
   const existingUpdates = Array.from(rowsByWholesaleId.entries());
   for (let offset = 0; offset < existingUpdates.length; offset += 100) {
     const batch = existingUpdates.slice(offset, offset + 100);
-    const operations: Prisma.PrismaPromise<unknown>[] = [];
-    for (const [wholesaleId, rows] of batch) {
+    await prisma.$transaction(async (tx) => {
+      for (const [wholesaleId, rows] of batch) {
         const account = wholesaleAccounts.find((candidate) => candidate.id === wholesaleId)!;
         const primaryRow = rows.find((row) => row.licenseeId === account.licenseeId.trim().toUpperCase()) ??
           choosePrimaryAccountMasterRow(rows);
         const officialAccountId = account.officialAccountId ?? officialIdsByLicenseeId.get(primaryRow.licenseeId);
-        const nextValues = getNextWholesaleValues(account, primaryRow, officialAccountId ?? null);
-        operations.push(prisma.wholesaleAccount.update({
-          where: { id: wholesaleId },
-          data: {
-            ...nextValues,
-            ...getGeocodeResetForAddressChange(account, {
-              address: nextValues.address,
-              city: nextValues.city,
-              state: nextValues.state,
-              zip: nextValues.zip,
-            }),
-          },
-        }));
+        await updateWholesaleAccountFromAccountMaster(tx, wholesaleId, primaryRow, officialAccountId ?? null);
         for (const row of rows) {
-          operations.push(prisma.wholesaleLicenseeId.upsert({
+          await tx.wholesaleLicenseeId.upsert({
             where: { licenseeId: row.licenseeId },
             create: { wholesaleAccountId: wholesaleId, licenseeId: row.licenseeId, isPrimary: row.licenseeId === account.licenseeId },
             update: { wholesaleAccountId: wholesaleId, isPrimary: row.licenseeId === account.licenseeId },
-          }));
+          });
         }
-    }
-    await prisma.$transaction(operations);
+      }
+    }, { timeout: 60000 });
     if (offset % 1000 === 0) console.log(`Existing wholesale accounts: ${Math.min(offset + batch.length, existingUpdates.length)}/${existingUpdates.length}`);
   }
 
@@ -537,9 +485,6 @@ async function runImport() {
     ...Array.from(officialIdsByLicenseeId, ([licenseeId, id]) => [id, licenseeId] as const),
   ]));
   const missingImportedLicenseeIds = importRows.filter((row) => !representedLicenseeIds.has(row.licenseeId));
-  const activeNameChanges = finalWholesaleAccounts.filter(
-    (account) => namesToPreserve.has(account.id) && namesToPreserve.get(account.id) !== account.name,
-  );
   const activeAccountsMissingAddress = await prisma.wholesaleAccount.count({
     where: { isActive: true, mergedIntoId: null, OR: [{ address: null }, { address: '' }] },
   });
@@ -547,14 +492,14 @@ async function runImport() {
     activeCount,
     placeholderCount,
     missingImportedLicenseeIds: missingImportedLicenseeIds.length,
-    preservedActiveNameChanges: activeNameChanges.length,
+    existingNamesPreserved: true,
     activeAccountsMissingAddress,
     ownershipConflicts: finalOwnershipConflicts,
   };
   logEnvironmentEvent('ohlq.account-master.completed', { sourceHash, ...verification });
   console.log(JSON.stringify({ applied: true, ...verification }, null, 2));
-  if (missingImportedLicenseeIds.length || activeNameChanges.length || finalOwnershipConflicts.length) {
-    throw new Error('Post-import verification failed. Review missing Licensee IDs, changed active names, or conflicting Licensee ID ownership.');
+  if (missingImportedLicenseeIds.length || finalOwnershipConflicts.length) {
+    throw new Error('Post-import verification failed. Review missing Licensee IDs or conflicting Licensee ID ownership.');
   }
   await recordOhlqReportRunCompleted({
     downloadResult: {

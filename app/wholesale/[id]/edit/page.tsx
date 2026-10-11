@@ -15,6 +15,7 @@ import { buildPageMetadata } from '../../../../lib/appBrand';
 import { requirePlatformAdmin } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
 import { getGeocodeResetForAddressChange } from '../../../../lib/location/geocode';
+import { getWholesaleAddressProtectionForEdit } from '../../../../lib/wholesaleAddressProtection';
 import { PageHeader } from '../../../components/PageChrome';
 import {
   chooseWholesaleOfficialAccountCandidate,
@@ -135,7 +136,9 @@ async function updateWholesaleAccount(formData: FormData) {
     select: {
       address: true,
       agencyId: true,
+      addressImportProtected: true,
       city: true,
+      cityImportProtected: true,
       county: true,
       deliveryDay: true,
       districtId: true,
@@ -149,6 +152,7 @@ async function updateWholesaleAccount(formData: FormData) {
       phone: true,
       state: true,
       zip: true,
+      zipImportProtected: true,
     },
   });
 
@@ -223,7 +227,8 @@ async function updateWholesaleAccount(formData: FormData) {
     state: existingAccount.state ?? 'OH',
     zip: existingAccount.zip,
   };
-  const accountValues =
+  const addressProtection = getWholesaleAddressProtectionForEdit(existingAccount, submittedValues);
+  const mergedValues =
     officialAccount && (licenseeIdsChanged || officialAccountChanged)
       ? mergeWholesaleEditableValuesWithOfficialDefaults({
           existingValues,
@@ -231,6 +236,12 @@ async function updateWholesaleAccount(formData: FormData) {
           submittedValues,
         })
       : submittedValues;
+  const accountValues = {
+    ...mergedValues,
+    address: addressProtection.addressImportProtected ? submittedValues.address : mergedValues.address,
+    city: addressProtection.cityImportProtected ? submittedValues.city : mergedValues.city,
+    zip: addressProtection.zipImportProtected ? submittedValues.zip : mergedValues.zip,
+  };
 
   await prisma.$transaction(async (tx) => {
     await tx.wholesaleAccount.update({
@@ -250,6 +261,7 @@ async function updateWholesaleAccount(formData: FormData) {
         districtId: accountValues.districtId,
         deliveryDay: accountValues.deliveryDay,
         phone: accountValues.phone,
+        ...addressProtection,
         ...getGeocodeResetForAddressChange(existingValues, accountValues),
       },
     });
@@ -319,8 +331,9 @@ export default async function EditWholesaleAccountPage({
               <textarea name="licenseeIds" defaultValue={getWholesaleLicenseeIdValues(account).join('\n')} required rows={3} />
             </label>
             <label>
-              Account name
-              <input name="name" defaultValue={account.name} required />
+              <span id="name-label">Account name</span>
+              <input name="name" defaultValue={account.name} required aria-labelledby="name-label" aria-describedby="name-import-help" />
+              <small id="name-import-help" className="muted">Kept during future OHLQ imports.</small>
             </label>
             <label>
               Phone
@@ -331,12 +344,14 @@ export default async function EditWholesaleAccountPage({
               <input name="agencyId" defaultValue={account.agencyId ?? ''} />
             </label>
             <label>
-              Address
-              <input name="address" defaultValue={account.address ?? ''} />
+              <span id="address-label">Address</span>
+              <input name="address" defaultValue={account.address ?? ''} aria-labelledby="address-label" aria-describedby="address-import-help" />
+              <small id="address-import-help" className="muted">{account.addressImportProtected ? 'Kept during OHLQ imports.' : 'Manual changes are kept during OHLQ imports.'}</small>
             </label>
             <label>
-              City
-              <input name="city" defaultValue={account.city ?? ''} />
+              <span id="city-label">City</span>
+              <input name="city" defaultValue={account.city ?? ''} aria-labelledby="city-label" aria-describedby="city-import-help" />
+              <small id="city-import-help" className="muted">{account.cityImportProtected ? 'Kept during OHLQ imports.' : 'Manual changes are kept during OHLQ imports.'}</small>
             </label>
             <label>
               County
@@ -344,8 +359,9 @@ export default async function EditWholesaleAccountPage({
             </label>
             <StateField defaultValue={normalizeUsState(account.state) ?? 'OH'} />
             <label>
-              Zip
-              <input name="zip" defaultValue={account.zip ?? ''} />
+              <span id="zip-label">Zip</span>
+              <input name="zip" defaultValue={account.zip ?? ''} aria-labelledby="zip-label" aria-describedby="zip-import-help" />
+              <small id="zip-import-help" className="muted">{account.zipImportProtected ? 'Kept during OHLQ imports.' : 'Manual changes are kept during OHLQ imports.'}</small>
             </label>
             <label>
               Ownership

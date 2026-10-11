@@ -8,6 +8,7 @@ import { isTasterRole } from '../lib/userAccess';
 import { normalizeUsState, stateScopedLicenseeIds } from '../lib/usStates';
 import * as wholesaleAccounts from '../lib/wholesaleAccounts';
 import * as visitWorkflow from '../lib/visitWorkflow';
+import { getWholesaleAddressProtectionForEdit } from '../lib/wholesaleAddressProtection';
 
 type RecordData = Record<string, any>;
 type Flow = 'directory' | 'visit';
@@ -64,6 +65,7 @@ function loadFlow(flow: Flow, role: enums.UserRole | null, organizationId: strin
   const context: RecordData = {
     URLSearchParams,
     ...enums, ...wholesaleAccounts, ...visitWorkflow, normalizeUsState, stateScopedLicenseeIds, isTasterRole,
+    getWholesaleAddressProtectionForEdit,
     getCurrentSession: async () => user ? { user } : null,
     requireOrganizationContext: async (actor: typeof user) => ({ organizationId: actor!.organizationId }),
     hasFeature: async () => true,
@@ -165,6 +167,7 @@ for (const flow of ['directory', 'visit'] as const) {
     assert.equal(accounts.length, 1); assert.equal(accounts[0].licenseeId, 'NEW-PERMIT');
     assert.equal(accounts[0].createdByUserId, 'tenant-a-caller');
     assert.equal(accounts[0].officialAccountId, 'official-submitted');
+    for (const field of ['address', 'city', 'zip']) assert.equal(accounts[0][`${field}ImportProtected`], true);
     assert.equal(harness.effects.filter(effect => effect === 'canonical-create').length, 1);
     assert.ok(!harness.effects.includes('canonical-update'));
     assert.equal(harness.tags[0].wholesaleAccountId, 'new-account');

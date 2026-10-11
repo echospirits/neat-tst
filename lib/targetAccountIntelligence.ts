@@ -8,6 +8,7 @@ import {
   type PrismaClient,
 } from '@prisma/client';
 import { prisma } from './prisma';
+import { getWholesaleAddressValuesForImport } from './wholesaleAddressProtection';
 import { ECHO_ORGANIZATION_ID } from './organizations';
 import {
   DEFAULT_TARGET_MODEL_PERIOD,
@@ -115,8 +116,10 @@ const upsertWholesaleAccount = async ({
     where: getWholesaleLicenseeIdLookupWhere(row.permitNumber),
     select: {
       address: true,
+      addressImportProtected: true,
       agencyId: true,
       city: true,
+      cityImportProtected: true,
       county: true,
       id: true,
       licenseeId: true,
@@ -127,6 +130,7 @@ const upsertWholesaleAccount = async ({
       phone: true,
       state: true,
       zip: true,
+      zipImportProtected: true,
     },
   });
   const officialAccount = await tx.account.findFirst({
@@ -167,12 +171,13 @@ const upsertWholesaleAccount = async ({
     officialAccountId: existing.officialAccountId ?? officialAccount?.id,
     isActive: true,
     licenseeId: primaryLicenseeId,
-    name: existing.name || row.accountName,
     agencyId: existing.agencyId ?? officialAccount?.agencyRefId,
-    address: existing.address ?? row.address,
-    city: existing.city ?? row.city,
+    ...getWholesaleAddressValuesForImport(existing, {
+      address: existing.address ?? row.address,
+      city: existing.city ?? row.city,
+      zip: existing.zip ?? row.zip,
+    }),
     ownership: existing.ownership ?? row.ownership,
-    zip: existing.zip ?? row.zip,
   };
   const updated = await tx.wholesaleAccount.update({
     where: { id: existing.id },

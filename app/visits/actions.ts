@@ -13,6 +13,7 @@ import {
 } from '../../lib/blob';
 import { prisma } from '../../lib/prisma';
 import { hasFeature, requireOrganizationContext } from '../../lib/organizations';
+import { getWholesaleAddressProtectionForEdit } from '../../lib/wholesaleAddressProtection';
 import { parseTimeInputToMinutes } from '../../lib/dateTime';
 import { syncWorklistItemCalendar } from '../../lib/calendar/worklistSync';
 import { parseSalesStatus, setAccountSalesStatus } from '../../lib/accountSalesStatus';
@@ -405,6 +406,11 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
               ownership: toOptional(formData.get('newWholesaleOwnership')),
               districtId: toOptional(formData.get('newWholesaleDistrictId')),
               deliveryDay: toOptional(formData.get('newWholesaleDeliveryDay')),
+              ...getWholesaleAddressProtectionForEdit(null, {
+                address: toOptional(formData.get('newWholesaleAddress')),
+                city: toOptional(formData.get('newWholesaleCity')),
+                zip: toOptional(formData.get('newWholesaleZip')),
+              }),
               createdByUserId: user.id,
             },
           });

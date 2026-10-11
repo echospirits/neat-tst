@@ -1,5 +1,6 @@
 import Papa from 'papaparse';
 import { areOhlqAddressesSame, getOhlqLicenseeMatchKeys, normalizeOhlqAddressPart } from './ohlqWholesaleMatching';
+import { getWholesaleAddressValuesForImport, type WholesaleAddressProtection } from './wholesaleAddressProtection';
 
 export type AccountMasterCsvRow = {
   LicenseeID?: string;
@@ -395,14 +396,30 @@ export function parseAccountMasterCsv(
 
 export function getImportedWholesaleName({
   currentName,
-  officialName,
-  wasActive,
 }: {
   currentName: string;
-  officialName: string;
-  wasActive: boolean;
 }) {
-  return wasActive ? currentName : officialName;
+  return currentName;
+}
+
+export function getNextAccountMasterWholesaleValues(
+  account: AccountMasterWholesaleValues & WholesaleAddressProtection,
+  row: AccountMasterRow,
+  officialAccountId: string | null,
+): AccountMasterWholesaleValues {
+  return {
+    ...getWholesaleAddressValuesForImport(account, row),
+    agencyId: row.agencyId ?? account.agencyId,
+    county: row.county ?? account.county,
+    deliveryDay: row.deliveryDay ?? account.deliveryDay,
+    districtId: row.districtId ?? account.districtId,
+    isActive: true,
+    name: getImportedWholesaleName({ currentName: account.name }),
+    officialAccountId,
+    ownership: row.ownership ?? account.ownership,
+    phone: row.phone ?? account.phone,
+    state: row.state ?? account.state,
+  };
 }
 
 const ACCOUNT_MASTER_WHOLESALE_FIELDS = [
