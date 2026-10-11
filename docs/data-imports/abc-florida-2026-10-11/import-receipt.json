@@ -1,0 +1,678 @@
+{
+  "batch": "abc-florida-2026-10-11",
+  "mode": "apply",
+  "startedAt": "2026-10-11T11:07:36.138Z",
+  "databaseTarget": "neon-neat-tst",
+  "databaseHost": "ep-noisy-dew-avchokwr-pooler.c-11.us-east-1.aws.neon.tech",
+  "organizationId": "org_echo_spirits",
+  "actorUserId": "cmtj135gl0000upa4zz3rwf8m",
+  "health": {
+    "ok": true,
+    "database": "connected",
+    "databaseTarget": "neon-neat-tst",
+    "environment": "test"
+  },
+  "sourceSha256": "dd686c8f41fcd154e3459e2be476874c7899218fc2c9d7b679e2a8ec1c0ee53f",
+  "countyEvidenceSha256": "1fcb6a514867f8afc5714b68d52a60ddfebd28e651b9fb2dd5683f0b808431b5",
+  "sourceCount": 126,
+  "namedManagers": 123,
+  "unknownManagerStores": [
+    "079",
+    "099",
+    "155"
+  ],
+  "panhandleAdvisoryStores": [
+    199,
+    200,
+    203,
+    210,
+    215,
+    217,
+    218
+  ],
+  "stores": [
+    {
+      "code": "003",
+      "id": "abc-fws-fl-003",
+      "result": "created"
+    },
+    {
+      "code": "004",
+      "id": "abc-fws-fl-004",
+      "result": "created"
+    },
+    {
+      "code": "005",
+      "id": "abc-fws-fl-005",
+      "result": "created"
+    },
+    {
+      "code": "006",
+      "id": "abc-fws-fl-006",
+      "result": "created"
+    },
+    {
+      "code": "014",
+      "id": "abc-fws-fl-014",
+      "result": "created"
+    },
+    {
+      "code": "016",
+      "id": "abc-fws-fl-016",
+      "result": "created"
+    },
+    {
+      "code": "017",
+      "id": "abc-fws-fl-017",
+      "result": "created"
+    },
+    {
+      "code": "018",
+      "id": "abc-fws-fl-018",
+      "result": "created"
+    },
+    {
+      "code": "019",
+      "id": "abc-fws-fl-019",
+      "result": "created"
+    },
+    {
+      "code": "020",
+      "id": "abc-fws-fl-020",
+      "result": "created"
+    },
+    {
+      "code": "023",
+      "id": "abc-fws-fl-023",
+      "result": "created"
+    },
+    {
+      "code": "025",
+      "id": "abc-fws-fl-025",
+      "result": "created"
+    },
+    {
+      "code": "027",
+      "id": "abc-fws-fl-027",
+      "result": "created"
+    },
+    {
+      "code": "028",
+      "id": "abc-fws-fl-028",
+      "result": "created"
+    },
+    {
+      "code": "032",
+      "id": "abc-fws-fl-032",
+      "result": "created"
+    },
+    {
+      "code": "035",
+      "id": "abc-fws-fl-035",
+      "result": "created"
+    },
+    {
+      "code": "038",
+      "id": "abc-fws-fl-038",
+      "result": "created"
+    },
+    {
+      "code": "040",
+      "id": "abc-fws-fl-040",
+      "result": "created"
+    },
+    {
+      "code": "041",
+      "id": "abc-fws-fl-041",
+      "result": "created"
+    },
+    {
+      "code": "042",
+      "id": "abc-fws-fl-042",
+      "result": "created"
+    },
+    {
+      "code": "043",
+      "id": "abc-fws-fl-043",
+      "result": "created"
+    },
+    {
+      "code": "046",
+      "id": "abc-fws-fl-046",
+      "result": "created"
+    },
+    {
+      "code": "049",
+      "id": "abc-fws-fl-049",
+      "result": "created"
+    },
+    {
+      "code": "050",
+      "id": "abc-fws-fl-050",
+      "result": "created"
+    },
+    {
+      "code": "052",
+      "id": "abc-fws-fl-052",
+      "result": "created"
+    },
+    {
+      "code": "053",
+      "id": "abc-fws-fl-053",
+      "result": "created"
+    },
+    {
+      "code": "054",
+      "id": "abc-fws-fl-054",
+      "result": "created"
+    },
+    {
+      "code": "055",
+      "id": "abc-fws-fl-055",
+      "result": "created"
+    },
+    {
+      "code": "056",
+      "id": "abc-fws-fl-056",
+      "result": "created"
+    },
+    {
+      "code": "059",
+      "id": "abc-fws-fl-059",
+      "result": "created"
+    },
+    {
+      "code": "060",
+      "id": "abc-fws-fl-060",
+      "result": "created"
+    },
+    {
+      "code": "063",
+      "id": "abc-fws-fl-063",
+      "result": "created"
+    },
+    {
+      "code": "064",
+      "id": "abc-fws-fl-064",
+      "result": "created"
+    },
+    {
+      "code": "065",
+      "id": "abc-fws-fl-065",
+      "result": "created"
+    },
+    {
+      "code": "069",
+      "id": "abc-fws-fl-069",
+      "result": "created"
+    },
+    {
+      "code": "071",
+      "id": "abc-fws-fl-071",
+      "result": "created"
+    },
+    {
+      "code": "072",
+      "id": "abc-fws-fl-072",
+      "result": "created"
+    },
+    {
+      "code": "073",
+      "id": "abc-fws-fl-073",
+      "result": "created"
+    },
+    {
+      "code": "074",
+      "id": "abc-fws-fl-074",
+      "result": "created"
+    },
+    {
+      "code": "075",
+      "id": "abc-fws-fl-075",
+      "result": "created"
+    },
+    {
+      "code": "076",
+      "id": "abc-fws-fl-076",
+      "result": "created"
+    },
+    {
+      "code": "077",
+      "id": "abc-fws-fl-077",
+      "result": "created"
+    },
+    {
+      "code": "079",
+      "id": "abc-fws-fl-079",
+      "result": "created"
+    },
+    {
+      "code": "080",
+      "id": "abc-fws-fl-080",
+      "result": "created"
+    },
+    {
+      "code": "081",
+      "id": "abc-fws-fl-081",
+      "result": "created"
+    },
+    {
+      "code": "085",
+      "id": "abc-fws-fl-085",
+      "result": "created"
+    },
+    {
+      "code": "086",
+      "id": "abc-fws-fl-086",
+      "result": "created"
+    },
+    {
+      "code": "091",
+      "id": "abc-fws-fl-091",
+      "result": "created"
+    },
+    {
+      "code": "092",
+      "id": "abc-fws-fl-092",
+      "result": "created"
+    },
+    {
+      "code": "094",
+      "id": "abc-fws-fl-094",
+      "result": "created"
+    },
+    {
+      "code": "095",
+      "id": "abc-fws-fl-095",
+      "result": "created"
+    },
+    {
+      "code": "096",
+      "id": "abc-fws-fl-096",
+      "result": "created"
+    },
+    {
+      "code": "098",
+      "id": "abc-fws-fl-098",
+      "result": "created"
+    },
+    {
+      "code": "099",
+      "id": "abc-fws-fl-099",
+      "result": "created"
+    },
+    {
+      "code": "105",
+      "id": "abc-fws-fl-105",
+      "result": "created"
+    },
+    {
+      "code": "106",
+      "id": "abc-fws-fl-106",
+      "result": "created"
+    },
+    {
+      "code": "107",
+      "id": "abc-fws-fl-107",
+      "result": "created"
+    },
+    {
+      "code": "111",
+      "id": "abc-fws-fl-111",
+      "result": "created"
+    },
+    {
+      "code": "112",
+      "id": "abc-fws-fl-112",
+      "result": "created"
+    },
+    {
+      "code": "113",
+      "id": "abc-fws-fl-113",
+      "result": "created"
+    },
+    {
+      "code": "114",
+      "id": "abc-fws-fl-114",
+      "result": "created"
+    },
+    {
+      "code": "118",
+      "id": "abc-fws-fl-118",
+      "result": "created"
+    },
+    {
+      "code": "123",
+      "id": "abc-fws-fl-123",
+      "result": "created"
+    },
+    {
+      "code": "128",
+      "id": "abc-fws-fl-128",
+      "result": "created"
+    },
+    {
+      "code": "131",
+      "id": "abc-fws-fl-131",
+      "result": "created"
+    },
+    {
+      "code": "132",
+      "id": "abc-fws-fl-132",
+      "result": "created"
+    },
+    {
+      "code": "133",
+      "id": "abc-fws-fl-133",
+      "result": "created"
+    },
+    {
+      "code": "134",
+      "id": "abc-fws-fl-134",
+      "result": "created"
+    },
+    {
+      "code": "136",
+      "id": "abc-fws-fl-136",
+      "result": "created"
+    },
+    {
+      "code": "137",
+      "id": "abc-fws-fl-137",
+      "result": "created"
+    },
+    {
+      "code": "138",
+      "id": "abc-fws-fl-138",
+      "result": "created"
+    },
+    {
+      "code": "139",
+      "id": "abc-fws-fl-139",
+      "result": "created"
+    },
+    {
+      "code": "140",
+      "id": "abc-fws-fl-140",
+      "result": "created"
+    },
+    {
+      "code": "142",
+      "id": "abc-fws-fl-142",
+      "result": "created"
+    },
+    {
+      "code": "143",
+      "id": "abc-fws-fl-143",
+      "result": "created"
+    },
+    {
+      "code": "144",
+      "id": "abc-fws-fl-144",
+      "result": "created"
+    },
+    {
+      "code": "145",
+      "id": "abc-fws-fl-145",
+      "result": "created"
+    },
+    {
+      "code": "147",
+      "id": "abc-fws-fl-147",
+      "result": "created"
+    },
+    {
+      "code": "148",
+      "id": "abc-fws-fl-148",
+      "result": "created"
+    },
+    {
+      "code": "149",
+      "id": "abc-fws-fl-149",
+      "result": "created"
+    },
+    {
+      "code": "150",
+      "id": "abc-fws-fl-150",
+      "result": "created"
+    },
+    {
+      "code": "151",
+      "id": "abc-fws-fl-151",
+      "result": "created"
+    },
+    {
+      "code": "152",
+      "id": "abc-fws-fl-152",
+      "result": "created"
+    },
+    {
+      "code": "153",
+      "id": "abc-fws-fl-153",
+      "result": "created"
+    },
+    {
+      "code": "154",
+      "id": "abc-fws-fl-154",
+      "result": "created"
+    },
+    {
+      "code": "155",
+      "id": "abc-fws-fl-155",
+      "result": "created"
+    },
+    {
+      "code": "157",
+      "id": "abc-fws-fl-157",
+      "result": "created"
+    },
+    {
+      "code": "158",
+      "id": "abc-fws-fl-158",
+      "result": "created"
+    },
+    {
+      "code": "159",
+      "id": "abc-fws-fl-159",
+      "result": "created"
+    },
+    {
+      "code": "160",
+      "id": "abc-fws-fl-160",
+      "result": "created"
+    },
+    {
+      "code": "161",
+      "id": "abc-fws-fl-161",
+      "result": "created"
+    },
+    {
+      "code": "162",
+      "id": "abc-fws-fl-162",
+      "result": "created"
+    },
+    {
+      "code": "163",
+      "id": "abc-fws-fl-163",
+      "result": "created"
+    },
+    {
+      "code": "164",
+      "id": "abc-fws-fl-164",
+      "result": "created"
+    },
+    {
+      "code": "165",
+      "id": "abc-fws-fl-165",
+      "result": "created"
+    },
+    {
+      "code": "167",
+      "id": "abc-fws-fl-167",
+      "result": "created"
+    },
+    {
+      "code": "172",
+      "id": "abc-fws-fl-172",
+      "result": "created"
+    },
+    {
+      "code": "173",
+      "id": "abc-fws-fl-173",
+      "result": "created"
+    },
+    {
+      "code": "174",
+      "id": "abc-fws-fl-174",
+      "result": "created"
+    },
+    {
+      "code": "175",
+      "id": "abc-fws-fl-175",
+      "result": "created"
+    },
+    {
+      "code": "181",
+      "id": "abc-fws-fl-181",
+      "result": "created"
+    },
+    {
+      "code": "182",
+      "id": "abc-fws-fl-182",
+      "result": "created"
+    },
+    {
+      "code": "185",
+      "id": "abc-fws-fl-185",
+      "result": "created"
+    },
+    {
+      "code": "187",
+      "id": "abc-fws-fl-187",
+      "result": "created"
+    },
+    {
+      "code": "189",
+      "id": "abc-fws-fl-189",
+      "result": "created"
+    },
+    {
+      "code": "190",
+      "id": "abc-fws-fl-190",
+      "result": "created"
+    },
+    {
+      "code": "191",
+      "id": "abc-fws-fl-191",
+      "result": "created"
+    },
+    {
+      "code": "192",
+      "id": "abc-fws-fl-192",
+      "result": "created"
+    },
+    {
+      "code": "193",
+      "id": "abc-fws-fl-193",
+      "result": "created"
+    },
+    {
+      "code": "194",
+      "id": "abc-fws-fl-194",
+      "result": "created"
+    },
+    {
+      "code": "195",
+      "id": "abc-fws-fl-195",
+      "result": "created"
+    },
+    {
+      "code": "196",
+      "id": "abc-fws-fl-196",
+      "result": "created"
+    },
+    {
+      "code": "197",
+      "id": "abc-fws-fl-197",
+      "result": "created"
+    },
+    {
+      "code": "199",
+      "id": "abc-fws-fl-199",
+      "result": "created"
+    },
+    {
+      "code": "200",
+      "id": "abc-fws-fl-200",
+      "result": "created"
+    },
+    {
+      "code": "201",
+      "id": "abc-fws-fl-201",
+      "result": "created"
+    },
+    {
+      "code": "203",
+      "id": "abc-fws-fl-203",
+      "result": "created"
+    },
+    {
+      "code": "204",
+      "id": "abc-fws-fl-204",
+      "result": "created"
+    },
+    {
+      "code": "207",
+      "id": "abc-fws-fl-207",
+      "result": "created"
+    },
+    {
+      "code": "209",
+      "id": "abc-fws-fl-209",
+      "result": "created"
+    },
+    {
+      "code": "210",
+      "id": "abc-fws-fl-210",
+      "result": "created"
+    },
+    {
+      "code": "211",
+      "id": "abc-fws-fl-211",
+      "result": "created"
+    },
+    {
+      "code": "212",
+      "id": "abc-fws-fl-212",
+      "result": "created"
+    },
+    {
+      "code": "215",
+      "id": "abc-fws-fl-215",
+      "result": "created"
+    },
+    {
+      "code": "217",
+      "id": "abc-fws-fl-217",
+      "result": "created"
+    },
+    {
+      "code": "218",
+      "id": "abc-fws-fl-218",
+      "result": "created"
+    }
+  ],
+  "before": {
+    "allAccounts": 15745,
+    "floridaAccounts": 0
+  },
+  "after": {
+    "allAccounts": 15871,
+    "floridaAccounts": 126,
+    "importedAccounts": 126,
+    "echoContacts": 126,
+    "echoOverlays": 126,
+    "otherOrganizationContacts": 0
+  },
+  "completedAt": "2026-10-11T11:08:04.247Z"
+}
