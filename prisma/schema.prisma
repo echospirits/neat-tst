@@ -499,6 +499,7 @@ model Organization {
   slug                    String                            @unique
   active                  Boolean                           @default(true)
   primaryState            String                            @default("OH")
+  enabledStates           String[]                          @default(["OH"])
   timezone                String                            @default("America/New_York")
   website                 String?
   logoUrl                 String?

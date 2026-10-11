@@ -13,11 +13,11 @@ export async function GET(request: NextRequest) {
 
   const agencyId = request.nextUrl.searchParams.get('agencyId')?.trim();
   if (!agencyId) {
-    return NextResponse.json({ error: 'An agency is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'A retail account is required.' }, { status: 400 });
   }
 
   const context = await getAgencyVisitContext({ agencyId, organizationId });
-  if (!context) return NextResponse.json({ error: 'Agency not found.' }, { status: 404 });
+  if (!context) return NextResponse.json({ error: 'Retail not found.' }, { status: 404 });
 
   return NextResponse.json(context, { headers: { 'Cache-Control': 'private, no-store' } });
 }

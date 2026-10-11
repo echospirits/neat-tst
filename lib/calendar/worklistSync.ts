@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { CalendarProviderName, CalendarSyncStatus, WorklistStatus, type CalendarConnection } from '@prisma/client';
-import { prisma } from '../prisma';
+import { prisma, runWithOrganizationStateAccess } from '../prisma';
 import { EASTERN_TIME_ZONE, formatDateOnlyInputValue, getZonedDateTimeParts } from '../dateTime';
 import { isSideEffectEnabled, logEnvironmentEvent } from '../appEnvironment';
 import { getCalendarProvider } from './index';
@@ -253,7 +253,7 @@ export async function syncGoogleCalendarConnection(connectionId: string, { resto
 export async function syncAllGoogleCalendarConnections() {
   const result = { attempted: 0, succeeded: 0, failed: 0, skipped: 0, updated: 0, removed: 0, ignored: 0, retried: 0 };
   if (!isSideEffectEnabled('calendar')) return result;
-  const connections = await prisma.calendarConnection.findMany({ where: { provider: GOOGLE, syncEnabled: true, requiresReconnect: false }, select: { id: true } });
+  const connections = await prisma.calendarConnection.findMany({ where: { provider: GOOGLE, syncEnabled: true, requiresReconnect: false }, select: { id: true, user: { select: { organizationId: true } } } });
   result.attempted = connections.length;
   const started = Date.now();
   for (const [index, connection] of connections.entries()) {
@@ -264,7 +264,8 @@ export async function syncAllGoogleCalendarConnections() {
       break;
     }
     try {
-      const counts = await syncGoogleCalendarConnection(connection.id, { budgetMs: remaining - 30_000 });
+      if (!connection.user.organizationId) { result.skipped++; continue; }
+      const counts = await runWithOrganizationStateAccess(connection.user.organizationId, () => syncGoogleCalendarConnection(connection.id, { budgetMs: remaining - 30_000 }));
       result.updated += counts.updated; result.removed += counts.removed; result.ignored += counts.ignored; result.retried += counts.pushed;
       if (counts.skipped) result.skipped++;
       else if (counts.failed) result.failed++;

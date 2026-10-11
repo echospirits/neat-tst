@@ -76,14 +76,14 @@ export function TasterVisitForm({ action, agencies }: TasterVisitFormProps) {
           params.set('longitude', String(currentLocation.longitude));
         }
         const response = await fetch(`/api/visits/account-search?${params}`, { signal: controller.signal });
-        if (!response.ok) throw new Error(`Agency search failed: ${response.status}`);
+        if (!response.ok) throw new Error(`Retail search failed: ${response.status}`);
         const data = (await response.json()) as { results: VisitFormAgencyOption[] };
         setAgencySearchResults(data.results.slice(0, 8));
         setResolvedSearch(searchKey);
       } catch (error) {
         if (controller.signal.aborted) return;
-        console.error('Taster agency search failed', error);
-        setSearchError('Agency search is unavailable. Try again.');
+        console.error('Taster retail search failed', error);
+        setSearchError('Retail search is unavailable. Try again.');
       } finally {
         if (!controller.signal.aborted) setIsSearching(false);
       }
@@ -119,7 +119,7 @@ export function TasterVisitForm({ action, agencies }: TasterVisitFormProps) {
         })));
       })
       .catch((error) => {
-        if (!controller.signal.aborted) console.error('Taster nearby agency lookup failed', error);
+        if (!controller.signal.aborted) console.error('Taster nearby retail lookup failed', error);
       });
 
     return () => controller.abort();
@@ -138,11 +138,11 @@ export function TasterVisitForm({ action, agencies }: TasterVisitFormProps) {
     setContextError(null);
     setIsContextLoading(true);
     fetch(`/api/visits/agency-context?agencyId=${encodeURIComponent(agencyId)}`, { signal: controller.signal })
-      .then((response) => response.ok ? response.json() : Promise.reject(new Error(`Agency context failed: ${response.status}`)))
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error(`Retail context failed: ${response.status}`)))
       .then((context: AgencyVisitContext) => setAgencyContext(context))
       .catch((error) => {
         if (controller.signal.aborted) return;
-        console.error('Taster agency context failed', error);
+        console.error('Taster retail context failed', error);
         setContextError('Inventory is temporarily unavailable. You can still log the visit.');
       })
       .finally(() => {
@@ -178,11 +178,11 @@ export function TasterVisitForm({ action, agencies }: TasterVisitFormProps) {
       {photoUploadError ? <p className="toast-notice page-status" role="alert">{photoUploadError}</p> : null}
 
       <fieldset className="visit-step visit-account-step">
-        <legend>1. Choose the retail liquor agency</legend>
+        <legend>1. Choose the retail account</legend>
         {!isChangingAgency && selectedAgency ? (
           <div className="selected-location-card">
             <div>
-              <span>Selected agency</span>
+              <span>Selected retail account</span>
               <strong>{selectedAgency.name}</strong>
               <small>{getAgencyMeta(selectedAgency)}</small>
             </div>
@@ -192,21 +192,21 @@ export function TasterVisitForm({ action, agencies }: TasterVisitFormProps) {
           </div>
         ) : (
           <div className="search-select taster-agency-picker">
-            <label htmlFor="taster-agency-search">Find agency</label>
+            <label htmlFor="taster-agency-search">Find retail account</label>
             <input
-              aria-label="Search agencies"
+              aria-label="Search retail accounts"
               id="taster-agency-search"
-              placeholder="Search name, agency ID, city, or county"
+              placeholder="Search name, retail ID, city, or county"
               type="search"
               value={agencySearch}
               onChange={(event) => setAgencySearch(event.target.value)}
             />
-            {!searchText ? <p className="field-note">Use your location for the closest stores or search every agency.</p> : null}
-            {searchText.length === 1 ? <p className="field-note">Enter one more character to search every agency.</p> : null}
-            {isSearching ? <p aria-live="polite" className="field-note">Searching agencies…</p> : null}
+            {!searchText ? <p className="field-note">Use your location for the closest stores or search every retail account.</p> : null}
+            {searchText.length === 1 ? <p className="field-note">Enter one more character to search every retail account.</p> : null}
+            {isSearching ? <p aria-live="polite" className="field-note">Searching retail accounts…</p> : null}
             {searchError ? <p className="field-note danger-text" role="alert">{searchError}</p> : null}
             {searchText.length >= 2 && hasResolvedSearch && visibleAgencies.length === 0 ? (
-              <p className="field-note">No agencies match “{agencySearch.trim()}”.</p>
+              <p className="field-note">No retail accounts match “{agencySearch.trim()}”.</p>
             ) : null}
 
             {!searchText && locationStatus !== 'ready' ? (
@@ -319,7 +319,7 @@ export function TasterVisitForm({ action, agencies }: TasterVisitFormProps) {
       </fieldset>
 
       <div className="visit-submit-bar">
-        <VisitSubmitButton disabled={!selectedAgency} label="Log agency visit" />
+        <VisitSubmitButton disabled={!selectedAgency} label="Log retail visit" />
       </div>
     </form>
   );

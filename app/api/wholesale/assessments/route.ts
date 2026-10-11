@@ -38,7 +38,7 @@ export async function GET(request: Request) {
   const nextPage = rows.length > limit ? page + 1 : null;
   if (query.get('format') === 'csv') return new Response(Papa.unparse(data, { escapeFormulae: true }), { headers: {
     'Content-Type': 'text/csv; charset=utf-8', 'Cache-Control': 'private, no-store',
-    'Content-Disposition': `attachment; filename="wholesale-commercial-ratings-page-${page}.csv"`,
+    'Content-Disposition': `attachment; filename="restaurant-commercial-ratings-page-${page}.csv"`,
     ...(nextPage ? { 'X-Next-Page': String(nextPage) } : {}),
   } });
   return Response.json({ data, page, nextPage }, { headers: { 'Cache-Control': 'private, no-store' } });

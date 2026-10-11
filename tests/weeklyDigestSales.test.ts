@@ -62,7 +62,7 @@ test('retail leaders and declines use tenant products and complete comparable we
   assert.equal(result.retail?.highlights.find((row) => row.agencyNumber === '100')?.href, '/agencies/agency-record');
   const stopped = result.retail?.highlights.find((row) => row.agencyNumber === '300');
   assert.equal(stopped?.bottles, 0); assert.equal(stopped?.change, -30);
-  assert.equal(stopped?.name, 'Agency 300'); assert.equal(stopped?.href, null);
+  assert.equal(stopped?.name, 'Retail 300'); assert.equal(stopped?.href, null);
 });
 
 test('partial prior coverage retains retail leaders but never computes sales declines', async (t) => {

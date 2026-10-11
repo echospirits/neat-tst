@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   const locationType = request.nextUrl.searchParams.get('type') === 'agency' ? 'agency' : 'wholesale';
   if (user.role === UserRole.TASTER && locationType !== 'agency') {
-    return NextResponse.json({ error: 'Taster accounts can only search agencies.' }, { status: 403 });
+    return NextResponse.json({ error: 'Taster accounts can only search retail accounts.' }, { status: 403 });
   }
 
   const query = request.nextUrl.searchParams.get('q')?.trim() ?? '';

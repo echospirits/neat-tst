@@ -136,7 +136,7 @@ export function getOperatingHoursConflict({
   if (!currentEntry || currentIntervals === null) return null;
   return {
     accountType,
-    label: accountType === 'agency' ? 'Outside agency hours' : 'Outside wholesale hours',
+    label: accountType === 'agency' ? 'Outside retail hours' : 'Outside restaurant hours',
   };
 }
 

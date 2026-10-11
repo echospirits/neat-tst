@@ -82,7 +82,7 @@ test('CSV exports share filtered result rows, preserve context and neutralize fo
 });
 test('server product scope is Organization-owned/represented, with no tenant fallback; unknown selections never load adapters', async () => {
   const seen: string[] = [];
-  const db = { organizationProduct: { findMany: async (args: any) => { assert.deepEqual(args.where.status, { in: ['OWNED', 'REPRESENTED'] }); assert.ok(!args.where.active); return [{ market: 'OH', externalItemCode: args.where.organizationId, displayName: args.where.organizationId }]; } } } as unknown as AnalyticsDb;
+  const db = { organization: { findUnique: async () => ({ enabledStates: ['OH'] }) }, organizationProduct: { findMany: async (args: any) => { assert.deepEqual(args.where.status, { in: ['OWNED', 'REPRESENTED'] }); assert.ok(!args.where.active); return [{ market: 'OH', externalItemCode: args.where.organizationId, displayName: args.where.organizationId }]; } } } as unknown as AnalyticsDb;
   const adapter: MarketAdapter = { market: 'OH', load: async (_db, org, products) => { seen.push(org); assert.deepEqual(products.map(p => p.code), [org]); return { ...fixture(), products, sales: [] }; } };
   const a = await loadAnalytics('org-a', filters(), db, [adapter]);
   const b = await loadAnalytics('org-b', filters(), db, [adapter]);
@@ -92,11 +92,11 @@ test('server product scope is Organization-owned/represented, with no tenant fal
   await assert.rejects(() => loadAnalytics('', filters(), db, [adapter]));
 });
 test('coverage verifies physical retained counts against source-specific completed imports', async () => {
-  const db = { $queryRaw: async (sql: any) => { assert.ok(sql.sql.includes('COUNT(*)')); assert.ok(sql.sql.includes('COALESCE')); assert.ok(sql.sql.includes('"skippedRows" = 0')); assert.ok(sql.values.includes('ANNUAL_SALES_SUMMARY')); return [{ reportDate: new Date('2026-09-01') }]; } } as unknown as AnalyticsDb;
+  const db = { organization: { findUnique: async () => ({ enabledStates: ['OH'] }) }, $queryRaw: async (sql: any) => { assert.ok(sql.sql.includes('COUNT(*)')); assert.ok(sql.sql.includes('COALESCE')); assert.ok(sql.sql.includes('"skippedRows" = 0')); assert.ok(sql.values.includes('ANNUAL_SALES_SUMMARY')); return [{ reportDate: new Date('2026-09-01') }]; } } as unknown as AnalyticsDb;
   assert.deepEqual(await retainedDays(db, 'retail', '2026-09-01', '2026-09-07'), ['2026-09-01']);
 });
 test('organizations with no configured products still see their CRM activity, with sales unavailable', async () => {
-  const db = { organizationProduct: { findMany: async () => [] } } as unknown as AnalyticsDb;
+  const db = { organization: { findUnique: async () => ({ enabledStates: ['OH'] }) }, organizationProduct: { findMany: async () => [] } } as unknown as AnalyticsDb;
   const adapter: MarketAdapter = { market: 'OH', load: async (_db, org, products) => {
     assert.equal(org, 'org-no-products'); assert.deepEqual(products, []);
     const data = fixture(); data.products = []; data.sales = []; data.coverage.forEach(c => c.days = []); return data;
@@ -108,7 +108,7 @@ test('organizations with no configured products still see their CRM activity, wi
 });
 test('Ohio adapter scopes every CRM query, uses only selected item codes, and rejects ambiguous permits', async () => {
   const scope = (args: any) => assert.equal(args.where.organizationId, 'org-a');
-  const db = {
+  const db = { organization: { findUnique: async () => ({ enabledStates: ['OH'] }) },
     $queryRaw: async () => [{ reportDate: new Date('2026-09-02') }],
     ohlqAnnualSalesRow: { groupBy: async (args: any) => { assert.deepEqual(args.where.brand.in, ['A']); return []; } },
     ohlqAnnualSalesByWholesaleRow: { groupBy: async (args: any) => { assert.deepEqual(args.where.brand.in, ['A']); return [{ permitNumber: '123', brand: 'A', reportDate: new Date('2026-09-02'), _sum: { wholesaleBottlesSold: 7 } }]; } },

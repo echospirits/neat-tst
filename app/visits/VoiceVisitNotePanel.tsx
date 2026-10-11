@@ -78,7 +78,7 @@ export function VoiceVisitNotePanel({
 
   const accountLabel = useMemo(() => {
     if (!accountContext) {
-      return visitType === 'agency' ? 'No agency selected yet' : 'No wholesale account selected yet';
+      return visitType === 'agency' ? 'No retail selected yet' : 'No restaurant account selected yet';
     }
 
     return [accountContext.name, accountContext.identifier, accountContext.city].filter(Boolean).join(' / ');

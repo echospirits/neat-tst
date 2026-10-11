@@ -7,6 +7,6 @@ export function scheduleWholesaleAssessment(organizationId: string, accountId: s
   after(async () => {
     await prisma.wholesaleAccountAssessment.updateMany({ where: { organizationId, wholesaleAccountId: accountId }, data: { refreshRequestedAt: new Date() } });
     try { await evaluateWholesaleAssessments({ organizationId, accountIds: [accountId] }); }
-    catch { console.warn('Wholesale assessment refresh remains pending', { organizationId, accountId }); }
+    catch { console.warn('Restaurant assessment refresh remains pending', { organizationId, accountId }); }
   });
 }

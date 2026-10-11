@@ -18,7 +18,7 @@ import { AGENCY_FOCUS_PAGE_SIZE, agencyFocusHref, agencyFocusPageNumber } from '
 import { TargetAccountControl } from '../components/TargetAccountControl';
 import { TargetAccountMarker } from '../components/TargetAccountMarker';
 
-export const metadata = buildPageMetadata('Agency Intelligence');
+export const metadata = buildPageMetadata('Retail Intelligence');
 
 const titleCase = (value: string) => value.toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 
@@ -99,20 +99,20 @@ export default async function AgencyFocusPage({
 
   return <div className="agency-focus-page">
     <header className="page-heading page-header agency-focus-header">
-      <div><span className="page-eyebrow">Intelligence · Retail actions</span><h1>Agency Intelligence</h1><p className="muted">Prioritized agency actions. Inventory, sales, and evidence at a glance.</p></div>
+      <div><span className="page-eyebrow">Intelligence · Retail actions</span><h1>Retail Intelligence</h1><p className="muted">Prioritized retail actions. Inventory, sales, and evidence at a glance.</p></div>
       <DataFreshnessBadge sourceDate={latestSourceDate} />
     </header>
-    <nav aria-label="Agency opportunity filters" className="opportunity-filters">
+    <nav aria-label="Retail opportunity filters" className="opportunity-filters">
       <Link aria-current={!state ? 'page' : undefined} className={!state ? 'active' : undefined} href={agencyFocusHref({ ...query, state: undefined, page: 1 })}>All actions</Link>
       {actionableStates.map((value) => <Link aria-current={state === value ? 'page' : undefined} className={state === value ? 'active' : undefined} href={agencyFocusHref({ ...query, state: value, page: 1 })} key={value}>{stateLabels[value]}</Link>)}
     </nav>
     <div className="agency-focus-toolbar">
       <AgencyFocusSearch value={search} />
       <p className="agency-focus-count">{page > 1 || hasMore ? `Page ${page} · ${visibleOpportunities.length} actions${hasMore ? ' · More on next page' : ''}` : `${visibleOpportunities.length} matching ${visibleOpportunities.length === 1 ? 'action' : 'actions'}`} · Highest priority first</p>
-      {query.agencyId ? <span className="agency-focus-scope">Single agency view <Link href={agencyFocusHref({ state, q: search })}>Show all agencies</Link></span> : null}
+      {query.agencyId ? <span className="agency-focus-scope">Single retail view <Link href={agencyFocusHref({ state, q: search })}>Show all retail accounts</Link></span> : null}
       {state || search ? <Link href={agencyFocusHref({ agencyId: query.agencyId })}>Clear filters</Link> : null}
     </div>
-    <section aria-label="Agency recommendations" className="agency-focus-results">
+    <section aria-label="Retail recommendations" className="agency-focus-results">
       {visibleOpportunities.map((item) => <article aria-labelledby={`focus-${item.id}`} className="agency-focus-row" key={item.id}>
         <div className="agency-focus-identity">
           <h2 id={`focus-${item.id}`}><Link href={`/agencies/${item.agency.id}`}>{item.agency.name}</Link></h2>
@@ -146,9 +146,9 @@ export default async function AgencyFocusPage({
           <details className="agency-focus-dismiss"><summary>Dismiss</summary><form action={updateAgencyOpportunity}><input name="id" type="hidden" value={item.id}/><select aria-label="Dismissal reason" name="reason" defaultValue="Not a fit"><option>Not a fit</option><option>Already handled</option><option>Wrong timing</option><option>Bad or missing data</option><option>Other</option></select><SubmitButton className="danger compact-btn" name="action" value="dismiss">Dismiss</SubmitButton></form></details>
         </div>
       </article>)}
-      {opportunities.length === 0 ? <div className="empty-state"><h2>No matching agency actions</h2><p>{state || search || query.agencyId ? 'Try another action type, clear your search, or show all agencies.' : 'No active recommendations are available yet. Check data freshness or browse your agencies.'}</p><Link href={state || search || query.agencyId ? '/agency-focus' : '/agencies'}>{state || search || query.agencyId ? 'Show all actions' : 'Browse agencies'}</Link></div> : null}
+      {opportunities.length === 0 ? <div className="empty-state"><h2>No matching retail actions</h2><p>{state || search || query.agencyId ? 'Try another action type, clear your search, or show all retail accounts.' : 'No active recommendations are available yet. Check data freshness or browse your retail accounts.'}</p><Link href={state || search || query.agencyId ? '/agency-focus' : '/agencies'}>{state || search || query.agencyId ? 'Show all actions' : 'Browse retail accounts'}</Link></div> : null}
     </section>
-    {page > 1 || hasMore ? <nav aria-label="Agency intelligence pages" className="pagination-row">
+    {page > 1 || hasMore ? <nav aria-label="Retail intelligence pages" className="pagination-row">
       {page > 1 ? <Link className="btn compact-btn secondary" href={agencyFocusHref({ ...query, page: page - 1 })}>Previous page</Link> : null}
       <span>Page {page}</span>
       {hasMore ? <Link className="btn compact-btn secondary" href={agencyFocusHref({ ...query, page: page + 1 })}>Next page</Link> : null}

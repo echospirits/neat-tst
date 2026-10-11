@@ -96,6 +96,7 @@ type VisitFormInitialValues = {
 };
 
 type LogVisitFormProps = {
+  allowedStates?: string[];
   action: (formData: FormData) => void | Promise<void>;
   agencies: VisitFormAgencyOption[];
   wholesaleAccounts: VisitFormWholesaleOption[];
@@ -135,6 +136,7 @@ const getLastVisitLabel = (lastVisitAt: string | null) =>
   lastVisitAt ? `Visited ${lastVisitFormatter.format(new Date(lastVisitAt))}` : 'Not visited yet';
 
 export function LogVisitForm({
+  allowedStates = ['OH'],
   action,
   agencies,
   wholesaleAccounts,
@@ -436,7 +438,7 @@ export function LogVisitForm({
         {!isChangingLocation && selectedLocation ? (
           <div className="selected-location-card">
             <div>
-              <span>{locationType === 'agency' ? 'Agency' : 'Wholesale'}</span>
+              <span>{locationType === 'agency' ? 'Retail' : 'Restaurants'}</span>
               <strong>{selectedLocation.name}</strong>
             </div>
             <button className="secondary compact-btn" type="button" onClick={() => setIsChangingLocation(true)}>Change</button>
@@ -452,12 +454,12 @@ export function LogVisitForm({
                   type="button"
                   onClick={() => handleLocationTypeChange(type)}
                 >
-                  {type === 'wholesale' ? 'Wholesale' : 'Agency'}
+                  {type === 'wholesale' ? 'Restaurants' : 'Retail'}
                 </button>
               ))}
             </div>
             <div className="search-select">
-              <label htmlFor="visit-location-search">Find {locationType === 'agency' ? 'agency' : 'wholesale account'}</label>
+              <label htmlFor="visit-location-search">Find {locationType === 'agency' ? 'agency' : 'restaurant account'}</label>
               <input
                 id="visit-location-search"
                 placeholder="Search name, ID, city, or phone"
@@ -706,7 +708,7 @@ export function LogVisitForm({
 
           {mode === 'create' && locationType === 'wholesale' && !wholesaleAccountId ? (
             <details className="compact-details nested-details">
-              <summary>Create a wholesale account</summary>
+              <summary>Create a restaurant account</summary>
               <fieldset className="wholesale-create-section">
                 <legend>Account</legend>
                 <div className="wholesale-create-grid">
@@ -714,7 +716,7 @@ export function LogVisitForm({
                   <label>Phone (optional)<input name="newWholesalePhone" type="tel" autoComplete="tel" /></label>
                 </div>
               </fieldset>
-              <WholesaleAddressFields visit />
+              <WholesaleAddressFields visit allowedStates={allowedStates} />
               <label>Licensee ID (optional)<input name="newWholesaleLicenseeId" /></label>
               {tags.length > 0 ? (
                 <div className="tag-checkbox-grid">

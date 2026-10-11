@@ -79,8 +79,8 @@ export function CrmAccountPicker({
             value={type}
             onChange={(e) => setType(e.target.value as typeof type)}
           >
-            <option value="WHOLESALE">Wholesale</option>
-            <option value="AGENCY">Agency</option>
+            <option value="WHOLESALE">Restaurants</option>
+            <option value="AGENCY">Retail</option>
           </select>
           <label htmlFor={`${id}-search`}>Find an account</label>
           <input

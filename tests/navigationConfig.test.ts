@@ -59,7 +59,7 @@ test('Intelligence is feature gated and separates rep and administrative tools',
   const features = ['AGENCY_INTELLIGENCE', 'WHOLESALE_OPPORTUNITIES', 'ADVANCED_INTELLIGENCE'];
   assert.deepEqual(getIntelligenceNavigationItems([], true, true), []);
   assert.deepEqual(getIntelligenceNavigationItems(features, false, false).map((item) => [item.href, item.label]), [
-    ['/opportunities', 'Wholesale Opportunities'], ['/agency-focus', 'Agency Intelligence'],
+    ['/opportunities', 'Restaurant Opportunities'], ['/agency-focus', 'Retail Intelligence'],
   ]);
   assert.deepEqual(getIntelligenceNavigationItems(features, false, true).map((item) => item.key), [
     'opportunities', 'agency-intelligence', 'account-research', 'opportunity-performance',

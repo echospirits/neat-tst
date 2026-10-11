@@ -23,10 +23,11 @@ import { VISIT_SALES_STATUS_OPTIONS } from '../../../lib/accountSalesStatus';
 export const metadata = buildPageMetadata('Log Visit');
 
 const statusMessages: Record<string, string> = {
+  'state-not-enabled': 'This state is not enabled for your organization.',
   'invalid-state': 'Enter a valid US state name or two-letter abbreviation.',
   'conflicting-state': 'That Licensee ID belongs to an account in another state. Leave the ID blank to create a separate account.',
-  'invalid-agency': 'Select an agency before logging an agency visit.',
-  'invalid-wholesale': 'Select an existing wholesale account or create one before logging a wholesale visit.',
+  'invalid-agency': 'Select a retail account before logging a retail account visit.',
+  'invalid-wholesale': 'Select an existing restaurant account or create one before logging a restaurant visit.',
   'invalid-contact': 'Select a contact tied to the selected account.',
   'invalid-photo': 'Photos must be image files.',
   'photo-too-large': 'Each uploaded photo must be 5 MB or smaller.',
@@ -37,7 +38,7 @@ const statusMessages: Record<string, string> = {
   'photo-required': 'Add one picture before logging the visit.',
   'invalid-assignee': 'Choose an active team member for the follow-up.',
   'invalid-context': 'The originating task or opportunity no longer matches this account. Start the action again from its source.',
-  'visit-logged': 'Agency visit logged.',
+  'visit-logged': 'Retail visit logged.',
 };
 
 export default async function NewVisitPage({
@@ -61,7 +62,7 @@ export default async function NewVisitPage({
   }>;
 }) {
   const [params, user] = await Promise.all([(await searchParams) ?? {}, requireUser({ allowTaster: true })]);
-  const { organizationId } = await requireOrganizationContext(user);
+  const { organizationId, organization } = await requireOrganizationContext(user);
   const enabledFeatures = await getOrganizationFeatures(organizationId);
 
   if (user.role === UserRole.TASTER) {
@@ -72,7 +73,7 @@ export default async function NewVisitPage({
         <PageHeader
           description="Find a nearby store, review its Echo inventory and recent sales, then log your visit."
           eyebrow="Field activity"
-          title="Log Agency Visit"
+          title="Log Retail Visit"
         />
         {params.status ? <p className="toast-notice page-status">{statusMessages[params.status] ?? params.status}</p> : null}
 
@@ -160,6 +161,7 @@ export default async function NewVisitPage({
 
       <div className="workflow-shell"><div className="card">
         <LogVisitForm
+          allowedStates={organization.enabledStates}
           action={createVisit}
           actorName={getUserDisplayName(user)}
           currentUserId={user.id}

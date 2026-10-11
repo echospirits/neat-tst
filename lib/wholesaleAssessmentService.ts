@@ -29,7 +29,7 @@ export async function evaluateWholesaleAssessments({ db = prisma, asOfDate = new
   db?: PrismaClient; asOfDate?: Date; accountIds?: string[]; organizationId: string; dryRun?: boolean; reconcileLedger?: boolean;
 }) {
   const eligible = await db.organization.findFirst({ where: { id: organizationId, ...enabledAssessmentTenants }, select: { id: true } });
-  if (!eligible) throw new Error('Wholesale intelligence is unavailable for this organization.');
+  if (!eligible) throw new Error('Restaurant intelligence is unavailable for this organization.');
   const startedAt = new Date();
   let runId: string | null = null;
   let expected = 0, evaluated = 0, persisted = 0, ineligible = 0, skipped = 0, failed = 0, sourceBlocked = 0;
@@ -243,7 +243,7 @@ export async function evaluateWholesaleAssessments({ db = prisma, asOfDate = new
         }
       }
       if (runId) await db.wholesaleAssessmentRun.update({ where: { id: runId }, data: { evaluated, persisted, ineligible, skipped, failed, evidenceCounts: counts, errors: json(errors.slice(0,100)) } });
-      console.log(`Wholesale assessments ${organizationId}: ${persisted}/${expected} persisted; ${failed} failed.`);
+      console.log(`Restaurant assessments ${organizationId}: ${persisted}/${expected} persisted; ${failed} failed.`);
     }
     if (!dryRun && persisted + skipped + failed !== expected) errors.push({ message: 'Account count changed during refresh; a full retry is required.' });
     if (runId) await db.wholesaleAssessmentRun.update({ where: { id: runId }, data: { activeKey: null, leaseUntil: null, status: failed || persisted + skipped !== expected ? 'PARTIAL' : sourceBlocked ? 'SOURCE_ERROR' : 'COMPLETED', completedAt: new Date(), errors: json(errors.slice(0,100)) } });
@@ -272,7 +272,7 @@ export async function runWholesaleAssessmentSweep({ db = prisma, reportDate = ne
       if (intelligence.failed || intelligence.sourceBlocked || intelligence.persisted !== intelligence.expected) failures.push(organization.id);
     } catch { failures.push(organization.id); }
   }
-  if (failures.length) throw new Error(`Wholesale assessment refresh incomplete for ${failures.length} tenant(s): ${failures.join(', ')}. Inspect assessment runs and retry scoring; research was not requested.`);
+  if (failures.length) throw new Error(`Restaurant assessment refresh incomplete for ${failures.length} tenant(s): ${failures.join(', ')}. Inspect assessment runs and retry scoring; research was not requested.`);
   return { organizations: results, salesEvents: { created: 0, skippedWithoutBaseline: false }, intelligence: {
     accountsEvaluated: results.reduce((n,r) => n + r.intelligence.evaluated, 0), persisted: results.reduce((n,r) => n + r.intelligence.persisted, 0),
     detected: 0, converted: 0, worklistCreated: 0, rulesVersion: ASSESSMENT_VERSION, scoringVersion: ASSESSMENT_VERSION } };
@@ -285,5 +285,5 @@ export async function markWholesaleAssessmentSourceFailure({ db = prisma, report
   if (latest && latest.reportDate > reportDate) return { count: 0 };
   const organizations = await db.organization.findMany({ where: enabledAssessmentTenants, select: { id: true } });
   return db.wholesaleAccountAssessment.updateMany({ where: { organizationId: { in: organizations.map(o => o.id) }, evidenceMode: { in: ['SALES_BACKED', 'PARTIAL_SALES'] } },
-    data: { assessmentStatus: 'SOURCE_ERROR', assessmentReason: 'Latest wholesale sales import failed; last valid commercial rating retained until recovery.', refreshRequestedAt: new Date() } });
+    data: { assessmentStatus: 'SOURCE_ERROR', assessmentReason: 'Latest restaurant sales import failed; last valid commercial rating retained until recovery.', refreshRequestedAt: new Date() } });
 }

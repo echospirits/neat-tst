@@ -16,7 +16,7 @@ import { formatWholesaleLicenseeIds } from '../../../../lib/wholesaleAccounts';
 import { mergeWholesaleAccountAction } from './actions';
 import { PageHeader } from '../../../components/PageChrome';
 
-export const metadata = buildPageMetadata('Merge Wholesale Account');
+export const metadata = buildPageMetadata('Merge Restaurant Account');
 
 const statusMessages: Record<string, string> = {
   'already-merged': 'This manual account has already been merged.',
@@ -85,7 +85,7 @@ export default async function MergeWholesaleAccountPage({
         actions={<Link className="btn secondary" href={`/wholesale/${sourceId}`}>Back to account</Link>}
         description="Merge shared accounts across all organizations. Linked activity keeps its organization ownership, and the manual account becomes an inactive redirect."
         eyebrow="Platform administration"
-        title="Merge wholesale account"
+        title="Merge restaurant account"
       />
 
       {query.status ? (
@@ -119,7 +119,7 @@ export default async function MergeWholesaleAccountPage({
           <div className="card">
             <h2>Choose the official destination</h2>
             <p className="muted">
-              Likely matches are ranked using the source name and address. Search checks every eligible wholesale
+              Likely matches are ranked using the source name and address. Search checks every eligible restaurant
               account, including real Licensee-ID accounts that are not linked to a legacy official record.
             </p>
             <form action={`/wholesale/${sourceId}/merge`} method="get">
@@ -195,7 +195,7 @@ export default async function MergeWholesaleAccountPage({
                       ['Address', source.address, preview.destinationFallbacks.address],
                       ['City', source.city, preview.destinationFallbacks.city],
                       ['Phone', source.phone, preview.destinationFallbacks.phone],
-                      ['Agency ID', source.agencyId, preview.destinationFallbacks.agencyId],
+                      ['Retail ID', source.agencyId, preview.destinationFallbacks.agencyId],
                       ['Ownership', source.ownership, preview.destinationFallbacks.ownership],
                     ].map(([label, sourceValue, finalValue]) => (
                       <tr key={label}>

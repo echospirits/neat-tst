@@ -14,7 +14,7 @@ export function ensureEchoOrganization() {
   echoBootstrap ??= (async () => {
     await prisma.organization.upsert({
       where: { id: ECHO_ORGANIZATION_ID },
-      create: { id: ECHO_ORGANIZATION_ID, name: DEFAULT_TENANT_ENTITY_NAME, displayName: 'Echo Spirits', slug: 'echo-spirits', active: true, primaryState: 'OH', timezone: 'America/New_York', accountStatus: OrganizationStatus.ACTIVE, onboardingStatus: 'READY', onboardingData: { migrated: true } },
+      create: { id: ECHO_ORGANIZATION_ID, name: DEFAULT_TENANT_ENTITY_NAME, displayName: 'Echo Spirits', slug: 'echo-spirits', active: true, primaryState: 'OH', enabledStates: ['OH', 'FL'], timezone: 'America/New_York', accountStatus: OrganizationStatus.ACTIVE, onboardingStatus: 'READY', onboardingData: { migrated: true } },
       update: {},
     });
     await prisma.organizationVendorIdentifier.createMany({ skipDuplicates: true, data: DEFAULT_TENANT_OHLQ_VENDOR_IDS.map((vendorId) => ({ organizationId: ECHO_ORGANIZATION_ID, market: 'OH', vendorId, label: 'Echo Spirits' })) });

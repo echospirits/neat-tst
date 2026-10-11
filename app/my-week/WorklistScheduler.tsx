@@ -528,7 +528,7 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
       <button aria-label="Close task actions" className="app-modal-backdrop" onClick={closeDialogs} type="button" />
       <div className="app-modal-panel contextual-action-sheet scheduler-action-sheet" ref={dialogRef}>
         <div className="app-modal-header"><div><span className="page-eyebrow">{statusLabel(selectedItem.status)}</span><h2 id={`scheduler-item-${selectedItem.id}`}>{selectedItem.title}</h2></div><button aria-label="Close" className="app-modal-close secondary" onClick={closeDialogs} type="button">Close</button></div>
-        {selectedItem.location ? <p className="scheduler-account-context"><span><Link href={selectedItem.location.href}>{selectedItem.location.name}</Link>{selectedItem.isTargeting ? <> · <TargetAccountMarker /></> : null}</span><span>{selectedItem.location.type === 'wholesale' ? 'Wholesale account' : 'Agency'}</span></p> : <p className="muted">No account linked to this task.</p>}
+        {selectedItem.location ? <p className="scheduler-account-context"><span><Link href={selectedItem.location.href}>{selectedItem.location.name}</Link>{selectedItem.isTargeting ? <> · <TargetAccountMarker /></> : null}</span><span>{selectedItem.location.type === 'wholesale' ? 'Restaurant account' : 'Retail'}</span></p> : <p className="muted">No account linked to this task.</p>}
         {selectedItem.detail ? <p className="scheduler-task-detail">{selectedItem.detail}</p> : null}
         <ActionForm action={updateAction as (data: FormData) => Promise<ActionResult>} className="scheduler-edit-form" onError={refreshAfterConflict} onSuccess={refreshAfterSave}>
           <input name="id" type="hidden" value={selectedItem.id} />
@@ -596,7 +596,7 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
         {createMode === 'new' ? <ActionForm action={createAction as (data: FormData) => Promise<ActionResult>} className="scheduler-create-form" onSuccess={refreshAfterSave}>
           <input name="submissionKey" type="hidden" value={createSubmissionKey} />
           <label>Task<input autoFocus name="title" placeholder="What needs to happen?" required /></label>
-          <label>Category<select onChange={(event) => { setCreateCategory(event.target.value); setSelectedAccount(null); setAccountSearch(''); }} value={createCategory} name="category"><option value="GENERAL">General</option><option value="AGENCY">Agency</option><option value="WHOLESALE">Wholesale</option></select></label>
+          <label>Category<select onChange={(event) => { setCreateCategory(event.target.value); setSelectedAccount(null); setAccountSearch(''); }} value={createCategory} name="category"><option value="GENERAL">General</option><option value="AGENCY">Retail</option><option value="WHOLESALE">Restaurants</option></select></label>
           {createCategory === 'AGENCY' || createCategory === 'WHOLESALE' ? <div className="scheduler-account-picker">
             <label>Search account<input autoComplete="off" onChange={(event) => { setAccountSearch(event.target.value); setSelectedAccount(null); }} placeholder="Name, city, or account ID" value={selectedAccount?.name ?? accountSearch} /></label>
             {accountSearch && !selectedAccount ? <button className="secondary" onClick={() => setAccountSearch('')} type="button">Clear account search</button> : null}

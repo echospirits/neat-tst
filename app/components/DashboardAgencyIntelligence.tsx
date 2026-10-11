@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { prisma } from '../../lib/prisma';
 
 const tiles = [
-  ['Agency stockouts', AgencyProductOpportunityState.STOCKOUT, 'High-demand products at zero inventory'],
+  ['Retail stockouts', AgencyProductOpportunityState.STOCKOUT, 'High-demand products at zero inventory'],
   ['Placement opportunities', AgencyProductOpportunityState.PLACEMENT_OPPORTUNITY, 'High-fit products not currently carried'],
   ['Tasting opportunities', AgencyProductOpportunityState.ACTIVATION_OPPORTUNITY, 'D8 stores with inventory and activation potential'],
   ['Dead inventory', AgencyProductOpportunityState.DEAD_INVENTORY, 'Inventory without acceptable sell-through'],
@@ -19,10 +19,10 @@ export async function DashboardAgencyIntelligence({ organizationId }: { organiza
     ] } }),
   ]);
   return <section className="dashboard-section">
-    <div className="section-heading"><div><span className="page-eyebrow">Agency intelligence</span><h2>Retail actions needing attention</h2></div><Link className="btn secondary compact-btn" href="/agency-focus">Open Agency Intelligence</Link></div>
+    <div className="section-heading"><div><span className="page-eyebrow">Retail intelligence</span><h2>Retail actions needing attention</h2></div><Link className="btn secondary compact-btn" href="/agency-focus">Open Retail Intelligence</Link></div>
     <div className="agency-dashboard-grid">
       {tiles.map(([label, state, detail], index) => <Link className="card agency-dashboard-tile" href={`/agency-focus?state=${state}`} key={state}><span>{label}</span><strong>{counts[index]}</strong><small>{detail}</small></Link>)}
-      <Link className="card agency-dashboard-tile" href="/agency-focus"><span>Agencies needing attention</span><strong>{agenciesNeedingAttention}</strong><small>Retail or connected wholesale action is available</small></Link>
+      <Link className="card agency-dashboard-tile" href="/agency-focus"><span>Retail accounts needing attention</span><strong>{agenciesNeedingAttention}</strong><small>Retail or connected restaurant action is available</small></Link>
     </div>
   </section>;
 }

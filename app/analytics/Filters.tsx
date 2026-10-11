@@ -16,7 +16,7 @@ export function AnalyticsFilters({ filters: f, products, markets }: { filters: F
       {f.preset === 'custom' ? <><label>Start<input type="date" name="start" defaultValue={f.start} /></label><label>End<input type="date" name="end" defaultValue={f.end} /></label></> : null}
       <label>Comparison<select name="comparison" defaultValue={f.comparison}><option value="previous">Previous Period</option><option value="year">Prior Year</option><option value="none">None</option></select></label>
       <label>Market<select name="market" defaultValue={f.market}><option value="all">All Markets</option>{markets.map(m => <option key={m} value={m}>{m === 'OH' ? 'Ohio' : m}</option>)}</select></label>
-      <label>Sales channel<select name="channel" defaultValue={f.channel}><option value="all">All</option><option value="retail">Retail</option><option value="wholesale">Wholesale</option></select></label>
+      <label>Sales channel<select name="channel" defaultValue={f.channel}><option value="all">All</option><option value="retail">Retail</option><option value="wholesale">Restaurants</option></select></label>
     </LiveFilterForm>
     <details className="analytics-product-picker"><summary>Product: {currentProduct?.name ?? (f.product ? 'Unavailable product' : 'All Organization products')}</summary>
       <label>Find a product<input type="search" value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder="Search name or item code" /></label>

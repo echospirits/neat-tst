@@ -25,18 +25,30 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 
 ## Pending changes
 
-### ABC Fine Wine & Spirits Florida directory import (TST data only)
+### Retail / Restaurants terminology and tenant state access
+
+- Description: Renamed CRM account categories and added independent multi-state tenant access, enforced for account reads and writes. Platform Admin can configure states separately from Core CRM / Intelligence. Echo Spirits gets Ohio and Florida; other existing tenants get Ohio.
+- Relevant commit(s): Commit titled Add Retail and Restaurants with tenant state access for v0.2.
+- Feature flag/default: Independent Organization.enabledStates; OH by default, Echo OH+FL. Existing feature plans preserved.
+- Migrations: 20261011130000_tenant_account_states and 20261011131000_abc_florida_retail_seed. The latter creates all 126 ABC retail stores and Echo directory contacts/audit notes/tags on production release; it preserves existing rows.
+- Environment/config: None. Development remains 0.2.3-dev within v0.2.
+- User-visible: Yes; account labels, searchable state configuration, state-scoped directories/related data and state-aware creation forms.
+- Validation and rollout: [State access and ABC production runbook](0.2.0-state-access-validation.md). Both migrations applied to verified TST; original account/contact/note/tag rows unchanged. Production requires owner audit sign-off, reviewed migration execution and the added blocking checklist gates.
+- Production readiness: TST delivery; future production candidate and owner audit still pending.
+
+
+### ABC Fine Wine & Spirits Florida directory import (TST audited source for v0.2 seed)
 
 - Retail correction: All 126 stores now use Agency records with ABC-FL identifiers and preserved addresses, phones, coordinates, source evidence and hours. All 126 Echo contacts, overlays/notes and tag assignments moved without changing their identities or contents. Wholesale copies are inactive for reversible audit history. No linked activity was present. Dry-run, atomic apply with field-level preservation assertions, and no-op replay passed; original wholesale importer disabled. See [correction evidence](../data-imports/abc-florida-2026-10-11/CORRECTION.md).
 
 - Description: Imported 126 active Florida ABC stores with addresses, 39 counties, store phones, source coordinates and regular weekly hours. Echo Spirits received 123 named managers plus three store-team contacts, audit notes and a chain tag on every account. Source, county evidence, audit CSV, reproducible TST-only script and receipts are in [the import package](../data-imports/abc-florida-2026-10-11/README.md).
 - Relevant commit(s): Commit titled Record ABC Florida store import and audit evidence.
 - Feature flag/default state: None / N/A; no account targeting, sales status, deal, Worklist or purchase history was created.
-- Migration(s): None. This was an explicit insert-only data operation on verified neon-neat-tst, not a deployment migration.
+- Migration(s): The original import was TST-only. The v0.2 package now includes 20261011131000_abc_florida_retail_seed for the public-source retail records; see the state-access entry above.
 - Environment/config: No changes. Import script requires an explicit private TST env file and refuses production or any other database host.
 - User-visible: Yes, 126 stores in Agencies (corrected from Wholesale at the owner's request); Echo Spirits notes/contacts/tags; source-backed regular hours. Three missing manager identities and seven Panhandle weather-hour advisories remain flagged for audit. Licenses, buyer authority and store-specific email remain unknown.
 - Validation: Five focused tests; dry run; atomic serializable apply; replay preserved all records; every persisted core field, hours/source snapshot and tenant-owned contact/overlay/tag verified. Live TST list shows 126 results.
-- Production readiness: Owner audit pending. Git promotion will not move these records. A separate authorized production data import must reconcile audited TST values and production duplicates; do not copy the whole TST database.
+- Production readiness: Owner audit pending. The release now includes an insert-only retail seed migration and mandatory production checklist gates. Reconcile approved later audit edits and production duplicates before running it; do not copy the TST database.
 - Rollout notes: User-authorized neat-tst only. Contacts and notes explicitly scoped to org_echo_spirits. Production/main and production data remain untouched.
 
 ### Keep Neat open when following external website links

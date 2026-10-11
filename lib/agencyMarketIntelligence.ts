@@ -232,7 +232,7 @@ export function analyzeAgencyProductMarketFit({
     reasons.push(`${round(profile.localRetailEqBottles, 1)} non-tenant Ohio-local 750ml-equivalent bottles in the observed window`);
   }
   if (peerEvidence.buyers >= 10 && peerEvidence.comparableShare !== null) {
-    reasons.push(`Basket compared with ${peerEvidence.buyers} Agencies selling this product`);
+    reasons.push(`Basket compared with ${peerEvidence.buyers} Retail accounts selling this product`);
   }
   if (reasons.length === 0) reasons.push('Not enough non-tenant market evidence is available yet');
 

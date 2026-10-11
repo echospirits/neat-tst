@@ -293,7 +293,7 @@ test('category-specific task creation rejects a missing or unavailable account',
     form.set('title', 'Visit account');
     form.set('category', category);
     const result = await (actions.createSchedulerWorklistItem as (data: FormData) => Promise<{ error?: string }>)(form);
-    assert.match(result.error ?? '', /Choose (an agency|a wholesale account)/);
+    assert.match(result.error ?? '', /Choose a (retail|restaurant) account/);
     assert.equal(calls.filter((call) => call.name === 'create').length, 0);
   }
 

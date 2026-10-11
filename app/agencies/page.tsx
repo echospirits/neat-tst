@@ -19,7 +19,7 @@ import { TagBadges } from '../tags/TagBadges';
 import { TargetAccountMarker } from '../components/TargetAccountMarker';
 import { AgencyCsvImportPanel } from './AgencyCsvImportPanel';
 
-export const metadata = buildPageMetadata('Agencies');
+export const metadata = buildPageMetadata('Retail');
 
 async function importAgencies(formData: FormData) {
   'use server';
@@ -40,7 +40,7 @@ async function importAgencies(formData: FormData) {
     if (error instanceof AgencyCsvValidationError) {
       redirect(`/agencies?status=invalid&error=${error.code}`);
     }
-    console.error('Agency CSV import failed', error);
+    console.error('Retail CSV import failed', error);
     redirect('/agencies?status=failed');
   }
 
@@ -114,14 +114,14 @@ export default async function AgenciesPage({
       <header className="page-heading page-header">
         <div>
           <span className="page-eyebrow">Accounts</span>
-          <h1>Liquor Agencies</h1>
-          <p className="muted">Find retail agencies, review account context, and start a visit.</p>
+          <h1>Retail</h1>
+          <p className="muted">Find retail retail accounts, review account context, and start a visit.</p>
         </div>
       </header>
       <AccountViewNavigation active="agencies" />
       {!q ? <NearbyAccountsSection type="agency" /> : null}
-      <LiveFilterForm className="filter-form narrow-filter" label="Filter agencies">
-        <input name="q" defaultValue={q} placeholder="Filter name, agency ID, address, contact, phone" />
+      <LiveFilterForm className="filter-form narrow-filter" label="Filter retail accounts">
+        <input name="q" defaultValue={q} placeholder="Filter name, retail ID, address, contact, phone" />
       </LiveFilterForm>
       <AgencyCsvImportPanel role={user.role} action={importAgencies} status={params.status} error={params.error} count={params.count} />
 
@@ -129,12 +129,12 @@ export default async function AgenciesPage({
         <thead>
           <tr>
             <th>Name</th>
-            <th>Agency ID</th>
+            <th>Retail ID</th>
             <th>Address</th>
             <th>City</th>
             <th>Primary Contact</th>
             <th>Contact Phone</th>
-            <th>Agency Phone</th>
+            <th>Retail Phone</th>
             <th>Tags</th>
             <th>Logged Visits</th>
             <th>Most Recent Visit</th>
@@ -156,19 +156,19 @@ export default async function AgenciesPage({
                   </Link>
                   {targetedIds.has(agency.id) ? <TargetAccountMarker /> : null}
                   <span className="account-directory-mobile-only account-directory-location">
-                    {address ? <AddressLink address={address} /> : `Agency ${agency.agencyId}`}
+                    {address ? <AddressLink address={address} /> : `Retail ${agency.agencyId}`}
                   </span>
                   <span className="account-directory-mobile-only account-directory-context">
                     {stats.lastVisitAt ? `Last visit ${formatEasternDate(stats.lastVisitAt)}` : 'Not visited yet'}
                     {agency.primaryContact ? ` · ${agency.primaryContact}` : ''}
                   </span>
                 </td>
-                <td className="account-directory-secondary-cell" data-label="Agency ID">{agency.agencyId}</td>
+                <td className="account-directory-secondary-cell" data-label="Retail ID">{agency.agencyId}</td>
                 <td className="account-directory-secondary-cell" data-label="Address"><AddressLink address={address}>{agency.address}</AddressLink></td>
                 <td className="account-directory-secondary-cell" data-label="City">{agency.city}</td>
                 <td className="account-directory-secondary-cell" data-label="Primary Contact">{agency.primaryContact}</td>
                 <td className="account-directory-secondary-cell" data-label="Contact Phone"><PhoneLink phone={agency.primaryContactPhone} /></td>
-                <td className="account-directory-secondary-cell" data-label="Agency Phone"><PhoneLink phone={agency.phone} /></td>
+                <td className="account-directory-secondary-cell" data-label="Retail Phone"><PhoneLink phone={agency.phone} /></td>
                 <td className="account-directory-secondary-cell" data-label="Tags">
                   <TagBadges tags={agency.tags.map((assignment) => assignment.tag)} />
                 </td>

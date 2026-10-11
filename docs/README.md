@@ -61,3 +61,5 @@ Start with [implementation progress](engineering/implementation-progress.md) and
 - [Mailbox integration setup](engineering/integration-setup.md)
 - [CRM migration runbook](engineering/crm-migration-runbook.md)
 - [CRM security review](engineering/crm-security-review.md)
+
+- [Retail/Restaurants state access and ABC release runbook](releases/0.2.0-state-access-validation.md)

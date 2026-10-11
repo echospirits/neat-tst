@@ -2,7 +2,7 @@ import { PhotoType, UserRole, WeeklyDigestStatus, WeeklyDigestType, WorklistStat
 import { getUserDisplayName } from './auth';
 import { EASTERN_TIME_ZONE, formatDateInputValue, addDaysToDateInputValue, zonedDateTimeToUtc } from './dateTime';
 import { getEmailAppBaseUrl, sendEmail, type SendEmailFn } from './email/sendEmail';
-import { prisma } from './prisma';
+import { prisma, runWithOrganizationStateAccess } from './prisma';
 import { ECHO_ORGANIZATION_ID } from './organizations';
 import { formatWholesaleLicenseeIds } from './wholesaleAccounts';
 import { getWeeklyDigestSales, type WeeklyDigestSales } from './weeklyDigestSales';
@@ -256,12 +256,12 @@ const visitToDigestVisit = (
     location:
       visit.locationType === 'agency'
         ? {
-            name: agency?.name ?? 'Agency visit',
+            name: agency?.name ?? 'Retail visit',
             href: visit.agencyId ? `/agencies/${visit.agencyId}` : null,
             meta: agency?.agencyId ?? null,
           }
         : {
-            name: wholesale?.name ?? 'Wholesale visit',
+            name: wholesale?.name ?? 'Restaurant visit',
             href: visit.wholesaleAccountId ? `/wholesale/${visit.wholesaleAccountId}` : null,
             meta: wholesale ? formatWholesaleLicenseeIds(wholesale) : null,
           },
@@ -285,13 +285,13 @@ const workItemToDigestItem = (
   const location =
     item.category === WorklistCategory.AGENCY
       ? {
-          name: agency?.name ?? 'Agency',
+          name: agency?.name ?? 'Retail',
           href: item.agencyId ? `/agencies/${item.agencyId}` : null,
           meta: agency?.agencyId ?? null,
         }
       : item.category === WorklistCategory.WHOLESALE
         ? {
-            name: wholesale?.name ?? 'Wholesale account',
+            name: wholesale?.name ?? 'Restaurant account',
             href: item.wholesaleAccountId ? `/wholesale/${item.wholesaleAccountId}` : null,
             meta: wholesale ? formatWholesaleLicenseeIds(wholesale) : null,
           }
@@ -541,7 +541,7 @@ export async function sendWeeklyDigestForAllUsers(options: {
   for (const [organizationId, users] of groups) {
     try {
       // One data snapshot, one interpretation and one rendered email per tenant.
-      const digest = await (options.digestLoader ?? getTenantWeeklyDigest)(organizationId, window);
+      const digest = await (options.digestLoader ? options.digestLoader(organizationId, window) : runWithOrganizationStateAccess(organizationId, () => getTenantWeeklyDigest(organizationId, window)));
       const rendered = renderTenantWeeklyDigestEmail(digest, options.appBaseUrl);
       for (const user of users) {
         try {

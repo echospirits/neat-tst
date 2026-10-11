@@ -165,8 +165,8 @@ const recommendedFocusForAgency = (products: ProductResult[], wholesale: Wholesa
     .sort((left, right) => right.analysis.priorityScore - left.analysis.priorityScore)
     .slice(0, 4)
     .map((product) => `${actionLabel[product.analysis.recommendedAction]} ${product.signals.itemName}`);
-  if (wholesale.lapsedWholesaleCount > 0) focus.push(`Follow up with ${wholesale.lapsedWholesaleCount} lapsed wholesale buyer${wholesale.lapsedWholesaleCount === 1 ? '' : 's'}`);
-  else if (wholesale.openWholesaleOpportunityCount > 0) focus.push(`Advance ${wholesale.openWholesaleOpportunityCount} linked wholesale opportunit${wholesale.openWholesaleOpportunityCount === 1 ? 'y' : 'ies'}`);
+  if (wholesale.lapsedWholesaleCount > 0) focus.push(`Follow up with ${wholesale.lapsedWholesaleCount} lapsed restaurant buyer${wholesale.lapsedWholesaleCount === 1 ? '' : 's'}`);
+  else if (wholesale.openWholesaleOpportunityCount > 0) focus.push(`Advance ${wholesale.openWholesaleOpportunityCount} linked restaurant opportunit${wholesale.openWholesaleOpportunityCount === 1 ? 'y' : 'ies'}`);
   return focus.slice(0, 5);
 };
 
@@ -185,7 +185,7 @@ export async function assertAgencyIntelligenceInputsComplete({
   }), db.ohlqTenantInventoryImportStatus.findUnique({ where: { organizationId_reportDate: { organizationId, reportDate: inventoryReportDate } }, select: { status: true } })]);
   const complete = statuses.length === 2 && statuses.every((row) => row.status === OhlqReportRunStatus.COMPLETED) && inventoryStatus?.status === OhlqReportRunStatus.COMPLETED;
   if (!complete) {
-    throw new Error('Agency intelligence skipped because all required OHLQ inputs have not completed successfully.');
+    throw new Error('Retail intelligence skipped because all required OHLQ inputs have not completed successfully.');
   }
 }
 

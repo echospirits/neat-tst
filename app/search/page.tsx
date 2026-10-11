@@ -102,7 +102,7 @@ export default async function SearchPage({ searchParams }: { searchParams?: Prom
         <div>
           <span className="page-eyebrow">Universal search</span>
           <h1>Find accounts and work</h1>
-          <p className="muted">Search retail agencies, wholesale accounts, active Opportunities, and work in one place.</p>
+          <p className="muted">Search retail retail accounts, restaurant accounts, active Opportunities, and work in one place.</p>
         </div>
       </header>
 
@@ -129,12 +129,12 @@ export default async function SearchPage({ searchParams }: { searchParams?: Prom
 
           {agencies.length > 0 ? (
             <section className="search-result-group">
-              <h3>Liquor Agencies <span>{agencies.length}</span></h3>
+              <h3>Retail <span>{agencies.length}</span></h3>
               <div className="search-result-list">
                 {agencies.map((agency) => (
                   <Link className="search-result-row" href={`/agencies/${agency.id}`} key={agency.id}>
                     <span><strong>{agency.name}</strong><small>{[agency.address, agency.city].filter(Boolean).join(', ') || 'No address'}</small></span>
-                    <span><small>Agency</small><strong>{agency.agencyId}</strong></span>
+                    <span><small>Retail</small><strong>{agency.agencyId}</strong></span>
                   </Link>
                 ))}
               </div>
@@ -143,13 +143,13 @@ export default async function SearchPage({ searchParams }: { searchParams?: Prom
 
           {wholesaleAccounts.length > 0 ? (
             <section className="search-result-group">
-              <h3>Wholesale Accounts <span>{wholesaleAccounts.length}</span></h3>
+              <h3>Restaurant Accounts <span>{wholesaleAccounts.length}</span></h3>
               <div className="search-result-list">
                 {wholesaleAccounts.map((account) => (
                   <Link className="search-result-row" href={`/wholesale/${account.id}`} key={account.id}>
                     <span><strong>{account.name}</strong><small>{[account.address, account.city].filter(Boolean).join(', ') || 'No address'}</small></span>
                     <span>
-                      {hasWholesaleOpportunities ? <span><CommercialOpportunityStars rating={account.currentAssessments[0]?.rating} status={account.currentAssessments[0]?.assessmentStatus ?? 'PENDING'} pending={Boolean(account.currentAssessments[0]?.refreshRequestedAt)} stale={Boolean(account.currentAssessments[0] && Date.now() - account.currentAssessments[0].calculatedAt.getTime() > 48 * 3_600_000)} />{account.currentAssessments[0] ? <small>{evidenceModeLabel[account.currentAssessments[0].evidenceMode as EvidenceMode]}</small> : null}</span> : <small>Wholesale</small>}
+                      {hasWholesaleOpportunities ? <span><CommercialOpportunityStars rating={account.currentAssessments[0]?.rating} status={account.currentAssessments[0]?.assessmentStatus ?? 'PENDING'} pending={Boolean(account.currentAssessments[0]?.refreshRequestedAt)} stale={Boolean(account.currentAssessments[0] && Date.now() - account.currentAssessments[0].calculatedAt.getTime() > 48 * 3_600_000)} />{account.currentAssessments[0] ? <small>{evidenceModeLabel[account.currentAssessments[0].evidenceMode as EvidenceMode]}</small> : null}</span> : <small>Restaurants</small>}
                       <strong>{account.licenseeId}</strong>
                     </span>
                   </Link>

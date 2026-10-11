@@ -51,7 +51,7 @@ const tagStatusMessages: Record<string, string> = {
   invalid: 'Select a valid tag.',
 };
 const statusMessages: Record<string, string> = {
-  updated: 'Wholesale account updated.',
+  updated: 'Restaurant account updated.',
   merged: 'Accounts merged successfully. Activity from the manual account is now shown here.',
   'visit-logged': 'Visit logged.',
   'visit-logged-photo-upload-failed': 'Visit logged, but one or more photos could not be uploaded.',
@@ -70,7 +70,7 @@ const menuPlacementStatusMessages: Record<string, string> = {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const account = await prisma.wholesaleAccount.findUnique({ where: { id }, select: { name: true } });
-  return buildPageMetadata(account?.name ?? 'Wholesale Account');
+  return buildPageMetadata(account?.name ?? 'Restaurant Account');
 }
 
 export default async function WholesaleActivityPage({
@@ -266,7 +266,7 @@ export default async function WholesaleActivityPage({
     <>
       <header className="page-heading page-header account-workspace-heading">
         <div>
-          <span className="page-eyebrow">Wholesale · {account.city || 'Location not set'}</span>
+          <span className="page-eyebrow">Restaurant · {account.city || 'Location not set'}</span>
           <h1>{account.name}</h1>
           {overlay?.isTargeting ? <p><strong className="target-account-marker">TARGET ACCOUNT</strong></p> : null}
           {account.tags.length ? <TagBadges tags={account.tags.map((assignment) => assignment.tag)} /> : null}
@@ -328,7 +328,7 @@ export default async function WholesaleActivityPage({
             <AddressLink address={[account.address, account.city, account.state, account.zip].filter(Boolean).join(', ')} />
           </p>
           <p>
-            <strong>Agency ID</strong>
+            <strong>Retail ID</strong>
             <span>{linkedAgency ? <Link href={`/agencies/${linkedAgency.id}`}>{account.agencyId}</Link> : account.agencyId}</span>
           </p>
           <p>
@@ -396,7 +396,7 @@ export default async function WholesaleActivityPage({
           detail: `${formatDateOnly(order.saleDate)} · ${formatOrderCurrency(order.totalCents)} · ${order.lines.length} item${order.lines.length === 1 ? '' : 's'}`,
           href: `/wholesale-orders/${order.id}`,
           id: order.id,
-          title: 'Direct wholesale order filed',
+          title: 'Direct restaurant order filed',
         })).concat(communicationActivities.map((activity) => ({
           actor: getUserDisplayName(activity.createdByUser), at: activity.occurredAt,
           detail: getCommunicationTitle(activity.activityType === 'EMAIL_INITIATED' ? 'EMAIL_INITIATED' : 'CALL_INITIATED', activity.contact?.name ?? 'Contact'), id: activity.id,

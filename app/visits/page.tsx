@@ -90,8 +90,8 @@ export default async function VisitsPage({
         <input name="q" defaultValue={q} placeholder="Filter summary, outcomes, next steps, rep" />
         <select name="type" defaultValue={type}>
           <option value="">All types</option>
-          <option value="agency">Agency</option>
-          <option value="wholesale">Wholesale</option>
+          <option value="agency">Retail</option>
+          <option value="wholesale">Restaurants</option>
         </select>
       </LiveFilterForm>
 

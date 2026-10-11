@@ -67,7 +67,7 @@ export default async function TagDetailPage({
       <section className="content-section">
       <SectionHeading count={tag.locationTags.length} title="Tagged accounts" />
       {tag.locationTags.length === 0 ? (
-        <EmptyState description="Apply this tag from an agency or wholesale account workspace." title="No accounts have this tag" />
+        <EmptyState description="Apply this tag from a retail account or restaurant account workspace." title="No accounts have this tag" />
       ) : (
         <div className="table-scroll"><table className="responsive-table">
           <thead>
@@ -82,7 +82,7 @@ export default async function TagDetailPage({
           <tbody>
             {tag.locationTags.map((assignment) => {
               const account = assignment.agency ?? assignment.wholesaleAccount;
-              const accountType = assignment.agency ? 'Agency' : 'Wholesale';
+              const accountType = assignment.agency ? 'Retail' : 'Restaurants';
               const href = assignment.agency
                 ? `/agencies/${assignment.agency.id}`
                 : assignment.wholesaleAccount

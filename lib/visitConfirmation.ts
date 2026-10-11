@@ -18,7 +18,7 @@ export function getVisitContinueTarget({
   if (isTaster) {
     return {
       href: '/visits/new',
-      label: 'Log another agency visit',
+      label: 'Log another retail visit',
     };
   }
 
@@ -32,14 +32,14 @@ export function getVisitContinueTarget({
   if (visit.locationType === 'wholesale' && visit.wholesaleAccountId) {
     return {
       href: `/wholesale/${visit.wholesaleAccountId}`,
-      label: 'Continue to wholesale account',
+      label: 'Continue to restaurant account',
     };
   }
 
   if (visit.locationType === 'agency' && visit.agencyId) {
     return {
       href: `/agencies/${visit.agencyId}`,
-      label: 'Continue to agency',
+      label: 'Continue to retail account',
     };
   }
 

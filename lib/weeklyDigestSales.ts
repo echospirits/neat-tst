@@ -77,7 +77,7 @@ export async function getWeeklyDigestSales(organizationId: string, window: Weekl
   const retail = { sellingAgencies: rows.filter((row) => row.bottles > 0).length, previousCoveredDays: previousDates.length, comparable,
     highlights: selected.map((row) => {
       const agency = agencyMap.get(row.agencyNumber);
-      return { ...row, name: agency ? `${agency.name}${agency.city ? `, ${agency.city}` : ''} (Agency ${row.agencyNumber})` : `Agency ${row.agencyNumber}`, href: agency ? `/agencies/${agency.id}` : null };
+      return { ...row, name: agency ? `${agency.name}${agency.city ? `, ${agency.city}` : ''} (Retail ${row.agencyNumber})` : `Retail ${row.agencyNumber}`, href: agency ? `/agencies/${agency.id}` : null };
     }) };
   return { ...base, retailBottles: totals._sum.retailBottlesSold ?? 0, wholesaleBottles: totals._sum.wholesaleBottlesSold ?? 0,
     coveredDays: coveredDates.length, throughDate: coveredDates.at(-1)!, status: coveredDates.length === dates.length ? 'complete' : 'partial', retail };

@@ -19,7 +19,7 @@ import { chosenPursuitWhere } from '../../lib/acceptWholesaleAssessment';
 import { commercialAccountKey, commercialDiscoveryFilter, commercialDiscoveryAccountWhere, commercialRatingOrder, normalizeCommercialFilter } from '../../lib/commercialOpportunity';
 import { acceptAssessment, assessmentFeedback } from './assessmentActions';
 
-export const metadata = buildPageMetadata('Wholesale Opportunities');
+export const metadata = buildPageMetadata('Restaurant Opportunities');
 type Query = { q?: string; state?: string; priority?: string; rating?: string; mode?: string; sort?: string; territory?: string; page?: string; view?: string };
 export default async function OpportunityInbox({ searchParams }: { searchParams?: Promise<Query> }) {
   const user = await requireUser();
@@ -52,7 +52,7 @@ export default async function OpportunityInbox({ searchParams }: { searchParams?
   const users = assignees.map(a => ({ id: a.id, name: getUserDisplayName(a) }));
   const targeted = new Set((await prisma.organizationAccountOverlay.findMany({ where: { organizationId, accountType: 'WHOLESALE', externalAccountId: { in: rows.map(r => r.wholesaleAccountId) }, isTargeting: true }, select: { externalAccountId: true } })).map(r => r.externalAccountId));
   return <div className="opportunities-page">
-    <header className="page-heading"><h1>Wholesale Opportunities</h1><p>Commercial opportunity for your portfolio. Choose which accounts to pursue; existing pursuits retain their original context.</p><Link href="/alerts?view=pursuing">View chosen pursuits</Link>{['ADMIN','PLATFORM_ADMIN'].includes(user.role) ? <Link href="/admin/opportunity-performance">Refresh status and outcomes</Link> : null}</header>
+    <header className="page-heading"><h1>Restaurant Opportunities</h1><p>Commercial opportunity for your portfolio. Choose which accounts to pursue; existing pursuits retain their original context.</p><Link href="/alerts?view=pursuing">View chosen pursuits</Link>{['ADMIN','PLATFORM_ADMIN'].includes(user.role) ? <Link href="/admin/opportunity-performance">Refresh status and outcomes</Link> : null}</header>
     <OpportunitySearch value={search ?? ''} state={state ?? ''} rating={q.rating} mode={mode} territory={territory} />
     <nav aria-label="Evidence mode" className="opportunity-filters"><Link href={href({ mode: undefined })}>All evidence modes</Link>{Object.entries(evidenceModeLabel).map(([value,label]) => <Link key={value} aria-current={mode === value ? 'page' : undefined} href={href({ mode: value })}>{label}</Link>)}</nav>
     <nav aria-label="Commercial opportunity filters" className="opportunity-filters">{[['high','Ready to pursue · 3–5 stars'],['all','All ratings'],['zero','Zero stars'],['unrated','Unrated']].map(([value,label]) => <Link key={value} aria-current={ratingFilter === value ? 'page' : undefined} href={href({ rating: value, priority: undefined })}>{label}</Link>)}<Link href={href({ sort: q.sort === 'lowest' ? undefined : 'lowest' })}>{q.sort === 'lowest' ? 'Highest stars first' : 'Lowest stars first'}</Link></nav><details className="compact-details"><summary>{territory ? `Territory: ${OPPORTUNITY_TERRITORIES.find(t => t.slug === territory)?.shortLabel}` : 'Filter by territory'}</summary><nav aria-label="Territory" className="opportunity-filters"><Link href={href({ territory: undefined })}>All territories</Link>{OPPORTUNITY_TERRITORIES.map(t => <Link key={t.slug} aria-current={territory === t.slug ? 'page' : undefined} href={href({ territory: t.slug })}>{t.shortLabel}</Link>)}</nav></details>

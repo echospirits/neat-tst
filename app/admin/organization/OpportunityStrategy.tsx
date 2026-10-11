@@ -27,7 +27,7 @@ async function saveStrategy(form: FormData): Promise<ActionResult> {
 export async function OpportunityStrategy({ organizationId }: { organizationId: string }) {
   if (!await hasFeature(organizationId, 'WHOLESALE_OPPORTUNITIES')) return null;
   const products = await prisma.organizationProduct.findMany({ where: { organizationId, active: true, discontinued: false, status: { in: ['OWNED','REPRESENTED'] } }, orderBy: [{ market: 'asc' }, { externalItemCode: 'asc' }] });
-  return <details className="card"><summary>Wholesale product strategy</summary><p>Roles and temporary distribution availability are execution context and do not change commercial stars. Priority 0 excludes the product from the included portfolio; other priority values do not multiply stars. Verified style identifies comparable products.</p>
+  return <details className="card"><summary>Restaurant product strategy</summary><p>Roles and temporary distribution availability are execution context and do not change commercial stars. Priority 0 excludes the product from the included portfolio; other priority values do not multiply stars. Verified style identifies comparable products.</p>
     {products.map(p => <details key={p.id} className="compact-details"><summary>{p.displayName ?? p.externalItemCode} · {p.market} · {p.opportunityRole ?? 'Neutral'}</summary>
       <ActionForm action={saveStrategy}><input name="id" type="hidden" value={p.id}/><div className="form-grid"><label>Role<select name="role" defaultValue={p.opportunityRole ?? 'NEUTRAL'}>{['NEUTRAL','FOCUS','OPPORTUNISTIC','MAINTENANCE'].map(s => <option key={s}>{s}</option>)}</select></label>
       <label>Priority (0 excludes)<input type="number" name="priority" min="0" max="10" defaultValue={p.strategicPriority ?? 1}/></label>

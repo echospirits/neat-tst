@@ -1,6 +1,8 @@
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+import { StateAccessPicker } from '../../../components/StateAccessPicker';
+import { parseEnabledStates } from '../../../../lib/stateOptions';
 import { SubmitButton } from '../../../components/SubmitButton';
 import { OrganizationAuditAction, UserRole } from '@prisma/client';
 import { redirect } from 'next/navigation';
@@ -31,6 +33,9 @@ async function provisionOrganization(formData: FormData) {
   const adminEmail = clean(formData.get('adminEmail')).toLowerCase();
   const vendorIds = [...new Set(clean(formData.get('vendorIds')).split(/[\s,;]+/).map((value) => value.toUpperCase()).filter(Boolean))];
   const a3aStoreIds = normalizeOrganizationIdentifierList(clean(formData.get('a3aStoreIds')));
+  let enabledStates: string[];
+  try { enabledStates = parseEnabledStates(formData.getAll('enabledStates')); }
+  catch { redirect('/platform/organizations/new?status=select-at-least-one-valid-state'); }
   const intelligenceEnabled = formData.get('intelligence') === 'on';
   const features = assertFeatureDependencies(getEnvironmentFeatureKeys(getPackageFeatureKeys(intelligenceEnabled)));
   if (!name || !slug || !adminFirstName || !adminLastName || !adminEmail || primaryState !== 'OH' || vendorIds.some((value) => !/^[A-Z0-9-]{3,32}$/.test(value)) || a3aStoreIds.some((value) => !isValidA3aStoreId(value))) redirect('/platform/organizations/new?status=invalid');
@@ -38,7 +43,7 @@ async function provisionOrganization(formData: FormData) {
   if (existing) redirect('/platform/organizations/new?status=email-in-use');
   const result = await prisma.$transaction(async (tx) => {
     const organization = await tx.organization.create({ data: {
-      name, displayName, slug, primaryState, timezone, active: true, accountStatus: 'TRIAL', onboardingStatus: 'PROVISIONING',
+      name, displayName, slug, primaryState, enabledStates, timezone, active: true, accountStatus: 'TRIAL', onboardingStatus: 'PROVISIONING',
       website: clean(formData.get('website')) || null,
       // Customer-facing configuration is fixed during provisioning; never read it from FormData.
       contactName: `${adminFirstName} ${adminLastName}`,
@@ -72,7 +77,8 @@ export default async function NewOrganizationPage({ searchParams }: { searchPara
       <fieldset className="card"><legend>1. Organization identity</legend><div className="form-grid"><label>Company name<input name="name" required /></label><label>Display name<input name="displayName" /></label><label>Slug<input name="slug" placeholder="auto-generated when blank" /></label><label>Market<select name="primaryState" defaultValue="OH"><option value="OH">Ohio</option></select></label><label>Timezone<input name="timezone" defaultValue="America/New_York" required /></label><label>Website<input name="website" type="url" /></label></div></fieldset>
       <fieldset className="card"><legend>2. Initial organization admin</legend><div className="form-grid"><label>First name<input name="adminFirstName" required /></label><label>Last name<input name="adminLastName" required /></label><label>Email<input name="adminEmail" type="email" required /></label></div><p className="muted">Neat uses the existing secure, single-use invitation flow; no password is handled here.</p></fieldset>
       <fieldset className="card"><legend>3–4. Ohio data and product discovery</legend><div className="form-grid"><label>Ohio Vendor IDs<textarea name="vendorIds" placeholder="One or more IDs, separated by commas or new lines" rows={3} /></label><label>A3A Store IDs<textarea name="a3aStoreIds" placeholder="Store numbers located in this organization's locations" rows={3} /></label></div><p className="muted">Vendor IDs discover matching products and remain Platform Admin-only. Organization admins can maintain A3A Store IDs and choose which discovered products to include.</p></fieldset>
-      <fieldset className="card"><legend>5. Plan</legend><p className="muted">Core CRM is always included. Add Intelligence for account recommendations.</p><div className="package-entitlement-grid"><article className="package-entitlement"><span><strong>Core CRM</strong><small>Accounts, visits, worklists, users, in-app Support, Ohio data, integrations, Account Sales Status / Pipeline, Analytics with CSV exports, and Direct Wholesale Orders (Ohio A-3a PDFs; setup required).</small></span><span className="pill">Included</span></article><label className="package-entitlement selectable"><input name="intelligence" type="checkbox" /><span><strong>Intelligence</strong><small>Agency Intelligence, Wholesale Opportunities, and Advanced Intelligence.</small></span><span className="pill">Add-on</span></label></div></fieldset>
+      <fieldset className="card"><legend>5. Plan</legend><p className="muted">Core CRM is always included. Add Intelligence for account recommendations.</p><div className="package-entitlement-grid"><article className="package-entitlement"><span><strong>Core CRM</strong><small>Accounts, visits, worklists, users, in-app Support, integrations, Account Sales Status / Pipeline, Analytics with CSV exports, and Direct Wholesale Orders (Ohio A-3a PDFs; setup required).</small></span><span className="pill">Included</span></article><label className="package-entitlement selectable"><input name="intelligence" type="checkbox" /><span><strong>Intelligence</strong><small>Retail Intelligence, Restaurant Opportunities, and Advanced Intelligence.</small></span><span className="pill">Add-on</span></label></div></fieldset>
+      <section className="card"><StateAccessPicker /></section>
       <section className="card provisioning-review"><div><span className="page-eyebrow">6. Discover and review</span><h2>Create configuration</h2><p className="muted">This creates an isolated tenant configuration and discovers product candidates. Review ownership on the next screen, then run the persisted provisioning workflow.</p></div><SubmitButton type="submit">Create and discover products</SubmitButton></section>
     </form>
   </>;

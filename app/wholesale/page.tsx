@@ -33,7 +33,7 @@ import { AccountViewNavigation } from '../components/AccountViewNavigation';
 import { NearbyAccountsSection } from '../components/NearbyAccountsSection';
 import { TargetAccountMarker } from '../components/TargetAccountMarker';
 
-export const metadata = buildPageMetadata('Wholesale Accounts');
+export const metadata = buildPageMetadata('Restaurant Accounts');
 
 type SortDirection = 'asc' | 'desc';
 
@@ -86,7 +86,7 @@ const wholesaleSortColumns: Array<{ key: WholesaleSortKey; label: string }> = [
   { key: 'licenseeIds', label: 'Licensee IDs' },
   { key: 'address', label: 'Address' },
   { key: 'city', label: 'City' },
-  { key: 'agencyId', label: 'Agency ID' },
+  { key: 'agencyId', label: 'Retail ID' },
   { key: 'mostRecentVisit', label: 'Most Recent Visit' },
   { key: 'commercialRating', label: 'Commercial opportunity' },
   { key: 'nextAction', label: 'Next Action' },
@@ -291,9 +291,10 @@ async function createWholesale(formData: FormData) {
   'use server';
 
   const user = await requireUser();
-  const { organizationId } = await requireOrganizationContext(user);
+  const { organizationId, organization } = await requireOrganizationContext(user);
   const state = normalizeUsState(String(formData.get('state') ?? 'OH'));
   if (!state) return { error: 'Enter a valid US state name or two-letter abbreviation.' };
+  if (!organization.enabledStates.includes(state)) return { error: 'This state is not enabled for your organization.' };
   const licenseeIds = stateScopedLicenseeIds(parseWholesaleLicenseeIds(
     String(formData.get('licenseeIds') ?? formData.get('licenseeId') ?? ''),
   ), state);
@@ -370,7 +371,7 @@ async function createWholesale(formData: FormData) {
         organizationId,
         tagId,
         wholesaleAccountId: account.id,
-        note: 'Applied from wholesale account form',
+        note: 'Applied from restaurant account form',
         createdByUserId: user.id,
       })),
       skipDuplicates: true,
@@ -409,7 +410,7 @@ export default async function WholesalePage({
   searchParams?: Promise<WholesalePageParams>;
 }) {
   const user = await requireUser();
-  const { organizationId } = await requireOrganizationContext(user);
+  const { organizationId, organization } = await requireOrganizationContext(user);
   const enabledFeatures = await getOrganizationFeatures(organizationId);
   const hasWholesaleOpportunities = enabledFeatures.has('WHOLESALE_OPPORTUNITIES');
   const visibleSortColumns = hasWholesaleOpportunities
@@ -524,14 +525,14 @@ export default async function WholesalePage({
       <header className="page-heading page-header">
         <div>
           <span className="page-eyebrow">Accounts</span>
-          <h1>Wholesale Accounts</h1>
+          <h1>Restaurant Accounts</h1>
           <p className="muted">Current Ohio accounts from the OHLQ Account Master, plus manually created accounts.</p>
         </div>
       </header>
       <AccountViewNavigation active="wholesale" />
       {!q ? <NearbyAccountsSection type="wholesale" /> : null}
 
-      <LiveFilterForm className="filter-form narrow-filter" label="Filter wholesale accounts">
+      <LiveFilterForm className="filter-form narrow-filter" label="Filter restaurant accounts">
         <input name="q" defaultValue={q} placeholder="Filter name, licensee ID, menu placement, phone" />
         <input name="page" type="hidden" value="1" />
         <label>Sort by</label>
@@ -548,14 +549,14 @@ export default async function WholesalePage({
           <option value="desc">Descending</option>
         </select>
       </LiveFilterForm>
-      {params.status === 'saved' ? <p className="pill">Wholesale account saved.</p> : null}
+      {params.status === 'saved' ? <p className="pill">Restaurant account saved.</p> : null}
       {params.status === 'invalid' ? <p className="pill">An account name and valid state are required.</p> : null}
       {params.status === 'duplicate-licensee' ? (
-        <p className="pill">Those Licensee IDs are already split across multiple wholesale accounts.</p>
+        <p className="pill">Those Licensee IDs are already split across multiple restaurant accounts.</p>
       ) : null}
 
       <details className="card compact-details admin-panel">
-        <summary>Create wholesale account</summary>
+        <summary>Create restaurant account</summary>
         <ActionForm action={createWholesale} className="wholesale-create-form">
           <fieldset className="wholesale-create-section">
             <legend>Account</legend>
@@ -564,7 +565,7 @@ export default async function WholesalePage({
               <label>Phone (optional)<input name="phone" type="tel" autoComplete="tel" /></label>
             </div>
           </fieldset>
-          <WholesaleAddressFields />
+          <WholesaleAddressFields allowedStates={organization.enabledStates} />
           <fieldset className="wholesale-create-section">
             <legend>Additional details (optional)</legend>
             <div className="wholesale-create-grid wholesale-create-extras">
@@ -587,7 +588,7 @@ export default async function WholesalePage({
               </div>
             </fieldset>
           ) : null}
-          <SubmitButton type="submit">Save wholesale account</SubmitButton>
+          <SubmitButton type="submit">Save restaurant account</SubmitButton>
         </ActionForm>
       </details>
 
@@ -634,7 +635,7 @@ export default async function WholesalePage({
                 <td className="account-directory-secondary-cell" data-label="Licensee IDs">{row.licenseeIdsText}</td>
                 <td className="account-directory-secondary-cell" data-label="Address"><AddressLink address={row.locationText}>{row.address}</AddressLink></td>
                 <td className="account-directory-secondary-cell" data-label="City">{row.city}</td>
-                <td className="account-directory-secondary-cell" data-label="Agency ID">{row.agencyId}</td>
+                <td className="account-directory-secondary-cell" data-label="Retail ID">{row.agencyId}</td>
                 <td className="account-directory-secondary-cell" data-label="Most Recent Visit">{formatEasternDate(row.mostRecentVisit)}</td>
                 {hasWholesaleOpportunities ? <><td className="account-directory-secondary-cell" data-label="Commercial opportunity"><CommercialOpportunityStars rating={row.commercialRating} status={row.assessmentStatus} pending={row.pending} stale={row.stale} />{row.evidenceMode ? <small className="muted"> {row.evidenceMode}</small> : null}</td>
                 <td className="account-directory-secondary-cell" data-label="Next Action">{row.nextAction ?? '—'}</td>
@@ -679,7 +680,7 @@ export default async function WholesalePage({
         </div>
       ) : null}
       {q && sortedRows.length === 0 ? (
-        <p className="muted activity-empty">No active or official wholesale accounts match that search.</p>
+        <p className="muted activity-empty">No active or official restaurant accounts match that search.</p>
       ) : null}
     </>
   );

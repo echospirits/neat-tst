@@ -34,8 +34,8 @@ test('tenant brief uses configured branding, sales and escaped evidence in HTML 
   assert.match(email.html, /Other &lt;Distillery&gt;/);
   assert.doesNotMatch(email.html, /<script>|Echo Spirits|Per-user|User digest/);
   assert.match(email.html, /background:#ffffff;color:#142c32/);
-  for (const text of ['Retail bottles sold', 'Wholesale bottles sold', '412', '186', 'Wholesale / Big wins', 'Retail / Big wins', 'Retail / Risks to watch', 'Harbor Cafe']) assert.ok(email.html.includes(text), text);
-  for (const text of ['412', '186', 'WHOLESALE / RISKS', 'RETAIL / RISKS']) assert.ok(email.text.includes(text), text);
+  for (const text of ['Retail bottles sold', 'Restaurant bottles sold', '412', '186', 'Restaurant / Big wins', 'Retail / Big wins', 'Retail / Risks to watch', 'Harbor Cafe']) assert.ok(email.html.includes(text), text);
+  for (const text of ['412', '186', 'RESTAURANTS / RISKS', 'RETAIL / RISKS']) assert.ok(email.text.includes(text), text);
   assert.doesNotMatch(email.html + email.text, /recommended focus|agree on priorities|Major progress|NEXT WEEK/i);
   assert.match(email.html, /https:\/\/crm.example.com\/agencies\/north/);
   assert.match(email.html, /target="_blank" rel="noopener noreferrer"/);

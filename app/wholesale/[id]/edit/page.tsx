@@ -280,8 +280,8 @@ async function updateWholesaleAccount(formData: FormData) {
 
 const statusMessages: Record<string, string> = {
   invalid: 'Name and at least one Licensee ID are required.',
-  'duplicate-licensee': 'Another wholesale account already uses one of those Licensee IDs.',
-  'duplicate-official': 'That official account is already linked to another wholesale account.',
+  'duplicate-licensee': 'Another restaurant account already uses one of those Licensee IDs.',
+  'duplicate-official': 'That official account is already linked to another restaurant account.',
 };
 
 export default async function EditWholesaleAccountPage({
@@ -317,7 +317,7 @@ export default async function EditWholesaleAccountPage({
       <PageHeader
         actions={<Link className="btn secondary" href={`/wholesale/${account.id}`}>Back to account</Link>}
         description={account.name}
-        eyebrow="Wholesale account"
+        eyebrow="Restaurant account"
         title="Edit account"
       />
       {query.status ? <p className="toast-notice page-status">{statusMessages[query.status] ?? query.status}</p> : null}
@@ -340,7 +340,7 @@ export default async function EditWholesaleAccountPage({
               <input name="phone" defaultValue={account.phone ?? ''} />
             </label>
             <label>
-              Agency ID
+              Retail ID
               <input name="agencyId" defaultValue={account.agencyId ?? ''} />
             </label>
             <label>
@@ -376,7 +376,7 @@ export default async function EditWholesaleAccountPage({
               <input name="deliveryDay" defaultValue={account.deliveryDay ?? ''} />
             </label>
           </div>
-          <SubmitButton type="submit">Save wholesale account</SubmitButton>
+          <SubmitButton type="submit">Save restaurant account</SubmitButton>
         </ActionForm>
       </div></div>
     </>

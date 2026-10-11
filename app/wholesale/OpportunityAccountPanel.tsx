@@ -132,7 +132,7 @@ export async function OpportunityAccountPanel({ agencyId, wholesaleAccountId, cu
     : { organizationId, ...chosenPursuitWhere, wholesaleAccount: { agencyId: { equals: agencyId, mode: 'insensitive' } } };
   if (isAgencyRollup) {
     const assessments = await prisma.wholesaleAccountAssessment.findMany({ where: { organizationId, wholesaleAccount: { agencyId: { equals: agencyId, mode: 'insensitive' }, mergedIntoId: null } }, orderBy: commercialRatingOrder(), take: 12, include: { wholesaleAccount: { select: { name: true } } } });
-    return <section className="card"><h2>Linked wholesale intelligence</h2>{assessments.map(a => <div key={a.id}><h3><Link href={`/wholesale/${a.wholesaleAccountId}`}>{a.wholesaleAccount.name}</Link></h3><WholesaleAssessmentSummary value={a.assessment} status={a.assessmentStatus} reason={a.assessmentReason} pending={Boolean(a.refreshRequestedAt)} /></div>)}{!assessments.length ? <p>Current assessments are unavailable for linked accounts.</p> : null}</section>;
+    return <section className="card"><h2>Linked restaurant intelligence</h2>{assessments.map(a => <div key={a.id}><h3><Link href={`/wholesale/${a.wholesaleAccountId}`}>{a.wholesaleAccount.name}</Link></h3><WholesaleAssessmentSummary value={a.assessment} status={a.assessmentStatus} reason={a.assessmentReason} pending={Boolean(a.refreshRequestedAt)} /></div>)}{!assessments.length ? <p>Current assessments are unavailable for linked accounts.</p> : null}</section>;
   }
 
   if (!wholesaleAccountId) return null;

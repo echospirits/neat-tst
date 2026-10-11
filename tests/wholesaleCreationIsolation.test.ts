@@ -67,7 +67,7 @@ function loadFlow(flow: Flow, role: enums.UserRole | null, organizationId: strin
     ...enums, ...wholesaleAccounts, ...visitWorkflow, normalizeUsState, stateScopedLicenseeIds, isTasterRole,
     getWholesaleAddressProtectionForEdit,
     getCurrentSession: async () => user ? { user } : null,
-    requireOrganizationContext: async (actor: typeof user) => ({ organizationId: actor!.organizationId }),
+    requireOrganizationContext: async (actor: typeof user) => ({ organizationId: actor!.organizationId, organization: { enabledStates: ['OH','FL'] } }),
     hasFeature: async () => true,
     getUserDisplayName: () => 'Caller', randomUUID: () => 'unique-test',
     getSelectedTagIds: (data: FormData) => data.getAll('tagId'),

@@ -76,7 +76,7 @@ export default async function VisitConfirmedPage({
         {photoUploadFailed
           ? 'The visit was saved, but one or more photos could not be uploaded.'
           : user.role === UserRole.TASTER
-            ? 'Your agency visit, comments, and picture were saved.'
+            ? 'Your retail visit, comments, and picture were saved.'
             : `Your ${visit.locationType === 'wholesale' ? 'wholesale' : 'agency'} visit was saved.`}
       </p>
       {!resolutionHandled && resolutionType === 'task' ? <div className="visit-origin-resolution">

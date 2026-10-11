@@ -29,17 +29,17 @@ export function AgencyOperatingHoursEditor({
 
   return <details className="account-hours-editor" id="account-hours">
     <summary>{canEdit ? (schedule?.length ? 'Edit known operating hours' : 'Set known operating hours') : 'Known operating hours'}</summary>
-    <p className="muted">{canEdit ? 'Leave a day blank when its hours are unknown. Use “Closed” for a known closure. ' : ''}Agency tasks outside listed hours are marked red in My Schedule and the Worklist.</p>
+    <p className="muted">{canEdit ? 'Leave a day blank when its hours are unknown. Use “Closed” for a known closure. ' : ''}Retail tasks outside listed hours are marked red in My Schedule and the Worklist.</p>
     {sourceName ? <p className="account-hours-source">Source: {sourceUrl ? <a href={sourceUrl} rel="noreferrer" target="_blank">{sourceName}</a> : sourceName}{researchedAt ? ` · checked ${researchedAt.slice(0, 10)}` : ''}</p> : null}
     {!canEdit ? <>
       <p className="muted">These hours are shared across organizations. A platform administrator can update them.</p>
       {schedule?.length ? <dl>{schedule.map((entry) => <div key={entry.day}><dt>{entry.day}</dt><dd>{entry.hours}</dd></div>)}</dl> : <p className="muted">Operating hours are not set.</p>}
     </> : <>
-    <p className="muted">Updates apply to every organization that uses this agency.</p>
+    <p className="muted">Updates apply to every organization that uses this retail.</p>
     <ActionForm action={researchAgencyOperatingHours} className="account-hours-research-form" onSuccess={() => router.refresh()}>
       <input name="agencyId" type="hidden" value={agencyId} />
       <SubmitButton className="secondary" disabled={!researchAvailable} pendingLabel="Searching public sources…">Research public hours</SubmitButton>
-      {!researchAvailable ? <small className="muted">Public lookup is unavailable in this environment; enter known hours below.</small> : <small className="muted">Searches OHLQ by agency number first, then checks other public sources against this address if needed. Results include a source link and can be edited below.</small>}
+      {!researchAvailable ? <small className="muted">Public lookup is unavailable in this environment; enter known hours below.</small> : <small className="muted">Searches OHLQ by retail number first, then checks other public sources against this address if needed. Results include a source link and can be edited below.</small>}
     </ActionForm>
     <ActionForm action={saveAgencyOperatingHours} className="account-hours-form" key={scheduleKey} onSuccess={() => router.refresh()}>
       <input name="agencyId" type="hidden" value={agencyId} />

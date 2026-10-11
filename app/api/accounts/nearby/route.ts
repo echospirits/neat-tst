@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
   const type = request.nextUrl.searchParams.get('type') === 'agency' ? 'agency' : 'wholesale';
   if (user.role === UserRole.TASTER && type !== 'agency') {
-    return NextResponse.json({ error: 'Taster accounts can only view agencies.' }, { status: 403 });
+    return NextResponse.json({ error: 'Taster accounts can only view retail accounts.' }, { status: 403 });
   }
 
   const coordinates = parseCoordinates(

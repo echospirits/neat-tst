@@ -187,41 +187,41 @@ export default async function AccountResearchPage({ searchParams }: { searchPara
 
   return (
     <>
-      <PageHeader actions={<Link className="btn secondary" href="/opportunities">View opportunities</Link>} description={view === 'agencies' ? 'Find and verify public operating hours for Ohio Agencies. The queue highlights missing hours; each lookup starts only when you choose Research hours.' : 'Research the accounts where public evidence can materially improve an opportunity decision. Structured findings are applied automatically only after exact-location validation.'} eyebrow="Administration" title="Account Research" />
+      <PageHeader actions={<Link className="btn secondary" href="/opportunities">View opportunities</Link>} description={view === 'agencies' ? 'Find and verify public operating hours for Ohio Retail accounts. The queue highlights missing hours; each lookup starts only when you choose Research hours.' : 'Research the accounts where public evidence can materially improve an opportunity decision. Structured findings are applied automatically only after exact-location validation.'} eyebrow="Administration" title="Account Research" />
       {message ? <p className="toast-notice page-status" role="status">{message}</p> : null}
       {params.detail ? <p className="card danger-text research-import-errors">{params.detail}</p> : null}
 
       <nav aria-label="Account research queues" className="research-queue-tabs">
-        <Link aria-current={view === 'wholesale' ? 'page' : undefined} className={view === 'wholesale' ? 'btn' : 'btn secondary'} href="/admin/account-research">Wholesale</Link>
-        <Link aria-current={view === 'agencies' ? 'page' : undefined} className={view === 'agencies' ? 'btn' : 'btn secondary'} href="/admin/account-research?view=agencies">Agencies</Link>
+        <Link aria-current={view === 'wholesale' ? 'page' : undefined} className={view === 'wholesale' ? 'btn' : 'btn secondary'} href="/admin/account-research">Restaurants</Link>
+        <Link aria-current={view === 'agencies' ? 'page' : undefined} className={view === 'agencies' ? 'btn' : 'btn secondary'} href="/admin/account-research?view=agencies">Retail</Link>
       </nav>
 
       {view === 'agencies' ? <>
         <div className="grid target-import-stats agency-hours-queue-stats">
-          <div className="card metric-card"><h3>Hours needed</h3><p className="metric-value">{agencyHoursQueue.length.toLocaleString()}</p><p className="muted">Agencies without a usable weekly schedule</p></div>
+          <div className="card metric-card"><h3>Hours needed</h3><p className="metric-value">{agencyHoursQueue.length.toLocaleString()}</p><p className="muted">Retail accounts without a usable weekly schedule</p></div>
           <div className="card metric-card"><h3>Ready to research</h3><p className="metric-value">{addressReadyAgencyCount.toLocaleString()}</p><p className="muted">Have street address, city, and state</p></div>
-          <div className="card metric-card"><h3>Need address details</h3><p className="metric-value">{(agencyHoursQueue.length - addressReadyAgencyCount).toLocaleString()}</p><p className="muted">Open an Agency record to complete its location</p></div>
+          <div className="card metric-card"><h3>Need address details</h3><p className="metric-value">{(agencyHoursQueue.length - addressReadyAgencyCount).toLocaleString()}</p><p className="muted">Open a Retail record to complete its location</p></div>
         </div>
         <section className="dashboard-section" id="agency-hours-queue">
-          <SectionHeading count={matchingAgencyHoursQueue.length} description="This Agency queue is populated from saved hours, so adding or confirming a schedule removes the account from the list. Research is manual in TST and production; the Agency detail page keeps its direct research shortcut." title="Agency public-hours queue" />
-          {!availability.available ? <p className="card muted">Public lookup is unavailable here. You can still open an Agency and enter known hours manually.</p> : null}
-          <LiveFilterForm action="/admin/account-research" className="agency-hours-queue-search" label="Search Agency hours queue" role="search">
+          <SectionHeading count={matchingAgencyHoursQueue.length} description="This Retail queue is populated from saved hours, so adding or confirming a schedule removes the account from the list. Research is manual in TST and production; the Retail detail page keeps its direct research shortcut." title="Retail public-hours queue" />
+          {!availability.available ? <p className="card muted">Public lookup is unavailable here. You can still open a Retail and enter known hours manually.</p> : null}
+          <LiveFilterForm action="/admin/account-research" className="agency-hours-queue-search" label="Search Retail hours queue" role="search">
             <input name="view" type="hidden" value="agencies" />
             <input name="hoursPage" type="hidden" value="1" />
-            <label>Search by Agency number, name, address, or city<input autoComplete="off" defaultValue={params.q ?? ''} name="q" placeholder="Agency number, name, address, or city" type="search" /></label>
+            <label>Search by Retail number, name, address, or city<input autoComplete="off" defaultValue={params.q ?? ''} name="q" placeholder="Retail number, name, address, or city" type="search" /></label>
           </LiveFilterForm>
           <AgencyHoursResearchQueue agencies={visibleAgencyHoursQueue} researchAvailable={availability.available} />
-          {matchingAgencyHoursQueue.length > AGENCY_HOURS_QUEUE_PAGE_SIZE ? <nav aria-label="Agency hours queue pages" className="pagination-actions">
-            {agencyHoursPage > 1 ? <Link className="btn secondary" href={`/admin/account-research?view=agencies${agencySearch ? `&q=${encodeURIComponent(params.q ?? '')}` : ''}&hoursPage=${agencyHoursPage - 1}#agency-hours-queue`}>Previous agencies</Link> : <span />}
+          {matchingAgencyHoursQueue.length > AGENCY_HOURS_QUEUE_PAGE_SIZE ? <nav aria-label="Retail hours queue pages" className="pagination-actions">
+            {agencyHoursPage > 1 ? <Link className="btn secondary" href={`/admin/account-research?view=agencies${agencySearch ? `&q=${encodeURIComponent(params.q ?? '')}` : ''}&hoursPage=${agencyHoursPage - 1}#retail-hours-queue`}>Previous retail accounts</Link> : <span />}
             <span>Page {agencyHoursPage} of {agencyHoursPageCount}</span>
-            {agencyHoursPage < agencyHoursPageCount ? <Link className="btn secondary" href={`/admin/account-research?view=agencies${agencySearch ? `&q=${encodeURIComponent(params.q ?? '')}` : ''}&hoursPage=${agencyHoursPage + 1}#agency-hours-queue`}>More agencies</Link> : null}
+            {agencyHoursPage < agencyHoursPageCount ? <Link className="btn secondary" href={`/admin/account-research?view=agencies${agencySearch ? `&q=${encodeURIComponent(params.q ?? '')}` : ''}&hoursPage=${agencyHoursPage + 1}#retail-hours-queue`}>More retail accounts</Link> : null}
           </nav> : null}
         </section>
         <section className="dashboard-section">
-          <SectionHeading description="Agency sales, inventory, retail opportunity, and market-fit intelligence refresh through OHLQ data imports. Sourced ownership, store format, neighborhood, and demographic context is maintained on Agency records; it is not part of this public-hours lookup." title="Other Agency research" />
+          <SectionHeading description="Retail sales, inventory, retail opportunity, and market-fit intelligence refresh through OHLQ data imports. Sourced ownership, store format, neighborhood, and demographic context is maintained on Retail records; it is not part of this public-hours lookup." title="Other Retail research" />
           <article className="card research-workflow-card">
-            <p className="muted">Targeting an Agency can request a targeted refresh when complete sales and inventory inputs are available. The separate Store Context fields remain team-entered with source and observation date. Public-hours research does not overwrite either workflow.</p>
-            <div className="segmented-submit"><Link className="btn secondary" href="/agency-focus">Open Agency Intelligence</Link><Link className="btn secondary" href="/agencies">Browse Agencies</Link></div>
+            <p className="muted">Targeting a Retail can request a targeted refresh when complete sales and inventory inputs are available. The separate Store Context fields remain team-entered with source and observation date. Public-hours research does not overwrite either workflow.</p>
+            <div className="segmented-submit"><Link className="btn secondary" href="/agency-focus">Open Retail Intelligence</Link><Link className="btn secondary" href="/agencies">Browse Retail accounts</Link></div>
           </article>
         </section>
       </> : <>
@@ -242,7 +242,7 @@ export default async function AccountResearchPage({ searchParams }: { searchPara
             <div><strong>{automaticStatus.latestRun ? automaticRunStatusLabel : 'No automatic run yet'}</strong><small>{automaticStatus.approvedToday.toLocaleString()} applied · {automaticStatus.failedToday.toLocaleString()} failed · {automaticStatus.unsuccessfulToday.toLocaleString()} unsuccessful · {automaticStatus.rejectedToday.toLocaleString()} declined today</small>{automaticStatus.latestRun ? <small>{formatUsdMicros(automaticStatus.latestRun.estimatedSpendMicros)} estimated · started {formatEasternDateTime(automaticStatus.latestRun.startedAt)}</small> : <small>The production scheduler will create the first run when enabled.</small>}</div>
           </div>
           {!automationAvailability.available ? <p className="muted">Automatic OpenAI research is intentionally disabled in this environment. Manual test runs remain available.</p> : null}
-          <p className="muted">All active wholesale accounts with a complete address can enter the research queue. Priority still favors unscored accounts, identity changes and near-term tenant activity.</p>
+          <p className="muted">All active restaurant accounts with a complete address can enter the research queue. Priority still favors unscored accounts, identity changes and near-term tenant activity.</p>
         </article>
       </section>
 
@@ -281,7 +281,7 @@ export default async function AccountResearchPage({ searchParams }: { searchPara
           {unresolvedFailures.length === 0 ? <div className="empty-state"><h3>No account failures need attention</h3><p>API limits, billing interruptions, and other operational issues are marked unsuccessful and returned to the research queue instead.</p></div> : <div className="card research-job-list">{unresolvedFailures.map((attempt) => {
             const failedAt = attempt.reviewedAt ?? attempt.completedAt ?? attempt.updatedAt;
             const snapshot = attempt.inputSnapshot && typeof attempt.inputSnapshot === 'object' ? attempt.inputSnapshot as { address?: string | null; city?: string | null; zip?: string | null } : null;
-            return <div key={attempt.id}><span><strong><Link href={`/wholesale/${attempt.wholesaleAccount.id}`}>{attempt.wholesaleAccount.name}</Link></strong><small>{[attempt.wholesaleAccount.city, attempt.wholesaleAccount.licenseeId].filter(Boolean).join(' · ')}</small><small>{accountResearchFailureReason(attempt)}</small>{snapshot ? <small className="muted">Submitted location: {[snapshot.address, snapshot.city, snapshot.zip].filter(Boolean).join(', ')}</small> : null}</span><span><strong>Needs correction</strong><small>{formatEasternDateTime(failedAt)}</small><Link href={`/wholesale/${attempt.wholesaleAccount.id}`}>Open wholesale account</Link></span></div>;
+            return <div key={attempt.id}><span><strong><Link href={`/wholesale/${attempt.wholesaleAccount.id}`}>{attempt.wholesaleAccount.name}</Link></strong><small>{[attempt.wholesaleAccount.city, attempt.wholesaleAccount.licenseeId].filter(Boolean).join(' · ')}</small><small>{accountResearchFailureReason(attempt)}</small>{snapshot ? <small className="muted">Submitted location: {[snapshot.address, snapshot.city, snapshot.zip].filter(Boolean).join(', ')}</small> : null}</span><span><strong>Needs correction</strong><small>{formatEasternDateTime(failedAt)}</small><Link href={`/wholesale/${attempt.wholesaleAccount.id}`}>Open restaurant account</Link></span></div>;
           })}</div>}
         </div>
       </details>

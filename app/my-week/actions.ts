@@ -183,13 +183,13 @@ export async function createSchedulerWorklistItem(formData: FormData): Promise<S
   const wholesaleAccountId = toOptional(formData.get('wholesaleAccountId'));
   if (agencyId && wholesaleAccountId) return { error: 'Choose one account for this task.' };
   if (agencyId && !await prisma.agency.findUnique({ where: { id: agencyId }, select: { id: true } })) {
-    return { error: 'That agency is no longer available. Search and choose it again.' };
+    return { error: 'That retail is no longer available. Search and choose it again.' };
   }
   if (wholesaleAccountId && !await prisma.wholesaleAccount.findFirst({
     where: { id: wholesaleAccountId, isActive: true, mergedIntoId: null },
     select: { id: true },
   })) {
-    return { error: 'That wholesale account is no longer available. Search and choose it again.' };
+    return { error: 'That restaurant account is no longer available. Search and choose it again.' };
   }
 
   const category = getWorklistCategoryForLocationSelection(
@@ -197,10 +197,10 @@ export async function createSchedulerWorklistItem(formData: FormData): Promise<S
     agencyId,
     wholesaleAccountId,
   );
-  if (agencyId && category !== WorklistCategory.AGENCY) return { error: 'Choose the Agency category for this account.' };
-  if (wholesaleAccountId && category !== WorklistCategory.WHOLESALE) return { error: 'Choose the Wholesale category for this account.' };
-  if (category === WorklistCategory.AGENCY && !agencyId) return { error: 'Choose an agency for this task.' };
-  if (category === WorklistCategory.WHOLESALE && !wholesaleAccountId) return { error: 'Choose a wholesale account for this task.' };
+  if (agencyId && category !== WorklistCategory.AGENCY) return { error: 'Choose the Retail category for this account.' };
+  if (wholesaleAccountId && category !== WorklistCategory.WHOLESALE) return { error: 'Choose the Restaurant category for this account.' };
+  if (category === WorklistCategory.AGENCY && !agencyId) return { error: 'Choose a retail account for this task.' };
+  if (category === WorklistCategory.WHOLESALE && !wholesaleAccountId) return { error: 'Choose a restaurant account for this task.' };
 
   const parsedDate = parseDateOnly(formData.get('dueDate'));
   if (parsedDate.error) return { error: parsedDate.error };

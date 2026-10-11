@@ -50,7 +50,7 @@ const statusMessages: Record<string, string> = {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const agency = await prisma.agency.findUnique({ where: { id }, select: { name: true } });
-  return buildPageMetadata(agency?.name ?? 'Agency');
+  return buildPageMetadata(agency?.name ?? 'Retail');
 }
 
 export default async function AgencyActivityPage({
@@ -147,7 +147,7 @@ export default async function AgencyActivityPage({
     <>
       <header className="page-heading page-header account-workspace-heading">
         <div>
-          <span className="page-eyebrow">Agency · {agency.city || 'Location not set'}</span>
+          <span className="page-eyebrow">Retail · {agency.city || 'Location not set'}</span>
           <h1>{agency.name}</h1>
           {overlay?.isTargeting ? <p><strong className="target-account-marker">TARGET ACCOUNT</strong></p> : null}
           {agency.tags.length ? <TagBadges tags={agency.tags.map((assignment) => assignment.tag)} /> : null}
@@ -175,7 +175,7 @@ export default async function AgencyActivityPage({
         { href: '#account-worklist', label: 'Outstanding work' },
         { href: '#sales', label: 'Sales' },
         { href: '#activity', label: 'Activity' },
-        ...(hasAgencyIntelligence ? [{ href: '#intelligence', label: 'Retail Intelligence' }] : hasWholesaleOpportunities ? [{ href: '#intelligence', label: 'Wholesale intelligence' }] : []),
+        ...(hasAgencyIntelligence ? [{ href: '#intelligence', label: 'Retail Intelligence' }] : hasWholesaleOpportunities ? [{ href: '#intelligence', label: 'Restaurant intelligence' }] : []),
       ]} />
 
       <AccountMemoryPanel accountId={agency.id} accountType="AGENCY" contacts={accountContacts} notes={overlay?.notes ?? null} returnTo={`/agencies/${agency.id}`} />
@@ -196,7 +196,7 @@ export default async function AgencyActivityPage({
         </div>
         <div className="card account-detail-list">
           <h3>Account details</h3>
-          <p><strong>Agency ID</strong><span>{agency.agencyId}</span></p>
+          <p><strong>Retail ID</strong><span>{agency.agencyId}</span></p>
           <p>
             <strong>Address</strong>
             <AddressLink address={[agency.address, agency.city, agency.state, agency.zip].filter(Boolean).join(', ')} />
@@ -210,7 +210,7 @@ export default async function AgencyActivityPage({
             <PhoneLink phone={agency.primaryContactPhone} />
           </p>
           <p>
-            <strong>Agency phone</strong>
+            <strong>Retail phone</strong>
             <PhoneLink phone={agency.phone} />
           </p>
           <AgencyOperatingHoursEditor agencyId={agency.id} {...knownHours} canEdit={currentUser.role === UserRole.PLATFORM_ADMIN} researchAvailable={hoursResearchAvailable} />
@@ -225,7 +225,7 @@ export default async function AgencyActivityPage({
       </div>
       </AnchoredDetails>
 
-      {hasWholesaleOpportunities ? <AnchoredDetails className="account-overview-details account-workspace-section" id={hasAgencyIntelligence ? 'wholesale-intelligence' : 'intelligence'} summary="Linked wholesale opportunity intelligence">
+      {hasWholesaleOpportunities ? <AnchoredDetails className="account-overview-details account-workspace-section" id={hasAgencyIntelligence ? 'wholesale-intelligence' : 'intelligence'} summary="Linked restaurant opportunity intelligence">
         <OpportunityAccountPanel agencyId={agency.agencyId} currentUserId={currentUser.id} returnTo={`/agencies/${agency.id}`} users={actionUsers} />
       </AnchoredDetails> : null}
 

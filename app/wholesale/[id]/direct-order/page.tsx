@@ -13,7 +13,7 @@ import { getWholesaleLicenseeIdValues } from '../../../../lib/wholesaleAccounts'
 import { PageHeader } from '../../../components/PageChrome';
 import { DirectWholesaleOrderForm } from './DirectWholesaleOrderForm';
 
-export const metadata = buildPageMetadata('Create Direct Wholesale Order');
+export const metadata = buildPageMetadata('Create Direct Restaurant Order');
 
 export default async function DirectWholesaleOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -43,8 +43,8 @@ export default async function DirectWholesaleOrderPage({ params }: { params: Pro
   const licenseeIds = getWholesaleLicenseeIdValues(account);
 
   return <>
-    <PageHeader eyebrow="Ohio wholesale" title="Create Direct Wholesale Order" description={`Prepare an A-3a PDF for ${account.name}. Nothing is emailed or transmitted.`} actions={<Link className="btn secondary" href={`/wholesale/${account.id}`}>Back to account</Link>} />
-    {readyLocations.length === 0 ? <article className="card empty-state"><h2>A-3a location setup required</h2><p>Add the seller name and address for an active A-3a location before creating a wholesale PDF.</p><Link className="btn" href="/admin/organization">Configure organization</Link></article> : organizationProducts.length === 0 ? <article className="card empty-state"><h2>No organization products are available</h2><p>Confirm the organization's Ohio product selection before creating an order.</p><Link className="btn" href="/admin/organization">Configure products</Link></article> : <DirectWholesaleOrderForm
+    <PageHeader eyebrow="Ohio restaurant" title="Create Direct Restaurant Order" description={`Prepare an A-3a PDF for ${account.name}. Nothing is emailed or transmitted.`} actions={<Link className="btn secondary" href={`/wholesale/${account.id}`}>Back to account</Link>} />
+    {readyLocations.length === 0 ? <article className="card empty-state"><h2>A-3a location setup required</h2><p>Add the seller name and address for an active A-3a location before creating a restaurant PDF.</p><Link className="btn" href="/admin/organization">Configure organization</Link></article> : organizationProducts.length === 0 ? <article className="card empty-state"><h2>No organization products are available</h2><p>Confirm the organization's Ohio product selection before creating an order.</p><Link className="btn" href="/admin/organization">Configure products</Link></article> : <DirectWholesaleOrderForm
       account={{
         address: account.address || '', city: account.city || '', dba: account.name,
         id: account.id,

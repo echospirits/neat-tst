@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
+import { parseEnabledStates } from '../lib/stateOptions';
 import { OrganizationAuditAction, OrganizationStatus } from '@prisma/client';
 
 const lockedFields = ['appName', 'digestName', 'productLabel', 'productPluralLabel', 'brandPrimaryColor', 'brandAccentColor', 'contactName', 'contactEmail', 'contactPhone', 'supportEmail', 'locale', 'weekStartsOn'];
@@ -24,6 +25,7 @@ function submittedData() {
   for (const field of lockedFields) form.set(field, 'unwanted-override');
   form.set('settings', '{"locale":"unwanted-override","weekStartsOn":1}');
   for (const [field, value] of Object.entries({ organizationId: 'org-1', name: 'Company', displayName: 'Display', accountStatus: 'TRIAL', active: 'on', timezone: 'America/New_York', website: 'https://example.com', adminFirstName: 'First', adminLastName: 'Admin', adminEmail: 'ADMIN@EXAMPLE.COM' })) form.set(field, value);
+  form.append('enabledStates', 'OH');
   return form;
 }
 
@@ -55,7 +57,7 @@ test('provisioning ignores forged configuration and derives contacts from the in
   };
   const action = loadAction('app/platform/organizations/new/page.tsx', 'provisionOrganization', 'export default async function NewOrganizationPage(', {
     requirePlatformAdmin: async () => ({ id: 'platform-admin' }), OrganizationAuditAction, UserRole: { ADMIN: 'ADMIN' },
-    normalizeOrganizationIdentifierList: () => [], isValidA3aStoreId: () => true,
+    parseEnabledStates, normalizeOrganizationIdentifierList: () => [], isValidA3aStoreId: () => true,
     getPackageFeatureKeys: () => [], getEnvironmentFeatureKeys: (keys: unknown) => keys, assertFeatureDependencies: (keys: unknown) => keys,
     prisma: { user: { findUnique: async () => null }, $transaction: async (callback: (db: typeof tx) => unknown) => callback(tx) },
     createProvisioningRun: async () => ({ id: 'run-1' }), runProvisioning: noOp,

@@ -1,0 +1,39 @@
+{
+  "applied": true,
+  "target": "neon-neat-tst",
+  "migrations": [
+    {
+      "name": "20261011130000_tenant_account_states",
+      "checksum": "86914167109f792caec9ae6758880670f0b40d2b63f405f13998c5cf0e0c8e08"
+    },
+    {
+      "name": "20261011131000_abc_florida_retail_seed",
+      "checksum": "6eb17ff14807b492add39c7427012a05bb75797337f7df246f28cf6bcb3d983a"
+    }
+  ],
+  "allExistingAccountContactNoteTagRowsUnchanged": true,
+  "organizations": [
+    {
+      "id": "cmtku43cp0000ju048ymojnl1",
+      "displayName": "Middle West Spirits",
+      "enabledStates": [
+        "OH"
+      ]
+    },
+    {
+      "id": "org_echo_spirits",
+      "displayName": "Echo Spirits",
+      "enabledStates": [
+        "OH",
+        "FL"
+      ]
+    },
+    {
+      "id": "org_neat_staging",
+      "displayName": "Neat Staging",
+      "enabledStates": [
+        "OH"
+      ]
+    }
+  ]
+}

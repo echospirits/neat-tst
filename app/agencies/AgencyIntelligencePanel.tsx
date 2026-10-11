@@ -52,7 +52,7 @@ export async function AgencyIntelligencePanel({ agencyId, agencyName, currentUse
     return <section className="agency-intelligence-empty">
       <h3>Next actions</h3>
       <p>Decision support is waiting for the next complete OHLQ data run.</p>
-      <p className="muted">The engine only publishes recommendations after sales, wholesale, and inventory inputs all complete successfully.</p>
+      <p className="muted">The engine only publishes recommendations after sales, restaurant, and inventory inputs all complete successfully.</p>
     </section>;
   }
 
@@ -71,9 +71,9 @@ export async function AgencyIntelligencePanel({ agencyId, agencyName, currentUse
       </div>
       <dl className="agency-intelligence-snapshot">
         <IntelligenceBand label="Retail" value={summary.retailBand} />
-        <IntelligenceBand label="Wholesale influence" value={summary.wholesaleInfluenceBand} />
+        <IntelligenceBand label="Restaurant influence" value={summary.wholesaleInfluenceBand} />
         <div><dt>Echo SKUs</dt><dd>{summary.currentSkuCount}</dd></div>
-        <div><dt>Agency sales / 30d</dt><dd>{summary.retailSales30}</dd></div>
+        <div><dt>Retail sales / 30d</dt><dd>{summary.retailSales30}</dd></div>
         <div><dt>Last Echo sale</dt><dd>{summary.lastEchoSaleDate ? formatEasternDate(summary.lastEchoSaleDate) : 'None'}</dd></div>
         <div><dt>D8 opportunities</dt><dd>{summary.tastingOpportunityCount}</dd></div>
       </dl>
@@ -84,7 +84,7 @@ export async function AgencyIntelligencePanel({ agencyId, agencyName, currentUse
     </section>
 
     <section className="dashboard-section" id="product-opportunities">
-      <div className="section-heading"><h3>Product opportunities</h3><Link className="btn secondary compact-btn" href={`/agency-focus?agencyId=${agencyId}`}>Open Agency Intelligence</Link></div>
+      <div className="section-heading"><h3>Product opportunities</h3><Link className="btn secondary compact-btn" href={`/agency-focus?agencyId=${agencyId}`}>Open Retail Intelligence</Link></div>
       <div className="agency-product-list">
         {activeProducts.slice(0, 5).map((product) => <article className="card agency-product-card" key={product.id}>
           <div className="agency-product-card-heading">
@@ -135,7 +135,7 @@ export async function AgencyIntelligencePanel({ agencyId, agencyName, currentUse
     </details>
 
     <details className="compact-details agency-wholesale-influence" id="wholesale-influence">
-      <summary><strong>Wholesale influence</strong><span className={`priority priority-${summary.wholesaleInfluenceBand.toLowerCase()}`}>{titleCase(summary.wholesaleInfluenceBand)}</span></summary>
+      <summary><strong>Restaurant influence</strong><span className={`priority priority-${summary.wholesaleInfluenceBand.toLowerCase()}`}>{titleCase(summary.wholesaleInfluenceBand)}</span></summary>
       <dl className="agency-intelligence-snapshot">
         <div><dt>Linked</dt><dd>{summary.linkedWholesaleCount}</dd></div>
         <div><dt>Active</dt><dd>{summary.activeWholesaleCount}</dd></div>

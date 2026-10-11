@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../../lib/prisma";
+import { prisma, runWithOrganizationStateAccess } from "../../../../lib/prisma";
 import { isSideEffectEnabled } from "../../../../lib/appEnvironment";
 import { syncMailbox } from "../../../../lib/crm/mail/sync";
 export const dynamic = "force-dynamic";
@@ -40,10 +40,10 @@ export async function GET(request: NextRequest) {
     failed = 0;
   for (const c of connections) {
     try {
-      await syncMailbox(
+      await runWithOrganizationStateAccess(c.organizationId, () => syncMailbox(
         { userId: c.userId, organizationId: c.organizationId },
         c.id,
-      );
+      ));
       processed++;
     } catch {
       failed++;

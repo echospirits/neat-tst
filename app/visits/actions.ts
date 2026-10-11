@@ -193,7 +193,7 @@ export async function createVisit(formData: FormData) {
 
 async function createVisitWithDiagnostics(formData: FormData, diagnostics: VisitDiagnostics) {
   const user = await requireUser({ allowTaster: true });
-  const { organizationId } = await requireOrganizationContext(user);
+  const { organizationId, organization } = await requireOrganizationContext(user);
   diagnostics.mark('validation', { userId: user.id, organizationId });
   const isTaster = user.role === UserRole.TASTER;
   const actorName = getUserDisplayName(user);
@@ -347,10 +347,11 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
     if (locationType === 'wholesale' && !wholesaleAccountId && (newWholesaleLicenseeId || newWholesaleName)) {
       const state = normalizeUsState(String(formData.get('newWholesaleState') ?? 'OH'));
       if (!state) redirectVisitWithStatus(formOrigin, 'invalid-state', locationType);
+      if (!organization.enabledStates.includes(state!)) redirectVisitWithStatus(formOrigin, 'state-not-enabled', locationType);
       const licenseeId = stateScopedLicenseeIds([
-        normalizeWholesaleLicenseeId(newWholesaleLicenseeId) ?? toManualLicenseeId(newWholesaleName ?? 'Wholesale account'),
+        normalizeWholesaleLicenseeId(newWholesaleLicenseeId) ?? toManualLicenseeId(newWholesaleName ?? 'Restaurant account'),
       ], state!)[0];
-      const name = newWholesaleName ?? `Wholesale ${licenseeId}`;
+      const name = newWholesaleName ?? `Restaurant ${licenseeId}`;
       const existingAccount = newWholesaleLicenseeId
         ? await tx.wholesaleAccount.findFirst({
             where: getWholesaleLicenseeIdLookupWhere(licenseeId),

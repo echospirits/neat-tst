@@ -97,7 +97,7 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
             <summary><h3>{option.label}</h3><span className="pill">{stageRows.length}</span><svg className="pipeline-kanban-chevron" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 5 7 7-7 7" /></svg></summary>
             {stageRows.map((row) => <article className="pipeline-kanban-card" key={`${row.accountType}:${row.externalAccountId}`}>
               <Link className="pipeline-kanban-account" href={row.accountType === SalesAccountType.AGENCY ? `/agencies/${row.externalAccountId}` : `/wholesale/${row.externalAccountId}`}>{row.account.name}</Link>{row.isTargeting ? <small className="target-account-marker">TARGET ACCOUNT</small> : null}
-              <span className="muted">{row.accountType === SalesAccountType.AGENCY ? 'Agency' : 'Wholesale'}{row.account.city ? ` · ${row.account.city}` : ''}</span>
+              <span className="muted">{row.accountType === SalesAccountType.AGENCY ? 'Retail' : 'Restaurants'}{row.account.city ? ` · ${row.account.city}` : ''}</span>
               <span>{BUYING_STATE_LABELS[row.buyingState]} · {daysInStatus(row.salesStatusUpdatedAt!)} days in status</span>
               <span className="muted">{row.assignedUserId ? usersById.get(row.assignedUserId) ?? 'Former team member' : 'Unassigned'}</span>
               <span><strong>Next:</strong> {row.nextAction ? `${row.nextAction.title}${row.nextAction.dueDate ? ` · ${formatEasternDate(row.nextAction.dueDate)}` : ''}` : 'No follow-up scheduled'}</span>
@@ -107,14 +107,14 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
           </details>;
         })}
       </div>
-      {!allRows.length ? <p className="muted">Set Sales Status on an <Link href="/agencies">Agency</Link> or <Link href="/wholesale">Wholesale Account</Link> to add it to your pipeline.</p> : null}
+      {!allRows.length ? <p className="muted">Set Sales Status on an <Link href="/agencies">Retail</Link> or <Link href="/wholesale">Restaurant Account</Link> to add it to your pipeline.</p> : null}
     </section> : <section className="dashboard-section">
       <div className="section-heading"><div><span className="page-eyebrow">Pipeline snapshot</span><h2>{selectedStatus ? SALES_STATUS_LABELS[selectedStatus] : 'Tracked accounts'}</h2></div><span className="pill">{rows.length}</span></div>
       {rows.length ? <div className="pipeline-account-list">
         {rows.map((row) => {
           const href = row.accountType === SalesAccountType.AGENCY ? `/agencies/${row.externalAccountId}` : `/wholesale/${row.externalAccountId}`;
           return <article className="pipeline-account-row" key={`${row.accountType}:${row.externalAccountId}`}>
-            <div className="pipeline-account-identity"><Link href={href}>{row.account.name}</Link>{row.isTargeting ? <small className="target-account-marker">TARGET ACCOUNT</small> : null}<span>{row.accountType === SalesAccountType.AGENCY ? 'Agency' : 'Wholesale'}{row.account.city ? ` · ${row.account.city}` : ''}</span></div>
+            <div className="pipeline-account-identity"><Link href={href}>{row.account.name}</Link>{row.isTargeting ? <small className="target-account-marker">TARGET ACCOUNT</small> : null}<span>{row.accountType === SalesAccountType.AGENCY ? 'Retail' : 'Restaurants'}{row.account.city ? ` · ${row.account.city}` : ''}</span></div>
             <span><small>Sales Status</small><strong>{SALES_STATUS_LABELS[row.salesStatus!]}</strong></span>
             <span><small>Buying State</small><strong>{BUYING_STATE_LABELS[row.buyingState]}</strong></span>
             <span><small>Owner</small><strong>{row.assignedUserId ? usersById.get(row.assignedUserId) ?? 'Former team member' : 'Unassigned'}</strong></span>
@@ -125,7 +125,7 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
             <span className={row.attention.length ? 'pipeline-attention needs-attention' : 'pipeline-attention'}><small>Needs Attention</small><strong>{row.attention[0] ?? 'On track'}</strong>{row.attention.length > 1 ? <em>+{row.attention.length - 1} more</em> : null}</span>
           </article>;
         })}
-      </div> : <div className="card empty-state"><h3>No tracked accounts{selectedStatus ? ` in ${SALES_STATUS_LABELS[selectedStatus]}` : ''}</h3><p>Set Sales Status from an Agency or Wholesale Account page, or clear this filter.</p>{selectedStatus ? <Link className="btn secondary" href={pipelineHref(view, null)}>Clear filter</Link> : null}</div>}
+      </div> : <div className="card empty-state"><h3>No tracked accounts{selectedStatus ? ` in ${SALES_STATUS_LABELS[selectedStatus]}` : ''}</h3><p>Set Sales Status from a Retail or Restaurant Account page, or clear this filter.</p>{selectedStatus ? <Link className="btn secondary" href={pipelineHref(view, null)}>Clear filter</Link> : null}</div>}
     </section>}
 
     <div className="pipeline-support-grid">
