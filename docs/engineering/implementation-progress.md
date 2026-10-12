@@ -34,3 +34,7 @@ Tested application commit `f9819f2c74003048c58e12378afd3184a78159d5` is pushed t
 ## Application continuation complete
 
 The authorized application implementation, migration rehearsal, integrated acceptance, TST migrations, commit/push and deployment verification are complete. The items above are live activation and production gates, not claims of completed live-provider acceptance. Production promotion remains a distinct release task.
+
+## Contact suggestions continuation — 2026-10-12
+
+Reviewed contact discovery now extends Contacts and Communications using captured email participants/header names and business SMS. It reuses ordinary tenant contacts and live contact search, with private-owner evidence, explicit acceptance, duplicate checks, per-user dismissals and preserved communication visibility/consent. No body/signature AI extraction or live provider activation was added. Application `c6686b8d` is verified TST READY after 852 tests, typecheck/build, isolated database acceptance and 390×844/1440×900 browser checks. See [guide](../product/contact-suggestions.md) and [release receipt](../releases/contact-suggestions-validation.md).

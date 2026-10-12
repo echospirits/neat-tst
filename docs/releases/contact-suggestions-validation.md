@@ -28,4 +28,8 @@ Tenant-specific reviewed suggestions in existing account Contacts and Communicat
 
 ## Deployment
 
-Baseline staging/tst `8cc02bb2c28d0d088c43fb559d93be4173b41e28`. Exact tested application SHA and READY/health receipt follow deployment. Production/main remains `af1f396726e3b15e1167f5af2aa6ba426cae9bf9`; no production push, schema/configuration mutation, credential provisioning or live message.
+Baseline staging/tst `8cc02bb2c28d0d088c43fb559d93be4173b41e28`. Tested application commit `c6686b8d14dd047ea331ab2b1dd917e69fbc748f` (feature checkpoint `27883a3651a0fea902143ea82b565ae9524410f6`) is pushed to staging/tst.
+
+Vercel deployment `dpl_73LmNmDFzXunAKDpmXRkUcijEdKX` is **READY** for that exact application SHA. [TST](https://neat-tst.vercel.app) · [immutable application deployment](https://neat-kgc8dcaik-joe-1533s-projects.vercel.app).
+
+Health verified `ok=true`, `database=connected`, `databaseTarget=neon-neat-tst`, `environment=test`. Signed-out Communications requires login and contact search returns 401. Vercel's production target label belongs to the separate neat-tst project. This documentation-only receipt follows the tested application commit without runtime changes. Production/main remains `af1f396726e3b15e1167f5af2aa6ba426cae9bf9`; no production push, schema/configuration mutation, credential provisioning or live message.
