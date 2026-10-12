@@ -55,7 +55,7 @@ async function assertMember(db: CrmDb, actor: CrmActor) {
         id: actor.userId,
         organizationId: actor.organizationId,
         isActive: true,
-        role: { notIn: ["PLATFORM_ADMIN", "TASTER"] },
+        role: { not: "TASTER" },
       },
       select: { id: true },
     }))

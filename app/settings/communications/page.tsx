@@ -28,16 +28,13 @@ export default async function CommunicationsPage({
     beforeId?: string;
   }>;
 }) {
-  const { actor, user } = await requireCrmActor(),
+  const { actor, user, ownCommunications } = await requireCrmActor(),
     params = await searchParams;
-  if (
-    user.role === "PLATFORM_ADMIN" ||
-    user.organizationId !== actor.organizationId
-  )
+  if (!ownCommunications)
     return (
       <PageHeader
         title="Communications"
-        description="Mailbox connections belong to their individual organization members. Support View does not grant access to private correspondence."
+        description="Mailbox connections belong to their individual organization members. Exit Support View to use your own organization's Communications. Support View does not grant access to private correspondence."
       />
     );
   const date = params.before ? new Date(params.before) : undefined;

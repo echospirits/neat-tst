@@ -5,7 +5,7 @@ Contact suggestions extend account Contacts and Communications. They do not crea
 ## Where to review
 
 - On an account, open **Contacts → Suggested contacts**. Existing activity associations supply the account context.
-- Open **Communications → Suggested contacts** for people whose account has not yet been established, or to review across accounts.
+- Open **My Work → Communications → Suggested contacts** on desktop, or **More → Communications** on mobile, for people whose account has not yet been established, or to review across accounts.
 - Search suggestions by name, address/number, or proposed account. Open **Why this suggestion?** for up to three source records, then **Review contact**.
 - Choose **Add contact** and confirm the name/account, **Link to existing contact** using the existing tenant contact search, or **Dismiss for me**.
 
@@ -22,6 +22,8 @@ SMS uses normalized phone numbers from the connected business number. Personal p
 ## Privacy and review state
 
 Mail-derived suggestions and their evidence belong to the mailbox owner, including when the underlying activity was shared. Another tenant member, tenant administrator or Platform Support View cannot browse private mailbox suggestions. Organization business SMS is shared. All source reads, contact lookups and writes remain tenant/state-scoped. The server rechecks current evidence, membership, account access and duplicate identities when accepting.
+
+Platform admins with their own organization membership can connect their own mailbox and review their own suggestions. Exit Support View first, including when viewing your own organization through Support View. Platform privileges alone do not grant membership or access to another user's mailbox; an admin without an assigned organization cannot connect through Support View.
 
 The confirmation explicitly shares only the approved contact details with the organization. Mail visibility is preserved; private subjects/bodies/source identifiers are not copied into shared contact notes or organization audit. Per-user dismissals and acceptance receipts are persisted using a hashed channel/identity key. Dismissals remain hidden across refresh/sync. Deleting or expiring source evidence removes the suggestion naturally; a stale review cannot create a contact from missing evidence.
 

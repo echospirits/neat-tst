@@ -25,6 +25,18 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 
 ## Pending changes
 
+### Communications navigation and platform-admin own-mailbox access
+
+- Description: Communications now appears in desktop My Work and remains in mobile More. Platform admins with matching organization membership can manage their own mailbox and review contact suggestions outside Support View. Support View, including the same tenant, remains blocked from private correspondence; mailbox queries and writes retain the authenticated owner and tenant scope.
+- Relevant commit(s): Commit titled Fix Communications navigation and platform own-mailbox access.
+- Feature flag/default: Existing CORE_CRM entitlement; unchanged.
+- Migration(s): None.
+- Environment/config: None; provider activation remains separate.
+- User-visible: Yes. Exit Support View to use your own organization's Communications. No membership is created by this fix.
+- Validation: See [Communications access validation](communications-access-validation.md).
+- Production readiness: TST-only fix; normal production release gates remain pending.
+- Rollout notes: neat-tst/tst only; production/main unchanged.
+
 ### Retail / Restaurants terminology and tenant state access
 
 - Description: Renamed CRM account categories and added independent multi-state tenant access, enforced for account reads and writes. Platform Admin can configure states separately from Core CRM / Intelligence. Echo Spirits gets Ohio and Florida; other existing tenants get Ohio.

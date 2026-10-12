@@ -8,11 +8,8 @@ export async function ContactSuggestions({
 }: {
   account?: CrmAccount;
 }) {
-  const { actor, user } = await requireCrmActor();
-  if (
-    user.organizationId !== actor.organizationId ||
-    ["PLATFORM_ADMIN", "TASTER"].includes(user.role)
-  )
+  const { actor, user, ownCommunications } = await requireCrmActor();
+  if (!ownCommunications || user.role === "TASTER")
     return null;
   try {
     const result = await loadContactSuggestions(prisma, actor, account);

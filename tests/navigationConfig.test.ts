@@ -11,7 +11,7 @@ import {
 test('desktop navigation keeps work and account areas intentionally grouped', () => {
   assert.deepEqual(
     getNavigationItems('work').map((item) => item.key),
-    ['home', 'worklist', 'visits', 'analytics'],
+    ['home', 'worklist', 'visits', 'analytics', 'communications'],
   );
   assert.deepEqual(
     getNavigationItems('work').find((item) => item.key === 'home'),
@@ -26,6 +26,15 @@ test('desktop navigation keeps work and account areas intentionally grouped', ()
 test('pipeline navigation is feature gated', () => {
   assert.equal(getNavigationItems('accounts', []).some((item) => item.key === 'pipeline'), false);
   assert.equal(getNavigationItems('accounts', ['ACCOUNT_SALES_STATUS']).some((item) => item.key === 'pipeline'), true);
+});
+
+test('Communications is available on desktop and mobile More for tenant members including platform admins', () => {
+  for (const platform of [false, true]) {
+    assert.equal(getNavigationItems('work', ['CORE_CRM'], platform).filter((item) => item.key === 'communications').length, 1);
+    assert.equal(getMoreNavigationItems(platform, ['CORE_CRM'], platform).filter((item) => item.key === 'communications').length, 1);
+    assert.equal(getNavigationItems('work', [], platform).some((item) => item.key === 'communications'), false);
+    assert.equal(getMoreNavigationItems(platform, [], platform).some((item) => item.key === 'communications'), false);
+  }
 });
 
 test('wholesale orders navigation is feature gated', () => {
