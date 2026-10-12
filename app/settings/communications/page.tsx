@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { ContactSuggestions } from "../../account-memory/ContactSuggestions";
 import { SmsSettings } from './SmsSettings';
 import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
@@ -92,6 +94,7 @@ export default async function CommunicationsPage({
       {params.status && statuses[params.status] ? (
         <p role="status">{statuses[params.status]}</p>
       ) : null}
+      <section className="card crm-panel"><Suspense fallback={<p role="status">Loading contact suggestions…</p>}><ContactSuggestions /></Suspense></section>
       <SmsSettings organizationId={actor.organizationId} admin={user.role === "ADMIN"} />
       <section className="card crm-panel">
         <h2>Mailbox privacy</h2>

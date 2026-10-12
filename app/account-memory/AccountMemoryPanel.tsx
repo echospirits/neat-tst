@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { ContactSuggestions } from "./ContactSuggestions";
 import { SmsConversation } from './SmsConversation';
 import { RecordPicker } from '../components/RecordPicker';
 import { ContactRelationships } from './ContactRelationships';
@@ -84,6 +86,7 @@ export function AccountMemoryPanel({ accountId, accountType, contacts, notes, re
       <div className="section-heading"><h2>Contacts</h2><span className="pill">{active.length}</span></div>
       <div className="contact-list">{active.length ? active.map(renderContact) : <p className="muted">No contacts yet.</p>}</div>
       {inactive.length ? <details className="inactive-contacts"><summary>{inactive.length} inactive</summary><div className="contact-list">{inactive.map(renderContact)}</div></details> : null}
+      <Suspense fallback={<p role="status">Loading contact suggestions…</p>}><ContactSuggestions account={{accountType,accountId}} /></Suspense>
       <SmsConversation contacts={active.map(contact => ({ id: contact.id, name: contact.name, phone: contact.phone }))} />
       <details className="contact-import-disclosure"><summary>Add or import a contact</summary><ContactImportForm accountId={accountId} accountType={accountType} installUrl={shortcutConfig.installUrl} returnTo={returnTo} shortcutVersion={shortcutConfig.version} /></details>
     </article>

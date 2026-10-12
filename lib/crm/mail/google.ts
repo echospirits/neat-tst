@@ -1,3 +1,4 @@
+import { headerParticipantNames } from "../matching";
 import { z } from "zod";
 import { extractEmails, normalizeEmail } from "../matching";
 import { forEachInBatches } from "../../forEachInBatches";
@@ -181,6 +182,7 @@ export class GoogleMailAdapter implements MailAdapter {
         at: at.toISOString(),
         subject: header("subject").slice(0, 500),
         participants: extractEmails(["from", "to", "cc"].map(header).join(",")),
+        participantNames: headerParticipantNames(["from", "to", "cc"].map(header)),
         direction: extractEmails(header("from")).includes(
           normalizeEmail(input.email),
         )

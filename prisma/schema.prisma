@@ -430,6 +430,7 @@ model UserActivityDay {
 }
 
 model User {
+  contactSuggestionReviews ContactSuggestionReview[]
   mailboxConnections MailboxConnection[]
   mailboxOAuthStates MailboxOAuthState[]
 
@@ -488,6 +489,7 @@ model User {
 }
 
 model Organization {
+  contactSuggestionReviews ContactSuggestionReview[]
   eventShifts EventShift[]
   eventbriteConnection EventbriteConnection?
   recipeShares RecipeShare[]
@@ -2088,6 +2090,7 @@ model LoggedVisitContact {
 }
 
 model AccountActivity {
+  participantNames Json @default("{}")
   providerSeenAt DateTime?
   deliveryStatus String?
   contactIds         String[] @default([])
@@ -3016,4 +3019,17 @@ model EventbriteConnection {
  cursor String?
  updatedAt DateTime @updatedAt
  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model ContactSuggestionReview {
+  id String @id @default(cuid())
+  organizationId String
+  userId String
+  identityKey String
+  status String
+  contactId String?
+  updatedAt DateTime @default(now()) @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([organizationId, userId, identityKey])
 }

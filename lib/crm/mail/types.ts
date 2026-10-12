@@ -7,6 +7,7 @@ export type MailChange = {
   at?: string;
   subject?: string;
   participants?: string[];
+  participantNames?: Record<string, string>;
   direction?: "INBOUND" | "OUTBOUND";
   url?: string;
   private?: boolean;

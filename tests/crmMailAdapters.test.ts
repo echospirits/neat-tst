@@ -52,6 +52,7 @@ test("Gmail snapshots preserve the initial history cursor and normalize outgoing
   assert.equal(page.cursor.baseline, "100");
   assert.equal(page.cursor.page, "page2");
   assert.equal(page.changes[0].direction, "OUTBOUND");
+  assert.equal(page.changes[0].participantNames?.["buyer@example.com"], "Buyer");
   assert.deepEqual(page.changes[0].participants, [
     "rep@example.com",
     "buyer@example.com",

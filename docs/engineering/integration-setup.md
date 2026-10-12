@@ -71,3 +71,7 @@ Set `CRM_AI_ENABLED=true`, `OPENAI_API_KEY` and an approved `CRM_AI_MODEL` priva
 ## Mail fixture mode
 
 In development/TST, Communications → Try fixture mode creates a visibly marked MOCK connection. Repeated ingestion uses the same source key; creating the demo connection again resets the fixture cursor. Production rejects demo creation and synchronization. Fixtures establish application behavior, not live provider acceptance.
+
+## Contact suggestions from captured communications
+
+After capture, Contacts and Communications compute tenant-specific, human-reviewed suggestions from participant addresses/header display names and business SMS numbers. Two-way and repeated correspondence ranks first; account proposals use existing activity associations. No additional provider scopes, AI key, full-body ingestion or autonomous contact creation is enabled. Accepted details are shared tenant contacts while mail evidence stays owner-private. See [contact suggestions](../product/contact-suggestions.md) for review, duplicates, dismissal and coverage limits.

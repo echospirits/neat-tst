@@ -64,7 +64,8 @@ describe('visit contact relationships', () => {
     const route = read('app/api/contacts/route.ts');
     assert.match(form, /fetch\('\/api\/contacts'/);
     assert.match(form, /setContactIds\(\(current\) => \[\.\.\.current\.filter\(\(id\) => id !== created\.id\), created\.id\]\)/);
-    assert.match(route, /organizationId, name/);
+    assert.match(route, /createAccountContactRecord\(tx,\{organizationId,userId:user\.id\}/);
+    assert.match(read('lib/crm/contactCreation.ts'), /organizationId: actor\.organizationId/);
   });
 
   it('renders linked names while leaving old visits without links uncluttered', () => {
@@ -250,7 +251,8 @@ describe('iPhone Shortcut contact import', () => {
     assert.match(startRoute, /organizationId/);
     assert.match(actions, /contactImportSession\.updateMany/);
     assert.match(actions, /consumedAt: null, expiresAt: \{ gt: new Date\(\) \}/);
-    assert.match(actions, /locationContact\.create/);
+    assert.match(actions, /createAccountContactRecord/);
+    assert.match(read('lib/crm/contactCreation.ts'), /locationContact\.create/);
     assert.match(actions, /getAccountContactWhere\(organizationId, location\)/);
   });
 

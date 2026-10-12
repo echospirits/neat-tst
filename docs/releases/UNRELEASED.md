@@ -294,3 +294,11 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 - Dependencies: Twilio SDK; patched devalue/nanoid overrides. Remaining audit: six package findings (3 high, 2 moderate, 1 low, 0 critical), documented in security review.
 - Validation/rollout: 847 tests, typecheck/build and three responsive browser suites pass; nine shared-TST migrations verified, deployment READY and health test/neon-neat-tst. Exact receipt in [v0.2-test-report](v0.2-test-report.md). No production/main push, migration, credential rotation, tag or live customer message.
 - Limits: metadata-only mailbox capture, provider-linked attachments, opt-in local text drafts rather than full offline sync, daily purchase observations rather than individual order/revenue claims. Live integration acceptance and production activation remain separate.
+
+### Tenant-specific reviewed contact suggestions
+
+- Extends existing account Contacts and Communications with evidence-backed suggestions from captured email participants and business SMS. Two-way/repeated correspondence ranks first; names/accounts remain human-reviewed. Add a contact, attach an address/number to an existing contact, or persist a personal dismissal.
+- Reuses ordinary contact creation/search and preserves existing details. Server-side membership/state/private-evidence checks, duplicate/replay locking, inactive-contact safeguards, sanitized audits and stale-source validation protect acceptance. Private mail is not shared; saving a phone does not grant SMS consent or trigger visits, Pipeline or Worklist side effects.
+- Migration: `20261012120000_contact_suggestions` (additive participantNames JSON and ContactSuggestionReview table). No backfill or destructive SQL. Existing source metadata can suggest addresses; display names arrive with subsequent provider ingestion.
+- Configuration: no new secret/scope/AI requirement; existing live mail/SMS activation gates remain unchanged. Personal phone messages and full email bodies/signatures are not ingested.
+- Validation and deployment: recorded in [contact suggestions validation](contact-suggestions-validation.md). TST-only; production/main unchanged.

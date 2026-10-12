@@ -22,7 +22,7 @@ export function safeGraphCursor(value: string) {
   return url.toString();
 }
 const email = z.object({
-  emailAddress: z.object({ address: z.string().optional() }).optional(),
+  emailAddress: z.object({ address: z.string().optional(), name: z.string().optional() }).optional(),
 });
 const row = z.object({
   id: z.string(),
@@ -133,6 +133,7 @@ export class MicrosoftMailAdapter implements MailAdapter {
               ...(m.toRecipients ?? []),
               ...(m.ccRecipients ?? []),
             ]),
+        participantNames: Object.fromEntries([...(m.from ? [m.from] : []), ...(m.toRecipients ?? []), ...(m.ccRecipients ?? [])].filter(p => p.emailAddress?.address && p.emailAddress?.name).map(p => [p.emailAddress!.address!.trim().toLowerCase(), p.emailAddress!.name!.slice(0,200)])),
         direction: stream === "sentitems" ? "OUTBOUND" : "INBOUND",
       };
     });

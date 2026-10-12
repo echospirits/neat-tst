@@ -73,3 +73,18 @@ export function isInternalMessage(
     participants.every((p) => internal.has(normalizeEmail(p)) || internalDomains.includes(normalizeEmail(p).split("@")[1]))
   );
 }
+
+// Header display names are unverified hints, never inferred job titles.
+export function cleanParticipantName(value: string) {
+  return value.replace(/[\u0000-\u001f\u007f<>]/g, "").trim().slice(0, 200);
+}
+export function headerParticipantNames(headers: string[]) {
+  const result: Record<string, string> = {};
+  for (const header of headers) {
+    for (const match of header.matchAll(/(?:^|,)\s*(?:"([^"\r\n]*)"|([^,<]*))\s*<([^<>]+)>/g)) {
+      const email = extractEmails(match[3])[0], name = cleanParticipantName(match[1] || match[2] || "");
+      if (email && name && !name.includes("@") && !name.startsWith("=?")) result[email] = name;
+    }
+  }
+  return result;
+}

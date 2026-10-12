@@ -7,6 +7,7 @@ import {
   matchParticipants,
   isInternalMessage,
   normalizeEmail,
+  cleanParticipantName,
 } from "../matching";
 import { GoogleMailAdapter } from "./google";
 import { MicrosoftMailAdapter } from "./microsoft";
@@ -116,6 +117,7 @@ export async function ingestMailChanges(
     });
     const data = {
       providerSeenAt: now,
+      participantNames: Object.fromEntries(participants.slice(0,100).filter(email => change.participantNames?.[email]).map(email => [email, cleanParticipantName(change.participantNames![email])])),
       summary: (change.subject || "(No subject)").slice(0, 500),
       occurredAt: at,
       threadId: change.threadId ?? null,

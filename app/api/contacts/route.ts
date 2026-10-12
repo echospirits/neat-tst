@@ -1,3 +1,4 @@
+import { createAccountContactRecord } from "../../../lib/crm/contactCreation";
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -21,11 +22,12 @@ export async function POST(request: NextRequest) {
   const accountId = optional(body?.accountId);
   const location = accountId ? getAccountLocation(String(body?.accountType ?? ''), accountId) : null;
   if (!name || !location || !(await accountExists(prisma, location))) return NextResponse.json({ error: 'A valid account and name are required.' }, { status: 400 });
-  const contact = await prisma.locationContact.create({ data: {
-    organizationId, name, role: optional(body?.role), email: optional(body?.email), phone: optional(body?.phone),
-    createdByUserId: user.id,
+  const row = await prisma.$transaction(tx=>createAccountContactRecord(tx,{organizationId,userId:user.id},{
+    name, role: optional(body?.role), email: optional(body?.email), phone: optional(body?.phone),
     ...(location.accountType === 'AGENCY' ? { agencyId: location.agencyId } : { wholesaleAccountId: location.wholesaleAccountId }),
-  }, select: { id: true, name: true, role: true, email: true, phone: true, agencyId: true, wholesaleAccountId: true, active: true, isPrimary: true } });
+  }));
+  const {id,role,email,phone,agencyId,wholesaleAccountId,active,isPrimary}=row;
+  const contact={id,name:row.name,role,email,phone,agencyId,wholesaleAccountId,active,isPrimary};
   return NextResponse.json(contact, { status: 201 });
 }
 
@@ -43,5 +45,5 @@ export async function GET(request: NextRequest) {
     prisma.wholesaleAccount.findMany({ where: { id: { in: rows.map(row => row.wholesaleAccountId).filter((id): id is string => Boolean(id)) } }, select: { id: true, name: true } }),
   ]);
   const names = new Map([...agencies, ...wholesale].map(row => [row.id, row.name]));
-  return NextResponse.json(rows.map(row => ({ id: row.id, name: row.name, email: row.email, accountName: names.get(row.agencyId ?? row.wholesaleAccountId ?? '') ?? 'Account' })));
+  return NextResponse.json(rows.map(row => ({ id: row.id, name: row.name, email: row.email, accountType: row.agencyId ? "AGENCY" : "WHOLESALE", accountId: row.agencyId ?? row.wholesaleAccountId, accountName: names.get(row.agencyId ?? row.wholesaleAccountId ?? '') ?? 'Account' })));
 }
