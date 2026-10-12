@@ -53,3 +53,26 @@ export const suggestionPriority = (
   (incoming && outgoing ? 1000 : 0) +
   Math.min(incoming + outgoing, 100) * 5 +
   lastAt.getTime() / 1e13;
+
+export function contactStillMatchesReview(
+  contact: {
+    email: string | null;
+    emailAliases: string[];
+    phone: string | null;
+    phoneAliases: string[];
+  },
+  key: string,
+) {
+  return (
+    [contact.email, ...contact.emailAliases].some(
+      (value) =>
+        value && suggestionKey("EMAIL", value.trim().toLowerCase()) === key,
+    ) ||
+    [contact.phone, ...contact.phoneAliases].some(
+      (value) =>
+        value &&
+        phoneIdentity(value) &&
+        suggestionKey("SMS", phoneIdentity(value)) === key,
+    )
+  );
+}

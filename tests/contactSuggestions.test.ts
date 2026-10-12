@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   contactHasIdentity,
+  contactStillMatchesReview,
   phoneIdentity,
   suggestionKey,
   suggestionPriority,
@@ -56,4 +57,19 @@ describe("communication contact suggestion rules", () => {
       {},
     );
   });
+});
+
+it("a saved review stops being a replay when the identity was removed from the contact", () => {
+  const key = suggestionKey("EMAIL", "buyer@restaurant.com"),
+    contact = {
+      email: "primary@restaurant.com",
+      emailAliases: ["buyer@restaurant.com"],
+      phone: null,
+      phoneAliases: [],
+    };
+  assert.equal(contactStillMatchesReview(contact, key), true);
+  assert.equal(
+    contactStillMatchesReview({ ...contact, emailAliases: [] }, key),
+    false,
+  );
 });

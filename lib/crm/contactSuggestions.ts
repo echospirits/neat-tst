@@ -11,6 +11,7 @@ import {
 } from "./activity";
 import {
   contactHasIdentity,
+  contactStillMatchesReview,
   phoneIdentity,
   suggestionKey,
   suggestionPriority,
@@ -376,9 +377,16 @@ export async function reviewContactSuggestion(
           accountType: input.accountType,
         }),
       },
-      select: { id: true },
+      select: {
+        id: true,
+        email: true,
+        emailAliases: true,
+        phone: true,
+        phoneAliases: true,
+      },
     });
-    if (saved) return { contactId: saved.id, already: true };
+    if (saved && contactStillMatchesReview(saved, input.key))
+      return { contactId: saved.id, already: true };
   }
   const { suggestions } = await loadContactSuggestions(
       db,

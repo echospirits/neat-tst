@@ -6,11 +6,12 @@ Tenant-specific reviewed suggestions in existing account Contacts and Communicat
 
 ## Verified checks
 
-- Full suite: **851 tests, 76 suites, zero failures/skips**, 24.93 seconds.
+- Full suite: **852 tests, 76 suites, zero failures/skips**, 28.82 seconds.
+- Targeted credential-pattern scan of 31 staged feature files found no hits (not a comprehensive secret audit).
 - TypeScript, optimized Next.js build, Prisma validation and `git diff --check` passed.
 - Generated schema diff matches the one additive migration; no unrelated schema change.
 - Isolated PostgreSQL `br-frosty-mouse-avfw4xvc`: tenant/member/private-owner isolation, header names, internal/no-reply filtering, two-way counts, required confirmation, simultaneous/repeated acceptance, preserved primary email plus alias, persistent dismissal, source-deletion rejection, SMS acceptance without consent/visit side effects, preserved private activity and sanitized tenant audit passed.
-- Additional isolated checks: inactive identity blocks a new duplicate; invalid account and foreign-tenant existing-contact selections are rejected.
+- Additional isolated checks: inactive identity blocks a new duplicate; invalid account and foreign-tenant existing-contact selections are rejected; removing a previously approved alias allows a fresh explicit review.
 - Optimized-build browser: **390×844 and 1440×900**; existing Contacts/Communications integration, prefilled account/name, missing-name validation, reviewed contact persistence after refresh, live existing-contact search/alias acceptance, empty search, zero page errors and no horizontal page overflow passed. Mobile/desktop screenshots inspected; review spacing and checkbox/selector labeling corrected.
 - Manual/import/API contact creation now shares persistence and serialization with suggestion approval. Existing contact/import regressions pass.
 - Scripts: `scripts/contact-suggestions-rehearsal.ts`, `contact-suggestions-edge-rehearsal.ts`, `contact-suggestions-browser.ts`; output fixtures/screenshots ignored. No shared-TST authenticated fixture session was created. Local browser server stopped.

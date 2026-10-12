@@ -110,8 +110,37 @@ async function main() {
         ),
       /active contact/,
     );
+    await prisma.locationContact.update({
+      where: { id: inactive.id },
+      data: { active: true },
+    });
+    const link = () =>
+      prisma.$transaction(
+        (tx) =>
+          reviewContactSuggestion(tx, actor, {
+            key,
+            operation: "LINK",
+            ...target,
+            contactId: inactive.id,
+            confirmed: "true",
+          }),
+        { timeout: 30000 },
+      );
+    await link();
+    await prisma.locationContact.update({
+      where: { id: inactive.id },
+      data: { emailAliases: [] },
+    });
+    await link();
+    assert.ok(
+      (
+        await prisma.locationContact.findUniqueOrThrow({
+          where: { id: inactive.id },
+        })
+      ).emailAliases.includes(email),
+    );
     console.log(
-      "PASS: inactive identity blocks duplicates, nonexistent account rejected, foreign-tenant contact link rejected.",
+      "PASS: inactive identity blocks duplicates, nonexistent account rejected, foreign-tenant contact link rejected, removed alias can be explicitly reviewed again.",
     );
   });
 }
