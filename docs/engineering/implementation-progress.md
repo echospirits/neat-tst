@@ -37,4 +37,6 @@ The authorized application implementation, migration rehearsal, integrated accep
 
 ## Contact suggestions continuation — 2026-10-12
 
+Rollout update: Communications, imported mailbox appointments, business SMS and contact suggestions now require a separate **COMMUNICATIONS Pilot**, initially assigned only to Echo Spirits for v0.2. TST auto-enablement and new/Core/Intelligence packages exclude the Pilot. It remains pending Echo review before general availability; provider activation is separate. See [review steps](../product/communications-pilot-review.md) and [pilot validation](../releases/communications-pilot-validation.md).
+
 Reviewed contact discovery now extends Contacts and Communications using captured email participants/header names and business SMS. It reuses ordinary tenant contacts and live contact search, with private-owner evidence, explicit acceptance, duplicate checks, per-user dismissals and preserved communication visibility/consent. No body/signature AI extraction or live provider activation was added. Application `c6686b8d` is verified TST READY after 852 tests, typecheck/build, isolated database acceptance and 390×844/1440×900 browser checks. See [guide](../product/contact-suggestions.md) and [release receipt](../releases/contact-suggestions-validation.md).

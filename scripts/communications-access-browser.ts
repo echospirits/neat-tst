@@ -18,6 +18,36 @@ async function main() {
     readFileSync("output/contact-suggestions-fixture.json", "utf8"),
   );
   assert.match(f.orgA, /^crm_qa_a_/);
+  await prisma.organizationFeature.upsert({
+    where: {
+      organizationId_featureKey: {
+        organizationId: f.orgA,
+        featureKey: "COMMUNICATIONS",
+      },
+    },
+    create: {
+      organizationId: f.orgA,
+      featureKey: "COMMUNICATIONS",
+      enabled: true,
+      source: "isolated-pilot-fixture",
+    },
+    update: { enabled: true },
+  });
+  await prisma.organizationFeature.upsert({
+    where: {
+      organizationId_featureKey: {
+        organizationId: f.orgB,
+        featureKey: "COMMUNICATIONS",
+      },
+    },
+    create: {
+      organizationId: f.orgB,
+      featureKey: "COMMUNICATIONS",
+      enabled: false,
+      source: "isolated-pilot-fixture",
+    },
+    update: { enabled: false },
+  });
   // Revoke only this script's synthetic sessions left behind by an interrupted run.
   const fixtureUsers = {
     organizationId: f.orgA,
@@ -97,7 +127,7 @@ async function main() {
           organizationId: f.orgB,
           userId: user.id,
         }),
-        /membership/,
+        /pilot access|membership/,
       );
     });
     console.log(
@@ -138,6 +168,7 @@ async function main() {
         await page
           .getByRole("heading", { name: "Mailbox privacy", exact: true })
           .waitFor();
+        await page.getByText('Try SMS with fixtures', { exact: true }).waitFor();
         await page.locator("#contact-suggestions > summary").click();
         await page
           .getByRole("article", {
@@ -201,11 +232,13 @@ async function main() {
           },
         ]);
         await page.goto(`${base}/settings/communications`);
-        await page
-          .getByText(
-            /Exit Support View to use your own organization's Communications/,
-          )
-          .waitFor();
+        if (org === f.orgA)
+          await page
+            .getByText(
+              /Exit Support View to use your own organization's Communications/,
+            )
+            .waitFor();
+        else await page.getByText(/could not be found/).waitFor();
         assert.equal(await page.locator("#contact-suggestions").count(), 0);
         assert.equal(
           await page.getByRole("heading", { name: "Mailbox privacy" }).count(),
@@ -217,9 +250,90 @@ async function main() {
       await context.clearCookies({ name: "neat_support_organization" });
       await page.goto(`${base}/settings/communications`);
       await page.getByRole("heading", { name: "Mailbox privacy" }).waitFor();
+      for (const [width, height, label] of [
+        [390, 844, "mobile"],
+        [1440, 900, "desktop"],
+      ] as const) {
+        await page.setViewportSize({ width, height });
+        await page.goto(`${base}/platform/organizations/${f.orgA}`);
+        const plan = page.locator(".feature-entitlements-form");
+        await plan
+          .getByRole("heading", { name: "Pilot", exact: true })
+          .waitFor();
+        assert.equal(
+          await plan
+            .getByRole("checkbox", { name: /Communications/ })
+            .isChecked(),
+          true,
+        );
+        await plan.scrollIntoViewIfNeeded();
+        assert.ok(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth + 1,
+          ),
+        );
+        await page.screenshot({
+          path: `output/playwright/communications-pilot-plan-${label}.png`,
+        });
+      }
+      const plan = page.locator(".feature-entitlements-form");
+      await plan.getByRole("checkbox", { name: /Communications/ }).uncheck();
+      await plan
+        .getByRole("button", { name: "Save plan", exact: true })
+        .click();
+      await page.waitForURL(/status=feature-package-saved/);
+      await page.goto(`${base}/profile`);
+      assert.equal(
+        await page
+          .getByRole("navigation", { name: "Primary navigation", exact: true })
+          .getByRole("link", { name: "Communications", exact: true })
+          .count(),
+        0,
+      );
+      await page.goto(`${base}/settings/communications`);
+      await page.getByText(/could not be found/).waitFor();
+      await page.goto(`${base}/wholesale/${s.account.id}`);
+      assert.equal(await page.locator("#contact-suggestions").count(), 0);
+      assert.equal(
+        await page.getByText("Business text messages", { exact: true }).count(),
+        0,
+      );
+      await page
+        .getByText("Add or import a contact", { exact: true })
+        .waitFor();
+      assert.equal(
+        (
+          await context.request.get(`${base}/api/crm/mail/google/connect`, {
+            maxRedirects: 0,
+          })
+        ).status(),
+        404,
+      );
+      await assert.rejects(
+        loadContactSuggestions(prisma, actor),
+        /pilot access/,
+      );
+      assert.equal(
+        await prisma.locationContact.count({
+          where: { organizationId: f.orgA, email: buyer },
+        }),
+        1,
+      );
+      await page.goto(`${base}/platform/organizations/${f.orgA}`);
+      await page
+        .locator(".feature-entitlements-form")
+        .getByRole("checkbox", { name: /Communications/ })
+        .check();
+      await page
+        .locator(".feature-entitlements-form")
+        .getByRole("button", { name: "Save plan", exact: true })
+        .click();
+      await page.waitForURL(/status=feature-package-saved/);
+      await page.goto(`${base}/settings/communications`);
+      await page.getByRole("heading", { name: "Mailbox privacy" }).waitFor();
       assert.deepEqual(errors, []);
       console.log(
-        "PASS: platform own-mailbox access, owner-only evidence, tenant denial, reviewed contact save, OAuth entry authorization, same/other-tenant Support View denial, exit recovery, desktop navigation and mobile More at 390x844/1440x900 without overflow.",
+        "PASS: platform own-mailbox access, owner-only evidence, reviewed contact save, same/other-tenant Support View denial, desktop/mobile Pilot group, actual plan revocation/re-enrollment, hidden navigation/account tools, direct URL/OAuth/service denial when disabled, preserved Core contacts and 390x844/1440x900 without overflow.",
       );
     } catch (e) {
       await page.screenshot({

@@ -20,7 +20,7 @@ test('feature packages keep Core mandatory and group every intelligence capabili
   assert.deepEqual(DEFAULT_FEATURE_KEYS, CORE_PACKAGE_FEATURE_KEYS);
   assert.deepEqual(INTELLIGENCE_PACKAGE_FEATURE_KEYS, ['AGENCY_INTELLIGENCE', 'WHOLESALE_OPPORTUNITIES', 'ADVANCED_INTELLIGENCE']);
   assert.deepEqual(getPackageFeatureKeys(false), CORE_PACKAGE_FEATURE_KEYS);
-  assert.deepEqual(getPackageFeatureKeys(true), [...FEATURE_KEYS]);
+  assert.deepEqual(getPackageFeatureKeys(true), FEATURE_KEYS.filter(key => key !== 'COMMUNICATIONS'));
   assert.equal(hasIntelligencePackage(['AGENCY_INTELLIGENCE']), true);
   assert.equal(hasIntelligencePackage(CORE_PACKAGE_FEATURE_KEYS), false);
 });
@@ -33,22 +33,23 @@ test('invalid entitlement combinations report every missing dependency', () => {
   ]);
 });
 
-test('test environment enables every registered feature without changing production package defaults', () => {
-  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'test' }), FEATURE_KEYS);
+test('test environment enables standard features while respecting explicit pilot enrollment', () => {
+  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'test' }), FEATURE_KEYS.filter(key => key !== 'COMMUNICATIONS'));
+  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM', 'COMMUNICATIONS'], { APP_ENV: 'test' }), FEATURE_KEYS);
   assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'production' }), ['CORE_CRM']);
   assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'development' }), ['CORE_CRM']);
 });
 
-test('staging tenant creation, editing, and seeding preserve all-feature entitlements', () => {
+test('staging tenant creation, editing, and seeding preserve standard entitlements without enrolling pilots', () => {
   const newOrganization = readFileSync('app/platform/organizations/new/page.tsx', 'utf8');
   const editOrganization = readFileSync('app/platform/organizations/[id]/page.tsx', 'utf8');
   const seed = readFileSync('scripts/seed-staging.ts', 'utf8');
   const reconcile = readFileSync('scripts/enable-all-staging-features.ts', 'utf8');
   assert.match(newOrganization, /getEnvironmentFeatureKeys\(getPackageFeatureKeys/);
   assert.match(editOrganization, /getEnvironmentFeatureKeys\(getPackageFeatureKeys/);
-  assert.match(seed, /FEATURE_KEYS\.map/);
+  assert.match(seed, /getEnvironmentFeatureKeys\(\[\]\)\.map/);
   assert.match(reconcile, /getAppEnvironment\(\) !== 'test'/);
-  assert.match(reconcile, /FEATURE_KEYS\.map/);
+  assert.match(reconcile, /getEnvironmentFeatureKeys\(\[\]\)/);
 });
 
 test('former Pilot capabilities are included in Core without buying Intelligence', () => {
@@ -71,7 +72,6 @@ test('former Pilot capabilities are included in Core without buying Intelligence
     const source = readFileSync(path, 'utf8');
     assert.match(source, /getPackageFeatureKeys\(intelligenceEnabled\)/);
     assert.doesNotMatch(source, /name="(?:analytics|accountSalesStatus|directWholesaleOrders)"/);
-    assert.doesNotMatch(source, />Pilot</);
     assert.match(source, /name="intelligence" type="checkbox"/);
   }
 });

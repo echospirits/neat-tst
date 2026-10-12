@@ -19,6 +19,7 @@ import {
   type ContactChannel,
 } from "./contactSuggestionRules";
 import { cleanParticipantName } from "./matching";
+import { requireCommunicationsPilot } from './communicationsPilot';
 import {
   createAccountContactRecord,
   lockAccountContacts,
@@ -49,6 +50,7 @@ export type ContactSuggestion = {
   existing: Array<{ id: string; name: string; accountLabel: string }>;
 };
 async function assertMember(db: CrmDb, actor: CrmActor) {
+  await requireCommunicationsPilot(db, actor.organizationId);
   if (
     !(await db.user.findFirst({
       where: {

@@ -29,7 +29,10 @@ export async function GET(request: NextRequest) {
       organization: {
         active: true,
         accountStatus: { notIn: ["SUSPENDED", "CANCELLED"] },
-        features: { some: { featureKey: "CORE_CRM", enabled: true } },
+        AND: [
+          { features: { some: { featureKey: "CORE_CRM", enabled: true } } },
+          { features: { some: { featureKey: "COMMUNICATIONS", enabled: true } } },
+        ],
       },
       AND: [{ OR: [{errorCode:null},{errorCode:{not:"RECONNECT"}}] }, { OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: new Date() } }] }],
 

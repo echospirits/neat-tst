@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../../prisma";
 import { CrmError, type CrmActor, type CrmDb } from "../activity";
+import { requireCommunicationsPilot } from '../communicationsPilot';
 import {
   matchParticipants,
   isInternalMessage,
@@ -34,6 +35,7 @@ export async function ingestMailChanges(
   changes: MailChange[],
   now = new Date(),
 ) {
+  await requireCommunicationsPilot(db, actor.organizationId);
   const participantEmails = [
     ...new Set(
       changes
@@ -168,6 +170,7 @@ export async function syncMailbox(
   id: string,
   adapterOverride?: MailAdapter,
 ) {
+  await requireCommunicationsPilot(prisma, actor.organizationId);
   const now = new Date(),
     leaseId = randomUUID();
   const owned = await prisma.mailboxConnection.findFirst({

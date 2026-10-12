@@ -4,6 +4,7 @@ import { prisma } from "../../prisma";
 import { getAppEnvironment } from "../../appEnvironment";
 import { decryptCalendarToken } from "../../calendar/crypto";
 import { CrmError, type CrmActor, type CrmDb } from "../activity";
+import { communicationsPilotEnabled, requireCommunicationsPilot } from '../communicationsPilot';
 import {
   MockSmsProvider,
   TwilioSmsProvider,
@@ -67,6 +68,7 @@ export async function sendContactSms(
   raw: unknown,
   override?: SmsProvider,
 ) {
+  await requireCommunicationsPilot(prisma, actor.organizationId);
   const input = z
     .object({
       contactId: z.string().min(1),
@@ -119,6 +121,7 @@ export async function sendContactSms(
   const sourceKey = `outbound:${actor.userId}:${input.submissionKey}`;
   // Persist a claim before calling a non-idempotent provider. A crash leaves SENDING for review, never an automatic resend.
   const claim = await prisma.$transaction(async (tx) => {
+    await requireCommunicationsPilot(tx, actor.organizationId);
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`sms-rate:${actor.organizationId}`}, 0))`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${phoneLock(actor.organizationId, phone)}, 0))`;
     const prior = await tx.smsMessage.findUnique({
@@ -273,6 +276,7 @@ export async function projectSmsActivity(
   },
   provider: string,
 ) {
+  if (!(await communicationsPilotEnabled(db, message.organizationId))) return;
   if (!message.agencyId && !message.wholesaleAccountId) return;
   await db.accountActivity.upsert({
     where: {
@@ -321,6 +325,12 @@ export async function receiveSms(
 ) {
   const phone = normalizeSmsPhone(fields.From);
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${phoneLock(connection.organizationId, phone)}, 0))`;
+  // A revoked pilot must still honor signed STOP callbacks for an existing sender.
+  if (isOptOut(fields.Body, fields.OptOutType))
+    await recordSmsConsent(db, { organizationId: connection.organizationId, userId: connection.createdByUserId }, {
+      phone, status: 'OPTED_OUT', evidence: 'Provider-verified inbound opt-out.', key: `stop:${connection.id}:${fields.MessageSid}`,
+    });
+  if (!(await communicationsPilotEnabled(db, connection.organizationId))) return null;
   const sourceKey = `inbound:${connection.id}:${fields.MessageSid}`;
   const prior = await db.smsMessage.findUnique({
     where: {
@@ -362,20 +372,6 @@ export async function receiveSms(
     ),
   );
   const matched = accounts.size === 1 ? matches[0] : null;
-  if (isOptOut(fields.Body, fields.OptOutType))
-    await recordSmsConsent(
-      db,
-      {
-        organizationId: connection.organizationId,
-        userId: connection.createdByUserId,
-      },
-      {
-        phone,
-        status: "OPTED_OUT",
-        evidence: "Provider-verified inbound opt-out.",
-        key: `stop:${connection.id}:${fields.MessageSid}`,
-      },
-    );
   const message = await db.smsMessage.create({
     data: {
       organizationId: connection.organizationId,
@@ -400,6 +396,7 @@ export async function simulateSmsReply(
   contactId: string,
   body: string,
 ) {
+  await requireCommunicationsPilot(prisma, actor.organizationId);
   if (getAppEnvironment() === "production")
     throw new CrmError("Demo replies are disabled in production.");
   const connection = await prisma.smsConnection.findFirst({

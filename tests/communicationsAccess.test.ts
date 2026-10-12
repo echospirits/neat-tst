@@ -5,7 +5,7 @@ import test from 'node:test';
 import ts from 'typescript';
 import { canAccessOwnCommunications } from '../lib/crm/communicationsAccess';
 
-function auth(role: string, organizationId: string | null, contextId: string, support = false) {
+function auth(role: string, organizationId: string | null, contextId: string, support = false, pilot = true) {
   const user = { id: 'actor', role, organizationId };
   const compiled = ts.transpileModule(readFileSync('lib/crm/auth.ts', 'utf8'), {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
@@ -15,7 +15,8 @@ function auth(role: string, organizationId: string | null, contextId: string, su
     '../auth': { requireUser: async () => user },
     '../organizations': { requireFeatureForUser: async (actor: unknown, feature: string) => {
       assert.equal(actor, user);
-      assert.equal(feature, 'CORE_CRM');
+      assert.ok(['CORE_CRM', 'COMMUNICATIONS'].includes(feature));
+      if (feature === 'COMMUNICATIONS' && !pilot) throw Error('not-found');
       return { organizationId: contextId, isSupportView: support, organization: { timezone: 'UTC' } };
     } },
     './activity': { CrmError: Error },
@@ -51,4 +52,8 @@ test('platform authority without matching membership cannot grant mailbox access
     assert.equal((await requireActor()).ownCommunications, false);
     await assert.rejects(requireActor(true), /own organization membership/);
   }
+});
+
+test('a tenant without the Communications pilot cannot execute mailbox actions even as platform admin', async () => {
+  await assert.rejects(auth('PLATFORM_ADMIN', 'own', 'own', false, false)(true), /not-found/);
 });

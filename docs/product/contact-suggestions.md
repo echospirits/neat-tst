@@ -4,6 +4,8 @@ Contact suggestions extend account Contacts and Communications. They do not crea
 
 ## Where to review
 
+This is part of the **Communications Pilot**, initially assigned only to Echo Spirits for v0.2. See the [pilot test guide](communications-pilot-review.md). Core CRM alone does not enable it, and TST's standard feature override does not enroll other tenants.
+
 - On an account, open **Contacts → Suggested contacts**. Existing activity associations supply the account context.
 - Open **My Work → Communications → Suggested contacts** on desktop, or **More → Communications** on mobile, for people whose account has not yet been established, or to review across accounts.
 - Search suggestions by name, address/number, or proposed account. Open **Why this suggestion?** for up to three source records, then **Review contact**.

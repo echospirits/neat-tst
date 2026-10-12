@@ -5,6 +5,7 @@ import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
 import { parseEnabledStates } from '../lib/stateOptions';
 import { OrganizationAuditAction, OrganizationStatus } from '@prisma/client';
+import { FEATURE_KEYS, getEnvironmentFeatureKeys, getPackageFeatureKeys, validateFeatureSelection } from '../lib/featureRegistry';
 
 const lockedFields = ['appName', 'digestName', 'productLabel', 'productPluralLabel', 'brandPrimaryColor', 'brandAccentColor', 'contactName', 'contactEmail', 'contactPhone', 'supportEmail', 'locale', 'weekStartsOn'];
 
@@ -45,6 +46,28 @@ test('platform edits ignore forged customer-facing fields and preserve existing 
   assert.equal(saved.active, true);
   const updated = { ...original, ...saved };
   for (const field of [...lockedFields, 'settings']) assert.deepEqual(updated[field], original[field], field);
+});
+
+test('the actual platform plan action persists an explicit pilot choice independently from Core and Intelligence', async () => {
+  for (const pilot of [false, true]) {
+    const writes: any[] = [];
+    let audit: any;
+    let authorized = false;
+    const action = loadAction('app/platform/organizations/[id]/page.tsx', 'saveFeatures', 'async function saveStates(', {
+      requirePlatformAdmin: async () => { authorized = true; return { id: 'platform' }; },
+      FEATURE_KEYS, getEnvironmentFeatureKeys, getPackageFeatureKeys,
+      assertFeatureDependencies: (keys: string[]) => { assert.deepEqual(validateFeatureSelection(keys).missing, []); return keys; },
+      prisma: { organizationFeature: { upsert: async (write: any) => { assert.equal(authorized, true); writes.push(write); } }, $transaction: async (calls: Promise<unknown>[]) => Promise.all(calls) },
+      writeOrganizationAudit: async (_actor: string, id: string, _action: unknown, metadata: any) => { assert.equal(id, 'org-1'); audit = metadata; },
+      OrganizationAuditAction, revalidatePath: () => {}, redirect: (url: string) => { throw Error(`redirect:${url}`); },
+    });
+    const form = submittedData();
+    if (pilot) form.set('communicationsPilot', 'on');
+    await assert.rejects(action(form), /feature-package-saved/);
+    assert.equal(writes.find(row => row.create.featureKey === 'COMMUNICATIONS').update.enabled, pilot);
+    assert.equal(writes.find(row => row.create.featureKey === 'CORE_CRM').update.enabled, true);
+    assert.equal(audit.communicationsPilot, pilot);
+  }
 });
 
 test('provisioning ignores forged configuration and derives contacts from the initial admin', async () => {

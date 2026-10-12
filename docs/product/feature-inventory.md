@@ -2,6 +2,8 @@
 
 Updated 2026-10-11 for the integrated 0.2.3-dev TST work. Existing workflows are authoritative; ADR 0012 supersedes the separate Deals/Activities design. “Implemented” means application code and the listed local/isolated tests; it does not mean a live provider was authorized.
 
+2026-10-12 rollout policy: connected mail/imported appointments, business SMS and reviewed contact suggestions are grouped under **Communications Pilot**, initially enrolled only for Echo Spirits in v0.2. Standard packages and broad TST feature enablement exclude it. See [review guide](communications-pilot-review.md). Existing captured history and ordinary Core workflows are preserved.
+
 | Capability | Implementation and primary code | Persistence | Evidence / activation |
 |---|---|---|---|
 | Accounts, ownership, tags, notes, contacts, sales/inventory | Existing Agency/Wholesale pages, account overlays, OHLQ importers | Shared directory identities plus tenant overlays and tenant sales | Existing isolation/import tests; external IDs preserved |

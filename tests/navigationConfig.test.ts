@@ -30,8 +30,9 @@ test('pipeline navigation is feature gated', () => {
 
 test('Communications is available on desktop and mobile More for tenant members including platform admins', () => {
   for (const platform of [false, true]) {
-    assert.equal(getNavigationItems('work', ['CORE_CRM'], platform).filter((item) => item.key === 'communications').length, 1);
-    assert.equal(getMoreNavigationItems(platform, ['CORE_CRM'], platform).filter((item) => item.key === 'communications').length, 1);
+    assert.equal(getNavigationItems('work', ['CORE_CRM', 'COMMUNICATIONS'], platform).filter((item) => item.key === 'communications').length, 1);
+    assert.equal(getMoreNavigationItems(platform, ['CORE_CRM', 'COMMUNICATIONS'], platform).filter((item) => item.key === 'communications').length, 1);
+    assert.equal(getNavigationItems('work', ['CORE_CRM'], platform).some((item) => item.key === 'communications'), false);
     assert.equal(getNavigationItems('work', [], platform).some((item) => item.key === 'communications'), false);
     assert.equal(getMoreNavigationItems(platform, [], platform).some((item) => item.key === 'communications'), false);
   }

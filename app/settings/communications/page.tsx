@@ -4,6 +4,8 @@ import { SmsSettings } from './SmsSettings';
 import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
 import { requireCrmActor } from "../../../lib/crm/auth";
+import { requireFeatureForUser } from "../../../lib/organizations";
+import { isAdminRole } from '../../../lib/userAccess';
 import { mailConfig } from "../../../lib/crm/mail/oauth";
 import { getAppEnvironment } from "../../../lib/appEnvironment";
 import { PageHeader, EmptyState } from "../../components/PageChrome";
@@ -30,9 +32,11 @@ export default async function CommunicationsPage({
 }) {
   const { actor, user, ownCommunications } = await requireCrmActor(),
     params = await searchParams;
+  await requireFeatureForUser(user, "COMMUNICATIONS");
   if (!ownCommunications)
     return (
       <PageHeader
+        eyebrow="Pilot"
         title="Communications"
         description="Mailbox connections belong to their individual organization members. Exit Support View to use your own organization's Communications. Support View does not grant access to private correspondence."
       />
@@ -85,14 +89,16 @@ export default async function CommunicationsPage({
   return (
     <>
       <PageHeader
+        eyebrow="Pilot"
         title="Communications"
         description="Connect your mailbox and review how correspondence is associated with accounts."
       />
+      <p className="field-note">Pilot access is enabled for your organization. Review matching, privacy and contact suggestions before a wider rollout. Provider connections still require setup.</p>
       {params.status && statuses[params.status] ? (
         <p role="status">{statuses[params.status]}</p>
       ) : null}
       <section className="card crm-panel"><Suspense fallback={<p role="status">Loading contact suggestions…</p>}><ContactSuggestions /></Suspense></section>
-      <SmsSettings organizationId={actor.organizationId} admin={user.role === "ADMIN"} />
+      <SmsSettings organizationId={actor.organizationId} admin={isAdminRole(user.role)} />
       <section className="card crm-panel">
         <h2>Mailbox privacy</h2>
         <p>

@@ -63,6 +63,7 @@ async function main() {
   await db.organizationFeature.createMany({
     data: [
       "CORE_CRM",
+      "COMMUNICATIONS",
       "VISITS",
       "WORKLIST",
       "AGENCIES",

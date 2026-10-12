@@ -7,6 +7,7 @@ import {
 } from "../../calendar/crypto";
 import { prisma } from "../../prisma";
 import { CrmError, type CrmActor } from "../activity";
+import { requireCommunicationsPilot } from '../communicationsPilot';
 import { MailProviderError, providerJson, type MailProvider } from "./types";
 
 export const providerInput = z.enum(["GOOGLE", "MICROSOFT"]);
@@ -57,6 +58,7 @@ export async function beginMailboxOAuth(
   actor: CrmActor,
   provider: Exclude<MailProvider, "MOCK">,
 ) {
+  await requireCommunicationsPilot(prisma, actor.organizationId);
   const config = mailConfig(provider),
     state = randomBytes(32).toString("base64url"),
     verifier = randomBytes(48).toString("base64url");
@@ -129,6 +131,7 @@ export async function finishMailboxOAuth(
   state: string,
   code: string,
 ) {
+  await requireCommunicationsPilot(prisma, actor.organizationId);
   const config = mailConfig(provider),
     stateHash = hashOAuthState(state);
   const stored = await prisma.mailboxOAuthState.findFirst({
@@ -190,6 +193,7 @@ export async function finishMailboxOAuth(
   }
   await prisma.$transaction(
     async (tx) => {
+      await requireCommunicationsPilot(tx, actor.organizationId);
       // Consume only while committing the connection. Disconnect cancels this state,
       // including callbacks whose provider requests were already in flight.
       const consumed = await tx.mailboxOAuthState.deleteMany({

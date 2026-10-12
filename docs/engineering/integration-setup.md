@@ -1,5 +1,7 @@
 # Communication integration setup
 
+For v0.2, connected mail/imported appointments, business SMS and contact suggestions require the **COMMUNICATIONS Pilot**, initially enrolled only for Echo Spirits. Core CRM, Intelligence and TST's standard-feature override do not enroll it. See [Echo pilot review](../product/communications-pilot-review.md) for demo and live acceptance steps. Provider configuration remains a separate prerequisite.
+
 Status: application-side metadata adapters and fixtures; no live Google/Microsoft mailbox has been authorized or verified by this implementation. Existing Worklist calendar authorization is separate and unchanged.
 
 ## Environment configuration

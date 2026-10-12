@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma";
 import { requireCrmActor } from "../../lib/crm/auth";
+import { hasFeature } from "../../lib/organizations";
 import type { CrmAccount } from "../../lib/crm/activity";
 import { loadContactSuggestions } from "../../lib/crm/contactSuggestions";
 import { ContactSuggestionList } from "./ContactSuggestionList";
@@ -11,6 +12,7 @@ export async function ContactSuggestions({
   const { actor, user, ownCommunications } = await requireCrmActor();
   if (!ownCommunications || user.role === "TASTER")
     return null;
+  if (!(await hasFeature(actor.organizationId, "COMMUNICATIONS"))) return null;
   try {
     const result = await loadContactSuggestions(prisma, actor, account);
     if (account && !result.suggestions.length) return null;

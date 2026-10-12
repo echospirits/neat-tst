@@ -44,10 +44,8 @@ export async function requireOrganizationContext(user: { id: string; organizatio
 }
 
 export async function getOrganizationFeatures(organizationId: string) {
-  const environmentFeatures = getEnvironmentFeatureKeys([], process.env);
-  if (environmentFeatures.length) return new Set(environmentFeatures);
   const rows = await prisma.organizationFeature.findMany({ where: { organizationId, enabled: true }, select: { featureKey: true } });
-  return new Set(rows.map((row) => row.featureKey).filter((key): key is FeatureKey => FEATURE_KEYS.includes(key as FeatureKey)));
+  return new Set(getEnvironmentFeatureKeys(rows.map((row) => row.featureKey).filter((key): key is FeatureKey => FEATURE_KEYS.includes(key as FeatureKey)), process.env));
 }
 
 export async function hasFeature(organizationId: string, featureKey: FeatureKey) {

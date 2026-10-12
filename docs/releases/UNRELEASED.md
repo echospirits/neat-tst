@@ -25,6 +25,17 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 
 ## Pending changes
 
+### Communications Pilot — Echo Spirits review before wider rollout
+
+- Description: Keeps connected email/imported appointments, business SMS and contact suggestions in a separate Pilot group for v0.2. Initially enrolled only Echo Spirits; Core/Intelligence packages, new-tenant provisioning, TST's standard feature override and staging reconciliation do not enroll other organizations. Existing Contacts, Log Visit, phone/email links and Worklist calendar synchronization remain available.
+- Relevant commit(s): Commit titled Restrict Communications to Echo Spirits pilot for v0.2.
+- Feature flag/default: COMMUNICATIONS; disabled by default, depends on CORE_CRM, category Pilot. Platform Admin can explicitly change enrollment under organization Plan → Pilot after review.
+- Migration(s): 20261012170000_communications_pilot; inserts an enabled entitlement only for Echo with Core enabled, false for other existing tenants; replay preserves explicit later choices. No correspondence/contact/schema changes.
+- Environment/config: None; pilot activation is separate from provider setup. No live mailbox/SMS provider activated.
+- User-visible: Pilot-labelled Communications and controlled account tools; UI, direct routes, actions, jobs and ingestion/sending services enforce tenant enrollment. Revocation preserves history/contacts and verified inbound SMS opt-outs/delivery receipts.
+- Validation/rollout: [Pilot validation](communications-pilot-validation.md), [Echo review steps](../product/communications-pilot-review.md). No general rollout until Echo review; include the entitlement migration in the separately authorized production v0.2 release.
+- Production readiness: Controlled pilot only; live-provider/owner acceptance and frozen production candidate checks remain pending. TST-only delivery.
+
 ### Communications navigation and platform-admin own-mailbox access
 
 - Description: Communications now appears in desktop My Work and remains in mobile More. Platform admins with matching organization membership can manage their own mailbox and review contact suggestions outside Support View. Support View, including the same tenant, remains blocked from private correspondence; mailbox queries and writes retain the authenticated owner and tenant scope.

@@ -65,3 +65,4 @@ Start with [implementation progress](engineering/implementation-progress.md) and
 - [Retail/Restaurants state access and ABC release runbook](releases/0.2.0-state-access-validation.md)
 
 - [Reviewed contact suggestions](product/contact-suggestions.md) — captured correspondence to existing tenant Contacts.
+- [Communications pilot review](product/communications-pilot-review.md) — Echo-only v0.2 enrollment and demo/live test steps.

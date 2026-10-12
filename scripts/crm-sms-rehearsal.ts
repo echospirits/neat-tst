@@ -82,9 +82,10 @@ async function main() {
   const reply = await prisma.$transaction((tx) =>
     receiveSms(tx, connection, incoming),
   );
+  assert.ok(reply, 'Enrolled pilot fixture must accept a reply');
   assert.equal(
     (await prisma.$transaction((tx) => receiveSms(tx, connection, incoming)))
-      .id,
+      ?.id,
     reply.id,
   );
   assert.equal(reply.contactId, contact.id);

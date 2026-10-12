@@ -36,7 +36,7 @@ export const navigationItems: NavigationItem[] = [
   { key: 'wholesale-orders', href: '/wholesale-orders', label: 'Wholesale Orders', section: 'accounts', moreOrder: 4, featureKey: 'OHIO_DIRECT_WHOLESALE_ORDERS' },
   { key: 'pipeline', href: '/pipeline', label: 'Pipeline', section: 'accounts', moreOrder: 5, featureKey: 'ACCOUNT_SALES_STATUS' },
   { key: 'recipes', href: '/recipes', label: 'Recipes', section: 'utility', moreOrder: 6.2, featureKey: 'CORE_CRM' },
-  { key: 'communications', href: '/settings/communications', label: 'Communications', section: 'work', moreOrder: 6.1, featureKey: 'CORE_CRM' },
+  { key: 'communications', href: '/settings/communications', label: 'Communications', section: 'work', moreOrder: 6.1, featureKey: 'COMMUNICATIONS' },
   { key: 'tags', href: '/tags', label: 'Tags', section: 'utility', moreOrder: 5 },
   { key: 'profile', href: '/profile', label: 'Profile', section: 'utility', moreOrder: 6 },
   { key: 'support', href: '/support', label: 'Support', section: 'utility', moreOrder: 6.5 },
