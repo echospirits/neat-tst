@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { AccountResearchJobStatus } from '@prisma/client';
 import { OHIO_WHOLESALE_CITY_CORRECTIONS, normalizeOhioWholesaleCity } from '../lib/ohioWholesaleCities';
-import { parseAccountMasterCsv } from '../lib/ohlqAccountMasterImport';
+import { chooseAccountMasterDuplicate, parseAccountMasterCsv } from '../lib/ohlqAccountMasterImport';
 import { getWholesaleAddressValuesForImport } from '../lib/wholesaleAddressProtection';
 import { areOhlqAddressesSame } from '../lib/ohlqWholesaleMatching';
 import { ACCOUNT_RESEARCH_CITY_RETRY_PREFIX, isActionableAccountResearchFailure } from '../lib/accountResearchFailures';
@@ -33,6 +33,16 @@ test('Ohio city normalization leaves other states, unknown cities and missing va
   assert.equal(normalizeOhioWholesaleCity('W CHESTER', null), 'West Chester');
   assert.equal(normalizeOhioWholesaleCity('Unlisted City'), 'Unlisted City');
   assert.equal(normalizeOhioWholesaleCity(null), null);
+});
+
+test('duplicate selection recognizes an existing abbreviated city after source normalization', () => {
+  const source = parseAccountMasterCsv([
+    'LicenseeID,AgencyID,Ownership,DBA,Address,City,County,ZipCode,DistrictId,DeliveryDay,PhoneNumber',
+    '1,100,Example,,1 Main St,GRANDVIEW HGTS,Franklin,,1,,',
+  ].join('\n')).selected[0];
+  assert.equal(chooseAccountMasterDuplicate([source, { ...source, city: 'Columbus' }], [
+    { name: 'Example', address: '1 Main St', city: 'GRANDVIEW HGTS', zip: null, agencyId: '100' },
+  ])?.city, 'Grandview Heights');
 });
 
 test('import corrections preserve protected manual cities and other address fields', () => {
