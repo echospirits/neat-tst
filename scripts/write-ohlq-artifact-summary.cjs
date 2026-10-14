@@ -18,6 +18,7 @@ const summary = {
     salesImport: status(process.env.OHLQ_SALES_IMPORT_STATUS),
     tenantInventory: status(process.env.OHLQ_TENANT_INVENTORY_STATUS),
     intelligence: status(process.env.OHLQ_INTELLIGENCE_STATUS),
+    productDiscovery: status(process.env.OHLQ_PRODUCT_DISCOVERY_STATUS),
   },
 };
 

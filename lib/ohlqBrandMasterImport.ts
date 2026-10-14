@@ -31,6 +31,7 @@ export type OhlqBrandMasterImportResult = {
   organizationsScanned: number;
   parsedRows: number;
   productsDiscovered: number;
+  productDiscoveryDeferred: boolean;
   removedItems: number;
   skippedRows: number;
   unchangedItems: number;
@@ -151,11 +152,13 @@ export async function importOhlqBrandMasterCsv({
   db = prisma,
   discoverProducts = discoverProductsForOrganizations,
   minimumRows = 1_000,
+  deferProductDiscovery = false,
 }: {
   csv: string | Buffer;
   db?: PrismaClient;
   discoverProducts?: (options: { db: PrismaClient }) => Promise<{ organizationsScanned: number; productsDiscovered: number }>;
   minimumRows?: number;
+  deferProductDiscovery?: boolean;
 }) {
   const parsed = parseOhlqBrandMasterCsv(csv);
   if (parsed.rows.length < minimumRows) {
@@ -196,7 +199,9 @@ export async function importOhlqBrandMasterCsv({
     },
     { timeout: 120_000 },
   );
-  const discovery = await discoverProducts({ db });
+  const discovery = deferProductDiscovery
+    ? { organizationsScanned: 0, productsDiscovered: 0 }
+    : await discoverProducts({ db });
 
   return {
     createdItems: result.createdItems,
@@ -205,6 +210,7 @@ export async function importOhlqBrandMasterCsv({
     organizationsScanned: discovery.organizationsScanned,
     parsedRows: parsed.rows.length,
     productsDiscovered: discovery.productsDiscovered,
+    productDiscoveryDeferred: deferProductDiscovery,
     removedItems: result.removedItems,
     skippedRows: parsed.skippedRows,
     unchangedItems: result.unchangedItems,

@@ -243,7 +243,7 @@ jobs:
         id: brand_master
         if: steps.schedule_window.outputs.should_run == 'true' && (github.event_name == 'schedule' || inputs.purchaseStateOnly != true)
         timeout-minutes: 15
-        run: npm run sync:ohlq-brand-master -- --environment "$APP_ENV" --apply
+        run: npm run sync:ohlq-brand-master -- --environment "$APP_ENV" --apply --defer-product-discovery
 
       - name: Run OHLQ annual sales import
         id: sales_import
@@ -278,6 +278,12 @@ jobs:
         timeout-minutes: 30
         run: npm run sync:ohlq-tenant-inventory -- --environment "$APP_ENV"
 
+      - name: Discover organization products after core imports
+        id: product_discovery
+        if: ${{ !cancelled() && steps.brand_master.outcome == 'success' }}
+        timeout-minutes: 10
+        run: npx tsx scripts/discover-ohlq-products.ts --environment "$APP_ENV"
+
       - name: Refresh post-import intelligence and retention
         id: intelligence
         if: ${{ !cancelled() && steps.sales_import.outcome == 'success' && (github.event_name == 'schedule' || inputs.purchaseStateOnly != true) }}
@@ -299,6 +305,7 @@ jobs:
           OHLQ_SALES_IMPORT_STATUS: ${{ steps.sales_import.outcome }}
           OHLQ_TENANT_INVENTORY_STATUS: ${{ steps.tenant_inventory.outcome }}
           OHLQ_INTELLIGENCE_STATUS: ${{ steps.intelligence.outcome }}
+          OHLQ_PRODUCT_DISCOVERY_STATUS: ${{ steps.product_discovery.outcome }}
         run: node scripts/write-ohlq-artifact-summary.cjs
 
       - name: Upload sanitized OHLQ failure summary

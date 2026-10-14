@@ -9,6 +9,15 @@ const step = (name: string) => {
   return body.split('\n      - name: ')[0];
 };
 
+test('product discovery cannot block sales or inventory and remains a visible failure', () => {
+  assert.match(step('Download and import current OHLQ Brand Master'), /--defer-product-discovery/);
+  const discovery = step('Discover organization products after core imports');
+  assert.match(discovery, /!cancelled\(\).*steps.brand_master.outcome == 'success'/);
+  assert.doesNotMatch(discovery, /continue-on-error/);
+  assert.ok(workflow.indexOf('- name: Download and import tenant OHLQ inventory') < workflow.indexOf('- name: Discover organization products after core imports'));
+  assert.ok(workflow.indexOf('- name: Discover organization products after core imports') < workflow.indexOf('- name: Refresh post-import intelligence and retention'));
+});
+
 test('both sales dispatch paths defer statewide intelligence until after inventory', () => {
   const sales = step('Run OHLQ annual sales import');
   assert.match(sales, /--date "\$report_date" --import-only/);

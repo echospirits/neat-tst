@@ -25,6 +25,15 @@ The v0.2 development cycle opened on 2026-10-08, immediately after the verified 
 
 ## Pending changes
 
+### Production 0.14.0 OHLQ product discovery hotfix — 2026-10-14
+
+- Description: Separate discovery from committed Brand Master imports; retry transient database reads without replaying writes. Core sales/inventory loads precede discovery, whose failures remain visible.
+- Relevant commit(s): Commit titled Isolate OHLQ product discovery and retry transient reads.
+- Feature flag/default: None / N/A. Migration(s): None. Environment/config: None.
+- User-visible: More reliable imports. No UI change.
+- Production readiness: Explicitly authorized hotfix within production 0.14.0; see [validation record](0.14.0-ohlq-discovery-hotfix.md).
+- Rollout: TST stays 0.2.3-dev; preserve all other unreleased changes. No stable tag moved.
+
 ### Communications Pilot — Echo Spirits review before wider rollout
 
 - Description: Keeps connected email/imported appointments, business SMS and contact suggestions in a separate Pilot group for v0.2. Initially enrolled only Echo Spirits; Core/Intelligence packages, new-tenant provisioning, TST's standard feature override and staging reconciliation do not enroll other organizations. Existing Contacts, Log Visit, phone/email links and Worklist calendar synchronization remain available.
