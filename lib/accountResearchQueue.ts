@@ -194,10 +194,6 @@ export function shouldDeferResearchRetry(
 export function classifyResearchNeed(candidate: ResearchQueueCandidate, now = new Date()): ResearchQueueItem | null {
   const refreshedAt = candidate.targetPublicResearch?.lastRefreshedAt ?? null;
   const latestAttempt = candidate.accountResearchJobs?.[0];
-  if (latestAttempt?.reviewNote?.startsWith(ACCOUNT_RESEARCH_CITY_RETRY_PREFIX)
-    && (!refreshedAt || refreshedAt <= (latestAttempt.updatedAt ?? latestAttempt.createdAt))) {
-    return { ...candidate, priorityBucket: 2, researchReason: 'City corrected; retry account research' };
-  }
   const stale30 = isOlderThan(refreshedAt, ageCutoff(now, 30));
   const recentPursuit = candidate.opportunities.some((item) => item.status === OpportunityStatus.ACTIONED && item.actionedAt && item.actionedAt >= ageCutoff(now, 1));
   const recentTenantActivity = candidate.opportunities.some((item) => item.actionedAt && item.actionedAt >= ageCutoff(now, 7));
@@ -208,6 +204,10 @@ export function classifyResearchNeed(candidate: ResearchQueueCandidate, now = ne
 
   if (candidate.isTargeting) return { ...candidate, priorityBucket: 1, researchReason: 'Target account; refresh research' };
   if (candidate.opportunities.length === 0 && !refreshedAt) return { ...candidate, priorityBucket: 1, researchReason: 'New account without an opportunity score or research' };
+  if (latestAttempt?.reviewNote?.startsWith(ACCOUNT_RESEARCH_CITY_RETRY_PREFIX)
+    && (!refreshedAt || refreshedAt <= (latestAttempt.updatedAt ?? latestAttempt.createdAt))) {
+    return { ...candidate, priorityBucket: 2, researchReason: 'City corrected; retry account research' };
+  }
   if (hasResearchIdentityChanged(candidate, candidate.targetPublicResearch?.identitySnapshot)) return { ...candidate, priorityBucket: 2, researchReason: 'Account name or address changed since research' };
   if (stale30 && recentPursuit) return { ...candidate, priorityBucket: 3, researchReason: 'Opportunity moved to in progress by a tenant in the last day; research is over 30 days old' };
   if (stale30 && upcomingTwoDayWork) return { ...candidate, priorityBucket: 4, researchReason: 'Tenant work is due in the next two days; research is over 30 days old' };

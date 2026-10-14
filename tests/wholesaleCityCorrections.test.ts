@@ -66,6 +66,7 @@ test('corrected failures reenter research regardless of error, missing input or 
     assert.equal(isActionableAccountResearchFailure(account.accountResearchJobs![0]), false);
     assert.equal(shouldDeferResearchRetry(account, now), false);
     assert.equal(classifyResearchNeed(account, now)?.researchReason, 'City corrected; retry account research');
+    assert.equal(classifyResearchNeed({ ...account, isTargeting: true }, now)?.priorityBucket, 1);
     account.targetPublicResearch!.lastRefreshedAt = new Date(now.getTime() + 1000);
     assert.equal(classifyResearchNeed(account, now), null);
   }
