@@ -50,11 +50,12 @@ async function main() {
       return;
     }
 
-    const result = await importOhlqBrandMasterCsv({ csv });
+    const result = await importOhlqBrandMasterCsv({ csv, deferProductDiscovery: process.argv.includes('--defer-product-discovery') });
     const diagnostics = {
       createdItems: result.createdItems,
       organizationsScanned: result.organizationsScanned,
       productsDiscovered: result.productsDiscovered,
+      productDiscoveryDeferred: result.productDiscoveryDeferred,
       removedItems: result.removedItems,
       unchangedItems: result.unchangedItems,
       updatedItems: result.updatedItems,

@@ -38,6 +38,28 @@ describe('parseOhlqBrandMasterCsv', () => {
 });
 
 describe('importOhlqBrandMasterCsv', () => {
+  it('commits the catalog without calling deferred discovery', async () => {
+    let committed = false;
+    const db = { $transaction: async (callback: (tx: unknown) => Promise<unknown>) => {
+      const result = await callback({
+        ohlqBrandMasterItem: {
+          findMany: async () => [],
+          deleteMany: async () => ({ count: 0 }),
+          createMany: async () => ({ count: 2 }),
+        },
+        wholesaleAccountAssessment: { updateMany: async () => ({ count: 0 }) },
+      });
+      committed = true;
+      return result;
+    } } as unknown as PrismaClient;
+    const result = await importOhlqBrandMasterCsv({ csv, db, minimumRows: 1, deferProductDiscovery: true,
+      discoverProducts: async () => { throw new Error('Discovery must run in its separate workflow step.'); },
+    });
+    assert.equal(committed, true);
+    assert.equal(result.importedRows, 2);
+    assert.equal(result.productDiscoveryDeferred, true);
+  });
+
   it('fully replaces the destination table before loading the new rows', async () => {
     const calls: string[] = [];
     const db = {

@@ -20,6 +20,15 @@ Previous release: [0.14.0 archive](0.14.0.md), [user notes](0.14.0-user-notes.md
 
 ## Pending changes
 
+### Current-version OHLQ product discovery hotfix — 2026-10-14
+
+- Description: Separate product discovery from committed Brand Master imports and retry transient read failures without replaying writes. Sales and inventory load before discovery.
+- Relevant commit(s): Commit titled Isolate OHLQ product discovery and retry transient reads.
+- Feature flag/default: None / N/A. Migration(s): None. Environment/config: None.
+- User-visible: More reliable scheduled data loads; persistent discovery failures remain visible in Actions.
+- Production readiness: Owner-authorized same-version hotfix; validation tracked in [hotfix record](0.14.0-ohlq-discovery-hotfix.md).
+- Rollout: Production remains 0.14.0; TST remains 0.2.3-dev. Existing stable tag unchanged.
+
 None.
 
 ## Current-version patch — 2026-10-10

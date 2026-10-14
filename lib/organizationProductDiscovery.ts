@@ -1,5 +1,6 @@
 import { OrganizationProductStatus, Prisma, type PrismaClient } from '@prisma/client';
 import { prisma } from './prisma';
+import { retryDatabaseRead } from './databaseReadRetry';
 
 type ProductDiscoveryDb = Pick<
   PrismaClient,
@@ -25,7 +26,7 @@ export async function discoverOrganizationProducts({
   db?: ProductDiscoveryDb;
   organizationId: string;
 }) {
-  const organization = await db.organization.findUnique({
+  const organization = await retryDatabaseRead(() => db.organization.findUnique({
     where: { id: organizationId },
     select: {
       onboardingData: true,
@@ -35,13 +36,13 @@ export async function discoverOrganizationProducts({
         select: { label: true, vendorId: true },
       },
     },
-  });
+  }));
   if (!organization) throw new Error('Organization no longer exists.');
 
   const vendorIds = unique(organization.vendorIdentifiers.map((vendor) => vendor.vendorId));
   if (!vendorIds.length) return { candidates: 0, created: 0, inferredVendorNames: [] as string[] };
 
-  const [annualItems, wholesaleItems, inventoryItems] = await Promise.all([
+  const [annualItems, wholesaleItems, inventoryItems] = await retryDatabaseRead(() => Promise.all([
     db.ohlqAnnualSalesRow.findMany({
       where: { vendor: { in: vendorIds } },
       distinct: ['brand'],
@@ -57,17 +58,17 @@ export async function discoverOrganizationProducts({
       distinct: ['itemCode'],
       select: { itemCode: true, itemName: true },
     }),
-  ]);
+  ]));
   const observedItemCodes = unique([
     ...annualItems.map((item) => item.brand),
     ...wholesaleItems.map((item) => item.brand),
     ...inventoryItems.map((item) => item.itemCode),
   ]);
   const mappedCatalogItems = observedItemCodes.length
-    ? await db.ohlqBrandMasterItem.findMany({
+    ? await retryDatabaseRead(() => db.ohlqBrandMasterItem.findMany({
         where: { itemCode: { in: observedItemCodes } },
         select: { vendor: true },
-      })
+      }))
     : [];
   const inferredVendorNames = unique(mappedCatalogItems.map((item) => item.vendor));
   const configuredVendorNames = unique(organization.vendorIdentifiers.map((vendor) => vendor.label));
@@ -78,11 +79,11 @@ export async function discoverOrganizationProducts({
     catalogFilters.push({ vendor: { contains: vendorName, mode: 'insensitive' } });
   }
   const catalogItems = catalogFilters.length
-    ? await db.ohlqBrandMasterItem.findMany({
+    ? await retryDatabaseRead(() => db.ohlqBrandMasterItem.findMany({
         where: { OR: catalogFilters },
         orderBy: { itemCode: 'asc' },
         select: { category: true, itemCode: true, name: true },
-      })
+      }))
     : [];
 
   const candidates = new Map<string, { category: string | null; itemCode: string; name: string }>();
@@ -103,7 +104,7 @@ export async function discoverOrganizationProducts({
   });
 
   if (created.count > 0) {
-    const totalProducts = await db.organizationProduct.count({ where: { organizationId, active: true } });
+    const totalProducts = await retryDatabaseRead(() => db.organizationProduct.count({ where: { organizationId, active: true } }));
     await db.organization.update({
       where: { id: organizationId },
       data: {
@@ -120,11 +121,11 @@ export async function discoverOrganizationProducts({
 }
 
 export async function discoverProductsForOrganizations({ db = prisma }: { db?: ProductDiscoveryDb } = {}) {
-  const organizations = await db.organization.findMany({
+  const organizations = await retryDatabaseRead(() => db.organization.findMany({
     where: { vendorIdentifiers: { some: { active: true } } },
     orderBy: { id: 'asc' },
     select: { id: true },
-  });
+  }));
   let productsDiscovered = 0;
   for (const organization of organizations) {
     const result = await discoverOrganizationProducts({ db, organizationId: organization.id });

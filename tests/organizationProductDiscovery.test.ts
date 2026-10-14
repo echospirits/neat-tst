@@ -4,7 +4,9 @@ import { OrganizationProductStatus, type PrismaClient } from '@prisma/client';
 import { discoverOrganizationProducts } from '../lib/organizationProductDiscovery';
 
 describe('organization product discovery', () => {
-  it('infers the Brand Master vendor from sales and adds every vendor item for review', async () => {
+  it('recovers a transient sales read and adds vendor items exactly once', async () => {
+    let annualReads = 0;
+    let writes = 0;
     let catalogCall = 0;
     let createdProducts: Array<Record<string, unknown>> = [];
     const updates: unknown[] = [];
@@ -17,7 +19,10 @@ describe('organization product discovery', () => {
         }),
         update: async (args: unknown) => { updates.push(args); },
       },
-      ohlqAnnualSalesRow: { findMany: async () => [{ brand: '7698B' }] },
+      ohlqAnnualSalesRow: { findMany: async () => {
+        if (++annualReads === 1) throw { code: 'P1001' };
+        return [{ brand: '7698B' }];
+      } },
       ohlqAnnualSalesByWholesaleRow: { findMany: async () => [] },
       ohlqAgencyInventoryCurrent: { findMany: async () => [] },
       ohlqBrandMasterItem: {
@@ -34,6 +39,7 @@ describe('organization product discovery', () => {
         count: async () => 2,
         createMany: async ({ data }: { data: Array<Record<string, unknown>> }) => {
           createdProducts = data;
+          writes++;
           return { count: data.length };
         },
       },
@@ -46,6 +52,8 @@ describe('organization product discovery', () => {
     assert.deepEqual(createdProducts.map((product) => product.externalItemCode), ['7698B', '7700B']);
     assert.ok(createdProducts.every((product) => product.status === OrganizationProductStatus.PENDING_REVIEW));
     assert.equal(updates.length, 1);
+    assert.equal(annualReads, 2);
+    assert.equal(writes, 1);
   });
 
   it('does not overwrite existing organization product decisions', async () => {
