@@ -1,4 +1,5 @@
 import { AccountType, type Prisma, type PrismaClient } from '@prisma/client';
+import { normalizeOhioWholesaleCity } from './ohioWholesaleCities';
 
 const minimumStemSearchLength = 4;
 const maximumAddressAliasCandidates = 12;
@@ -97,7 +98,7 @@ export const getOhlqAddressKey = (account: AddressIdentity) => {
   const address = normalizeOhlqAddressPart(account.address);
   if (!address) return null;
 
-  const city = normalizeOhlqAddressPart(account.city);
+  const city = normalizeOhlqAddressPart(normalizeOhioWholesaleCity(account.city ?? null, account.state ?? 'OH'));
   const state = normalizeOhlqAddressPart(account.state) ?? 'OH';
   const zip = normalizeZip(account.zip);
 
@@ -130,8 +131,8 @@ export const areOhlqAddressesSame = (left: AddressIdentity, right: AddressIdenti
   const rightZip = normalizeZip(right.zip);
   if (leftZip && rightZip) return leftZip === rightZip;
 
-  const leftCity = normalizeOhlqAddressPart(left.city);
-  const rightCity = normalizeOhlqAddressPart(right.city);
+  const leftCity = normalizeOhlqAddressPart(normalizeOhioWholesaleCity(left.city ?? null, left.state ?? 'OH'));
+  const rightCity = normalizeOhlqAddressPart(normalizeOhioWholesaleCity(right.city ?? null, right.state ?? 'OH'));
   const leftState = normalizeOhlqAddressPart(left.state) ?? 'OH';
   const rightState = normalizeOhlqAddressPart(right.state) ?? 'OH';
 

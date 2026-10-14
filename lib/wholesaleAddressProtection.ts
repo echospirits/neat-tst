@@ -1,3 +1,5 @@
+import { normalizeOhioWholesaleCity } from './ohioWholesaleCities';
+
 export type WholesaleAddressValues = {
   address: string | null;
   city: string | null;
@@ -25,11 +27,11 @@ export function getWholesaleAddressProtectionForEdit(
 
 export function getWholesaleAddressValuesForImport(
   current: WholesaleAddressValues & WholesaleAddressProtection,
-  source: WholesaleAddressValues,
+  source: WholesaleAddressValues & { state?: string | null },
 ): WholesaleAddressValues {
   return {
     address: current.addressImportProtected ? current.address : source.address ?? current.address,
-    city: current.cityImportProtected ? current.city : source.city ?? current.city,
+    city: current.cityImportProtected ? current.city : normalizeOhioWholesaleCity(source.city, source.state ?? 'OH') ?? current.city,
     zip: current.zipImportProtected ? current.zip : source.zip ?? current.zip,
   };
 }
