@@ -20,6 +20,15 @@ Previous release: [0.14.0 archive](0.14.0.md), [user notes](0.14.0-user-notes.md
 
 ## Pending changes
 
+### Production 0.14.0 wholesale city corrections — 2026-10-14
+
+- Description: Recover the existing Ohio city correction list, add the owner's mappings, normalize future Account Master accounts and reapply protected corrections to existing wholesale accounts. Corrected research failures return to the research queue regardless of their other failure reasons.
+- Relevant commit(s): Commit titled Normalize Ohio wholesale cities and retry corrected research.
+- Feature flag/default: None / N/A. Migration(s): None. Environment/config: None.
+- User-visible: Correct city names and renewed research eligibility. Historical failure evidence and spending controls are preserved.
+- Production readiness: Explicitly authorized within production 0.14.0; see [validation and rollout](0.14.0-wholesale-city-corrections.md).
+- Rollout: Apply the city repair separately to verified TST and production databases with recovery evidence. TST retains 0.2.3-dev. No stable tag moved; unrelated pending development stays in TST.
+
 ### Current-version OHLQ product discovery hotfix — 2026-10-14
 
 - Description: Separate product discovery from committed Brand Master imports and retry transient read failures without replaying writes. Sales and inventory load before discovery.

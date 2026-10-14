@@ -1,6 +1,7 @@
 import { AccountResearchJobStatus } from '@prisma/client';
 
 export const ACCOUNT_RESEARCH_ACTIONABLE_REVIEW_PREFIX = 'Automatically declined: exact-location validation failed.';
+export const ACCOUNT_RESEARCH_CITY_RETRY_PREFIX = 'City correction applied; research retry requested.';
 
 type ResearchAttempt = {
   status: AccountResearchJobStatus;

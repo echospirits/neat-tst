@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import type { AccountMasterRow } from './ohlqAccountMasterImport';
+import { normalizeOhioWholesaleCity } from './ohioWholesaleCities';
 
 // Resolve protected values inside the UPDATE, using the row's current values.
 // A correction saved after import preflight must survive this import as well.
@@ -17,7 +18,7 @@ export async function updateWholesaleAccountFromAccountMaster(
     ), next_address AS (
       SELECT id,
         CASE WHEN "addressImportProtected" THEN address ELSE COALESCE(${row.address}::text, address) END AS address,
-        CASE WHEN "cityImportProtected" THEN city ELSE COALESCE(${row.city}::text, city) END AS city,
+        CASE WHEN "cityImportProtected" THEN city ELSE COALESCE(${normalizeOhioWholesaleCity(row.city, row.state)}::text, city) END AS city,
         CASE WHEN "zipImportProtected" THEN zip ELSE COALESCE(${row.zip}::text, zip) END AS zip,
         ${row.state}::text AS state
       FROM current_account

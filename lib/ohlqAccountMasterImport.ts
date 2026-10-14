@@ -1,4 +1,5 @@
 import Papa from 'papaparse';
+import { normalizeOhioWholesaleCity } from './ohioWholesaleCities';
 import { areOhlqAddressesSame, getOhlqLicenseeMatchKeys, normalizeOhlqAddressPart } from './ohlqWholesaleMatching';
 import { getWholesaleAddressValuesForImport, type WholesaleAddressProtection } from './wholesaleAddressProtection';
 
@@ -122,7 +123,7 @@ export const getWholesaleLocationKey = (identity: {
   const address = normalizeOhlqAddressPart(identity.address);
   if (!address) return null;
   const zip = normalizeZip(identity.zip);
-  const city = normalizeOhlqAddressPart(identity.city);
+  const city = normalizeOhlqAddressPart(normalizeOhioWholesaleCity(identity.city, identity.state ?? 'OH'));
   const state = normalizeOhlqAddressPart(identity.state) ?? 'OH';
   if (!zip && !city) return null;
   return `${address}|${zip || city}|${state}`;
@@ -264,7 +265,7 @@ const toAccountMasterRow = (row: AccountMasterCsvRow): AccountMasterRow | null =
     dba,
     name,
     address: clean(row.Address),
-    city: clean(row.City),
+    city: normalizeOhioWholesaleCity(clean(row.City)),
     county: clean(row.County),
     state: 'OH',
     zip: clean(row.ZipCode),

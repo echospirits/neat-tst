@@ -1,6 +1,6 @@
 import { AccountResearchJobStatus, OpportunityStatus, WorklistStatus, type PrismaClient } from '@prisma/client';
 import type { AccountResearchResult } from './accountResearchPilot';
-import { isActionableAccountResearchFailure } from './accountResearchFailures';
+import { ACCOUNT_RESEARCH_CITY_RETRY_PREFIX, isActionableAccountResearchFailure } from './accountResearchFailures';
 import { opportunityTerritoryForCounty, territoryCoverageDeficits } from './opportunityTerritories';
 import { prisma } from './prisma';
 import { isOutsideOhio, normalizeUsState } from './usStates';
@@ -53,6 +53,7 @@ export type ResearchQueueCandidate = {
     status: AccountResearchJobStatus;
     submittedAt: Date | null;
     createdAt: Date;
+    updatedAt?: Date;
     error?: string | null;
     reviewNote?: string | null;
     inputSnapshot?: unknown;
@@ -192,6 +193,11 @@ export function shouldDeferResearchRetry(
 
 export function classifyResearchNeed(candidate: ResearchQueueCandidate, now = new Date()): ResearchQueueItem | null {
   const refreshedAt = candidate.targetPublicResearch?.lastRefreshedAt ?? null;
+  const latestAttempt = candidate.accountResearchJobs?.[0];
+  if (latestAttempt?.reviewNote?.startsWith(ACCOUNT_RESEARCH_CITY_RETRY_PREFIX)
+    && (!refreshedAt || refreshedAt <= (latestAttempt.updatedAt ?? latestAttempt.createdAt))) {
+    return { ...candidate, priorityBucket: 2, researchReason: 'City corrected; retry account research' };
+  }
   const stale30 = isOlderThan(refreshedAt, ageCutoff(now, 30));
   const recentPursuit = candidate.opportunities.some((item) => item.status === OpportunityStatus.ACTIONED && item.actionedAt && item.actionedAt >= ageCutoff(now, 1));
   const recentTenantActivity = candidate.opportunities.some((item) => item.actionedAt && item.actionedAt >= ageCutoff(now, 7));
@@ -252,7 +258,7 @@ export async function getPrioritizedAccountResearchQueue({
         where: { status: { in: TERMINAL_RESEARCH_RETRY_STATUSES } },
         orderBy: { createdAt: 'desc' },
         take: 1,
-        select: { status: true, submittedAt: true, createdAt: true, error: true, reviewNote: true, inputSnapshot: true },
+        select: { status: true, submittedAt: true, createdAt: true, updatedAt: true, error: true, reviewNote: true, inputSnapshot: true },
       },
     },
   });
