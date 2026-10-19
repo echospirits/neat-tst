@@ -1,6 +1,6 @@
 # Integrated CRM implementation progress
 
-> Release update, 2026-10-19: development is frozen at **0.2.3**. The [0.2.3 checklist](../releases/0.2.3-checklist.md) governs current readiness. Historical implementation/delivery evidence below is retained.
+> Release update, 2026-10-19: **0.2.3 is released to production; development remains frozen**. [Production receipt](../releases/0.2.3/production-rollout.json). The [0.2.3 checklist](../releases/0.2.3-checklist.md) governs current readiness. Historical implementation/delivery evidence below is retained.
 
 ## Current state — 2026-10-11
 

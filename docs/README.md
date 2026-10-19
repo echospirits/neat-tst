@@ -4,7 +4,7 @@ Start with [implementation progress](engineering/implementation-progress.md) and
 
 ## Current release
 
-**0.2.3 is frozen.** See the [plan](releases/0.2.3-plan.md), [checklist](releases/0.2.3-checklist.md) and [validation](releases/0.2.3-validation.md).
+**0.2.3 is released; development remains frozen.** [Archived release](releases/0.2.3.md) | [Tenant announcement](releases/0.2.3-user-notes.md). See the [plan](releases/0.2.3-plan.md), [checklist](releases/0.2.3-checklist.md) and [validation](releases/0.2.3-validation.md).
 
 ## architecture
 

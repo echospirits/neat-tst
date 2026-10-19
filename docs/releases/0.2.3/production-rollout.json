@@ -1,0 +1,339 @@
+{
+  "date": "2026-10-19",
+  "version": "0.2.3",
+  "productionProject": "crimson-river-91402927",
+  "productionBranch": "br-solitary-lake-am9whrqb",
+  "database": "neondb",
+  "postgres": "17.11",
+  "host": "ep-proud-recipe-amosj8m9.c-5.us-east-1.aws.neon.tech",
+  "productionBase": "0a73323b61f96c27ccc4bb84d1e9bf42eae98959",
+  "testedCandidate": "370056f963e7f3af24184213db55dbf5048229ff",
+  "candidateRef": "rc/0.2.3-2",
+  "promotedCommit": "ea9433bfc7452bc2b4ec4247526eea39609694ed",
+  "exactTestedTree": "adf67d2c657d579517b7af6808f2e03bfb29b853",
+  "migrationMethod": "Neon managed SQL; per-migration transaction with exact database/branch/ledger guard and canonical checksum registration; no credentials transferred",
+  "recovery": {
+    "branch": "br-bitter-king-am9toqhk",
+    "parent": "br-solitary-lake-am9whrqb",
+    "parentLsn": "A/7471DFF8",
+    "parentTimestamp": "2026-10-19T16:21:51Z",
+    "expiresAt": "2026-10-26T18:00:00Z",
+    "noCompute": true
+  },
+  "migrationsApplied": [
+    "20261009010000_support_tickets",
+    "20261011010000_wholesale_commercial_stars",
+    "20261011021000_crm_activity_mail_deals",
+    "20261011130000_tenant_account_states",
+    "20261011131000_abc_florida_retail_seed",
+    "20261011153000_integrated_account_workflows",
+    "20261011160000_contact_relationship_mail_operations",
+    "20261011170000_business_sms",
+    "20261011180000_worklist_playbooks",
+    "20261011190000_recipe_sales_materials",
+    "20261011200000_event_schedule_operations",
+    "20261011210000_field_guides_routes",
+    "20261011220000_account_profiles",
+    "20261011230000_mail_snapshot_reconciliation",
+    "20261012120000_contact_suggestions",
+    "20261012170000_communications_pilot"
+  ],
+  "legacyLedgerEntriesPreserved": 11,
+  "legacyCrlfChecksumsRecognized": [
+    "20260911170000_iphone_contact_import",
+    "20260916140000_wholesale_order_checklist",
+    "20260922120000_account_sales_status",
+    "20260923120000_account_targeting",
+    "20260923130000_agency_business_hours"
+  ],
+  "legacyGapsNotReplayed": true,
+  "preservation": [
+    {
+      "table": "Organization",
+      "beforeCount": 6,
+      "afterCount": 6,
+      "beforeFingerprint": "965cfb8ee4dbebdc39f3b4bb3ec91d9a",
+      "afterFingerprint": "965cfb8ee4dbebdc39f3b4bb3ec91d9a",
+      "preserved": true
+    },
+    {
+      "table": "OrganizationFeature",
+      "beforeCount": 93,
+      "afterCount": 93,
+      "beforeFingerprint": "bd42ce865852dc85d2dddc087032f2f3",
+      "afterFingerprint": "bd42ce865852dc85d2dddc087032f2f3",
+      "preserved": true
+    },
+    {
+      "table": "Agency",
+      "beforeCount": 482,
+      "afterCount": 482,
+      "beforeFingerprint": "6bbd119aad83ed6d13caf92827af846f",
+      "afterFingerprint": "6bbd119aad83ed6d13caf92827af846f",
+      "preserved": true
+    },
+    {
+      "table": "WholesaleAccount",
+      "beforeCount": 16155,
+      "afterCount": 16155,
+      "beforeFingerprint": "e7605efbfc4b2c731d8fa10d53b58789",
+      "afterFingerprint": "589564b3a8a6d4fcd4d32f77d57f31ef",
+      "preserved": false
+    },
+    {
+      "table": "LocationContact",
+      "beforeCount": 8,
+      "afterCount": 8,
+      "beforeFingerprint": "2c5dcfd5a9b1211936921564b1affec4",
+      "afterFingerprint": "2c5dcfd5a9b1211936921564b1affec4",
+      "preserved": true
+    },
+    {
+      "table": "OrganizationAccountOverlay",
+      "beforeCount": 11,
+      "afterCount": 11,
+      "beforeFingerprint": "03b125a1b650593561ebcee1e93a0246",
+      "afterFingerprint": "03b125a1b650593561ebcee1e93a0246",
+      "preserved": true
+    },
+    {
+      "table": "Tag",
+      "beforeCount": 3,
+      "afterCount": 3,
+      "beforeFingerprint": "451f171290b2dfa4a03c4e0f57730283",
+      "afterFingerprint": "451f171290b2dfa4a03c4e0f57730283",
+      "preserved": true
+    },
+    {
+      "table": "LocationTag",
+      "beforeCount": 3,
+      "afterCount": 3,
+      "beforeFingerprint": "9651757c9bf1549bd9ba4ec0812010eb",
+      "afterFingerprint": "9651757c9bf1549bd9ba4ec0812010eb",
+      "preserved": true
+    },
+    {
+      "table": "AccountActivity",
+      "beforeCount": 0,
+      "afterCount": 0,
+      "beforeFingerprint": "d41d8cd98f00b204e9800998ecf8427e",
+      "afterFingerprint": "d41d8cd98f00b204e9800998ecf8427e",
+      "preserved": true
+    },
+    {
+      "table": "WholesaleAccountAssessment",
+      "beforeCount": 15481,
+      "afterCount": 15481,
+      "beforeFingerprint": "71e85bca0b7bda995f27fefd0f8b9edb",
+      "afterFingerprint": "71e85bca0b7bda995f27fefd0f8b9edb",
+      "preserved": true
+    },
+    {
+      "table": "EventShift",
+      "beforeCount": 0,
+      "afterCount": 0,
+      "beforeFingerprint": "d41d8cd98f00b204e9800998ecf8427e",
+      "afterFingerprint": "d41d8cd98f00b204e9800998ecf8427e",
+      "preserved": true
+    },
+    {
+      "table": "WorklistItem",
+      "beforeCount": 2299,
+      "afterCount": 2299,
+      "beforeFingerprint": "5f1301559825db931b32f45866f4c7c3",
+      "afterFingerprint": "5f1301559825db931b32f45866f4c7c3",
+      "preserved": true
+    },
+    {
+      "table": "Recipe",
+      "beforeCount": 47,
+      "afterCount": 47,
+      "beforeFingerprint": "03aba22dfebacb7feac95bc489cc984a",
+      "afterFingerprint": "03aba22dfebacb7feac95bc489cc984a",
+      "preserved": true
+    },
+    {
+      "table": "LoggedVisit",
+      "beforeCount": 161,
+      "afterCount": 161,
+      "beforeFingerprint": "739286a017d39805cb447e496034e936",
+      "afterFingerprint": "739286a017d39805cb447e496034e936",
+      "preserved": true
+    }
+  ],
+  "preservationDisposition": {
+    "fullFingerprintMatches": 13,
+    "timestampVarianceTable": "WholesaleAccount",
+    "changedColumns": [
+      "updatedAt"
+    ],
+    "businessColumnsPreserved": 35,
+    "rows": 16155,
+    "comparisonBranch": "br-orange-glade-amc1avhm",
+    "explanation": "Only updatedAt differs during concurrent live activity. All 35 other column fingerprints, including IDs, match across all 16,155 rows. No release migration updates WholesaleAccount. Historical whole-row fingerprints are retained without claiming an exact timestamp match."
+  },
+  "checks": {
+    "retail": 126,
+    "restaurantCopies": 0,
+    "echoContacts": 126,
+    "echoOverlays": 126,
+    "echoTagAssignments": 126,
+    "stateDefaults": true,
+    "echoPilot": 1,
+    "otherPilots": 0,
+    "mailboxConnections": 0,
+    "smsConnections": 0,
+    "assessmentSnapshots": 15481,
+    "releaseLedger": [
+      {
+        "name": "20261009010000_support_tickets",
+        "checksum": "2e899f4d95935f2c6a6f3dc74505a012cca0d4e1af5db1aadd3955994d60e0e1",
+        "finished": true,
+        "rolledBack": false
+      },
+      {
+        "name": "20261011010000_wholesale_commercial_stars",
+        "checksum": "8de8b4b7646cb6c142409b93a9ec358996d68c7bdfe9db85b7d7776b61ce0244",
+        "finished": true,
+        "rolledBack": false
+      },
+      {
+        "name": "20261011021000_crm_activity_mail_deals",
+        "checksum": "2884856ea0b3f57adef6d472393ad59c9509f8c092633d943238afc51233c36c",
+        "finished": true,
+        "rolledBack": false
+      },
+      {
+        "name": "20261011130000_tenant_account_states",
+        "checksum": "86914167109f792caec9ae6758880670f0b40d2b63f405f13998c5cf0e0c8e08",
+        "finished": true,
+        "rolledBack": false
+      },
+      {
+        "name": "20261011131000_abc_florida_retail_seed",
+        "checksum": "6eb17ff14807b492add39c7427012a05bb75797337f7df246f28cf6bcb3d983a",
+        "finished": true,
+        "rolledBack": false
+      },
+      {
+        "name": "20261011153000_integrated_account_workflows",
+        "checksum": "365cc5e5a4f09127e5accfa65129a301f5e9db7c238b97eab6f7a1d838544fbf",
+        "finished": true,
+        "rolledBack": false
+      },
+      {
+        "name": "20261011160000_contact_relationship_mail_operations",
+        "checksum": "128967b02863bb8b35acf0a687d8e2071d22b3b9a44617bc5cfe3a9bca2af66d",
+        "finished": true,
+        "rolledBack": false
+      },
+      {
+        "name": "20261011170000_business_sms",
+        "checksum": "7b7d47a1d22ce7ce6fdecafc0d79a78aa33d0f89949ff1d86f466af2da25097b",
+        "finished": true,
+        "rolledBack": false
+      },
+      {
+        "name": "20261011180000_worklist_playbooks",
+        "checksum": "bcb71d74cbf6f21034078317a5550b9f3066b1fb55bbbd81befab9c00bf24b7f",
+        "finished": true,
+        "rolledBack": false
+      },
+      {
+        "name": "20261011190000_recipe_sales_materials",
+        "checksum": "716b7dd8978b7ef28dc7f1c7e8c3af62609c58958fa7df86d7554c0b849fd955",
+        "finished": true,
+        "rolledBack": false
+      },
+      {
+        "name": "20261011200000_event_schedule_operations",
+        "checksum": "4e31491848f5a1983cbd068928293d821cad959210483980adb7538578a0ba13",
+        "finished": true,
+        "rolledBack": false
+      },
+      {
+        "name": "20261011210000_field_guides_routes",
+        "checksum": "982a924751d3fd605618c7ef76935ab3b329784e4aebaac25b193282503d1774",
+        "finished": true,
+        "rolledBack": false
+      },
+      {
+        "name": "20261011220000_account_profiles",
+        "checksum": "2ec0086528a7bb91c6f4319e09582254f631d746569fe50bcbe816475a44e0b9",
+        "finished": true,
+        "rolledBack": false
+      },
+      {
+        "name": "20261011230000_mail_snapshot_reconciliation",
+        "checksum": "5e4e40799b5e650fb30974c9c40598c629ad0756603fb030d2ff96b8058d32c2",
+        "finished": true,
+        "rolledBack": false
+      },
+      {
+        "name": "20261012120000_contact_suggestions",
+        "checksum": "23d881eea329ba45c3650f8694aedd18ce9f4fc596e49e0e5944816f5a9608f3",
+        "finished": true,
+        "rolledBack": false
+      },
+      {
+        "name": "20261012170000_communications_pilot",
+        "checksum": "0b3ef8edbefcd0f698ae85575c5667a0c7eb583bee0dfd4a42afd28b43a5fe12",
+        "finished": true,
+        "rolledBack": false
+      }
+    ]
+  },
+  "abcOwnerAccepted": true,
+  "credentialRotation": "Owner confirmed already completed; no rotation or independent secret verification performed here",
+  "newProviderFlagsAbsent": true,
+  "providersActivated": false,
+  "temporaryProductionAdminSessions": false,
+  "deploymentVerification": {
+    "status": "READY",
+    "projectId": "prj_GaShdLZfAN7exFFw93FX0B66pqGn",
+    "deploymentId": "dpl_7pXG3tBQzAzo2c2LwzB7fMA4KZVa",
+    "commit": "ea9433bfc7452bc2b4ec4247526eea39609694ed",
+    "url": "https://ohlq-field-lkuv7sm69-joe-1533s-projects.vercel.app",
+    "alias": "https://crm.echospirits.com",
+    "origin": "https://crm.echospirits.com",
+    "health": {
+      "ok": true,
+      "database": "connected",
+      "databaseTarget": "ohlq-field-crm",
+      "environment": "production"
+    },
+    "results": [
+      {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "login": true,
+        "protectedRoutesDenied": 6,
+        "noHorizontalOverflow": true,
+        "pageErrors": 0
+      },
+      {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "login": true,
+        "protectedRoutesDenied": 6,
+        "noHorizontalOverflow": true,
+        "pageErrors": 0
+      }
+    ]
+  },
+  "validation": {
+    "unitTests": 873,
+    "suites": 76,
+    "failed": 0,
+    "typecheck": "pass",
+    "prismaValidate": "pass",
+    "optimizedBuild": "pass",
+    "auditVulnerabilities": 0,
+    "authenticatedWorkflowAcceptance": "Isolated database/browser suites recorded in acceptance.json; application/UI source unchanged by security replacement",
+    "productionLiveAcceptance": "Health, target identity, mobile/desktop signed-out guards; no temporary admin or tenant business writes"
+  }
+}
