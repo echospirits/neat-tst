@@ -343,3 +343,9 @@ Development is frozen by owner instruction on **2026-10-19**. All pending v0.2/0
 - Migration: `20261012120000_contact_suggestions` (additive participantNames JSON and ContactSuggestionReview table). No backfill or destructive SQL. Existing source metadata can suggest addresses; display names arrive with subsequent provider ingestion.
 - Configuration: no new secret/scope/AI requirement; existing live mail/SMS activation gates remain unchanged. Personal phone messages and full email bodies/signatures are not ingested.
 - Validation and deployment: 852 tests, typecheck/build, isolated privacy/concurrency/edge checks and mobile/desktop browser acceptance passed. Application `c6686b8d` is TST READY with healthy test/neon-neat-tst identity; migration verified and 611 existing contacts unchanged. Receipt in [contact suggestions validation](contact-suggestions-validation.md). TST-only; production/main unchanged.
+
+### 0.2.3 production security gate and tenant announcement - 2026-10-19
+
+- Replaces the first frozen candidate only to resolve its six dependency findings: deepmerge-ts 8.0.0 scoped to Prisma config, uuid 11.1.1 scoped to ExcelJS, and tsx 4.23.15/esbuild 0.28.2. Prisma 6.19.3 and ExcelJS 4.4.0 stay unchanged. No migration SQL, application behavior or provider activation changes.
+- Fresh clean install and audit: zero vulnerabilities; 873 tests, TypeScript, Prisma validation, config merge/cyclic graph and Excel conditional-formatting read/write compatibility pass. Build and managed SQL re-rehearsal receipts follow in production validation.
+- Owner accepted the packaged ABC data and confirmed the earlier reported credential rotation is already complete. Tenant-facing notes are in 0.2.3-user-notes.md. Production promotion was explicitly requested.

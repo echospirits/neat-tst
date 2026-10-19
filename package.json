@@ -72,13 +72,19 @@
     "@types/react-dom": "18.3.0",
     "exceljs": "^4.4.0",
     "playwright": "^1.60.0",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.4.5"
   },
   "overrides": {
     "devalue": "5.9.3",
     "@workflow/core": {
       "nanoid": "5.1.16"
+    },
+    "@prisma/config": {
+      "deepmerge-ts": "8.0.0"
+    },
+    "exceljs": {
+      "uuid": "11.1.1"
     }
   }
 }
