@@ -9,7 +9,7 @@ test('agency and wholesale confirmations continue to the logged account', () => 
       isTaster: false,
       visit: { agencyId: 'agency-1', locationType: 'agency', wholesaleAccountId: null },
     }),
-    { href: '/agencies/agency-1', label: 'Continue to agency' },
+    { href: '/agencies/agency-1', label: 'Continue to retail account' },
   );
   assert.deepEqual(
     getVisitContinueTarget({
@@ -17,7 +17,7 @@ test('agency and wholesale confirmations continue to the logged account', () => 
       isTaster: false,
       visit: { agencyId: null, locationType: 'wholesale', wholesaleAccountId: 'wholesale-1' },
     }),
-    { href: '/wholesale/wholesale-1', label: 'Continue to wholesale account' },
+    { href: '/wholesale/wholesale-1', label: 'Continue to restaurant account' },
   );
 });
 
@@ -39,6 +39,6 @@ test('Taster confirmations offer another restricted agency visit', () => {
       isTaster: true,
       visit: { agencyId: 'agency-1', locationType: 'agency', wholesaleAccountId: null },
     }),
-    { href: '/visits/new', label: 'Log another agency visit' },
+    { href: '/visits/new', label: 'Log another retail visit' },
   );
 });

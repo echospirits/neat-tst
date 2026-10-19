@@ -1,5 +1,4 @@
 import { spawn } from 'node:child_process';
-import path from 'node:path';
 import { OhlqReportDataSource } from '@prisma/client';
 import { assertSideEffectEnabled, validateRuntimeEnvironment } from '../lib/appEnvironment';
 import { loadLocalEnvironmentFile } from '../lib/environmentFile';
@@ -51,8 +50,6 @@ async function main() {
   if (apply) await recordOhlqReportRunStarted({ reportDate, source: OhlqReportDataSource.ACCOUNT_MASTER });
   try {
     const download = await downloadOhlqAccountMaster({
-      debugDir: path.join(process.cwd(), 'output', 'playwright'),
-      downloadDir: path.join(process.cwd(), 'output', 'ohlq-downloads'),
       headless: true,
       returnBuffer: false,
       useServerlessChromium: false,

@@ -83,7 +83,7 @@ export default async function TagsPage({
       </div>
 
       <section className="content-section">
-      <SectionHeading count={tags.length} description="Reusable labels available across agency and wholesale workspaces." title="Tag library" />
+      <SectionHeading count={tags.length} description="Reusable labels available across retail and restaurant workspaces." title="Tag library" />
       {tags.length > 0 ? <div className="table-scroll"><table className="responsive-table">
         <thead>
           <tr>

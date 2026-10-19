@@ -1,0 +1,22 @@
+{
+  "correction": "abc-florida-2026-10-11-retail-correction",
+  "mode": "dry-run",
+  "health": {
+    "ok": true,
+    "database": "connected",
+    "databaseTarget": "neon-neat-tst",
+    "environment": "test"
+  },
+  "startedAt": "2026-10-11T11:28:45.995Z",
+  "beforeHash": "5dc7ebabd652d6db3d832c1e078bcc8d49f8165255bc192e15e06b3aa9716f8d",
+  "counts": {
+    "agencies": 126,
+    "contacts": 126,
+    "notesAndOverlays": 126,
+    "tags": 126,
+    "hours": 126,
+    "activeWholesaleAfter": 0
+  },
+  "result": "ready",
+  "completedAt": "2026-10-11T11:28:48.817Z"
+}

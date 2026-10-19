@@ -1,8 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { Prisma } from '@prisma/client';
 import type { ActionResult } from '../../components/ActionForm';
-import { requireUser } from '../../../lib/auth';
+import { requirePlatformAdmin } from '../../../lib/auth';
 import { requireOrganizationContext } from '../../../lib/organizations';
 import { isSupportedOperatingHoursText, OPERATING_HOURS_DAYS, type OperatingHoursDay } from '../../../lib/operatingHours';
 import { prisma } from '../../../lib/prisma';
@@ -129,12 +130,31 @@ function isOhlqLocationUrl(sourceUrl: URL): boolean {
   return (sourceHost === 'ohlq.com' || sourceHost.endsWith('.ohlq.com')) && /^\/locations\/[^/]+\/?$/.test(sourceUrl.pathname);
 }
 
+async function saveCuratedAgencyHours(agencyId: string, actorUserId: string, hours: Prisma.InputJsonObject): Promise<boolean> {
+  const agency = await prisma.agency.findUnique({ where: { id: agencyId }, select: { businessHours: true, updatedAt: true } });
+  if (!agency) return false;
+  const previous = agency.businessHours && typeof agency.businessHours === 'object' && !Array.isArray(agency.businessHours)
+    ? agency.businessHours : null;
+  const { history: priorHistory, ...previousDetails } = previous ?? {};
+  const savedAt = new Date().toISOString();
+  const history = [
+    ...(Array.isArray(priorHistory) ? priorHistory : []),
+    { replacedAt: savedAt, replacedByUserId: actorUserId, previous: previous ? previousDetails : agency.businessHours },
+  ];
+  // Keep the previous value and provenance together; a concurrent edit must not lose history.
+  const result = await prisma.agency.updateMany({
+    where: { id: agencyId, updatedAt: agency.updatedAt, businessHours: { equals: agency.businessHours ?? Prisma.AnyNull } },
+    data: { businessHours: { ...hours, savedAt, savedByUserId: actorUserId, history } },
+  });
+  return result.count === 1;
+}
+
 export async function saveAgencyOperatingHours(formData: FormData): Promise<ActionResult> {
-  const user = await requireUser();
+  const user = await requirePlatformAdmin();
   await requireOrganizationContext(user);
   const agencyId = String(formData.get('agencyId') ?? '').trim();
   if (!agencyId || !(await prisma.agency.findUnique({ where: { id: agencyId }, select: { id: true } }))) {
-    return { error: 'This agency is no longer available. Refresh the page and try again.' };
+    return { error: 'This retail is no longer available. Refresh the page and try again.' };
   }
 
   const schedule = [];
@@ -147,24 +167,26 @@ export async function saveAgencyOperatingHours(formData: FormData): Promise<Acti
     schedule.push({ day, hours });
   }
 
-  await prisma.agency.update({ where: { id: agencyId }, data: { businessHours: { schedule, sourceType: 'manual' } } });
+  if (!(await saveCuratedAgencyHours(agencyId, user.id, { schedule, sourceType: 'manual' }))) {
+    return { error: 'The retail changed while saving. Refresh the page and try again.' };
+  }
   revalidatePath(`/agencies/${agencyId}`);
   revalidatePath('/alerts');
   revalidatePath('/');
-  return { success: 'Agency operating hours saved.' };
+  return { success: 'Retail operating hours saved.' };
 }
 
 export async function researchAgencyOperatingHours(formData: FormData): Promise<ActionResult> {
-  const user = await requireUser();
+  const user = await requirePlatformAdmin();
   await requireOrganizationContext(user);
   const agencyId = String(formData.get('agencyId') ?? '').trim();
   const agency = agencyId ? await prisma.agency.findUnique({
     where: { id: agencyId },
     select: { id: true, agencyId: true, name: true, address: true, city: true, state: true, zip: true },
   }) : null;
-  if (!agency) return { error: 'This agency is no longer available. Refresh the page and try again.' };
+  if (!agency) return { error: 'This retail is no longer available. Refresh the page and try again.' };
   if (!agency.address?.trim() || !agency.city?.trim() || !agency.state?.trim()) {
-    return { error: 'Add the agency street address, city, and state before researching hours.' };
+    return { error: 'Add the retail street address, city, and state before researching hours.' };
   }
 
   let apiKey: string;
@@ -176,8 +198,8 @@ export async function researchAgencyOperatingHours(formData: FormData): Promise<
 
   try {
     const location = [agency.address, agency.city, agency.state, agency.zip].filter(Boolean).join(', ');
-    const agencyIdentity = `Ohio agency number: ${agency.agencyId}\nAccount name: ${agency.name}\nAddress: ${location}`;
-    const ohlqSearch = await searchAgencyHours(apiKey, `Search the official OHLQ site-wide search for this exact Ohio agency number (do not use the Locations map filter, which does not accept agency numbers). Open the matching official location detail page and use its listed Hours. This search is restricted to OHLQ. Return the Agency # and full street address, city, and state shown on that page. Return the detail page URL as sourceUrl. Do not use a similarly named location. Include only days and hours explicitly listed by the source. Use a 12-hour range such as "9:00 AM–5:00 PM", "Closed", or "Open 24 hours". Leave the schedule empty if the exact agency page or its hours cannot be confirmed.\n\n${agencyIdentity}`, ['ohlq.com']);
+    const agencyIdentity = `Ohio retail number: ${agency.agencyId}\nAccount name: ${agency.name}\nAddress: ${location}`;
+    const ohlqSearch = await searchAgencyHours(apiKey, `Search the official OHLQ site-wide search for this exact Ohio retail number (do not use the Locations map filter, which does not accept retail numbers). Open the matching official location detail page and use its listed Hours. This search is restricted to OHLQ. Return the Retail # and full street address, city, and state shown on that page. Return the detail page URL as sourceUrl. Do not use a similarly named location. Include only days and hours explicitly listed by the source. Use a 12-hour range such as "9:00 AM–5:00 PM", "Closed", or "Open 24 hours". Leave the schedule empty if the exact retail page or its hours cannot be confirmed.\n\n${agencyIdentity}`, ['ohlq.com']);
     const ohlqSource = ohlqSearch ? hasVerifiableSource(ohlqSearch.result, ohlqSearch.sourceUrls) : null;
     const ohlqAgencyNumber = typeof ohlqSearch?.result.matchedAgencyNumber === 'string' ? ohlqSearch.result.matchedAgencyNumber.replace(/\D/g, '') : '';
     const ohlqAddressMatches = typeof ohlqSearch?.result.matchedAddress === 'string' && matchesAgencyAddress(agency, ohlqSearch.result.matchedAddress);
@@ -202,24 +224,26 @@ export async function researchAgencyOperatingHours(formData: FormData): Promise<
     const identityMatches = isOhlqLocation
       ? agencyNumberMatches && addressMatches
       : result.exactLocation === true && Boolean(accountName) && matchedName === accountName && addressMatches;
-    if (!identityMatches) return { error: 'Search could not confirm this exact agency location. Review or enter its hours manually.' };
+    if (!identityMatches) return { error: 'Search could not confirm this exact retail location. Review or enter its hours manually.' };
 
     if (!hasUsableSchedule(result)) {
       return { error: 'The source did not provide usable weekly hours. You can enter the hours manually.' };
     }
     const schedule = (result.schedule ?? []).map((entry) => ({ day: entry.day as OperatingHoursDay, hours: entry.hours as string }));
 
-    await prisma.agency.update({ where: { id: agency.id }, data: { businessHours: {
+    if (!(await saveCuratedAgencyHours(agency.id, user.id, {
       schedule,
       sourceType: 'public-web-research',
       sourceName: (result.sourceName as string).trim().slice(0, 120),
       sourceUrl,
       researchedAt: new Date().toISOString(),
-    } } });
+    }))) {
+      return { error: 'The retail changed while researching. Refresh the page and try again.' };
+    }
     revalidatePath(`/agencies/${agency.id}`);
     revalidatePath('/alerts');
     revalidatePath('/');
-    return { success: 'Public hours found for the exact agency location and saved with their source.' };
+    return { success: 'Public hours found for the exact retail location and saved with their source.' };
   } catch {
     return { error: 'Could not verify public hours right now. Try again or enter the hours manually.' };
   }

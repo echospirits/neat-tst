@@ -12,9 +12,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (!user) return NextResponse.json({ error: 'Sign in again before saving.' }, { status: 401 });
   if (user.role === 'TASTER') return NextResponse.json({ error: 'Your role cannot edit store context.' }, { status: 403 });
   const { organizationId } = await requireOrganizationContext(user);
-  if (!(await getOrganizationFeatures(organizationId)).has('AGENCY_INTELLIGENCE')) return NextResponse.json({ error: 'Agency intelligence is not enabled for your organization.' }, { status: 403 });
+  if (!(await getOrganizationFeatures(organizationId)).has('AGENCY_INTELLIGENCE')) return NextResponse.json({ error: 'Retail intelligence is not enabled for your organization.' }, { status: 403 });
   const { id } = await params;
-  if (!(await prisma.agency.findUnique({ where: { id }, select: { id: true } }))) return NextResponse.json({ error: 'Agency no longer exists.' }, { status: 404 });
+  if (!(await prisma.agency.findUnique({ where: { id }, select: { id: true } }))) return NextResponse.json({ error: 'Retail no longer exists.' }, { status: 404 });
   const body = await request.json().catch(() => null);
   const parsed = storeContextSchema.safeParse(body?.context);
   if (!parsed.success) return NextResponse.json({ error: 'Check the highlighted store context fields.', fields: Object.fromEntries(parsed.error.issues.map((issue) => [issue.path.join('.'), issue.message])) }, { status: 400 });

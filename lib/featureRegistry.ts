@@ -16,6 +16,7 @@ export const FEATURE_KEYS = [
   'TASTING_WORKFLOWS',
   'ANALYTICS',
   'ACCOUNT_SALES_STATUS',
+  'COMMUNICATIONS',
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -24,40 +25,43 @@ export type FeatureDefinition = {
   key: FeatureKey;
   label: string;
   description: string;
-  category: 'Core' | 'Ohio data' | 'Intelligence' | 'Field';
+  category: 'Core' | 'Ohio data' | 'Intelligence' | 'Field' | 'Pilot';
   defaultEnabled: boolean;
   dependencies: FeatureKey[];
   beta?: boolean;
 };
 
 export const FEATURE_REGISTRY: Record<FeatureKey, FeatureDefinition> = {
+  COMMUNICATIONS: { key: 'COMMUNICATIONS', label: 'Communications', description: 'Pilot: connected email, imported appointments, business SMS and reviewed contact suggestions. Provider setup required.', category: 'Pilot', defaultEnabled: false, dependencies: ['CORE_CRM'], beta: true },
   ACCOUNT_SALES_STATUS: { key: 'ACCOUNT_SALES_STATUS', label: 'Account Sales Status / Pipeline', description: 'Tenant-owned relationship stages, buying state, and lightweight pipeline visibility.', category: 'Core', defaultEnabled: true, dependencies: ['CORE_CRM'] },
   ANALYTICS: { key: 'ANALYTICS', label: 'Analytics', description: 'Tenant sales, account performance, and activity reporting with CSV exports.', category: 'Core', defaultEnabled: true, dependencies: ['CORE_CRM'] },
-  CORE_CRM: { key: 'CORE_CRM', label: 'Core CRM', description: 'Users, shared accounts, private overlays, and core relationship workflows.', category: 'Core', defaultEnabled: true, dependencies: [] },
+  CORE_CRM: { key: 'CORE_CRM', label: 'Core CRM', description: 'Users, shared accounts, private overlays, core relationship workflows, and in-app Support.', category: 'Core', defaultEnabled: true, dependencies: [] },
   VISITS: { key: 'VISITS', label: 'Visits', description: 'Field visit capture and visit history.', category: 'Core', defaultEnabled: true, dependencies: ['CORE_CRM'] },
   WORKLIST: { key: 'WORKLIST', label: 'Worklist', description: 'Assignments, follow-ups, and personal work planning.', category: 'Core', defaultEnabled: true, dependencies: ['CORE_CRM'] },
-  AGENCIES: { key: 'AGENCIES', label: 'Agencies', description: 'Ohio agency directory and shared reference data.', category: 'Ohio data', defaultEnabled: true, dependencies: ['CORE_CRM'] },
-  WHOLESALE_ACCOUNTS: { key: 'WHOLESALE_ACCOUNTS', label: 'Wholesale accounts', description: 'Ohio wholesale accounts and purchase history.', category: 'Ohio data', defaultEnabled: true, dependencies: ['CORE_CRM'] },
+  AGENCIES: { key: 'AGENCIES', label: 'Retail', description: 'Retail directory and shared reference data for enabled states.', category: 'Ohio data', defaultEnabled: true, dependencies: ['CORE_CRM'] },
+  WHOLESALE_ACCOUNTS: { key: 'WHOLESALE_ACCOUNTS', label: 'Restaurant accounts', description: 'Restaurant directory for enabled states; sales coverage varies by state.', category: 'Ohio data', defaultEnabled: true, dependencies: ['CORE_CRM'] },
   OHLQ_SALES_DATA: { key: 'OHLQ_SALES_DATA', label: 'Ohio sales data', description: 'Shared OHLQ sales datasets and tenant-specific product interpretation.', category: 'Ohio data', defaultEnabled: true, dependencies: [] },
-  AGENCY_INVENTORY: { key: 'AGENCY_INVENTORY', label: 'Agency inventory', description: 'Current and historical Ohio agency inventory.', category: 'Ohio data', defaultEnabled: true, dependencies: ['AGENCIES'] },
+  AGENCY_INVENTORY: { key: 'AGENCY_INVENTORY', label: 'Retail inventory', description: 'Current and historical Ohio retail inventory.', category: 'Ohio data', defaultEnabled: true, dependencies: ['AGENCIES'] },
   WEEKLY_DIGEST: { key: 'WEEKLY_DIGEST', label: 'Weekly digest', description: 'Organization-scoped activity email summaries.', category: 'Core', defaultEnabled: true, dependencies: ['CORE_CRM'] },
   CALENDAR_INTEGRATION: { key: 'CALENDAR_INTEGRATION', label: 'Calendar integration', description: 'Worklist synchronization with connected calendars.', category: 'Field', defaultEnabled: true, dependencies: ['WORKLIST'] },
   LOCATION_PROXIMITY: { key: 'LOCATION_PROXIMITY', label: 'Location proximity', description: 'Nearby-account tools for field teams.', category: 'Field', defaultEnabled: true, dependencies: ['CORE_CRM'] },
-  AGENCY_INTELLIGENCE: { key: 'AGENCY_INTELLIGENCE', label: 'Agency Intelligence', description: 'Organization-specific agency prioritization and recommended actions.', category: 'Intelligence', defaultEnabled: false, dependencies: ['AGENCIES', 'OHLQ_SALES_DATA', 'AGENCY_INVENTORY'] },
-  WHOLESALE_OPPORTUNITIES: { key: 'WHOLESALE_OPPORTUNITIES', label: 'Wholesale Opportunities', description: 'Forward-looking wholesale account opportunity detection, prioritization, and recommended actions.', category: 'Intelligence', defaultEnabled: false, dependencies: ['WHOLESALE_ACCOUNTS', 'OHLQ_SALES_DATA'] },
+  AGENCY_INTELLIGENCE: { key: 'AGENCY_INTELLIGENCE', label: 'Retail Intelligence', description: 'Organization-specific retail prioritization and recommended actions.', category: 'Intelligence', defaultEnabled: false, dependencies: ['AGENCIES', 'OHLQ_SALES_DATA', 'AGENCY_INVENTORY'] },
+  WHOLESALE_OPPORTUNITIES: { key: 'WHOLESALE_OPPORTUNITIES', label: 'Restaurant Opportunities', description: 'Forward-looking restaurant account opportunity detection, prioritization, and recommended actions.', category: 'Intelligence', defaultEnabled: false, dependencies: ['WHOLESALE_ACCOUNTS', 'OHLQ_SALES_DATA'] },
   OHIO_DIRECT_WHOLESALE_ORDERS: { key: 'OHIO_DIRECT_WHOLESALE_ORDERS', label: 'Direct Wholesale Orders', description: 'Prepare Ohio A-3a direct wholesale orders and download the completed official PDF.', category: 'Field', defaultEnabled: true, dependencies: ['WHOLESALE_ACCOUNTS', 'OHLQ_SALES_DATA'] },
   ADVANCED_INTELLIGENCE: { key: 'ADVANCED_INTELLIGENCE', label: 'Advanced intelligence', description: 'Advanced scoring and predictive account recommendations.', category: 'Intelligence', defaultEnabled: false, dependencies: ['OHLQ_SALES_DATA'] },
   TASTING_WORKFLOWS: { key: 'TASTING_WORKFLOWS', label: 'Tasting workflows', description: 'Restricted tasting visit workflow and context.', category: 'Field', defaultEnabled: true, dependencies: ['VISITS', 'AGENCIES'] },
 };
 
 export const INTELLIGENCE_PACKAGE_FEATURE_KEYS = ['AGENCY_INTELLIGENCE', 'WHOLESALE_OPPORTUNITIES', 'ADVANCED_INTELLIGENCE'] as const satisfies readonly FeatureKey[];
+export const PILOT_FEATURE_KEYS = ['COMMUNICATIONS'] as const satisfies readonly FeatureKey[];
 export const CORE_PACKAGE_FEATURE_KEYS = FEATURE_KEYS.filter((key) =>
-  !INTELLIGENCE_PACKAGE_FEATURE_KEYS.includes(key as (typeof INTELLIGENCE_PACKAGE_FEATURE_KEYS)[number]));
+  !INTELLIGENCE_PACKAGE_FEATURE_KEYS.includes(key as (typeof INTELLIGENCE_PACKAGE_FEATURE_KEYS)[number]) && !PILOT_FEATURE_KEYS.includes(key as (typeof PILOT_FEATURE_KEYS)[number]));
 export const DEFAULT_FEATURE_KEYS = [...CORE_PACKAGE_FEATURE_KEYS];
 export const ECHO_FEATURE_KEYS = [...FEATURE_KEYS];
 
 export function getEnvironmentFeatureKeys(configured: readonly FeatureKey[], env: Record<string, string | undefined> = process.env): FeatureKey[] {
-  return env.APP_ENV?.trim().toLowerCase() === 'test' ? [...FEATURE_KEYS] : [...configured];
+  // TST's broad feature override must never enroll a tenant in a pilot.
+  return env.APP_ENV?.trim().toLowerCase() === 'test' ? FEATURE_KEYS.filter(key => !PILOT_FEATURE_KEYS.includes(key as (typeof PILOT_FEATURE_KEYS)[number]) || configured.includes(key)) : [...configured];
 }
 
 export function getPackageFeatureKeys(intelligenceEnabled: boolean): FeatureKey[] {

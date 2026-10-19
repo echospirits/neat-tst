@@ -36,7 +36,7 @@ test('agency focus exposes decision metrics and reasons without evidence dropdow
   assert.match(source, /Previous page/);
   assert.match(source, /AgencyFocusSearch value=\{search\}/);
   assert.match(readFileSync('app/agency-focus/AgencyFocusSearch.tsx', 'utf8'), /LiveFilterForm/);
-  assert.match(source, /No matching agency actions/);
+  assert.match(source, /No matching retail actions/);
 });
 
 test('pagination preserves filters, validates input, and search resets to the first page', () => {
@@ -57,5 +57,5 @@ test('shared Intelligence navigation group appears on desktop and mobile without
   assert.match(source, /getIntelligenceNavigationItems\(enabledFeatures, isAdmin, isPlatformAdmin\)/);
   assert.match(source, /label: 'Intelligence', items/);
   assert.match(source, /event.currentTarget.open = false/);
-  assert.match(source, /prefix: '\/agency-focus'.*label: 'Agency Intelligence'/);
+  assert.match(source, /prefix: '\/agency-focus'.*label: 'Retail Intelligence'/);
 });

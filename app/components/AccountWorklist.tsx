@@ -1,3 +1,6 @@
+import { AccountPlaybooks } from '../account-memory/AccountPlaybooks';
+import { playbookStep } from '../../lib/crm/playbooks';
+import { z } from 'zod';
 import { getAccountWorklist } from '../../lib/accountWorklist';
 import { getUserDisplayName } from '../../lib/auth';
 import { prisma } from '../../lib/prisma';
@@ -28,12 +31,14 @@ export async function AccountWorklist(props: {
       prisma.locationContact.findMany({ where: { organizationId, active: true, ...(type === 'agency' ? { agencyId: accountId } : { wholesaleAccountId: accountId }) }, orderBy: [{ isPrimary: 'desc' }, { name: 'asc' }] }),
       prisma.user.findMany({ where: { organizationId, isActive: true, role: { notIn: ['TASTER', 'PLATFORM_ADMIN'] } }, select: { id: true, name: true, email: true }, orderBy: [{ name: 'asc' }, { email: 'asc' }] }),
       prisma.tag.findMany({ where: { organizationId }, select: { id: true, name: true, color: true }, orderBy: { name: 'asc' } }),
+      prisma.salesPlaybook.findMany({ where: { organizationId, active: true }, orderBy: { name: 'asc' } }),
+      prisma.playbookRun.findMany({ where: { organizationId, accountType, accountId, status: 'ACTIVE' }, include: { tasks: { select: { status: true } } }, orderBy: { startedAt: 'desc' }, take: 30 }),
     ]);
   } catch (error) {
     console.error('Account outstanding work unavailable', error);
     return <section className="card account-workspace-section account-worklist" id="account-worklist"><h2>Outstanding work</h2><p className="notice danger" role="alert">Unable to load outstanding work.</p><form action={returnTo} method="get"><button className="secondary" type="submit">Retry</button></form></section>;
   }
-  const [items, contacts, users, tags] = data;
+  const [items, contacts, users, tags, templates, runs] = data;
   const actionUsers = users.map((user) => ({ id: user.id, name: getUserDisplayName(user) }));
   return (
     <section className="card account-workspace-section account-worklist" id="account-worklist" aria-labelledby="account-worklist-heading">
@@ -62,6 +67,7 @@ export async function AccountWorklist(props: {
           </div> : null;
         })}
       </>}
+      <AccountPlaybooks accountId={accountId} accountType={accountType} currentUserId={props.currentUserId} users={actionUsers} templates={templates.map(t => ({ id:t.id, name:t.name, steps:z.array(playbookStep).parse(t.steps) }))} runs={runs.map(r => ({id:r.id,name:String((r.snapshot as {name?:string}).name ?? 'Playbook'),open:r.tasks.filter(t=>t.status==='OPEN'||t.status==='IN_PROGRESS').length,complete:r.tasks.filter(t=>t.status==='COMPLETED').length,total:r.tasks.length}))}/>
     </section>
   );
 }

@@ -87,6 +87,15 @@ export async function addLocationTag(formData: FormData) {
     redirect(`${returnTo}?tagStatus=invalid`);
   }
 
+  const tag = await prisma.tag.findFirst({
+    where: { id: tagId, organizationId },
+    select: { id: true },
+  });
+
+  if (!tag) {
+    redirect(`${returnTo}?tagStatus=invalid`);
+  }
+
   if (agencyId) {
     await prisma.locationTag.upsert({
       where: { organizationId_tagId_agencyId: { organizationId, tagId, agencyId } },

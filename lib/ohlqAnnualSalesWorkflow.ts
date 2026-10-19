@@ -23,6 +23,7 @@ import {
 } from './ohlqDataStatus';
 import { getTenantConfig } from './tenantConfig';
 import { reconcileAccountSalesStatusAfterImport } from './accountSalesStatus';
+import { markWholesaleAssessmentSourceFailure } from './wholesaleAssessmentService';
 
 type Logger = Pick<Console, 'error' | 'log'>;
 
@@ -65,6 +66,10 @@ const safeMarkErrored = async ({
       }),
     ),
   );
+  if (pendingSources.includes(OhlqReportDataSource.ANNUAL_SALES_SUMMARY_BY_WHOLESALE)) {
+    await markWholesaleAssessmentSourceFailure({ reportDate: toOhlqDateOnlyUtc(reportDates.get(OhlqReportDataSource.ANNUAL_SALES_SUMMARY_BY_WHOLESALE)!) })
+      .catch(statusError => logger.error('Unable to record wholesale assessment source freshness:', statusError));
+  }
 };
 
 export async function runOhlqAnnualSalesWorkflow(options: OhlqAnnualSalesWorkflowOptions = {}) {

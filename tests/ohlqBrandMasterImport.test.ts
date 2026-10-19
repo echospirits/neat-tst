@@ -65,6 +65,7 @@ describe('importOhlqBrandMasterCsv', () => {
     const db = {
       $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
         callback({
+          wholesaleAccountAssessment: { updateMany: async ({ data }: { data: { refreshRequestedAt: Date } }) => { assert.ok(data.refreshRequestedAt instanceof Date); calls.push('queue-score-only'); return { count: 2 }; } },
           ohlqBrandMasterItem: {
             createMany: async ({ data }: { data: unknown[] }) => {
               calls.push(`create:${data.length}`);
@@ -98,7 +99,7 @@ describe('importOhlqBrandMasterCsv', () => {
       minimumRows: 1,
     });
 
-    assert.deepEqual(calls, ['delete', 'create:2']);
+    assert.deepEqual(calls, ['delete', 'create:2', 'queue-score-only']);
     assert.equal(result.deletedRows, 12);
     assert.equal(result.importedRows, 2);
     assert.equal(result.parsedRows, 2);

@@ -42,25 +42,25 @@ const statusLabels: Record<WorklistStatus, string> = {
 };
 
 const sourceLabels: Record<WorklistSource, string> = {
-  [WorklistSource.AGENCY_INTELLIGENCE]: 'Agency intelligence',
+  [WorklistSource.AGENCY_INTELLIGENCE]: 'Retail intelligence',
   [WorklistSource.MANUAL]: 'Manual',
-  [WorklistSource.OHLQ_WHOLESALE_REACTIVATION]: 'OHLQ wholesale reactivation',
+  [WorklistSource.OHLQ_WHOLESALE_REACTIVATION]: 'OHLQ restaurant reactivation',
   [WorklistSource.OPPORTUNITY_INTELLIGENCE]: 'Opportunity intelligence',
   [WorklistSource.TARGET_ACCOUNT_INTELLIGENCE]: 'Target account intelligence',
   [WorklistSource.VISIT_FOLLOW_UP]: 'Visit follow-up',
 };
 
 const categoryLabels: Record<WorklistCategory, string> = {
-  [WorklistCategory.AGENCY]: 'Agency follow-ups',
-  [WorklistCategory.WHOLESALE]: 'Wholesale follow-ups',
+  [WorklistCategory.AGENCY]: 'Retail follow-ups',
+  [WorklistCategory.WHOLESALE]: 'Restaurant follow-ups',
   [WorklistCategory.GENERAL]: 'General',
 };
 
 const noticeMessages: Record<string, string> = {
   'visit-logged': 'Visit logged.',
   'invalid-context': 'The originating task or opportunity no longer matches the selected account.',
-  'invalid-agency': 'Select an agency before logging an agency visit.',
-  'invalid-wholesale': 'Select an existing wholesale account or create one before logging a wholesale visit.',
+  'invalid-agency': 'Select a retail account before logging a retail account visit.',
+  'invalid-wholesale': 'Select an existing restaurant account or create one before logging a restaurant visit.',
   'invalid-contact': 'Select a contact tied to the selected account.',
   'invalid-photo': 'Photos must be image files.',
   'photo-too-large': 'Each uploaded photo must be 5 MB or smaller.',
@@ -458,16 +458,16 @@ export default async function Alerts({
             <DatePickerField name="dueDate" aria-label="Due date" pickerLabel="Choose due date" />
             <input aria-label="Due time (optional)" name="dueTime" type="time" />
             <select name="category" defaultValue={WorklistCategory.GENERAL} aria-label="Category">
-              <option value={WorklistCategory.AGENCY}>Agency</option>
-              <option value={WorklistCategory.WHOLESALE}>Wholesale</option>
+              <option value={WorklistCategory.AGENCY}>Retail</option>
+              <option value={WorklistCategory.WHOLESALE}>Restaurants</option>
               <option value={WorklistCategory.GENERAL}>General</option>
             </select>
             <SubmitButton type="submit">Create task</SubmitButton>
 
             <details className="compact-details nested-details quick-task-more">
               <summary>Add account, owner, or details</summary>
-              <RecordPicker label="Agency" name="agencyId" options={agencyOptions.map((agency) => ({ value: agency.id, label: agency.name + ' (' + agency.agencyId + ')' }))} />
-              <RecordPicker label="Wholesale account" name="wholesaleAccountId" options={wholesaleOptions.map((account) => ({ value: account.id, label: account.name + ' (' + account.licenseeId + ')' }))} />
+              <RecordPicker label="Retail" name="agencyId" options={agencyOptions.map((agency) => ({ value: agency.id, label: agency.name + ' (' + agency.agencyId + ')' }))} />
+              <RecordPicker label="Restaurant account" name="wholesaleAccountId" options={wholesaleOptions.map((account) => ({ value: account.id, label: account.name + ' (' + account.licenseeId + ')' }))} />
 
               <label>Assigned to</label>
               <select name="assignedToUserId">

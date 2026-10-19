@@ -2,8 +2,8 @@ import Link from 'next/link';
 
 const accountViews = [
   { key: 'overview', href: '/search', label: 'Search' },
-  { key: 'agencies', href: '/agencies', label: 'Agencies' },
-  { key: 'wholesale', href: '/wholesale', label: 'Wholesale' },
+  { key: 'agencies', href: '/agencies', label: 'Retail' },
+  { key: 'wholesale', href: '/wholesale', label: 'Restaurants' },
   { key: 'tags', href: '/tags', label: 'Tags' },
 ] as const;
 

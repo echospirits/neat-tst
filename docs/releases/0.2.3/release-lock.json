@@ -1,0 +1,150 @@
+{
+  "version": "0.2.3",
+  "developmentFrozen": true,
+  "freezeDate": "2026-10-19",
+  "sourceCommit": "ac54063d12ccf87275da98b69707263d5b2f599c",
+  "productionBase": "0a73323b61f96c27ccc4bb84d1e9bf42eae98959",
+  "productionVersion": "0.14.0",
+  "sourceTree": "1d2c0cea91792355f30061ec869d482b5bbb3f75",
+  "productionTree": "aa6e21bdb146166175569dcac757f882f8b86db4",
+  "newEnvironmentNames": [
+    "APP_ENV",
+    "CRM_AI_ENABLED",
+    "CRM_AI_MODEL",
+    "CRM_GOOGLE_CLIENT_ID",
+    "CRM_GOOGLE_CLIENT_SECRET",
+    "CRM_MAIL_ENABLED",
+    "CRM_REHEARSAL",
+    "CRM_ROUTES_ENABLED",
+    "CRM_SMS_ENABLED",
+    "GOOGLE_ROUTES_API_KEY",
+    "OAUTH_ENVIRONMENT",
+    "OHLQ_ACCOUNT_MASTER_STATUS",
+    "OHLQ_BRAND_MASTER_STATUS",
+    "OHLQ_INTELLIGENCE_STATUS",
+    "OHLQ_JOB_STATUS",
+    "OHLQ_PRODUCT_DISCOVERY_STATUS",
+    "OHLQ_SALES_IMPORT_STATUS",
+    "OHLQ_TENANT_INVENTORY_STATUS",
+    "OPENAI_API_KEY",
+    "RUNNER_TEMP",
+    "SMS_ENVIRONMENT"
+  ],
+  "migrations": [
+    {
+      "order": 1,
+      "name": "20261009010000_support_tickets",
+      "path": "prisma/migrations/20261009010000_support_tickets/migration.sql",
+      "sha256": "2e899f4d95935f2c6a6f3dc74505a012cca0d4e1af5db1aadd3955994d60e0e1",
+      "effect": "Private Support tickets/messages/screenshots; 600 KiB raster constraint."
+    },
+    {
+      "order": 2,
+      "name": "20261011010000_wholesale_commercial_stars",
+      "path": "prisma/migrations/20261011010000_wholesale_commercial_stars/migration.sql",
+      "sha256": "8de8b4b7646cb6c142409b93a9ec358996d68c7bdfe9db85b7d7776b61ce0244",
+      "effect": "Commercial stars and historical assessment snapshot backfill."
+    },
+    {
+      "order": 3,
+      "name": "20261011021000_crm_activity_mail_deals",
+      "path": "prisma/migrations/20261011021000_crm_activity_mail_deals/migration.sql",
+      "sha256": "2884856ea0b3f57adef6d472393ad59c9509f8c092633d943238afc51233c36c",
+      "effect": "Nullable contact/new activity types; private mailbox and dormant Deal/audit tables."
+    },
+    {
+      "order": 4,
+      "name": "20261011130000_tenant_account_states",
+      "path": "prisma/migrations/20261011130000_tenant_account_states/migration.sql",
+      "sha256": "86914167109f792caec9ae6758880670f0b40d2b63f405f13998c5cf0e0c8e08",
+      "effect": "Tenant states: Echo OH+FL; all other existing tenants OH."
+    },
+    {
+      "order": 5,
+      "name": "20261011131000_abc_florida_retail_seed",
+      "path": "prisma/migrations/20261011131000_abc_florida_retail_seed/migration.sql",
+      "sha256": "6eb17ff14807b492add39c7427012a05bb75797337f7df246f28cf6bcb3d983a",
+      "effect": "Insert-only public-source seed: 126 ABC Florida retail accounts and Echo contacts/notes/tags."
+    },
+    {
+      "order": 6,
+      "name": "20261011153000_integrated_account_workflows",
+      "path": "prisma/migrations/20261011153000_integrated_account_workflows/migration.sql",
+      "sha256": "365cc5e5a4f09127e5accfa65129a301f5e9db7c238b97eab6f7a1d838544fbf",
+      "effect": "Canonical account, activity and Pipeline expansion; dormant Deal tables retained."
+    },
+    {
+      "order": 7,
+      "name": "20261011160000_contact_relationship_mail_operations",
+      "path": "prisma/migrations/20261011160000_contact_relationship_mail_operations/migration.sql",
+      "sha256": "128967b02863bb8b35acf0a687d8e2071d22b3b9a44617bc5cfe3a9bca2af66d",
+      "effect": "Contact relationships, aliases, health and mailbox operations."
+    },
+    {
+      "order": 8,
+      "name": "20261011170000_business_sms",
+      "path": "prisma/migrations/20261011170000_business_sms/migration.sql",
+      "sha256": "7b7d47a1d22ce7ce6fdecafc0d79a78aa33d0f89949ff1d86f466af2da25097b",
+      "effect": "Business SMS connections, consent, messages and callbacks."
+    },
+    {
+      "order": 9,
+      "name": "20261011180000_worklist_playbooks",
+      "path": "prisma/migrations/20261011180000_worklist_playbooks/migration.sql",
+      "sha256": "bcb71d74cbf6f21034078317a5550b9f3066b1fb55bbbd81befab9c00bf24b7f",
+      "effect": "Canonical Worklist playbooks."
+    },
+    {
+      "order": 10,
+      "name": "20261011190000_recipe_sales_materials",
+      "path": "prisma/migrations/20261011190000_recipe_sales_materials/migration.sql",
+      "sha256": "716b7dd8978b7ef28dc7f1c7e8c3af62609c58958fa7df86d7554c0b849fd955",
+      "effect": "Recipe costing, approval and public-share records."
+    },
+    {
+      "order": 11,
+      "name": "20261011200000_event_schedule_operations",
+      "path": "prisma/migrations/20261011200000_event_schedule_operations/migration.sql",
+      "sha256": "4e31491848f5a1983cbd068928293d821cad959210483980adb7538578a0ba13",
+      "effect": "Owned event scheduling/staffing; legacy unowned events retained."
+    },
+    {
+      "order": 12,
+      "name": "20261011210000_field_guides_routes",
+      "path": "prisma/migrations/20261011210000_field_guides_routes/migration.sql",
+      "sha256": "982a924751d3fd605618c7ef76935ab3b329784e4aebaac25b193282503d1774",
+      "effect": "Field guides and reviewed routes."
+    },
+    {
+      "order": 13,
+      "name": "20261011220000_account_profiles",
+      "path": "prisma/migrations/20261011220000_account_profiles/migration.sql",
+      "sha256": "2ec0086528a7bb91c6f4319e09582254f631d746569fe50bcbe816475a44e0b9",
+      "effect": "Account profiles/configuration/documents."
+    },
+    {
+      "order": 14,
+      "name": "20261011230000_mail_snapshot_reconciliation",
+      "path": "prisma/migrations/20261011230000_mail_snapshot_reconciliation/migration.sql",
+      "sha256": "5e4e40799b5e650fb30974c9c40598c629ad0756603fb030d2ff96b8058d32c2",
+      "effect": "Mail snapshot reconciliation, phone aliases and provider-seen timestamps."
+    },
+    {
+      "order": 15,
+      "name": "20261012120000_contact_suggestions",
+      "path": "prisma/migrations/20261012120000_contact_suggestions/migration.sql",
+      "sha256": "23d881eea329ba45c3650f8694aedd18ce9f4fc596e49e0e5944816f5a9608f3",
+      "effect": "Reviewed contact suggestions and participant names."
+    },
+    {
+      "order": 16,
+      "name": "20261012170000_communications_pilot",
+      "path": "prisma/migrations/20261012170000_communications_pilot/migration.sql",
+      "sha256": "0b3ef8edbefcd0f698ae85575c5667a0c7eb583bee0dfd4a42afd28b43a5fe12",
+      "effect": "Echo-only first COMMUNICATIONS enrollment with Core; replay preserves explicit choices."
+    }
+  ],
+  "productionPromotion": "NOT EXECUTED",
+  "productionMigrations": "NOT EXECUTED",
+  "liveProviderActivation": "NOT EXECUTED"
+}

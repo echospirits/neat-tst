@@ -88,10 +88,10 @@ function SalesItemList({ emptyText, items }: { emptyText: string; items: Combine
           <tr>
             <th scope="col">Total</th>
             <th scope="col">Retail</th>
-            <th scope="col">Wholesale</th>
+            <th scope="col">Restaurants</th>
             <th className="window-start" scope="col">Total</th>
             <th scope="col">Retail</th>
-            <th scope="col">Wholesale</th>
+            <th scope="col">Restaurants</th>
           </tr>
         </thead>
         <tbody>

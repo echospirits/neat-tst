@@ -1,3 +1,8 @@
+import { accountWorkAndEvents } from '../../../lib/crm/accountTimeline';
+import { AccountProfile } from '../../components/AccountProfile';
+import { AccountRecipes } from '../../components/AccountRecipes';
+import { AccountBriefing } from '../../components/AccountBriefing';
+import { activityLabels } from '../../../lib/crm/activity';
 import { Suspense } from 'react';
 import { AccountWorklist } from '../../components/AccountWorklist';
 import { AddressLink, PhoneLink } from '../../components/AccountContactLinks';
@@ -15,12 +20,11 @@ import { getWholesaleRecentPurchases } from '../../../lib/ohlqSalesData';
 import { prisma } from '../../../lib/prisma';
 import { getOrganizationFeatures, requireOrganizationContext } from '../../../lib/organizations';
 import { getOrganizationTenantConfig } from '../../../lib/tenantConfig';
-import { isAdminRole } from '../../../lib/userAccess';
 import { formatWholesaleLicenseeIds, getWholesaleLicenseeIdValues } from '../../../lib/wholesaleAccounts';
 import { MenuPlacementPanel } from '../../menu-placements/MenuPlacementPanel';
 import { AccountTagPanel } from '../../tags/AccountTagPanel';
 import { TagBadges } from '../../tags/TagBadges';
-import { VisitActivityTable } from '../../visits/VisitActivityTable';
+import { VisitActivityTable, type SupplementalActivity } from '../../visits/VisitActivityTable';
 import { WholesaleRecentPurchasesCard } from '../WholesaleRecentPurchasesCard';
 import { AccountWorkspaceNavigation } from '../../components/AccountWorkspaceNavigation';
 import { OpportunityAccountPanel } from '../OpportunityAccountPanel';
@@ -52,7 +56,7 @@ const tagStatusMessages: Record<string, string> = {
   invalid: 'Select a valid tag.',
 };
 const statusMessages: Record<string, string> = {
-  updated: 'Wholesale account updated.',
+  updated: 'Restaurant account updated.',
   merged: 'Accounts merged successfully. Activity from the manual account is now shown here.',
   'visit-logged': 'Visit logged.',
   'visit-logged-photo-upload-failed': 'Visit logged, but one or more photos could not be uploaded.',
@@ -71,7 +75,7 @@ const menuPlacementStatusMessages: Record<string, string> = {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const account = await prisma.wholesaleAccount.findUnique({ where: { id }, select: { name: true } });
-  return buildPageMetadata(account?.name ?? 'Wholesale Account');
+  return buildPageMetadata(account?.name ?? 'Restaurant Account');
 }
 
 export default async function WholesaleActivityPage({
@@ -174,7 +178,7 @@ export default async function WholesaleActivityPage({
       orderBy: [{ active: 'desc' }, { isPrimary: 'desc' }, { name: 'asc' }],
     }),
     prisma.accountActivity.findMany({
-      where: { organizationId, wholesaleAccountId: id },
+      where: { organizationId, wholesaleAccountId: id, OR: [{ visibility: 'TEAM' }, { createdByUserId: user.id }] },
       include: { contact: { select: { name: true } }, createdByUser: { select: { email: true, name: true } } },
       orderBy: { occurredAt: 'desc' }, take: 50,
     }),
@@ -263,11 +267,12 @@ export default async function WholesaleActivityPage({
   const userNames = new Map(users.map((entry) => [entry.id, getUserDisplayName(entry)]));
   const targetingHistory = await prisma.accountTargetingHistory.findMany({ where: { organizationId, accountType: SalesAccountType.WHOLESALE, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 });
 
+  const workAndEvents = await accountWorkAndEvents({organizationId,accountType:"WHOLESALE",accountId:account.id,enabledFeatures});
   return (
     <>
       <header className="page-heading page-header account-workspace-heading">
         <div>
-          <span className="page-eyebrow">Wholesale · {account.city || 'Location not set'}</span>
+          <span className="page-eyebrow">Restaurant · {account.city || 'Location not set'}</span>
           <h1>{account.name}</h1>
           {overlay?.isTargeting ? <p><strong className="target-account-marker">TARGET ACCOUNT</strong></p> : null}
           {account.tags.length ? <TagBadges tags={account.tags.map((assignment) => assignment.tag)} /> : null}
@@ -280,8 +285,10 @@ export default async function WholesaleActivityPage({
             currentUserId={user.id}
             users={actionUsers}
           />
-          <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/edit`}>Edit</Link>
-          {isAdminRole(user.role) && !account.officialAccountId ? (
+          {user.role === UserRole.PLATFORM_ADMIN ? (
+            <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/edit`}>Edit</Link>
+          ) : null}
+          {user.role === UserRole.PLATFORM_ADMIN && !account.officialAccountId ? (
             <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/merge`}>Merge account</Link>
           ) : null}
         </div>
@@ -303,7 +310,9 @@ export default async function WholesaleActivityPage({
         { href: '#activity', label: 'Activity' },
       ]} />
 
-      <AccountMemoryPanel accountId={account.id} accountType="WHOLESALE" contacts={accountContacts} notes={overlay?.notes ?? null} returnTo={`/wholesale/${account.id}`} />
+      <AccountRecipes organizationId={organizationId} accountId={account.id} />
+      <AccountProfile organizationId={organizationId} accountType="WHOLESALE" accountId={account.id} />
+      <AccountMemoryPanel users={actionUsers} accountId={account.id} accountType="WHOLESALE" contacts={accountContacts} notes={overlay?.notes ?? null} returnTo={`/wholesale/${account.id}`} />
 
       <Suspense fallback={<section id="account-worklist" className="card account-workspace-section account-worklist" aria-busy="true"><h2>Outstanding work</h2><p role="status">Loading outstanding work…</p></section>}>
         <AccountWorklist accountId={account.id} accountName={account.name} accountType="WHOLESALE" currentUserId={user.id} actorName={getUserDisplayName(user)} organizationId={organizationId} enabledFeatures={enabledFeatures} />
@@ -327,7 +336,7 @@ export default async function WholesaleActivityPage({
             <AddressLink address={[account.address, account.city, account.state, account.zip].filter(Boolean).join(', ')} />
           </p>
           <p>
-            <strong>Agency ID</strong>
+            <strong>Retail ID</strong>
             <span>{linkedAgency ? <Link href={`/agencies/${linkedAgency.id}`}>{account.agencyId}</Link> : account.agencyId}</span>
           </p>
           <p>
@@ -387,20 +396,21 @@ export default async function WholesaleActivityPage({
       <section className="dashboard-section account-workspace-section" id="activity">
         <div className="section-heading">
           <h2>Activity</h2>
-          <span className="pill">{visits.length + filedOrders.length + communicationActivities.length + salesStatusHistory.length + targetingHistory.length}</span>
+          <span className="pill">{visits.length + filedOrders.length + communicationActivities.length + salesStatusHistory.length + targetingHistory.length + workAndEvents.length}</span>
         </div>
-        <VisitActivityTable contactMap={contactMap} visits={visits} supplementalEvents={filedOrders.map((order) => ({
+        <AccountBriefing account={{ accountType: "WHOLESALE", accountId: account.id }} actor={{ organizationId, userId: user.id }} lastPurchaseAt={salesStatusSummary?.lastPurchaseAt} />
+        <VisitActivityTable contactMap={contactMap} visits={visits} supplementalEvents={filedOrders.map((order): SupplementalActivity => ({
           actor: order.filedSource === WholesaleOrderFiledSource.MANUAL ? order.filedBy?.displayName : 'OHLQ sales match',
           at: order.filedAt!,
           detail: `${formatDateOnly(order.saleDate)} · ${formatOrderCurrency(order.totalCents)} · ${order.lines.length} item${order.lines.length === 1 ? '' : 's'}`,
           href: `/wholesale-orders/${order.id}`,
           id: order.id,
-          title: 'Direct wholesale order filed',
-        })).concat(communicationActivities.map((activity) => ({
+          title: 'Direct restaurant order filed',
+        })).concat(communicationActivities.map((activity): SupplementalActivity => ({
           actor: getUserDisplayName(activity.createdByUser), at: activity.occurredAt,
-          detail: getCommunicationTitle(activity.activityType, activity.contact.name), id: activity.id,
-          href: '',
-          title: activity.activityType === 'EMAIL_INITIATED' ? 'Email initiated' : 'Call initiated',
+          detail: [activity.summary ?? (['EMAIL_INITIATED', 'CALL_INITIATED'].includes(activity.activityType) ? getCommunicationTitle(activity.activityType === 'EMAIL_INITIATED' ? 'EMAIL_INITIATED' : 'CALL_INITIATED', activity.contact?.name ?? 'Contact') : activity.contact?.name), activity.outcome, activity.visibility === 'PRIVATE' ? 'Only you' : null].filter(Boolean).join(' · '), id: activity.id,
+          href: activity.createdByUserId === user.id ? activity.externalUrl ?? "" : "",
+          title: activityLabels[activity.activityType], type: activityLabels[activity.activityType], source: activity.source, contactIds: activity.contactIds.length ? activity.contactIds : activity.contactId ? [activity.contactId] : [],
         }))).concat(salesStatusHistory.map((event) => ({
           actor: event.changedByUserId ? userNames.get(event.changedByUserId) ?? 'Former team member' : 'Neat',
           at: event.changedAt,
@@ -415,7 +425,7 @@ export default async function WholesaleActivityPage({
           href: '',
           id: `targeting-${event.id}`,
           title: event.isTargeting ? 'Account targeted' : 'Targeting stopped',
-        })))} />
+        }))).concat(workAndEvents)} />
       </section>
     </>
   );

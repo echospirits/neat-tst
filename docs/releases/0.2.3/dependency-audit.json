@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-19",
+  "counts": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "findings": [],
+  "previousCandidateFindings": {
+    "info": 0,
+    "low": 1,
+    "moderate": 2,
+    "high": 3,
+    "critical": 0,
+    "total": 6
+  },
+  "resolution": {
+    "prisma": "6.19.3 unchanged; @prisma/config override deepmerge-ts 8.0.0",
+    "exceljs": "4.4.0 unchanged; uuid override 11.1.1",
+    "tsx": "4.23.15 with esbuild 0.28.2"
+  },
+  "compatibility": {
+    "fullTests": 873,
+    "typecheck": "pass",
+    "excelReadWriteAndConditionalFormatting": "pass",
+    "prismaConfigurationMerge": "pass",
+    "recursiveGraphNoStackExhaustion": "pass",
+    "prismaValidate": "pass"
+  },
+  "credentialRotation": "Owner confirmed completed on 2026-10-19; not independently performed or claimed by this release",
+  "sources": [
+    "https://github.com/advisories/GHSA-ggr8-5vv4-36mx",
+    "https://github.com/advisories/GHSA-w5hq-g745-h8pq",
+    "https://github.com/advisories/GHSA-g7r4-m6w7-qqqr"
+  ],
+  "disposition": "All six original dependency findings resolved by the replacement candidate; npm audit reports zero vulnerabilities."
+}

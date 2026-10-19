@@ -1,3 +1,4 @@
+import { AccountSalesPlan } from './AccountSalesPlan';
 import { SalesAccountType, type AccountSalesStatus } from '@prisma/client';
 import { getUserDisplayName } from '../../lib/auth';
 import { BUYING_STATE_LABELS, SALES_STATUS_LABELS, SALES_STATUS_OPTIONS, type BuyingState } from '../../lib/accountSalesStatus';
@@ -55,5 +56,6 @@ export function AccountSalesStatusPanel({
       <SubmitButton className="compact-btn" pendingLabel="Saving…">Save</SubmitButton>
     </form>
     </div>
+    <AccountSalesPlan account={{ accountType, accountId: externalAccountId }} />
   </section>;
 }

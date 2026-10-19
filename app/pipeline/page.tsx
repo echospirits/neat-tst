@@ -1,3 +1,9 @@
+import {readPipelineStages,effectivePipelineStage} from '../../lib/crm/pipelineStages';
+import { readAccountConfiguration } from '../../lib/crm/accountConfiguration';
+import { PipelineScopeFilter } from './PipelineScopeFilter';
+import { healthRules } from '../../lib/crm/health';
+import { pipelineForecast } from '../../lib/crm/pipeline';
+import { visibleActivityWhere } from '../../lib/crm/activity';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -19,19 +25,22 @@ export const metadata = buildPageMetadata('Pipeline');
 const DAY = 86_400_000;
 const daysInStatus = (date: Date) => Math.max(0, Math.floor((Date.now() - date.getTime()) / DAY));
 
-export default async function PipelinePage({ searchParams }: { searchParams?: Promise<{ status?: string; view?: string }> }) {
+export default async function PipelinePage({ searchParams }: { searchParams?: Promise<{ status?: string; view?: string; q?:string; territory?:string; team?:string }> }) {
   const user = await requireUser();
   const { organizationId } = await requireFeatureForUser(user, 'ACCOUNT_SALES_STATUS');
   const params = await searchParams;
   const requestedStatus = params?.status;
-  const view = params?.view === 'list' ? 'list' : 'board';
+  const view = params?.view === 'list' ? 'list' : params?.view === 'stages' ? 'stages' : 'board';
   const selectedStatus = Object.values(AccountSalesStatus).includes(requestedStatus as AccountSalesStatus) ? requestedStatus as AccountSalesStatus : null;
   const now = new Date();
   const config = await getOrganizationTenantConfig(organizationId);
+  const preferences = await prisma.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { crmPreferences: true } });
+  const detailedStages = readPipelineStages(preferences.crmPreferences).stages;
+  const rules = healthRules((preferences.crmPreferences as Record<string, unknown>).health);
   const overlays = await prisma.organizationAccountOverlay.findMany({
-    where: { organizationId, salesStatus: { not: null } },
+    where: { organizationId, salesStatus: { not: null }, AND: [...(params?.territory ? [{crmDetails:{path:['territoryId'],equals:params.territory}}] : []),...(params?.team ? [{crmDetails:{path:['teamId'],equals:params.team}}] : [])] },
     orderBy: [{ salesStatusUpdatedAt: 'desc' }],
-    select: { accountType: true, assignedUserId: true, externalAccountId: true, salesStatus: true, salesStatusUpdatedAt: true, isTargeting: true },
+    select: { crmDetails:true, salesPlan: true, accountType: true, assignedUserId: true, externalAccountId: true, salesStatus: true, salesStatusUpdatedAt: true, isTargeting: true },
   });
   const agencyIds = overlays.filter((row) => row.accountType === SalesAccountType.AGENCY).map((row) => row.externalAccountId);
   const wholesaleIds = overlays.filter((row) => row.accountType === SalesAccountType.WHOLESALE).map((row) => row.externalAccountId);
@@ -44,6 +53,9 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
     prisma.accountSalesEvent.findMany({ where: { organizationId, wholesaleAccountId: { in: wholesaleIds }, isTenantProduct: true, bottles: { gt: 0 } }, orderBy: { reportDate: 'desc' }, select: { wholesaleAccountId: true, reportDate: true } }),
     prisma.accountSalesStatusHistory.findMany({ where: { organizationId }, orderBy: { changedAt: 'desc' }, take: 12 }),
   ]);
+  const meaningfulActivities = await prisma.accountActivity.findMany({ where: { AND: [visibleActivityWhere({ organizationId, userId: user.id }), { OR: [{ agencyId: { in: agencyIds } }, { wholesaleAccountId: { in: wholesaleIds } }] }], meaningful: true, occurredAt: { lte: now } }, select: { agencyId: true, wholesaleAccountId: true, occurredAt: true }, orderBy: { occurredAt: 'desc' } });
+
+  const money = (amount: number) => amount.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
   const agencySalesRows = agencies.length ? await prisma.ohlqAnnualSalesRow.findMany({
     where: { agencyId: { in: agencies.map((agency) => agency.agencyId) }, retailBottlesSold: { gt: 0 }, ...getTenantSalesWhere(config) },
     orderBy: { reportDate: 'desc' }, select: { agencyId: true, reportDate: true },
@@ -56,6 +68,10 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
     const key = visit.agencyId ? `AGENCY:${visit.agencyId}` : `WHOLESALE:${visit.wholesaleAccountId}`;
     if (!lastVisitByKey.has(key)) lastVisitByKey.set(key, visit.visitAt);
   });
+  meaningfulActivities.forEach(activity => {
+    const key = activity.agencyId ? `AGENCY:${activity.agencyId}` : `WHOLESALE:${activity.wholesaleAccountId}`;
+    if (!lastVisitByKey.has(key) || lastVisitByKey.get(key)! < activity.occurredAt) lastVisitByKey.set(key, activity.occurredAt);
+  });
   const nextActionByKey = new Map<string, { dueDate: Date | null; title: string }>();
   worklist.filter((item) => item.dueDate && item.dueDate >= now).forEach((item) => {
     const key = item.agencyId ? `AGENCY:${item.agencyId}` : `WHOLESALE:${item.wholesaleAccountId}`;
@@ -67,28 +83,35 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
   agencySalesRows.forEach((purchase) => { if (!agencyPurchaseByNumber.has(purchase.agencyId)) agencyPurchaseByNumber.set(purchase.agencyId, purchase.reportDate); });
   const allRows = overlays.flatMap((overlay) => {
     const account = overlay.accountType === SalesAccountType.AGENCY ? agenciesById.get(overlay.externalAccountId) : wholesaleById.get(overlay.externalAccountId);
-    if (!account || !overlay.salesStatus || !overlay.salesStatusUpdatedAt) return [];
+    if (!account || !overlay.salesStatus || !overlay.salesStatusUpdatedAt || (params?.q && !`${account.name} ${account.city??''}`.toLowerCase().includes(params.q.toLowerCase().trim()))) return [];
     const key = `${overlay.accountType}:${overlay.externalAccountId}`;
     const lastPurchaseAt = overlay.accountType === SalesAccountType.AGENCY ? agencyPurchaseByNumber.get((account as typeof agencies[number]).agencyId) ?? null : wholesalePurchaseById.get(overlay.externalAccountId) ?? null;
     const nextAction = nextActionByKey.get(key) ?? null;
     const lastActivityAt = lastVisitByKey.get(key) ?? null;
-    return [{ ...overlay, account, buyingState: getBuyingState(lastPurchaseAt, now), lastActivityAt, lastPurchaseAt, nextAction, attention: getNeedsAttentionReasons({ status: overlay.salesStatus, statusUpdatedAt: overlay.salesStatusUpdatedAt, lastActivityAt, lastPurchaseAt, nextActionAt: nextAction?.dueDate ?? null, now }) }];
+    return [{ ...overlay, account, buyingState: getBuyingState(lastPurchaseAt, now, rules.purchaseDays), lastActivityAt, lastPurchaseAt, nextAction, attention: getNeedsAttentionReasons({ status: overlay.salesStatus, statusUpdatedAt: overlay.salesStatusUpdatedAt, lastActivityAt, lastPurchaseAt, nextActionAt: nextAction?.dueDate ?? null, thresholds: { noMeaningfulActivityDays: ["RETAIL_CHAIN","HOSPITALITY_GROUP"].includes(String((overlay.crmDetails as {kind?:string}).kind)) ? rules.chainContactDays : overlay.accountType === "AGENCY" ? rules.agencyContactDays : rules.wholesaleContactDays, waitingOnOrderDays: rules.waitingDays }, now }) }];
   });
+  const forecast = pipelineForecast(allRows);
   const rows = allRows.filter((row) => !selectedStatus || row.salesStatus === selectedStatus);
   const counts = countSalesStatuses(allRows.map((row) => row.salesStatus!));
-  const pipelineHref = (nextView: string, status: AccountSalesStatus | null = selectedStatus) => `/pipeline?${new URLSearchParams({ view: nextView, ...(status ? { status } : {}) })}`;
+  const pipelineHref = (nextView: string, status: AccountSalesStatus | null = selectedStatus) => `/pipeline?${new URLSearchParams({ ...(params?.q?{q:params.q}:{}),...(params?.territory?{territory:params.territory}:{}),...(params?.team?{team:params.team}:{}),view: nextView, ...(status ? { status } : {}) })}`;
   const nameFor = (type: SalesAccountType, id: string) => type === SalesAccountType.AGENCY ? agenciesById.get(id)?.name : wholesaleById.get(id)?.name;
 
   return <>
     <PageHeader eyebrow="Accounts" title="Pipeline" description="Where relationships stand, what needs attention, and recent movement. Worklist remains the source of truth for next actions." />
+    <details className="card crm-panel"><summary>Forecast · {money(forecast.weighted)} weighted estimate</summary>
+      <p>{forecast.valued} of {forecast.accounts} open accounts have estimates; {money(forecast.unweighted)} before probability weighting.</p>
+      <p className="muted">USD assumptions from account plans. Purchasing, Nurture, and Lost accounts are excluded. {forecast.missingProbability} valued accounts have no probability and contribute zero to the weighted estimate. This is not recorded revenue.</p>
+    </details>
+    <PipelineScopeFilter {...readAccountConfiguration(preferences.crmPreferences)} />
     <SalesStatusJourney currentStatus={selectedStatus} counts={counts} filterHref={(status) => pipelineHref(view, selectedStatus === status ? null : status)} />
     <nav className="scope-tabs" aria-label="Pipeline view">
       <Link href={pipelineHref('board')} aria-current={view === 'board' ? 'page' : undefined}>Kanban board</Link>
+      {detailedStages.length ? <Link href={pipelineHref('stages')} aria-current={view === 'stages' ? 'page' : undefined}>Detailed stages</Link> : null}
       <Link href={pipelineHref('list')} aria-current={view === 'list' ? 'page' : undefined}>List</Link>
       {selectedStatus ? <Link href={pipelineHref(view, null)}>Clear status filter</Link> : null}
     </nav>
 
-    {view === 'board' ? <section className="dashboard-section" aria-label="Accounts by sales status">
+    {view==='stages'?<section className="pipeline-kanban" aria-label="Detailed sales stages">{[...detailedStages.map(s=>({id:s.id,name:s.name})),{id:'',name:'No current detailed stage'}].map(stage=>{const group=rows.filter(r=>(effectivePipelineStage(detailedStages,r.salesPlan,r.salesStatus)?.id??'')===stage.id);return<details className="pipeline-kanban-column" key={stage.id}><summary><h3>{stage.name}</h3><span className="pill">{group.length}</span></summary>{group.map(r=><article className="pipeline-kanban-card" key={`${r.accountType}:${r.externalAccountId}`}><Link href={`/${r.accountType==='AGENCY'?'agencies':'wholesale'}/${r.externalAccountId}`}>{r.account.name}</Link><span>{SALES_STATUS_LABELS[r.salesStatus!]}</span><span>{BUYING_STATE_LABELS[r.buyingState]}</span></article>)}</details>})}</section>:view === 'board' ? <section className="dashboard-section" aria-label="Accounts by sales status">
       <div className="section-heading"><div><span className="page-eyebrow">Pipeline snapshot</span><h2>Accounts by status</h2><p className="muted">Open an account to update its status or log a visit.</p></div><span className="pill">{rows.length} account{rows.length === 1 ? '' : 's'}</span></div>
       <div className="pipeline-kanban">
         {SALES_STATUS_OPTIONS.filter((option) => !selectedStatus || selectedStatus === option.value).map((option) => {
@@ -97,7 +120,7 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
             <summary><h3>{option.label}</h3><span className="pill">{stageRows.length}</span><svg className="pipeline-kanban-chevron" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 5 7 7-7 7" /></svg></summary>
             {stageRows.map((row) => <article className="pipeline-kanban-card" key={`${row.accountType}:${row.externalAccountId}`}>
               <Link className="pipeline-kanban-account" href={row.accountType === SalesAccountType.AGENCY ? `/agencies/${row.externalAccountId}` : `/wholesale/${row.externalAccountId}`}>{row.account.name}</Link>{row.isTargeting ? <small className="target-account-marker">TARGET ACCOUNT</small> : null}
-              <span className="muted">{row.accountType === SalesAccountType.AGENCY ? 'Agency' : 'Wholesale'}{row.account.city ? ` · ${row.account.city}` : ''}</span>
+              <span className="muted">{row.accountType === SalesAccountType.AGENCY ? 'Retail' : 'Restaurants'}{row.account.city ? ` · ${row.account.city}` : ''}</span>
               <span>{BUYING_STATE_LABELS[row.buyingState]} · {daysInStatus(row.salesStatusUpdatedAt!)} days in status</span>
               <span className="muted">{row.assignedUserId ? usersById.get(row.assignedUserId) ?? 'Former team member' : 'Unassigned'}</span>
               <span><strong>Next:</strong> {row.nextAction ? `${row.nextAction.title}${row.nextAction.dueDate ? ` · ${formatEasternDate(row.nextAction.dueDate)}` : ''}` : 'No follow-up scheduled'}</span>
@@ -107,14 +130,14 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
           </details>;
         })}
       </div>
-      {!allRows.length ? <p className="muted">Set Sales Status on an <Link href="/agencies">Agency</Link> or <Link href="/wholesale">Wholesale Account</Link> to add it to your pipeline.</p> : null}
+      {!allRows.length ? <p className="muted">Set Sales Status on an <Link href="/agencies">Retail</Link> or <Link href="/wholesale">Restaurant Account</Link> to add it to your pipeline.</p> : null}
     </section> : <section className="dashboard-section">
       <div className="section-heading"><div><span className="page-eyebrow">Pipeline snapshot</span><h2>{selectedStatus ? SALES_STATUS_LABELS[selectedStatus] : 'Tracked accounts'}</h2></div><span className="pill">{rows.length}</span></div>
       {rows.length ? <div className="pipeline-account-list">
         {rows.map((row) => {
           const href = row.accountType === SalesAccountType.AGENCY ? `/agencies/${row.externalAccountId}` : `/wholesale/${row.externalAccountId}`;
           return <article className="pipeline-account-row" key={`${row.accountType}:${row.externalAccountId}`}>
-            <div className="pipeline-account-identity"><Link href={href}>{row.account.name}</Link>{row.isTargeting ? <small className="target-account-marker">TARGET ACCOUNT</small> : null}<span>{row.accountType === SalesAccountType.AGENCY ? 'Agency' : 'Wholesale'}{row.account.city ? ` · ${row.account.city}` : ''}</span></div>
+            <div className="pipeline-account-identity"><Link href={href}>{row.account.name}</Link>{row.isTargeting ? <small className="target-account-marker">TARGET ACCOUNT</small> : null}<span>{row.accountType === SalesAccountType.AGENCY ? 'Retail' : 'Restaurants'}{row.account.city ? ` · ${row.account.city}` : ''}</span></div>
             <span><small>Sales Status</small><strong>{SALES_STATUS_LABELS[row.salesStatus!]}</strong></span>
             <span><small>Buying State</small><strong>{BUYING_STATE_LABELS[row.buyingState]}</strong></span>
             <span><small>Owner</small><strong>{row.assignedUserId ? usersById.get(row.assignedUserId) ?? 'Former team member' : 'Unassigned'}</strong></span>
@@ -125,7 +148,7 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
             <span className={row.attention.length ? 'pipeline-attention needs-attention' : 'pipeline-attention'}><small>Needs Attention</small><strong>{row.attention[0] ?? 'On track'}</strong>{row.attention.length > 1 ? <em>+{row.attention.length - 1} more</em> : null}</span>
           </article>;
         })}
-      </div> : <div className="card empty-state"><h3>No tracked accounts{selectedStatus ? ` in ${SALES_STATUS_LABELS[selectedStatus]}` : ''}</h3><p>Set Sales Status from an Agency or Wholesale Account page, or clear this filter.</p>{selectedStatus ? <Link className="btn secondary" href={pipelineHref(view, null)}>Clear filter</Link> : null}</div>}
+      </div> : <div className="card empty-state"><h3>No tracked accounts{selectedStatus ? ` in ${SALES_STATUS_LABELS[selectedStatus]}` : ''}</h3><p>Set Sales Status from a Retail or Restaurant Account page, or clear this filter.</p>{selectedStatus ? <Link className="btn secondary" href={pipelineHref(view, null)}>Clear filter</Link> : null}</div>}
     </section>}
 
     <div className="pipeline-support-grid">

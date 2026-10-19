@@ -1,0 +1,138 @@
+{
+  "branch": "br-steep-feather-amu5ih2w",
+  "project": "crimson-river-91402927",
+  "parent": "br-solitary-lake-am9whrqb",
+  "database": "neondb",
+  "postgres": "17.11 (59c914d)",
+  "sourceCommit": "ac54063d12ccf87275da98b69707263d5b2f599c",
+  "applied": [
+    "20261009010000_support_tickets",
+    "20261011010000_wholesale_commercial_stars",
+    "20261011021000_crm_activity_mail_deals",
+    "20261011130000_tenant_account_states",
+    "20261011131000_abc_florida_retail_seed",
+    "20261011153000_integrated_account_workflows",
+    "20261011160000_contact_relationship_mail_operations",
+    "20261011170000_business_sms",
+    "20261011180000_worklist_playbooks",
+    "20261011190000_recipe_sales_materials",
+    "20261011200000_event_schedule_operations",
+    "20261011210000_field_guides_routes",
+    "20261011220000_account_profiles",
+    "20261011230000_mail_snapshot_reconciliation",
+    "20261012120000_contact_suggestions",
+    "20261012170000_communications_pilot"
+  ],
+  "canonicalChecksums": true,
+  "historicalGapsNotReplayed": [
+    "20260814120000_streamline_visit_workflow",
+    "20260814170000_google_calendar_worklist_scheduling",
+    "20260814220000_account_geocoding",
+    "20260815010000_opportunity_intelligence",
+    "20260817183000_opportunity_scoring_v2",
+    "20260818120000_agency_inventory_report",
+    "20260818170000_agency_inventory_query_indexes",
+    "20260818193000_agency_intelligence_engine",
+    "20260902143000_tenant_provisioning_v2",
+    "20260903143000_organization_a3a_store_ids",
+    "20260905123000_account_master_import_status",
+    "20260905152000_brand_master_import_status",
+    "20260906020000_tenant_inventory_isolation",
+    "20260909160000_a3a_direct_wholesale_pdf",
+    "20260910140000_wholesale_order_lifecycle",
+    "20260910190000_account_notes_contacts",
+    "20260914143000_account_research_waterfall",
+    "20260915113000_account_research_automation",
+    "20260916180000_agency_market_profiles",
+    "20260917120000_agency_store_context"
+  ],
+  "preservation": {
+    "Organization": {
+      "beforeCount": 6,
+      "afterCount": 6,
+      "beforeFingerprint": "965cfb8ee4dbebdc39f3b4bb3ec91d9a",
+      "afterFingerprint": "965cfb8ee4dbebdc39f3b4bb3ec91d9a",
+      "preserved": true
+    },
+    "OrganizationFeature": {
+      "beforeCount": 93,
+      "afterCount": 93,
+      "beforeFingerprint": "bd42ce865852dc85d2dddc087032f2f3",
+      "afterFingerprint": "bd42ce865852dc85d2dddc087032f2f3",
+      "preserved": true
+    },
+    "Agency": {
+      "beforeCount": 482,
+      "afterCount": 482,
+      "beforeFingerprint": "6bbd119aad83ed6d13caf92827af846f",
+      "afterFingerprint": "6bbd119aad83ed6d13caf92827af846f",
+      "preserved": true
+    },
+    "WholesaleAccount": {
+      "beforeCount": 16155,
+      "afterCount": 16155,
+      "beforeFingerprint": "4feb6cb5de26d328e0bef49046c08120",
+      "afterFingerprint": "4feb6cb5de26d328e0bef49046c08120",
+      "preserved": true
+    },
+    "LocationContact": {
+      "beforeCount": 8,
+      "afterCount": 8,
+      "beforeFingerprint": "2c5dcfd5a9b1211936921564b1affec4",
+      "afterFingerprint": "2c5dcfd5a9b1211936921564b1affec4",
+      "preserved": true
+    },
+    "OrganizationAccountOverlay": {
+      "beforeCount": 11,
+      "afterCount": 11,
+      "beforeFingerprint": "03b125a1b650593561ebcee1e93a0246",
+      "afterFingerprint": "03b125a1b650593561ebcee1e93a0246",
+      "preserved": true
+    },
+    "Tag": {
+      "beforeCount": 3,
+      "afterCount": 3,
+      "beforeFingerprint": "451f171290b2dfa4a03c4e0f57730283",
+      "afterFingerprint": "451f171290b2dfa4a03c4e0f57730283",
+      "preserved": true
+    },
+    "LocationTag": {
+      "beforeCount": 3,
+      "afterCount": 3,
+      "beforeFingerprint": "9651757c9bf1549bd9ba4ec0812010eb",
+      "afterFingerprint": "9651757c9bf1549bd9ba4ec0812010eb",
+      "preserved": true
+    },
+    "AccountActivity": {
+      "beforeCount": 0,
+      "afterCount": 0,
+      "beforeFingerprint": "d41d8cd98f00b204e9800998ecf8427e",
+      "afterFingerprint": "d41d8cd98f00b204e9800998ecf8427e",
+      "preserved": true
+    },
+    "WholesaleAccountAssessment": {
+      "beforeCount": 15481,
+      "afterCount": 15481,
+      "beforeFingerprint": "71e85bca0b7bda995f27fefd0f8b9edb",
+      "afterFingerprint": "71e85bca0b7bda995f27fefd0f8b9edb",
+      "preserved": true
+    },
+    "EventShift": {
+      "beforeCount": 0,
+      "afterCount": 0,
+      "beforeFingerprint": "d41d8cd98f00b204e9800998ecf8427e",
+      "afterFingerprint": "d41d8cd98f00b204e9800998ecf8427e",
+      "preserved": true
+    }
+  },
+  "seedCounts": {
+    "Agency": 126,
+    "LocationContact": 126,
+    "OrganizationAccountOverlay": 126,
+    "LocationTag": 126
+  },
+  "stateDefaultsVerified": true,
+  "pilotOnlyEcho": true,
+  "seedAndPilotReplay": "no-op",
+  "productionModified": false
+}

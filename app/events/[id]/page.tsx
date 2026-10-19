@@ -1,0 +1,153 @@
+import { VisitActivityTable } from "../../visits/VisitActivityTable";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { prisma } from "../../../lib/prisma";
+import { requireCrmActor } from "../../../lib/crm/auth";
+import { getUserDisplayName } from "../../../lib/auth";
+import { eventSalesComparison } from "../../../lib/crm/events";
+import { EventEditor } from "../EventEditor";
+export const dynamic = "force-dynamic";
+export default async function EventPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { actor } = await requireCrmActor();
+  const { id } = await params;
+  const event = await prisma.eventShift.findFirst({
+    where: { id, organizationId: actor.organizationId },
+    include: {
+      visits: {
+        where: { organizationId: actor.organizationId },
+        include: {
+          photos: true,
+          contacts: { include: { contact: true } },
+          createdByUser: { select: { email: true, name: true } },
+          worklistItems: { select: { id: true, title: true, status: true } },
+        },
+      },
+    },
+  });
+  if (!event) notFound();
+  const [users, comparison] = await Promise.all([
+    prisma.user.findMany({
+      where: {
+        organizationId: actor.organizationId,
+        isActive: true,
+        role: { not: "PLATFORM_ADMIN" },
+      },
+      select: { id: true, name: true, email: true },
+    }),
+    eventSalesComparison(prisma, actor.organizationId, event),
+  ]);
+  const account = event.externalAccountId
+    ? event.accountType === "AGENCY"
+      ? await prisma.agency.findUnique({
+          where: { id: event.externalAccountId },
+          select: { name: true },
+        })
+      : await prisma.wholesaleAccount.findUnique({
+          where: { id: event.externalAccountId },
+          select: { name: true },
+        })
+    : null;
+  const visit = new URLSearchParams({
+    type: event.accountType === "AGENCY" ? "agency" : "wholesale",
+    [event.accountType === "AGENCY" ? "agencyId" : "wholesaleAccountId"]:
+      event.externalAccountId ?? "",
+    eventId: id,
+    returnTo: `/events/${id}`,
+  });
+  return (
+    <>
+      <Link href="/#events">My Schedule</Link>
+      <h1>{event.title}</h1>
+      {event.source === "EVENTBRITE" ? (
+        <section className="card">
+          <h2>Latest Eventbrite details</h2>
+          <p className="field-note">
+            Imported provider values for review; saving your local schedule does
+            not publish changes to Eventbrite.
+          </p>
+          {Object.entries(
+            ((event.details as Record<string, unknown>).providerSnapshot ??
+              {}) as Record<string, unknown>,
+          )
+            .filter(([key]) =>
+              [
+                "title",
+                "startsAt",
+                "endsAt",
+                "location",
+                "status",
+                "mock",
+              ].includes(key),
+            )
+            .map(([key, value]) => (
+              <p key={key}>
+                {key}: {String(value)}
+              </p>
+            ))}
+        </section>
+      ) : null}
+      <section className="card">
+        <EventEditor
+          event={{
+            ...event,
+            startsAt: event.startsAt.toISOString(),
+            endsAt: event.endsAt?.toISOString() ?? null,
+            details: event.details as Record<string, never>,
+          }}
+          users={users.map((u) => ({ id: u.id, name: getUserDisplayName(u) }))}
+          accountName={account?.name}
+        />
+      </section>
+      <section className="card">
+        <h2>Execution and follow-up</h2>
+        {event.externalAccountId ? (
+          <Link className="btn" href={`/visits/new?${visit}`}>
+            Log Visit, photos, and follow-up
+          </Link>
+        ) : (
+          <p>
+            Link an account above to record an account visit and its follow-up
+            tasks.
+          </p>
+        )}
+        <VisitActivityTable visits={event.visits} contactMap={{}} />
+      </section>
+      <section className="card">
+        <h2>Observed sales before and after</h2>
+        <p>
+          This comparison describes recorded purchases. It does not establish
+          that the event caused a change. Event-day sales are excluded; source
+          dates are report dates, not exact order times.
+        </p>
+        {comparison.available ? (
+          <>
+            <p>
+              {comparison.days}-day windows ·{" "}
+              {comparison.comparison === "PREVIOUS_YEAR"
+                ? "Same period last year"
+                : "Immediately preceding period"}
+            </p>
+            <p>
+              Before: {comparison.before?.bottles ?? "Unknown"} bottles (
+              {comparison.before?.coveredDays}/{comparison.days} covered days)
+            </p>
+            <p>
+              After: {comparison.after?.bottles ?? "Unknown"} bottles (
+              {comparison.after?.coveredDays}/{comparison.days} covered days)
+            </p>
+            <p className="field-note">
+              Tenant products only. A total is shown only with complete daily
+              ledger coverage; future or missing days are unknown.
+            </p>
+          </>
+        ) : (
+          <p>{comparison.reason}</p>
+        )}
+      </section>
+    </>
+  );
+}

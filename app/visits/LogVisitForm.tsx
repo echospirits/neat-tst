@@ -1,5 +1,6 @@
 'use client';
 
+import { VisitDraft } from './VisitDraft';
 import { useEffect, useMemo, useState } from 'react';
 import { WholesaleAddressFields } from '../components/WholesaleAddressFields';
 import { addEasternCalendarDays, EASTERN_TIME_ZONE } from '../../lib/dateTime';
@@ -69,6 +70,7 @@ export type VisitFormUserOption = {
 };
 
 type VisitFormInitialValues = {
+  eventId?: string;
   locationType?: VisitLocationType;
   locationName?: string | null;
   locationLocked?: boolean;
@@ -96,6 +98,9 @@ type VisitFormInitialValues = {
 };
 
 type LogVisitFormProps = {
+  allowedStates?: string[];
+  organizationId?: string;
+  visitGuides?: Array<{accountType:string;name:string;questions:string[]}>;
   action: (formData: FormData) => void | Promise<void>;
   agencies: VisitFormAgencyOption[];
   wholesaleAccounts: VisitFormWholesaleOption[];
@@ -135,6 +140,8 @@ const getLastVisitLabel = (lastVisitAt: string | null) =>
   lastVisitAt ? `Visited ${lastVisitFormatter.format(new Date(lastVisitAt))}` : 'Not visited yet';
 
 export function LogVisitForm({
+  allowedStates = ['OH'],
+  organizationId, visitGuides = [],
   action,
   agencies,
   wholesaleAccounts,
@@ -153,6 +160,8 @@ export function LogVisitForm({
   targetedAgencyIds = [],
   targetedWholesaleAccountIds = [],
 }: LogVisitFormProps) {
+  const [interactionType, setInteractionType] = useState('PHYSICAL_VISIT');
+  const physicalVisit = interactionType === 'PHYSICAL_VISIT';
   const [locationType, setLocationType] = useState<VisitLocationType>(initialValues?.locationType ?? 'wholesale');
   const [agencyId, setAgencyId] = useState(initialValues?.agencyId ?? '');
   const [wholesaleAccountId, setWholesaleAccountId] = useState(initialValues?.wholesaleAccountId ?? '');
@@ -412,6 +421,7 @@ export function LogVisitForm({
       <input name="wholesaleAccountId" readOnly type="hidden" value={locationType === 'wholesale' ? wholesaleAccountId : ''} />
       {contactIds.map((contactId) => <input key={contactId} name="contactId" readOnly type="hidden" value={contactId} />)}
       <input name="outcomes" readOnly type="hidden" value={legacyOutcomes} />
+      <input name="eventId" type="hidden" value={initialValues?.eventId??''} />
       <input name="submissionKey" readOnly type="hidden" value={submissionKey} />
       {worklistItemId ? <input name="worklistItemId" readOnly type="hidden" value={worklistItemId} /> : null}
       {initialValues?.opportunityId ? <input name="opportunityId" readOnly type="hidden" value={initialValues.opportunityId} /> : null}
@@ -436,7 +446,7 @@ export function LogVisitForm({
         {!isChangingLocation && selectedLocation ? (
           <div className="selected-location-card">
             <div>
-              <span>{locationType === 'agency' ? 'Agency' : 'Wholesale'}</span>
+              <span>{locationType === 'agency' ? 'Retail' : 'Restaurants'}</span>
               <strong>{selectedLocation.name}</strong>
             </div>
             <button className="secondary compact-btn" type="button" onClick={() => setIsChangingLocation(true)}>Change</button>
@@ -452,12 +462,12 @@ export function LogVisitForm({
                   type="button"
                   onClick={() => handleLocationTypeChange(type)}
                 >
-                  {type === 'wholesale' ? 'Wholesale' : 'Agency'}
+                  {type === 'wholesale' ? 'Restaurants' : 'Retail'}
                 </button>
               ))}
             </div>
             <div className="search-select">
-              <label htmlFor="visit-location-search">Find {locationType === 'agency' ? 'agency' : 'wholesale account'}</label>
+              <label htmlFor="visit-location-search">Find {locationType === 'agency' ? 'agency' : 'restaurant account'}</label>
               <input
                 id="visit-location-search"
                 placeholder="Search name, ID, city, or phone"
@@ -519,18 +529,30 @@ export function LogVisitForm({
         )}
       </fieldset>
 
+      {mode === 'create' ? <fieldset className="visit-step"><legend>How did you connect?</legend>
+        <div className="visit-contact-chips interaction-channel-options" role="group" aria-label="Interaction type">
+          {([['PHYSICAL_VISIT', 'In person'], ['PHONE_CALL', 'Phone'], ['EMAIL', 'Email'], ['SMS', 'Text'], ['VIRTUAL_MEETING', 'Video'], ['INTERNAL_NOTE', 'Note']] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={interactionType === value} className={interactionType === value ? 'visit-contact-chip is-selected' : 'visit-contact-chip'} onClick={() => setInteractionType(value)}>{label}</button>)}
+        </div><input name="interactionType" type="hidden" value={interactionType} />
+        {!physicalVisit ? <p className="field-note">Record a completed conversation. Emails and texts entered here are logged only.</p> : null}
+      </fieldset> : null}
       <fieldset className="visit-step visit-outcome-step">
         <legend>What happened?</legend>
-        <label htmlFor="visit-notes">Visit notes <span className="optional-label">Optional</span></label>
+        <label htmlFor="visit-notes">{physicalVisit ? 'Visit notes' : 'Conversation notes'} {physicalVisit ? <span className="optional-label">Optional</span> : null}</label>
         <textarea
           id="visit-notes"
           name="summary"
+          required={!physicalVisit}
+          maxLength={4000}
           rows={mode === 'create' ? 2 : 3}
           placeholder="Key conversation, product interest, or anything worth remembering"
           value={summary}
           onChange={(event) => setSummary(event.target.value)}
         />
-        <details className="visit-outcomes-details"><summary>Visit outcomes{selectedOutcomes.length ? ` · ${selectedOutcomes.length} selected` : ' (optional)'}</summary>
+        {!physicalVisit ? <div className="form-grid">
+          {interactionType !== 'INTERNAL_NOTE' ? <label><input type="checkbox" name="meaningful" /> Meaningful exchange with the customer</label> : null}
+          <label htmlFor="interaction-visibility">Visibility</label><select id="interaction-visibility" name="visibility" defaultValue="TEAM"><option value="TEAM">Team</option><option value="PRIVATE">Only me</option></select><p className="field-note">Follow-up titles and account status changes are shared with your team.</p>
+        </div> : null}
+        <details className="visit-outcomes-details"><summary>Outcomes{selectedOutcomes.length ? ` · ${selectedOutcomes.length} selected` : ' (optional)'}</summary>
         <div className="visit-outcome-grid">
           {outcomeOptions.map((outcome) => (
             <label className="visit-outcome-chip" key={outcome.code}>
@@ -561,7 +583,7 @@ export function LogVisitForm({
       </fieldset>
 
       {hasLocation ? <fieldset className="visit-step visit-contact-step">
-        <legend>Who did you meet? <span className="optional-label">Optional</span></legend>
+        <legend>{physicalVisit ? 'Who did you meet?' : 'Who was involved?'} <span className="optional-label">Optional</span></legend>
         {visibleContacts.length > 0 ? <div className="visit-contact-chips">
           {visibleContacts.map((contact) => <button
             aria-pressed={contactIds.includes(contact.id)}
@@ -643,7 +665,7 @@ export function LogVisitForm({
       {matchingWorklistItems.length > 0 ? (
         <fieldset className="visit-step visit-worklist-prompt">
           <legend>Complete existing follow-up?</legend>
-          <p className="field-note">This account already has follow-up assigned to you. Choose what should happen when this visit is saved.</p>
+          <p className="field-note">This account already has follow-up assigned to you. Choose what should happen when this interaction is saved.</p>
           <div className="worklist-completion-list">
             {matchingWorklistItems.map((item) => (
               <div className="worklist-completion-item" key={item.id}>
@@ -666,7 +688,7 @@ export function LogVisitForm({
 
       {mode === 'create' && salesStatusOptions.length > 0 ? <fieldset className="visit-step visit-sales-status-step">
         <legend>Sales status changed?</legend>
-        <p className="field-note">Optional. Keep No change selected unless this visit moved the relationship.</p>
+        <p className="field-note">Optional. Keep No change selected unless this interaction moved the relationship.</p>
         <div className="visit-outcome-grid sales-status-visit-choices">
           <label className="visit-outcome-chip"><input defaultChecked name="salesStatus" type="radio" value="" /><span>No change</span></label>
           {salesStatusOptions.map((option) => <label className="visit-outcome-chip" key={option.value}><input name="salesStatus" type="radio" value={option.value} /><span>{option.label}</span></label>)}
@@ -706,7 +728,7 @@ export function LogVisitForm({
 
           {mode === 'create' && locationType === 'wholesale' && !wholesaleAccountId ? (
             <details className="compact-details nested-details">
-              <summary>Create a wholesale account</summary>
+              <summary>Create a restaurant account</summary>
               <fieldset className="wholesale-create-section">
                 <legend>Account</legend>
                 <div className="wholesale-create-grid">
@@ -714,7 +736,7 @@ export function LogVisitForm({
                   <label>Phone (optional)<input name="newWholesalePhone" type="tel" autoComplete="tel" /></label>
                 </div>
               </fieldset>
-              <WholesaleAddressFields visit />
+              <WholesaleAddressFields visit allowedStates={allowedStates} />
               <label>Licensee ID (optional)<input name="newWholesaleLicenseeId" /></label>
               {tags.length > 0 ? (
                 <div className="tag-checkbox-grid">
@@ -730,11 +752,11 @@ export function LogVisitForm({
             </details>
           ) : null}
 
-          {mode === 'create' ? <details className="compact-details nested-details">
+          {mode === 'create' && physicalVisit ? <details className="compact-details nested-details">
             <summary>Add photo proof</summary>
             {photoSlots.map((slot) => (
               <div className="photo-entry streamlined-photo-entry" key={slot}>
-                <input name="photoType" readOnly type="hidden" value="OTHER" />
+                <label>Photo category<select name="photoType" defaultValue="OTHER"><option value="OTHER">Other</option><option value="SHELF">Shelf</option><option value="DISPLAY">Display</option><option value="MENU">Menu</option><option value="BACK_BAR">Back bar</option><option value="COMPETITOR">Competitor</option></select></label>
                 <label htmlFor={`visit-photo-${slot}`}>{slot === 1 ? 'Photo' : `Additional photo ${slot}`}</label>
                 <input id={`visit-photo-${slot}`} name="photoFile" type="file" accept="image/*" />
                 <input name="photoUrl" readOnly type="hidden" value="" />
@@ -745,8 +767,10 @@ export function LogVisitForm({
         </div>
       </details>
 
+      {physicalVisit && visitGuides.length ? <details className="compact-details"><summary>Visit guide</summary><input name="guideSignature" type="hidden" value={JSON.stringify(visitGuides.find(g=>g.accountType===(locationType==='agency'?'AGENCY':'WHOLESALE')))}/><label><input name="guideEnabled" type="checkbox"/>Include these answers with the visit</label>{visitGuides.find(g=>g.accountType===(locationType==='agency'?'AGENCY':'WHOLESALE'))?.questions.map((question,index)=><label key={`${locationType}:${index}`}>{question}<textarea name={`guideAnswer${index}`} maxLength={1500}/></label>)}</details> : null}
+      {physicalVisit && mode==='create' && organizationId && currentUserId && (agencyId || wholesaleAccountId) ? <VisitDraft scope={`${organizationId}:${currentUserId}:${locationType}:${locationType==='agency'?agencyId:wholesaleAccountId}:${initialValues?.eventId??''}:${worklistItemId??''}:${initialValues?.opportunityId??''}`} value={{summary,followUpText,followUpDate,followUpTime,followUpMode,selectedOutcomes,submissionKey}} onRestore={draft=>{if(typeof draft.summary==='string')setSummary(draft.summary);if(typeof draft.followUpText==='string')setFollowUpText(draft.followUpText);if(typeof draft.followUpDate==='string')setFollowUpDate(draft.followUpDate);if(typeof draft.followUpTime==='string')setFollowUpTime(draft.followUpTime);if(['none','task'].includes(String(draft.followUpMode)))setFollowUpMode(draft.followUpMode as VisitFollowUpMode);if(Array.isArray(draft.selectedOutcomes))setSelectedOutcomes(draft.selectedOutcomes.filter((v):v is string=>typeof v==='string'));if(typeof draft.submissionKey==='string')setSubmissionKey(draft.submissionKey);}}/> : null}
       <div className="visit-submit-bar">
-        <VisitSubmitButton disabled={!canSave} label={submitLabel} />
+        <VisitSubmitButton disabled={!canSave} label={physicalVisit ? submitLabel : 'Save interaction'} />
         {!canSave ? <p>Select an account to save.</p> : null}
       </div>
     </form>

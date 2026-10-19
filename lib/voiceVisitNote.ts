@@ -345,7 +345,7 @@ const extractOutcomes = (sentences: string[], visitType?: VoiceVisitType) => {
   const detected = tags.filter((tag) => tag.pattern.test(sentences.join(' '))).map((tag) => tag.label);
 
   if (visitType === 'agency' && /\b(stock|inventory|shelf|warehouse|delivery)\b/i.test(sentences.join(' '))) {
-    detected.push('Agency inventory discussion');
+    detected.push('Retail inventory discussion');
   }
 
   return unique(detected, 8);

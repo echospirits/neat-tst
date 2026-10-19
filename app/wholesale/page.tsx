@@ -1,3 +1,5 @@
+import { CommercialOpportunityStars } from '../components/CommercialOpportunityStars';
+import { evidenceModeLabel, type EvidenceMode } from '../../lib/wholesaleAssessment';
 import { AddressLink } from '../components/AccountContactLinks';
 ﻿export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -15,7 +17,6 @@ import { buildPageMetadata } from '../../lib/appBrand';
 import { requireUser } from '../../lib/auth';
 import { getDirectionsHref } from '../../lib/crmActionContext';
 import { formatEasternDate } from '../../lib/dateTime';
-import { getGeocodeResetForAddressChange } from '../../lib/location/geocode';
 import { getWholesaleAddressProtectionForEdit } from '../../lib/wholesaleAddressProtection';
 import { prisma } from '../../lib/prisma';
 import { getOrganizationFeatures, requireOrganizationContext } from '../../lib/organizations';
@@ -26,14 +27,13 @@ import {
   getWholesaleLicenseeIdCreateData,
   getWholesaleLicenseeIdTextSearchWhere,
   parseWholesaleLicenseeIds,
-  syncWholesaleAccountLicenseeIds,
 } from '../../lib/wholesaleAccounts';
 import { LiveFilterForm } from '../components/LiveFilterForm';
 import { AccountViewNavigation } from '../components/AccountViewNavigation';
 import { NearbyAccountsSection } from '../components/NearbyAccountsSection';
 import { TargetAccountMarker } from '../components/TargetAccountMarker';
 
-export const metadata = buildPageMetadata('Wholesale Accounts');
+export const metadata = buildPageMetadata('Restaurant Accounts');
 
 type SortDirection = 'asc' | 'desc';
 
@@ -45,8 +45,7 @@ type WholesaleSortKey =
   | 'address'
   | 'city'
   | 'mostRecentVisit'
-  | 'opportunityPriority'
-  | 'opportunityScore'
+  | 'commercialRating'
   | 'nextAction';
 
 type WholesalePageParams = {
@@ -69,9 +68,11 @@ type WholesaleTableRow = {
   name: string;
   nameHref: string | null;
   nextAction: string | null;
-  opportunityPriority: string | null;
-  opportunityScore: number | null;
+  commercialRating: number | null;
   evidenceMode?: string;
+  assessmentStatus?: string;
+  pending?: boolean;
+  stale?: boolean;
   phone: string | null;
   directionsHref: string | null;
   locationText: string | null;
@@ -85,36 +86,26 @@ const wholesaleSortColumns: Array<{ key: WholesaleSortKey; label: string }> = [
   { key: 'licenseeIds', label: 'Licensee IDs' },
   { key: 'address', label: 'Address' },
   { key: 'city', label: 'City' },
-  { key: 'agencyId', label: 'Agency ID' },
+  { key: 'agencyId', label: 'Retail ID' },
   { key: 'mostRecentVisit', label: 'Most Recent Visit' },
-  { key: 'opportunityPriority', label: 'Opportunity Priority' },
-  { key: 'opportunityScore', label: 'Account Priority' },
+  { key: 'commercialRating', label: 'Commercial opportunity' },
   { key: 'nextAction', label: 'Next Action' },
   { key: 'actions', label: 'Actions' },
 ];
 
 const numericSortKeys = new Set<WholesaleSortKey>([
-  'opportunityScore',
-  'opportunityPriority',
+  'commercialRating',
 ]);
 
 const descendingDefaultSortKeys = new Set<WholesaleSortKey>([
   'mostRecentVisit',
-  'opportunityScore',
+  'commercialRating',
 ]);
-
-const opportunityPriorityRanks: Record<string, number> = {
-  HIGH: 1,
-  MEDIUM: 2,
-  LOW: 3,
-};
 
 const toOptional = (value: string | undefined) => {
   const trimmed = (value ?? '').trim();
   return trimmed.length > 0 ? trimmed : null;
 };
-
-const formatMetric = (value: number | null, suffix = '') => (value === null ? 'n/a' : `${value.toFixed(1)}${suffix}`);
 
 const isWholesaleSortKey = (value: string | undefined, columns = wholesaleSortColumns): value is WholesaleSortKey =>
   columns.some((column) => column.key === value);
@@ -242,10 +233,8 @@ const compareDate = (left: Date | null, right: Date | null, direction: SortDirec
 
 const getSortNumberValue = (row: WholesaleTableRow, sortKey: WholesaleSortKey) => {
   switch (sortKey) {
-    case 'opportunityScore':
-      return row.opportunityScore;
-    case 'opportunityPriority':
-      return row.opportunityPriority ? opportunityPriorityRanks[row.opportunityPriority.toUpperCase()] ?? 99 : null;
+    case 'commercialRating':
+      return row.commercialRating;
     default:
       return null;
   }
@@ -274,10 +263,6 @@ const getSortTextValue = (row: WholesaleTableRow, sortKey: WholesaleSortKey) => 
 
 const sortWholesaleRows = (rows: WholesaleTableRow[], sortKey: WholesaleSortKey, direction: SortDirection) =>
   [...rows].sort((left, right) => {
-    if (numericSortKeys.has(sortKey)) {
-      const mode = (left.evidenceMode ?? '').localeCompare(right.evidenceMode ?? '');
-      if (mode) return mode;
-    }
     const primary =
       sortKey === 'mostRecentVisit'
         ? compareDate(left.mostRecentVisit, right.mostRecentVisit, direction)
@@ -306,9 +291,10 @@ async function createWholesale(formData: FormData) {
   'use server';
 
   const user = await requireUser();
-  const { organizationId } = await requireOrganizationContext(user);
+  const { organizationId, organization } = await requireOrganizationContext(user);
   const state = normalizeUsState(String(formData.get('state') ?? 'OH'));
   if (!state) return { error: 'Enter a valid US state name or two-letter abbreviation.' };
+  if (!organization.enabledStates.includes(state)) return { error: 'This state is not enabled for your organization.' };
   const licenseeIds = stateScopedLicenseeIds(parseWholesaleLicenseeIds(
     String(formData.get('licenseeIds') ?? formData.get('licenseeId') ?? ''),
   ), state);
@@ -326,8 +312,7 @@ async function createWholesale(formData: FormData) {
     : [];
   const matchingAccounts = await prisma.wholesaleAccount.findMany({
     where: getWholesaleLicenseeIdConflictWhere(licenseeIds),
-    select: { id: true, address: true, city: true, state: true, zip: true,
-      addressImportProtected: true, cityImportProtected: true, zipImportProtected: true },
+    select: { id: true, state: true },
     take: 2,
   });
   const matchingAccountIds = Array.from(new Set(matchingAccounts.map((account) => account.id)));
@@ -339,7 +324,7 @@ async function createWholesale(formData: FormData) {
     redirect('/wholesale?status=duplicate-licensee');
   }
 
-  const officialAccount = state === 'OH' ? await prisma.account.findFirst({
+  const officialAccount = !matchingAccountIds.length && state === 'OH' ? await prisma.account.findFirst({
     where: {
       licenseeId: { equals: licenseeId, mode: 'insensitive' },
       type: AccountType.BAR_RESTAURANT,
@@ -363,24 +348,9 @@ async function createWholesale(formData: FormData) {
     const existingAccountId = matchingAccountIds[0];
 
     if (existingAccountId) {
-      const existingAccount = matchingAccounts.find((candidate) => candidate.id === existingAccountId);
-      const updatedAccount = await tx.wholesaleAccount.update({
-        where: { id: existingAccountId },
-        data: {
-          ...accountData,
-          ...getWholesaleAddressProtectionForEdit(existingAccount, accountData),
-          ...getGeocodeResetForAddressChange(existingAccount, {
-            address: accountData.address,
-            city: accountData.city,
-            state,
-            zip: accountData.zip,
-          }),
-          licenseeId,
-        },
-        select: { id: true },
-      });
-      await syncWholesaleAccountLicenseeIds(tx, updatedAccount.id, licenseeIds);
-      return updatedAccount;
+      // Creating tenant activity does not authorize changes to shared identity.
+      // Canonical corrections belong in the Platform Admin edit workflow.
+      return { id: existingAccountId };
     }
 
     return tx.wholesaleAccount.create({
@@ -401,7 +371,7 @@ async function createWholesale(formData: FormData) {
         organizationId,
         tagId,
         wholesaleAccountId: account.id,
-        note: 'Applied from wholesale account form',
+        note: 'Applied from restaurant account form',
         createdByUserId: user.id,
       })),
       skipDuplicates: true,
@@ -440,16 +410,17 @@ export default async function WholesalePage({
   searchParams?: Promise<WholesalePageParams>;
 }) {
   const user = await requireUser();
-  const { organizationId } = await requireOrganizationContext(user);
+  const { organizationId, organization } = await requireOrganizationContext(user);
   const enabledFeatures = await getOrganizationFeatures(organizationId);
   const hasWholesaleOpportunities = enabledFeatures.has('WHOLESALE_OPPORTUNITIES');
   const visibleSortColumns = hasWholesaleOpportunities
     ? wholesaleSortColumns
-    : wholesaleSortColumns.filter((column) => !['opportunityPriority', 'opportunityScore', 'nextAction'].includes(column.key));
+    : wholesaleSortColumns.filter((column) => !['commercialRating', 'nextAction'].includes(column.key));
 
   const params = (await searchParams) ?? {};
   const q = (params.q ?? '').trim();
-  const sortKey = isWholesaleSortKey(params.sort, visibleSortColumns) ? params.sort : 'name';
+  const requestedSort = ['opportunityScore', 'opportunityPriority'].includes(params.sort ?? '') ? 'commercialRating' : params.sort;
+  const sortKey = isWholesaleSortKey(requestedSort, visibleSortColumns) ? requestedSort : 'name';
   const sortDirection = getSortDirection(params.dir, sortKey);
   const requestedPage = Number.parseInt(params.page ?? '1', 10);
   const accountWhere: Prisma.WholesaleAccountWhereInput = {
@@ -491,11 +462,13 @@ export default async function WholesalePage({
               organizationId,
               wholesaleAccountId: { in: accountIds },
             },
-            orderBy: [{ priority: 'desc' }],
+            orderBy: [{ rating: { sort: 'desc', nulls: 'last' } }],
             select: {
               wholesaleAccountId: true,
-              priorityBand: true,
-              priority: true,
+              rating: true,
+              assessmentStatus: true,
+              refreshRequestedAt: true,
+              calculatedAt: true,
               action: true,
               evidenceMode: true,
             },
@@ -529,9 +502,11 @@ export default async function WholesalePage({
       name: account.name,
       nameHref: `/wholesale/${account.id}`,
       nextAction: opportunity?.action ?? null,
-      opportunityPriority: opportunity?.priorityBand ?? null,
-      opportunityScore: opportunity?.priority ?? null,
-      evidenceMode: opportunity?.evidenceMode.replaceAll('_', ' ').toLowerCase(),
+      commercialRating: opportunity?.rating ?? null,
+      assessmentStatus: opportunity?.assessmentStatus,
+      pending: Boolean(opportunity?.refreshRequestedAt),
+      stale: Boolean(opportunity && Date.now() - opportunity.calculatedAt.getTime() > 48 * 3_600_000),
+      evidenceMode: opportunity ? evidenceModeLabel[opportunity.evidenceMode as EvidenceMode] : undefined,
       phone: account.phone,
       directionsHref: getDirectionsHref(locationText),
       locationText: locationText || null,
@@ -550,14 +525,14 @@ export default async function WholesalePage({
       <header className="page-heading page-header">
         <div>
           <span className="page-eyebrow">Accounts</span>
-          <h1>Wholesale Accounts</h1>
+          <h1>Restaurant Accounts</h1>
           <p className="muted">Current Ohio accounts from the OHLQ Account Master, plus manually created accounts.</p>
         </div>
       </header>
       <AccountViewNavigation active="wholesale" />
       {!q ? <NearbyAccountsSection type="wholesale" /> : null}
 
-      <LiveFilterForm className="filter-form narrow-filter" label="Filter wholesale accounts">
+      <LiveFilterForm className="filter-form narrow-filter" label="Filter restaurant accounts">
         <input name="q" defaultValue={q} placeholder="Filter name, licensee ID, menu placement, phone" />
         <input name="page" type="hidden" value="1" />
         <label>Sort by</label>
@@ -574,14 +549,14 @@ export default async function WholesalePage({
           <option value="desc">Descending</option>
         </select>
       </LiveFilterForm>
-      {params.status === 'saved' ? <p className="pill">Wholesale account saved.</p> : null}
+      {params.status === 'saved' ? <p className="pill">Restaurant account saved.</p> : null}
       {params.status === 'invalid' ? <p className="pill">An account name and valid state are required.</p> : null}
       {params.status === 'duplicate-licensee' ? (
-        <p className="pill">Those Licensee IDs are already split across multiple wholesale accounts.</p>
+        <p className="pill">Those Licensee IDs are already split across multiple restaurant accounts.</p>
       ) : null}
 
       <details className="card compact-details admin-panel">
-        <summary>Create wholesale account</summary>
+        <summary>Create restaurant account</summary>
         <ActionForm action={createWholesale} className="wholesale-create-form">
           <fieldset className="wholesale-create-section">
             <legend>Account</legend>
@@ -590,7 +565,7 @@ export default async function WholesalePage({
               <label>Phone (optional)<input name="phone" type="tel" autoComplete="tel" /></label>
             </div>
           </fieldset>
-          <WholesaleAddressFields />
+          <WholesaleAddressFields allowedStates={organization.enabledStates} />
           <fieldset className="wholesale-create-section">
             <legend>Additional details (optional)</legend>
             <div className="wholesale-create-grid wholesale-create-extras">
@@ -613,7 +588,7 @@ export default async function WholesalePage({
               </div>
             </fieldset>
           ) : null}
-          <SubmitButton type="submit">Save wholesale account</SubmitButton>
+          <SubmitButton type="submit">Save restaurant account</SubmitButton>
         </ActionForm>
       </details>
 
@@ -653,19 +628,16 @@ export default async function WholesalePage({
                     {row.locationText ? <AddressLink address={row.locationText} /> : (row.licenseeIdsText ? `Licensee ${row.licenseeIdsText}` : 'Location unavailable')}
                   </span>
                   <span className="account-directory-mobile-only account-directory-context">
-                    {row.opportunityPriority ? <span className={`priority priority-${row.opportunityPriority.toLowerCase()}`}>{row.opportunityPriority}</span> : null}
+                    {hasWholesaleOpportunities ? <CommercialOpportunityStars rating={row.commercialRating} status={row.assessmentStatus} pending={row.pending} stale={row.stale} /> : null}
                     <span>{row.nextAction ?? (row.mostRecentVisit ? `Last visit ${formatEasternDate(row.mostRecentVisit)}` : 'Not visited yet')}</span>
                   </span>
                 </td>
                 <td className="account-directory-secondary-cell" data-label="Licensee IDs">{row.licenseeIdsText}</td>
                 <td className="account-directory-secondary-cell" data-label="Address"><AddressLink address={row.locationText}>{row.address}</AddressLink></td>
                 <td className="account-directory-secondary-cell" data-label="City">{row.city}</td>
-                <td className="account-directory-secondary-cell" data-label="Agency ID">{row.agencyId}</td>
+                <td className="account-directory-secondary-cell" data-label="Retail ID">{row.agencyId}</td>
                 <td className="account-directory-secondary-cell" data-label="Most Recent Visit">{formatEasternDate(row.mostRecentVisit)}</td>
-                {hasWholesaleOpportunities ? <><td className="account-directory-secondary-cell" data-label="Opportunity Priority">
-                  {row.opportunityPriority ? <span className={`priority priority-${row.opportunityPriority.toLowerCase()}`}>{row.opportunityPriority}</span> : <span className="muted">None active</span>}
-                </td>
-                <td className="account-directory-secondary-cell" data-label="Account priority">{formatMetric(row.opportunityScore)}{row.evidenceMode ? <small className="muted"> {row.evidenceMode}</small> : null}</td>
+                {hasWholesaleOpportunities ? <><td className="account-directory-secondary-cell" data-label="Commercial opportunity"><CommercialOpportunityStars rating={row.commercialRating} status={row.assessmentStatus} pending={row.pending} stale={row.stale} />{row.evidenceMode ? <small className="muted"> {row.evidenceMode}</small> : null}</td>
                 <td className="account-directory-secondary-cell" data-label="Next Action">{row.nextAction ?? '—'}</td>
                 </> : null}
                 <td className="account-directory-actions-cell" data-label="Actions">
@@ -708,7 +680,7 @@ export default async function WholesalePage({
         </div>
       ) : null}
       {q && sortedRows.length === 0 ? (
-        <p className="muted activity-empty">No active or official wholesale accounts match that search.</p>
+        <p className="muted activity-empty">No active or official restaurant accounts match that search.</p>
       ) : null}
     </>
   );

@@ -5,14 +5,18 @@ import { APP_COMPANY, APP_DESCRIPTION, APP_NAME } from '../lib/appBrand';
 import { isAdminRole, isTasterRole } from '../lib/userAccess';
 import { getOrganizationContext, getOrganizationFeatures } from '../lib/organizations';
 import Link from 'next/link';
-import { AppBreadcrumbs, AppSidebarNavigation, MobileTabbar } from './components/AppNavigation';
+import { AppBreadcrumbs, AppSidebarNavigation, FloatingVisitAction, MobileTabbar } from './components/AppNavigation';
 import { GlobalSearchForm } from './components/GlobalSearchForm';
 import { ActionNotice } from './components/ActionNotice';
 import './styles.css';
+import './crm/crm.css';
 import './redesign.css';
 import './theme.css';
 import { AppearanceSync } from './components/AppearanceSync';
 import { UsageTracker } from './components/UsageTracker';
+import { SupportTrailTracker } from './components/SupportTrailTracker';
+import { SupportUpdates } from './components/SupportUpdates';
+import './support/support.css';
 import { getAppEnvironment, getEnvironmentLabel } from '../lib/appEnvironment';
 
 export const metadata: Metadata = {
@@ -57,6 +61,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={appEnvironment !== 'production' ? 'has-environment-banner' : undefined} style={tenantTheme}>
         {user ? <AppearanceSync darkMode={user.darkMode} /> : null}
         {user ? <UsageTracker userId={user.id} /> : null}
+        {user ? <SupportTrailTracker scope={`${user.id}:${organizationContext?.organizationId ?? ''}`} /> : null}
         {appEnvironment !== 'production' ? (
           <div className="environment-banner" role="status">
             {APP_NAME} — {getEnvironmentLabel().toUpperCase()} ENVIRONMENT
@@ -76,7 +81,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <span className="sr-only">Signed in as</span>
                 <strong>{getUserDisplayName(user)}</strong>
                 <span className="pill">{isPlatformAdmin ? 'Platform Admin' : user.role === 'ADMIN' ? 'Admin' : isTaster ? 'Taster' : 'User'}</span>
-                <Link className="user-card-profile" href="/profile">Profile &amp; preferences</Link>
+                <nav className="user-card-links" aria-label="Account and support">
+                  <Link className="user-card-profile" href="/profile">Profile &amp; preferences</Link>
+                  <Link className="user-card-profile" href="/support">Support</Link>
+                </nav>
                 <form action="/api/auth/logout" method="post">
                   <button className="secondary" type="submit">
                     Sign out
@@ -88,11 +96,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               {organizationContext?.isSupportView ? <div className="support-view-banner"><strong>Viewing Neat as {organizationContext.organization.displayName}</strong><form action="/platform/support-view/exit" method="post"><button className="secondary" type="submit">Exit Support View</button></form></div> : null}
               <AppBreadcrumbs isTaster={isTaster} />
               <ActionNotice />
+              <SupportUpdates userId={user.id} />
               {children}
             </main>
-            <Link className="fab" href="/visits/new" aria-label="Log Visit">
-              <span aria-hidden="true">＋</span> Log visit
-            </Link>
+            <FloatingVisitAction />
             <MobileTabbar enabledFeatures={enabledFeatures} isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} isTaster={isTaster} />
           </>
         ) : (

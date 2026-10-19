@@ -143,15 +143,15 @@ export function calculateRetailFit(signals: AgencyProductSignals) {
   }
   if (signals.previousPlacement) {
     score += 8;
-    reasons.push('Previously placed at this agency');
+    reasons.push('Previously placed at this retail');
   }
   if (signals.peerAgencyCount >= rules.minimumPeerAgencies && signals.peerCarryPercent !== null) {
     if (signals.peerCarryPercent >= rules.strongPeerCarryPercent) {
       score += 15;
-      reasons.push(`${Math.round(signals.peerCarryPercent)}% of comparable agencies carry this item`);
+      reasons.push(`${Math.round(signals.peerCarryPercent)}% of comparable retail accounts carry this item`);
     } else if (signals.peerCarryPercent >= rules.moderatePeerCarryPercent) {
       score += 8;
-      reasons.push(`${Math.round(signals.peerCarryPercent)}% of comparable agencies carry this item`);
+      reasons.push(`${Math.round(signals.peerCarryPercent)}% of comparable retail accounts carry this item`);
     }
   }
   if (
@@ -161,7 +161,7 @@ export function calculateRetailFit(signals: AgencyProductSignals) {
     signals.retailSales30 < signals.peerAverageSales30 * 0.5
   ) {
     score += 8;
-    reasons.push(`Comparable agencies average ${signals.peerAverageSales30.toFixed(1)} bottles in 30 days`);
+    reasons.push(`Comparable retail accounts average ${signals.peerAverageSales30.toFixed(1)} bottles in 30 days`);
   }
   if (signals.d8Eligible) {
     score += 5;
@@ -288,7 +288,7 @@ export function analyzeAgencyProduct(signals: AgencyProductSignals): AgencyProdu
   }
   if (inventoryState === 'MISSING_PLACEMENT') stateReasons.push('High fit with no current placement');
   if (inventoryState === 'DEAD_INVENTORY') stateReasons.push(`${onHand} on hand with no recent sell-through`);
-  if (tastingOpportunity) stateReasons.push('Inventory is available and no recent Agency visit is recorded');
+  if (tastingOpportunity) stateReasons.push('Inventory is available and no recent Retail visit is recorded');
 
   return {
     daysOfSupply,
@@ -323,12 +323,12 @@ export function analyzeWholesaleInfluence(signals: WholesaleInfluenceSignals): W
     signals.openWholesaleOpportunityCount >= rules.mediumOpenOpportunityCount ||
     signals.activeWholesaleCount >= 3;
   const reasons = [
-    `${signals.activeWholesaleCount} active linked wholesale account${signals.activeWholesaleCount === 1 ? '' : 's'}`,
-    `${signals.echoBuyerCount} current Echo wholesale buyer${signals.echoBuyerCount === 1 ? '' : 's'}`,
+    `${signals.activeWholesaleCount} active linked restaurant account${signals.activeWholesaleCount === 1 ? '' : 's'}`,
+    `${signals.echoBuyerCount} current Echo restaurant buyer${signals.echoBuyerCount === 1 ? '' : 's'}`,
   ];
-  if (signals.echoBottles30 > 0) reasons.push(`${signals.echoBottles30} wholesale Echo bottles in 30 days`);
-  if (signals.openWholesaleOpportunityCount > 0) reasons.push(`${signals.openWholesaleOpportunityCount} open wholesale opportunities`);
-  if (signals.lapsedWholesaleCount > 0) reasons.push(`${signals.lapsedWholesaleCount} lapsed wholesale buyers`);
+  if (signals.echoBottles30 > 0) reasons.push(`${signals.echoBottles30} restaurant Echo bottles in 30 days`);
+  if (signals.openWholesaleOpportunityCount > 0) reasons.push(`${signals.openWholesaleOpportunityCount} open restaurant opportunities`);
+  if (signals.lapsedWholesaleCount > 0) reasons.push(`${signals.lapsedWholesaleCount} lapsed restaurant buyers`);
 
   return { ...signals, band: high ? 'HIGH' : medium ? 'MEDIUM' : 'LOW', reasons: reasons.slice(0, 4) };
 }

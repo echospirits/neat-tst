@@ -1,0 +1,13 @@
+{
+  "correction": "abc-florida-2026-10-11-retail-correction",
+  "mode": "apply",
+  "health": {
+    "ok": true,
+    "database": "connected",
+    "databaseTarget": "neon-neat-tst",
+    "environment": "test"
+  },
+  "startedAt": "2026-10-11T11:29:48.421Z",
+  "result": "already-corrected-preserved",
+  "completedAt": "2026-10-11T11:29:51.342Z"
+}

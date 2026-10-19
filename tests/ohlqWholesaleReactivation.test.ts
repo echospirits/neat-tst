@@ -9,6 +9,7 @@ import {
   getWholesaleReactivationWindows,
   planWholesaleReactivationWorklistSync,
   splitReactivationPurchasedAgainDetail,
+  syncOhlqWholesaleReactivationWorklist,
   type ReactivationWorklistSnapshot,
   type WholesaleReactivationCandidate,
   type WholesaleReactivationPurchaseRow,
@@ -54,6 +55,30 @@ const worklistItem = (overrides: Partial<ReactivationWorklistSnapshot>): Reactiv
   updatedAt: new Date('2026-05-01T00:00:00.000Z'),
   wholesaleAccountId: 'wholesale-1',
   ...overrides,
+});
+
+describe('commercial boundary for automatic reactivation', () => {
+  it('skips zero, unrated and held prospects while retaining existing service tasks', async () => {
+    const states = [{id:'zero',rating:0},{id:'unrated',rating:null},{id:'positive',rating:3},{id:'held',rating:5},{id:'service',rating:0}];
+    const accounts = states.map((a,i) => ({...a,name:a.id,licenseeId:String(80000+i),licenseeIds:[],ohlqLastEchoPurchaseDate:new Date('2026-04-01'),ohlqLastEchoPurchaseBottles:2,ohlqLastEchoPurchaseItemCode:'0100A',ohlqLastEchoPurchaseItemName:'Echo Vodka'}));
+    const created:any[] = [], updated:any[] = [];
+    const db:any = {
+      wholesaleAccount: { findMany:async({where}:any)=>where.id ? accounts.filter(a=>where.id.in.includes(a.id)) : where.ohlqLastEchoPurchaseDate.lt ? accounts : [] },
+      worklistItem: {
+        findMany:async({where}:any)=>{assert.equal(where.organizationId,'tenant');return[{...worklistItem({id:'existing-service',wholesaleAccountId:'service'}),detail:'Existing service obligation'}];},
+        create:async({data}:any)=>{created.push(data);return data;},update:async({where,data}:any)=>{updated.push({where,data});return data;},
+      },
+      wholesaleAccountAssessment: { findMany:async({where}:any)=>{
+        assert.equal(where.organizationId,'tenant');assert.equal(where.rating.gte,1);assert.equal(where.assessmentStatus,'READY');assert.equal(where.refreshRequestedAt,null);assert.equal(where.dismissedKey,null);
+        return states.filter(a=>a.rating!==null && a.rating>=where.rating.gte).map(a=>({wholesaleAccountId:a.id,wholesaleAccount:{isActive:true,tags:[]}}));
+      } },
+      organizationAccountOverlay: { findMany:async({where}:any)=>{assert.equal(where.organizationId,'tenant');return[{externalAccountId:'held'}];} },
+      salesOpportunity: { findMany:async({where}:any)=>{assert.equal(where.organizationId,'tenant');assert.ok(where.OR.some((p:any)=>p.status==='DISMISSED'));return[];} },
+    };
+    const result=await syncOhlqWholesaleReactivationWorklist({db,organizationId:'tenant',runAt});
+    assert.deepEqual(created.map(c=>c.wholesaleAccountId),['positive']);assert.equal(result.skippedCommercialOrPursuitState,3);
+    assert.equal(result.updatedItems,1);assert.equal(updated[0].where.id,'existing-service');assert.equal(updated[0].data.status,undefined,'existing service status is preserved');
+  });
 });
 
 describe('getWholesaleReactivationWindows', () => {

@@ -3,7 +3,9 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
+import { parseEnabledStates } from '../lib/stateOptions';
 import { OrganizationAuditAction, OrganizationStatus } from '@prisma/client';
+import { FEATURE_KEYS, getEnvironmentFeatureKeys, getPackageFeatureKeys, validateFeatureSelection } from '../lib/featureRegistry';
 
 const lockedFields = ['appName', 'digestName', 'productLabel', 'productPluralLabel', 'brandPrimaryColor', 'brandAccentColor', 'contactName', 'contactEmail', 'contactPhone', 'supportEmail', 'locale', 'weekStartsOn'];
 
@@ -24,6 +26,7 @@ function submittedData() {
   for (const field of lockedFields) form.set(field, 'unwanted-override');
   form.set('settings', '{"locale":"unwanted-override","weekStartsOn":1}');
   for (const [field, value] of Object.entries({ organizationId: 'org-1', name: 'Company', displayName: 'Display', accountStatus: 'TRIAL', active: 'on', timezone: 'America/New_York', website: 'https://example.com', adminFirstName: 'First', adminLastName: 'Admin', adminEmail: 'ADMIN@EXAMPLE.COM' })) form.set(field, value);
+  form.append('enabledStates', 'OH');
   return form;
 }
 
@@ -45,6 +48,28 @@ test('platform edits ignore forged customer-facing fields and preserve existing 
   for (const field of [...lockedFields, 'settings']) assert.deepEqual(updated[field], original[field], field);
 });
 
+test('the actual platform plan action persists an explicit pilot choice independently from Core and Intelligence', async () => {
+  for (const pilot of [false, true]) {
+    const writes: any[] = [];
+    let audit: any;
+    let authorized = false;
+    const action = loadAction('app/platform/organizations/[id]/page.tsx', 'saveFeatures', 'async function saveStates(', {
+      requirePlatformAdmin: async () => { authorized = true; return { id: 'platform' }; },
+      FEATURE_KEYS, getEnvironmentFeatureKeys, getPackageFeatureKeys,
+      assertFeatureDependencies: (keys: string[]) => { assert.deepEqual(validateFeatureSelection(keys).missing, []); return keys; },
+      prisma: { organizationFeature: { upsert: async (write: any) => { assert.equal(authorized, true); writes.push(write); } }, $transaction: async (calls: Promise<unknown>[]) => Promise.all(calls) },
+      writeOrganizationAudit: async (_actor: string, id: string, _action: unknown, metadata: any) => { assert.equal(id, 'org-1'); audit = metadata; },
+      OrganizationAuditAction, revalidatePath: () => {}, redirect: (url: string) => { throw Error(`redirect:${url}`); },
+    });
+    const form = submittedData();
+    if (pilot) form.set('communicationsPilot', 'on');
+    await assert.rejects(action(form), /feature-package-saved/);
+    assert.equal(writes.find(row => row.create.featureKey === 'COMMUNICATIONS').update.enabled, pilot);
+    assert.equal(writes.find(row => row.create.featureKey === 'CORE_CRM').update.enabled, true);
+    assert.equal(audit.communicationsPilot, pilot);
+  }
+});
+
 test('provisioning ignores forged configuration and derives contacts from the initial admin', async () => {
   let created: Record<string, unknown> = {};
   const noOp = async () => {};
@@ -55,7 +80,7 @@ test('provisioning ignores forged configuration and derives contacts from the in
   };
   const action = loadAction('app/platform/organizations/new/page.tsx', 'provisionOrganization', 'export default async function NewOrganizationPage(', {
     requirePlatformAdmin: async () => ({ id: 'platform-admin' }), OrganizationAuditAction, UserRole: { ADMIN: 'ADMIN' },
-    normalizeOrganizationIdentifierList: () => [], isValidA3aStoreId: () => true,
+    parseEnabledStates, normalizeOrganizationIdentifierList: () => [], isValidA3aStoreId: () => true,
     getPackageFeatureKeys: () => [], getEnvironmentFeatureKeys: (keys: unknown) => keys, assertFeatureDependencies: (keys: unknown) => keys,
     prisma: { user: { findUnique: async () => null }, $transaction: async (callback: (db: typeof tx) => unknown) => callback(tx) },
     createProvisioningRun: async () => ({ id: 'run-1' }), runProvisioning: noOp,

@@ -23,7 +23,7 @@ export function AgencyHoursResearchQueue({ agencies, researchAvailable }: {
   const router = useRouter();
 
   if (agencies.length === 0) {
-    return <div className="card empty-state"><h3>No Agencies need hours research</h3><p>Every Agency currently has known operating hours. Manually entered hours remain available to edit on the Agency account.</p></div>;
+    return <div className="card empty-state"><h3>No Retail accounts need hours research</h3><p>Every Retail currently has known operating hours. Manually entered hours remain available to edit on the Retail account.</p></div>;
   }
 
   return <div className="card research-job-list agency-hours-research-queue">
@@ -32,7 +32,7 @@ export function AgencyHoursResearchQueue({ agencies, researchAvailable }: {
       return <div key={agency.id}>
         <span>
           <strong><Link href={`/agencies/${agency.id}#account-hours`}>{agency.name}</Link></strong>
-          <small>Agency #{agency.agencyId} · {[agency.city, agency.state, agency.zip].filter(Boolean).join(', ') || 'Address incomplete'}</small>
+          <small>Retail #{agency.agencyId} · {[agency.city, agency.state, agency.zip].filter(Boolean).join(', ') || 'Address incomplete'}</small>
           <small>{hasCompleteAddress ? 'Operating hours not recorded' : 'Needs a street address, city, and state before research'}</small>
         </span>
         <span>

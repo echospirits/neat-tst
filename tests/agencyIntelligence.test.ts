@@ -133,7 +133,7 @@ describe('Agency retail fit, peers, and tasting', () => {
     const strong = calculateRetailFit(base());
     const weak = calculateRetailFit(base({ retailSales30: 0, historicalRetailSales: 0, previousPlacement: false, peerCarryPercent: 0, peerAverageSales30: 0 }));
     assert.ok(strong.fitScore > weak.fitScore);
-    assert.ok(strong.reasons.some((reason) => reason.includes('comparable agencies')));
+    assert.ok(strong.reasons.some((reason) => reason.includes('comparable retail accounts')));
   });
 
   test('peer comparison excludes the current agency from averages', () => {
@@ -176,7 +176,7 @@ test('wholesale influence uses linked buyers, volume, lapses, and open opportuni
     openWholesaleOpportunityCount: 3,
   });
   assert.equal(result.band, 'HIGH');
-  assert.ok(result.reasons.some((reason) => reason.includes('open wholesale opportunities')));
+  assert.ok(result.reasons.some((reason) => reason.includes('open restaurant opportunities')));
 });
 
 describe('daily Agency intelligence safety and idempotency', () => {

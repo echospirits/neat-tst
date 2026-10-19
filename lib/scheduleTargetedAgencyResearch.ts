@@ -7,7 +7,7 @@ export function scheduleTargetedAgencyResearch({ agencyId, organizationId }: { a
       await refreshTargetedAgencyResearch({ agencyId, organizationId });
     } catch (error) {
       // A failed refresh must not undo a committed targeting action; the import workflow retries it.
-      console.error('Targeted agency intelligence refresh failed', { agencyId, organizationId, error });
+      console.error('Targeted retail intelligence refresh failed', { agencyId, organizationId, error });
     }
   });
 }

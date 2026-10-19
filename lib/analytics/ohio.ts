@@ -32,7 +32,7 @@ export const ohioAdapter: MarketAdapter = {
     const start = [f.start, previous?.start ?? f.start, shiftDay(f.end, -(analyticsRules.lapseDays - 1))].sort()[0];
     const codes = products.map(p => p.code);
     const channels: Channel[] = f.channel === 'all' ? ['retail', 'wholesale'] : [f.channel];
-    const coverage = await Promise.all(channels.map(async channel => ({ market: 'OH', channel, unit: 'bottles', source: channel === 'retail' ? 'OHLQ daily Agency retail sales' : 'OHLQ daily wholesale sales by permit', days: codes.length ? await retainedDays(db, channel, start, f.end) : [] })));
+    const coverage = await Promise.all(channels.map(async channel => ({ market: 'OH', channel, unit: 'bottles', source: channel === 'retail' ? 'OHLQ daily retail sales' : 'OHLQ daily wholesale sales by permit', days: codes.length ? await retainedDays(db, channel, start, f.end) : [] })));
     const retailDays = coverage.find(c => c.channel === 'retail')?.days ?? [];
     const wholesaleDays = coverage.find(c => c.channel === 'wholesale')?.days ?? [];
     const activityStart = [f.start, shiftDay(f.end, -(analyticsRules.recentVisitDays - 1))].sort()[0];
@@ -76,7 +76,7 @@ export const ohioAdapter: MarketAdapter = {
       if (!accountKeys.has(key)) { accountKeys.add(key); data.accounts.push({ key, name, channel, market: 'OH', city: null, href: `/search?q=${encodeURIComponent(search)}`, matched: false }); }
       return key;
     }
-    for (const r of retail) data.sales.push({ account: agencyMap.has(r.agencyId) ? `OH:retail:${agencyMap.get(r.agencyId)!.id}` : unresolved(`OH:retail:unmatched:${r.agencyId}`, `Agency ${r.agencyId} (unlinked)`, 'retail', r.agencyId), product: `OH:${r.brand}`, date: day(r.reportDate), channel: 'retail', market: 'OH', quantity: r._sum.retailBottlesSold ?? 0 });
+    for (const r of retail) data.sales.push({ account: agencyMap.has(r.agencyId) ? `OH:retail:${agencyMap.get(r.agencyId)!.id}` : unresolved(`OH:retail:unmatched:${r.agencyId}`, `Retail ${r.agencyId} (unlinked)`, 'retail', r.agencyId), product: `OH:${r.brand}`, date: day(r.reportDate), channel: 'retail', market: 'OH', quantity: r._sum.retailBottlesSold ?? 0 });
     for (const r of wholesale) data.sales.push({ account: permitMap.has(r.permitNumber) ? `OH:wholesale:${permitMap.get(r.permitNumber)}` : unresolved(`OH:wholesale:unmatched:${r.permitNumber}`, `Permit ${r.permitNumber} (unresolved)`, 'wholesale', r.permitNumber), product: `OH:${r.brand}`, date: day(r.reportDate), channel: 'wholesale', market: 'OH', quantity: r._sum.wholesaleBottlesSold ?? 0 });
     const keyFor = (r: { wholesaleAccountId?: string | null; agencyId?: string | null }) => r.wholesaleAccountId ? `OH:wholesale:${r.wholesaleAccountId}` : r.agencyId ? `OH:retail:${r.agencyId}` : '';
     const dateFor = (d: Date) => formatDateInputValue(d, 'America/New_York');

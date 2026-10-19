@@ -33,7 +33,7 @@ async function main() {
     const accountEvents = await tx.accountSalesEvent.findMany({ where: { organizationId: 'org_echo_spirits', wholesaleAccountId: { in: accounts.map(a => a.id) } } });
     const grouped = new Map<string, number>();
     accountEvents.forEach(e => grouped.set(e.itemCode, (grouped.get(e.itemCode) ?? 0) + e.bottles));
-    console.log(JSON.stringify({ organizations: organizations.map(o => ({ id: o.id, name: o.displayName })), accounts, latest, accountLatest, sales: sales.map(s => ({ bottles: s.wholesaleBottlesSold, permit: s.permitNumber, ...compact(s.brand) })), observedPurchases: [...grouped].map(([c,bottles]) => ({ ...compact(c), bottles })).sort((a,b) => b.bottles-a.bottles), localItems: items.filter(i => /buckeye vodka|capital city|echo spirits/i.test(i.name) || i.itemCode === '9755L').map(i => compact(i.itemCode)), ledger, outcomes }, null, 2));
+    console.log(JSON.stringify({ historicalScoreNote: 'Account opportunity productionScore values are preserved historical pursuit scores, not current commercial ratings. Use current assessments or --score for commercial stars.', organizations: organizations.map(o => ({ id: o.id, name: o.displayName })), accounts, latest, accountLatest, sales: sales.map(s => ({ bottles: s.wholesaleBottlesSold, permit: s.permitNumber, ...compact(s.brand) })), observedPurchases: [...grouped].map(([c,bottles]) => ({ ...compact(c), bottles })).sort((a,b) => b.bottles-a.bottles), localItems: items.filter(i => /buckeye vodka|capital city|echo spirits/i.test(i.name) || i.itemCode === '9755L').map(i => compact(i.itemCode)), ledger, outcomes }, null, 2));
   }, { timeout: 60000 });
 }
 main().catch(e => { console.error(e.message); process.exitCode = 1; }).finally(() => db.$disconnect());

@@ -2,6 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { EASTERN_TIME_ZONE, getZonedDateTimeParts } from './dateTime';
+import { getOhlqReportStorageDirectories } from './ohlqReportStorage';
 import {
   chromium as playwrightChromium,
   type Browser,
@@ -13,7 +14,6 @@ import {
   type Page,
 } from 'playwright-core';
 
-const APP_ROOT = process.cwd();
 const POWER_BI_APP_ID = '1b854c43-d373-43ea-9f76-edefa2dd227f';
 const POWER_BI_TENANT_ID = '50f8fcc4-94d8-4f07-84eb-36ed57c7c8a2';
 
@@ -908,13 +908,7 @@ function createDownloadRuntime(options: OhlqAnnualSalesDownloadOptions): OhlqDow
   const logger = options.logger ?? console;
   const reportDate = options.reportDate ? getOhlqAnnualSalesReportDate(options.reportDate) : getReportDate();
   const runDateIso = todayIsoEastern();
-  const downloadDir = path.resolve(
-    options.downloadDir ??
-      (options.returnBuffer ? path.join(os.tmpdir(), 'ohlq-downloads') : path.join(APP_ROOT, 'output', 'ohlq-downloads')),
-  );
-  const debugDir = path.resolve(
-    options.debugDir ?? (process.env.VERCEL ? path.join(os.tmpdir(), 'ohlq-playwright') : path.join(APP_ROOT, 'output', 'playwright')),
-  );
+  const { downloadDir, debugDir } = getOhlqReportStorageDirectories(options);
   fs.mkdirSync(downloadDir, { recursive: true });
 
   return {

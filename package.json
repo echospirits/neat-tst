@@ -1,6 +1,6 @@
 {
   "name": "ohlq-field-crm-mvp",
-  "version": "0.14.0",
+  "version": "0.2.3",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -54,7 +54,7 @@
     "@sparticuz/chromium": "^148.0.0",
     "@vercel/blob": "^2.3.3",
     "jszip": "^3.10.1",
-    "next": "^16.2.4",
+    "next": "16.3.8",
     "papaparse": "5.4.1",
     "pdf-lib": "^1.17.1",
     "playwright-core": "^1.60.0",
@@ -62,6 +62,7 @@
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "resend": "^6.12.3",
+    "twilio": "6.1.2",
     "workflow": "^4.8.8",
     "zod": "3.23.8"
   },
@@ -71,7 +72,19 @@
     "@types/react-dom": "18.3.0",
     "exceljs": "^4.4.0",
     "playwright": "^1.60.0",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.4.5"
+  },
+  "overrides": {
+    "devalue": "5.9.3",
+    "@workflow/core": {
+      "nanoid": "5.1.16"
+    },
+    "@prisma/config": {
+      "deepmerge-ts": "8.0.0"
+    },
+    "exceljs": {
+      "uuid": "11.1.1"
+    }
   }
 }

@@ -125,19 +125,22 @@ const getBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
 
   const home = { href: '/', label: 'Home' };
   const routeMap: Array<{ prefix: string; crumbs: BreadcrumbItem[] }> = [
+    { prefix: '/support/new', crumbs: [{ href: '/support', label: 'Support' }, { href: pathname, label: 'New support ticket' }] },
+    { prefix: '/support/', crumbs: [{ href: '/support', label: 'Support' }, { href: pathname, label: 'Ticket' }] },
+    { prefix: '/support', crumbs: [{ href: '/support', label: 'Support' }] },
     { prefix: '/analytics', crumbs: [{ href: '/analytics', label: 'Analytics' }] },
     { prefix: '/visits/new', crumbs: [{ href: '/visits/new', label: 'Log Visit' }] },
     { prefix: '/visits/confirmed', crumbs: [{ href: '/visits', label: 'Visits' }, { href: pathname, label: 'Confirmed' }] },
     { prefix: '/visits', crumbs: [{ href: '/visits', label: 'Visit History' }] },
     { prefix: '/alerts', crumbs: [{ href: '/alerts', label: 'Worklist' }] },
-    { prefix: '/opportunities', crumbs: [{ href: '/opportunities', label: 'Wholesale Opportunities' }] },
-    { prefix: '/agency-focus', crumbs: [{ href: '/agency-focus', label: 'Agency Intelligence' }] },
+    { prefix: '/opportunities', crumbs: [{ href: '/opportunities', label: 'Restaurant Opportunities' }] },
+    { prefix: '/agency-focus', crumbs: [{ href: '/agency-focus', label: 'Retail Intelligence' }] },
     { prefix: '/my-week', crumbs: [{ href: '/alerts', label: 'My Work' }, { href: '/?view=week', label: 'My Schedule' }] },
-    { prefix: '/agencies/', crumbs: [{ href: '/search', label: 'Accounts' }, { href: '/agencies', label: 'Agencies' }, { href: pathname, label: 'Agency' }] },
-    { prefix: '/agencies', crumbs: [{ href: '/search', label: 'Accounts' }, { href: '/agencies', label: 'Agencies' }] },
+    { prefix: '/agencies/', crumbs: [{ href: '/search', label: 'Accounts' }, { href: '/agencies', label: 'Retail' }, { href: pathname, label: 'Retail' }] },
+    { prefix: '/agencies', crumbs: [{ href: '/search', label: 'Accounts' }, { href: '/agencies', label: 'Retail' }] },
     { prefix: '/wholesale-orders', crumbs: [{ href: '/search', label: 'Accounts' }, { href: '/wholesale-orders', label: 'Wholesale Orders' }] },
-    { prefix: '/wholesale/', crumbs: [{ href: '/search', label: 'Accounts' }, { href: '/wholesale', label: 'Wholesale' }, { href: pathname, label: 'Account' }] },
-    { prefix: '/wholesale', crumbs: [{ href: '/search', label: 'Accounts' }, { href: '/wholesale', label: 'Wholesale' }] },
+    { prefix: '/wholesale/', crumbs: [{ href: '/search', label: 'Accounts' }, { href: '/wholesale', label: 'Restaurants' }, { href: pathname, label: 'Account' }] },
+    { prefix: '/wholesale', crumbs: [{ href: '/search', label: 'Accounts' }, { href: '/wholesale', label: 'Restaurants' }] },
     { prefix: '/tags', crumbs: [{ href: '/search', label: 'Accounts' }, { href: '/tags', label: 'Tags' }] },
     { prefix: '/search', crumbs: [{ href: '/search', label: 'Accounts' }] },
     { prefix: '/accounts', crumbs: [{ href: '/search', label: 'Accounts' }] },
@@ -183,6 +186,7 @@ export function MobileTabbar({ enabledFeatures, isAdmin, isPlatformAdmin, isTast
   if (isTaster) return <nav className="mobile-tabbar mobile-tabbar-taster" aria-label="Quick field actions">
     <NavLink item={{ href: '/visits/new', key: 'visits', label: 'Log Visit', section: 'work' }} pathname={pathname} />
     <NavLink item={{ href: '/profile', key: 'profile', label: 'Profile', section: 'utility' }} pathname={pathname} />
+    <NavLink item={{ href: '/support', key: 'support', label: 'Support', section: 'utility' }} pathname={pathname} />
   </nav>;
 
   return (
@@ -201,4 +205,10 @@ export function MobileTabbar({ enabledFeatures, isAdmin, isPlatformAdmin, isTast
       </details>
     </nav>
   );
+}
+
+export function FloatingVisitAction() {
+  const pathname = usePathname();
+  if (pathname === '/support' || pathname.startsWith('/support/')) return null;
+  return <Link className="fab" href="/visits/new" aria-label="Log Visit"><span aria-hidden="true">＋</span> Log visit</Link>;
 }

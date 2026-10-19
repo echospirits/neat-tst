@@ -254,12 +254,12 @@ export function estimateResearchCostMicros({ inputTokens, outputTokens, webSearc
   ));
 }
 
-export function chooseResearchTier(opportunities: Array<{ status: string; productionScore: number }>) {
+export function chooseResearchTier(opportunities: Array<{ status: string; rating?: number | null }>) {
   const pursued = opportunities.some((item) => item.status === 'ACTIONED');
-  const highestScore = Math.max(0, ...opportunities.map((item) => item.productionScore));
+  const highestRating = Math.max(-1, ...opportunities.map((item) => item.rating ?? -1));
   if (pursued) return { tier: 'DEEP' as const, reason: 'Opportunity in progress; complete commercial refresh.' };
-  if (highestScore >= 70) return { tier: 'DEEP' as const, reason: `High provisional opportunity score (${Math.round(highestScore)}).` };
-  return { tier: 'LIGHTWEIGHT' as const, reason: `Initial identity and public-fit pass for score ${Math.round(highestScore)}.` };
+  if (highestRating >= 3) return { tier: 'DEEP' as const, reason: 'Solid or stronger commercial opportunity; refresh supporting evidence.' };
+  return { tier: 'LIGHTWEIGHT' as const, reason: 'Initial identity and commercial-evidence pass.' };
 }
 
 export function buildAccountResearchPrompt(input: AccountResearchInputSnapshot, tier: 'LIGHTWEIGHT' | 'DEEP') {

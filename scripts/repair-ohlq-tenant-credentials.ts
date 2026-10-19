@@ -2,6 +2,7 @@ import { assertSideEffectEnabled, validateRuntimeEnvironment } from '../lib/appE
 import { loadLocalEnvironmentFile } from '../lib/environmentFile';
 import { requireEnv } from '../lib/ohlqAnnualSalesReport';
 import { saveOrganizationOhlqCredentials } from '../lib/ohlqTenantCredentials';
+import { assertOrganizationId } from '../lib/organizationId';
 import { prisma } from '../lib/prisma';
 
 const arg = (name: string) => {
@@ -16,6 +17,7 @@ async function main() {
   const organizationId = arg('--organization');
   if (!['test', 'production'].includes(environment)) throw new Error('Pass --environment test or --environment production.');
   if (!organizationId) throw new Error('Pass the exact organization ID with --organization.');
+  assertOrganizationId(organizationId);
   if (!process.argv.includes('--apply')) throw new Error('Pass --apply to confirm this credential repair.');
 
   const runtime = validateRuntimeEnvironment();

@@ -1,6 +1,7 @@
 'use server';
+import { captureVisitGuide } from '../../lib/crm/visitGuides';
 
-import { AccountSalesStatusSource, AccountType, OpportunityEventType, PhotoType, SalesAccountType, UserRole, WorklistCategory, WorklistSource, WorklistStatus } from '@prisma/client';
+import { AccountActivityType, AccountSalesStatusSource, AccountType, OpportunityEventType, PhotoType, SalesAccountType, UserRole, WorklistCategory, WorklistSource, WorklistStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { normalizeUsState, stateScopedLicenseeIds } from '../../lib/usStates';
 import { redirect, unstable_rethrow } from 'next/navigation';
@@ -11,9 +12,10 @@ import {
   validateVisitPhotoFile,
   verifyClientUploadedVisitPhoto,
 } from '../../lib/blob';
+import { randomUUID } from 'node:crypto';
+import { activityLabels } from '../../lib/crm/activity';
 import { prisma } from '../../lib/prisma';
 import { hasFeature, requireOrganizationContext } from '../../lib/organizations';
-import { getGeocodeResetForAddressChange } from '../../lib/location/geocode';
 import { getWholesaleAddressProtectionForEdit } from '../../lib/wholesaleAddressProtection';
 import { parseTimeInputToMinutes } from '../../lib/dateTime';
 import { syncWorklistItemCalendar } from '../../lib/calendar/worklistSync';
@@ -33,12 +35,10 @@ import {
 import {
   getWholesaleLicenseeIdCreateData,
   getWholesaleLicenseeIdLookupWhere,
-  getWholesaleLicenseeIdValues,
   normalizeWholesaleLicenseeId,
-  syncWholesaleAccountLicenseeIds,
 } from '../../lib/wholesaleAccounts';
 
-const photoTypes: PhotoType[] = [PhotoType.DISPLAY, PhotoType.MENU, PhotoType.OTHER];
+const photoTypes: PhotoType[] = Object.values(PhotoType);
 
 type FormOrigin = 'visits' | 'worklist';
 
@@ -196,9 +196,14 @@ export async function createVisit(formData: FormData) {
 
 async function createVisitWithDiagnostics(formData: FormData, diagnostics: VisitDiagnostics) {
   const user = await requireUser({ allowTaster: true });
-  const { organizationId } = await requireOrganizationContext(user);
+  const { organizationId, organization } = await requireOrganizationContext(user);
   diagnostics.mark('validation', { userId: user.id, organizationId });
   const isTaster = user.role === UserRole.TASTER;
+  const interactionType = String(formData.get('interactionType') ?? 'PHYSICAL_VISIT');
+  const physicalVisit = interactionType === 'PHYSICAL_VISIT';
+  const privateInteraction = !physicalVisit && formData.get('visibility') === 'PRIVATE';
+  if (privateInteraction && (user.role === UserRole.PLATFORM_ADMIN || user.organizationId !== organizationId)) throw new Error('Private conversation logging requires your own organization.');
+  if (!physicalVisit && (isTaster || !['PHONE_CALL', 'EMAIL', 'SMS', 'VIRTUAL_MEETING', 'INTERNAL_NOTE'].includes(interactionType))) throw new Error('Choose a supported interaction type.');
   const actorName = getUserDisplayName(user);
   const formOrigin = isTaster ? 'visits' : getFormOrigin(formData);
   const worklistItemId = isTaster ? null : toOptional(formData.get('worklistItemId'));
@@ -222,6 +227,7 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
   const newContactEmail = isTaster ? null : toOptional(formData.get('newContactEmail'));
   const newContactPhone = isTaster ? null : toOptional(formData.get('newContactPhone'));
   const summary = toOptional(formData.get('summary'));
+  if (!physicalVisit && (!summary || summary.length > 4000)) throw new Error('Add conversation notes (up to 4,000 characters).');
   const requestedSalesStatus = isTaster ? null : parseSalesStatus(formData.get('salesStatus'));
   const requestedTargeting = !isTaster && formData.get('targetAccount') === 'true';
   if (requestedSalesStatus && !(await hasFeature(organizationId, 'ACCOUNT_SALES_STATUS'))) {
@@ -252,8 +258,19 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
   const selectedVoiceFollowUps = isTaster ? [] : getSelectedVoiceFollowUps(formData);
   const selectedTagIds = isTaster ? [] : getSelectedTagIds(formData);
   const collectedPhotos = collectPhotos(formData, formOrigin, locationType);
+  if (!physicalVisit && collectedPhotos.length) throw new Error('Photo proof belongs to an in-person visit.');
   const photoUploadSessionId = toOptional(formData.get('photoUploadSessionId'));
 
+  const activitySourceKey = `manual:${user.id}:${submissionKey ?? randomUUID()}`;
+  const returnToInteraction = (account: { agencyId: string | null; wholesaleAccountId: string | null }): never => {
+    const requested = toOptional(formData.get('returnTo'));
+    const href = requested?.startsWith('/') && !requested.startsWith('//') && !requested.includes('\\') ? requested : formOrigin === 'worklist' ? '/alerts' : account.agencyId ? `/agencies/${account.agencyId}` : `/wholesale/${account.wholesaleAccountId}`;
+    redirect(`${href.split('#')[0]}${href.includes('?') ? '&' : '?'}interaction=saved#activity`);
+  };
+  if (!physicalVisit && submissionKey) {
+    const existing = await prisma.accountActivity.findUnique({ where: { organizationId_sourceKey: { organizationId, sourceKey: activitySourceKey } } });
+    if (existing) returnToInteraction(existing);
+  }
   if (submissionKey) {
     const existingVisit = await prisma.loggedVisit.findUnique({
       where: { organizationId_submissionKey: { organizationId, submissionKey } },
@@ -345,35 +362,33 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
 
   diagnostics.mark('transaction', { locationType });
   const visit = await prisma.$transaction(async (tx) => {
+    if (submissionKey) {
+      // Serialize retries before creating a contact, account, interaction or follow-up.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`${organizationId}:${user.id}:${submissionKey}`}, 0))`;
+      const replay = physicalVisit
+        ? await tx.loggedVisit.findUnique({ where: { organizationId_submissionKey: { organizationId, submissionKey } } })
+        : await tx.accountActivity.findUnique({ where: { organizationId_sourceKey: { organizationId, sourceKey: activitySourceKey } } });
+      if (replay) {
+        if (replay.createdByUserId !== user.id) throw new Error('Submission belongs to another user.');
+        return { id: replay.id, agencyId: replay.agencyId, wholesaleAccountId: replay.wholesaleAccountId };
+      }
+    }
     let wholesaleAccountId = selectedWholesaleAccountId;
 
     if (locationType === 'wholesale' && !wholesaleAccountId && (newWholesaleLicenseeId || newWholesaleName)) {
       const state = normalizeUsState(String(formData.get('newWholesaleState') ?? 'OH'));
       if (!state) redirectVisitWithStatus(formOrigin, 'invalid-state', locationType);
+      if (!organization.enabledStates.includes(state!)) redirectVisitWithStatus(formOrigin, 'state-not-enabled', locationType);
       const licenseeId = stateScopedLicenseeIds([
-        normalizeWholesaleLicenseeId(newWholesaleLicenseeId) ?? toManualLicenseeId(newWholesaleName ?? 'Wholesale account'),
+        normalizeWholesaleLicenseeId(newWholesaleLicenseeId) ?? toManualLicenseeId(newWholesaleName ?? 'Restaurant account'),
       ], state!)[0];
-      const name = newWholesaleName ?? `Wholesale ${licenseeId}`;
-      const officialAccount = newWholesaleLicenseeId && state === 'OH'
-        ? await tx.account.findFirst({
-            where: {
-              licenseeId: { equals: licenseeId, mode: 'insensitive' },
-              type: AccountType.BAR_RESTAURANT,
-            },
-            select: { id: true },
-          })
-        : null;
+      const name = newWholesaleName ?? `Restaurant ${licenseeId}`;
       const existingAccount = newWholesaleLicenseeId
         ? await tx.wholesaleAccount.findFirst({
             where: getWholesaleLicenseeIdLookupWhere(licenseeId),
             select: {
               id: true,
-              licenseeId: true,
-              licenseeIds: { select: { licenseeId: true } },
-              address: true,
-              city: true,
               state: true,
-              zip: true,
             },
           })
         : await tx.wholesaleAccount.findFirst({
@@ -386,18 +401,24 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
             },
             select: {
               id: true,
-              licenseeId: true,
-              licenseeIds: { select: { licenseeId: true } },
-              address: true,
-              city: true,
               state: true,
-              zip: true,
             },
           });
 
       if (existingAccount && (normalizeUsState(existingAccount.state) ?? 'OH') !== state) {
         redirectVisitWithStatus(formOrigin, 'conflicting-state', locationType);
       }
+      const officialAccount = !existingAccount && newWholesaleLicenseeId && state === 'OH'
+        ? await tx.account.findFirst({
+            where: {
+              licenseeId: { equals: licenseeId, mode: 'insensitive' },
+              type: AccountType.BAR_RESTAURANT,
+            },
+            select: { id: true },
+          })
+        : null;
+      // Reuse shared identity without changing it or synchronizing licensee IDs.
+      // Canonical corrections belong in the Platform Admin edit workflow.
       const wholesaleAccount = existingAccount
         ? existingAccount
         : await tx.wholesaleAccount.create({
@@ -425,41 +446,6 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
               createdByUserId: user.id,
             },
           });
-
-      if (existingAccount) {
-        const nextAddress = {
-          address: toOptional(formData.get('newWholesaleAddress')) ?? existingAccount.address,
-          city: toOptional(formData.get('newWholesaleCity')) ?? existingAccount.city,
-          state,
-          zip: toOptional(formData.get('newWholesaleZip')) ?? existingAccount.zip,
-        };
-        await tx.wholesaleAccount.update({
-          where: { id: existingAccount.id },
-          data: {
-            isActive: true,
-            officialAccountId: officialAccount?.id ?? undefined,
-            name,
-            state,
-            agencyId: toOptional(formData.get('newWholesaleAgencyId')) ?? undefined,
-            ...getWholesaleAddressProtectionForEdit(existingAccount, nextAddress),
-            address: toOptional(formData.get('newWholesaleAddress')) ?? undefined,
-            city: toOptional(formData.get('newWholesaleCity')) ?? undefined,
-            county: toOptional(formData.get('newWholesaleCounty')) ?? undefined,
-            zip: toOptional(formData.get('newWholesaleZip')) ?? undefined,
-            phone: toOptional(formData.get('newWholesalePhone')) ?? undefined,
-            ownership: toOptional(formData.get('newWholesaleOwnership')) ?? undefined,
-            districtId: toOptional(formData.get('newWholesaleDistrictId')) ?? undefined,
-            deliveryDay: toOptional(formData.get('newWholesaleDeliveryDay')) ?? undefined,
-            ...getGeocodeResetForAddressChange(existingAccount, nextAddress),
-          },
-        });
-        if (newWholesaleLicenseeId) {
-          await syncWholesaleAccountLicenseeIds(tx, existingAccount.id, [
-            ...getWholesaleLicenseeIdValues(existingAccount),
-            licenseeId,
-          ]);
-        }
-      }
 
       wholesaleAccountId = wholesaleAccount.id;
     }
@@ -520,8 +506,16 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
       contactIds = [...contactIds, createdContact.id];
     }
 
-    const loggedVisit = await tx.loggedVisit.create({
+    const eventId = toOptional(formData.get('eventId'));
+    if (eventId) {
+      const event = await tx.eventShift.findFirst({ where: { id: eventId, organizationId, accountType: locationType === 'agency' ? 'AGENCY' : 'WHOLESALE', externalAccountId: locationType === 'agency' ? agencyId : wholesaleAccountId } });
+      if (!event || !physicalVisit) throw new Error('The event no longer matches this visit account. Reload the event before logging.');
+    }
+    const guideOrganization = physicalVisit && formData.get('guideEnabled')==='on' ? await tx.organization.findUniqueOrThrow({where:{id:organizationId},select:{crmPreferences:true}}) : null;
+    const physical = physicalVisit ? await tx.loggedVisit.create({
       data: {
+        eventShiftId: eventId,
+        guidedAnswers: captureVisitGuide(formData,guideOrganization?.crmPreferences,locationType==='agency'?'AGENCY':'WHOLESALE'),
         organizationId,
         locationType,
         agencyId: locationType === 'agency' ? agencyId : null,
@@ -543,18 +537,30 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
         followUpTimeMinutes,
         followUpAssignedToUserId: followUpAssignee?.id ?? null,
       },
-    });
+    }) : null;
+    const activity = physical ? null : await tx.accountActivity.create({ data: {
+      organizationId, createdByUserId: user.id, sourceKey: activitySourceKey,
+      agencyId: locationType === 'agency' ? agencyId : null,
+      wholesaleAccountId: locationType === 'wholesale' ? wholesaleAccountId : null,
+      contactId: contactIds[0] ?? null, contactIds,
+      activityType: interactionType as AccountActivityType,
+      summary: summary ?? activityLabels[interactionType as AccountActivityType], outcome: outcomes,
+      meaningful: interactionType !== 'INTERNAL_NOTE' && formData.get('meaningful') === 'on', visibility: privateInteraction ? 'PRIVATE' : 'TEAM', source: 'MANUAL',
+      taskId: originatingWorklistItem?.id ?? null,
+    } });
+    const loggedVisit = physical ?? { id: activity!.id, visitAt: activity!.occurredAt, agencyId: activity!.agencyId, wholesaleAccountId: activity!.wholesaleAccountId };
+    const loggedVisitId = physical?.id ?? null;
     if (requestedSalesStatus) {
       await setAccountSalesStatus({
         accountType: locationType === 'agency' ? SalesAccountType.AGENCY : SalesAccountType.WHOLESALE,
         changedAt: loggedVisit.visitAt,
         changedByUserId: user.id,
-        context: summary,
+        context: privateInteraction ? null : summary,
         db: tx,
         externalAccountId: locationType === 'agency' ? agencyId! : wholesaleAccountId!,
-        loggedVisitId: loggedVisit.id,
+        loggedVisitId,
         organizationId,
-        source: AccountSalesStatusSource.VISIT,
+        source: physicalVisit ? AccountSalesStatusSource.VISIT : AccountSalesStatusSource.USER,
         status: requestedSalesStatus,
       });
     }
@@ -566,12 +572,12 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
         db: tx,
         externalAccountId: locationType === 'agency' ? agencyId! : wholesaleAccountId!,
         isTargeting: true,
-        loggedVisitId: loggedVisit.id,
+        loggedVisitId,
         organizationId,
       });
     }
-    if (contactIds.length) await tx.loggedVisitContact.createMany({
-      data: contactIds.map((contactId) => ({ organizationId, loggedVisitId: loggedVisit.id, contactId })),
+    if (physical && contactIds.length) await tx.loggedVisitContact.createMany({
+      data: contactIds.map((contactId) => ({ organizationId, loggedVisitId: physical!.id, contactId })),
       skipDuplicates: true,
     });
 
@@ -580,7 +586,7 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
       agencyId: locationType === 'agency' ? agencyId : null,
       wholesaleAccountId: locationType === 'wholesale' ? wholesaleAccountId : null,
     };
-    const visitTaskDetail =
+    const visitTaskDetail = privateInteraction ? null :
       [
         summary ? `Summary: ${summary}` : null,
         outcomes ? `Outcomes: ${outcomes}` : null,
@@ -593,13 +599,14 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
       await tx.worklistItem.create({
         data: {
           organizationId,
-          title: nextStep ? `Follow up: ${nextStep.slice(0, 120)}` : 'Follow up on visit',
+          title: nextStep ? `Follow up: ${nextStep.slice(0, 120)}` : physicalVisit ? 'Follow up on visit' : 'Follow up on conversation',
           detail: visitTaskDetail,
           status: WorklistStatus.OPEN,
-          source: WorklistSource.VISIT_FOLLOW_UP,
+          source: physicalVisit ? WorklistSource.VISIT_FOLLOW_UP : WorklistSource.MANUAL,
+          sourceActivityId: activity?.id,
           category: taskCategory,
           ...taskLocation,
-          loggedVisitId: loggedVisit.id,
+          loggedVisitId,
           dueDate: followUpDate,
           dueTimeMinutes: followUpTimeMinutes,
           assignedTo: followUpAssigneeName,
@@ -617,7 +624,7 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
           title: voiceFollowUp.title,
           detail:
             [
-              voiceFollowUp.description,
+              privateInteraction ? null : voiceFollowUp.description,
               voiceFollowUp.dueDateLabel && !voiceFollowUp.dueDate
                 ? `Date heard from voice note: ${voiceFollowUp.dueDateLabel}`
                 : null,
@@ -626,10 +633,11 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
               .filter(Boolean)
               .join('\n\n') || null,
           status: WorklistStatus.OPEN,
-          source: WorklistSource.VISIT_FOLLOW_UP,
+          source: physicalVisit ? WorklistSource.VISIT_FOLLOW_UP : WorklistSource.MANUAL,
+          sourceActivityId: activity?.id,
           category: taskCategory,
           ...taskLocation,
-          loggedVisitId: loggedVisit.id,
+          loggedVisitId,
           dueDate: voiceFollowUp.dueDate,
           assignedTo: followUpAssigneeName,
           assignedToUserId: followUpAssignee?.id ?? user.id,
@@ -639,11 +647,11 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
       });
     }
 
-    if (worklistItemId) {
+    if (worklistItemId && physicalVisit) {
       await tx.worklistItem.update({
-        where: { id: worklistItemId },
+        where: { id: worklistItemId, organizationId },
         data: {
-          loggedVisitId: loggedVisit.id,
+          loggedVisitId,
         },
       });
     }
@@ -652,6 +660,7 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
       await tx.worklistItem.updateMany({
         where: {
           id: { in: requestedWorklistCompletionIds },
+          organizationId,
           status: { in: [WorklistStatus.OPEN, WorklistStatus.IN_PROGRESS] },
           OR: [{ assignedToUserId: user.id }, ...(worklistItemId ? [{ id: worklistItemId }] : [])],
           ...(locationType === 'agency'
@@ -664,19 +673,19 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
           completedByUserId: user.id,
           cancelledAt: null,
           cancelledByUserId: null,
-          loggedVisitId: loggedVisit.id,
+          ...(physicalVisit ? { loggedVisitId } : {}),
         },
       });
     }
 
     if (salesOpportunity) {
       await tx.opportunityEvent.create({
-        data: { organizationId, opportunityId: salesOpportunity.id, eventType: OpportunityEventType.VISIT_LOGGED, eventKey: `VISIT_LOGGED:${loggedVisit.id}`, wholesaleAccountId: salesOpportunity.wholesaleAccountId, userId: user.id, loggedVisitId: loggedVisit.id, metadata: { sourceType: toOptional(formData.get('sourceType')), productItemCode: toOptional(formData.get('productItemCode')), productName: toOptional(formData.get('productName')) }, occurredAt: new Date() },
+        data: { organizationId, opportunityId: salesOpportunity.id, eventType: physicalVisit ? OpportunityEventType.VISIT_LOGGED : OpportunityEventType.ACTIONED, eventKey: `${interactionType}:${loggedVisit.id}`, wholesaleAccountId: salesOpportunity.wholesaleAccountId, userId: user.id, loggedVisitId, metadata: { interactionType, activityId: activity?.id ?? null, sourceType: toOptional(formData.get('sourceType')), productItemCode: toOptional(formData.get('productItemCode')), productName: toOptional(formData.get('productName')) }, occurredAt: new Date() },
       });
     }
     if (agencyProductIntelligence) {
       await tx.agencyIntelligenceEvent.create({
-        data: { organizationId, agencyId: agencyProductIntelligence.agencyId, agencyProductIntelligenceId: agencyProductIntelligence.id, eventKey: `${agencyProductIntelligence.id}:VISIT_LOGGED:${loggedVisit.id}`, eventType: 'VISIT_LOGGED', inventoryState: agencyProductIntelligence.inventoryState, itemCode: agencyProductIntelligence.itemCode, opportunityState: agencyProductIntelligence.opportunityState, occurredAt: new Date(), snapshot: { actorUserId: user.id, loggedVisitId: loggedVisit.id } },
+        data: { organizationId, agencyId: agencyProductIntelligence.agencyId, agencyProductIntelligenceId: agencyProductIntelligence.id, eventKey: `${agencyProductIntelligence.id}:VISIT_LOGGED:${loggedVisit.id}`, eventType: physicalVisit ? 'VISIT_LOGGED' : 'ACTIONED', inventoryState: agencyProductIntelligence.inventoryState, itemCode: agencyProductIntelligence.itemCode, opportunityState: agencyProductIntelligence.opportunityState, occurredAt: new Date(), snapshot: { actorUserId: user.id, loggedVisitId } },
       });
     }
 
@@ -686,6 +695,14 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
   diagnostics.mark('committed', { visitId: visit.id, committed: true });
   if (requestedTargeting && locationType === 'agency' && agencyId) {
     scheduleTargetedAgencyResearch({ agencyId, organizationId });
+  }
+  if (!physicalVisit) {
+    await diagnostics.bestEffort('calendar_sync', async () => {
+      const items = await prisma.worklistItem.findMany({ where: { organizationId, OR: [{ sourceActivityId: visit.id }, { id: { in: requestedWorklistCompletionIds }, completedByUserId: user.id }, ...(worklistItemId ? [{ id: worklistItemId }] : [])] }, select: { id: true } });
+      for (const item of items) await syncWorklistItemCalendar(item.id);
+    });
+    for (const path of ['/visits', '/alerts', '/pipeline', '/my-week', '/', ...(visit.agencyId ? [`/agencies/${visit.agencyId}`] : []), ...(visit.wholesaleAccountId ? [`/wholesale/${visit.wholesaleAccountId}`] : [])]) revalidatePath(path);
+    returnToInteraction(visit);
   }
   diagnostics.mark('photos');
   if (isTaster) {
@@ -784,6 +801,7 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
   await diagnostics.bestEffort('calendar_sync', async () => {
     const calendarItems = await prisma.worklistItem.findMany({
       where: {
+        organizationId,
         OR: [
           { loggedVisitId: visit.id },
           ...(worklistItemId ? [{ id: worklistItemId }] : []),

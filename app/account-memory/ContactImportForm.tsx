@@ -100,7 +100,7 @@ export function ContactImportForm({ accountId, accountType, installUrl, returnTo
         <input accept=".vcf,text/vcard,text/x-vcard" aria-label="Upload a vCard contact" className="visually-hidden" onChange={importFile} ref={fileRef} type="file" />
         <p className="contact-shortcut-help">
           Send to Neat version {shortcutVersion} is recommended.
-          {installUrl ? <> <a href={installUrl}>Install or update the Shortcut</a>.</> : <> Ask your administrator for the installation link.</>}
+          {installUrl ? <> <a href={installUrl} target="_blank" rel="noopener noreferrer">Install or update the Shortcut<span className="sr-only"> (opens in a new tab)</span></a>.</> : <> Ask your administrator for the installation link.</>}
         </p>
       </div>
     </details>

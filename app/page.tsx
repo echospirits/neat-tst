@@ -1,3 +1,5 @@
+import { ScheduleRoute } from './my-week/ScheduleRoute';
+import { ScheduleEvents } from './events/ScheduleEvents';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -160,11 +162,11 @@ function MetricSplits({ agency, wholesale }: { agency: number; wholesale: number
   return (
     <div className="metric-splits">
       <div className="metric-split">
-        <span>Agency</span>
+        <span>Retail</span>
         <strong>{agency}</strong>
       </div>
       <div className="metric-split">
-        <span>Wholesale</span>
+        <span>Restaurants</span>
         <strong>{wholesale}</strong>
       </div>
     </div>
@@ -373,13 +375,15 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
           </Link>
           <Link className="quick-action-card" href="/search">
             <strong>Find account</strong>
-            <span>{enabledFeatures.has('WHOLESALE_OPPORTUNITIES') ? 'Agency, wholesale, or opportunity' : 'Agency or wholesale'}</span>
+            <span>{enabledFeatures.has('WHOLESALE_OPPORTUNITIES') ? 'Retail, restaurant, or opportunity' : 'Retail or restaurant'}</span>
           </Link>
         </div>
       </section>
 
+      <ScheduleRoute organizationId={organizationId} userId={user.id} date={anchorDate} />
+      <ScheduleEvents organizationId={organizationId} />
       <details className="dashboard-section dashboard-details">
-        <summary><span><strong>Explore opportunities</strong><small>Wholesale recommendations and retail signals</small></span></summary>
+        <summary><span><strong>Explore opportunities</strong><small>Restaurant recommendations and retail signals</small></span></summary>
         <div className="dashboard-details-content">
           {enabledFeatures.has('WHOLESALE_OPPORTUNITIES') ? <DashboardOpportunitySummary organizationId={organizationId} /> : null}
           {enabledFeatures.has('AGENCY_INTELLIGENCE') ? <DashboardAgencyIntelligence organizationId={organizationId} /> : null}

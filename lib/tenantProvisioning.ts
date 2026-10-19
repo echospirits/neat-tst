@@ -14,7 +14,7 @@ import {
 import { refreshAgencyIntelligence } from './agencyIntelligenceService';
 import { hasFeature, writeOrganizationAudit } from './organizations';
 import { captureWholesaleSalesEvents, evaluateOpportunityIntelligence } from './opportunityEngine';
-import { prisma } from './prisma';
+import { prisma, runWithOrganizationStateAccess } from './prisma';
 import { createUserInvitationToken, getUserInvitationUrl, sendUserInvitationEmail } from './userInvitations';
 import { discoverOrganizationProducts } from './organizationProductDiscovery';
 
@@ -133,12 +133,12 @@ async function executeStep(organizationId: string, kind: ProvisioningStepKind) {
 
   if (kind === ProvisioningStepKind.BACKFILL_SALES) {
     const reportDate = await latestCompletedReportDate(OhlqReportDataSource.ANNUAL_SALES_SUMMARY_BY_WHOLESALE);
-    if (!reportDate) return { skipped: true, message: 'No completed wholesale sales import is available yet.' };
+    if (!reportDate) return { skipped: true, message: 'No completed restaurant sales import is available yet.' };
     return captureWholesaleSalesEvents({ organizationId, reportDate });
   }
 
   if (kind === ProvisioningStepKind.BACKFILL_AGENCY_INTELLIGENCE) {
-    if (!(await hasFeature(organizationId, 'AGENCY_INTELLIGENCE'))) return { skipped: true, message: 'Agency Intelligence is not enabled.' };
+    if (!(await hasFeature(organizationId, 'AGENCY_INTELLIGENCE'))) return { skipped: true, message: 'Retail Intelligence is not enabled.' };
     const [inventoryReportDate, salesReportDate] = await Promise.all([
       latestCompletedReportDate(OhlqReportDataSource.AGENCY_INVENTORY_REPORT),
       latestCompletedReportDate(OhlqReportDataSource.ANNUAL_SALES_SUMMARY),
@@ -148,9 +148,9 @@ async function executeStep(organizationId: string, kind: ProvisioningStepKind) {
   }
 
   if (kind === ProvisioningStepKind.BACKFILL_OPPORTUNITIES) {
-    if (!(await hasFeature(organizationId, 'WHOLESALE_OPPORTUNITIES'))) return { skipped: true, message: 'Wholesale Opportunities is not enabled.' };
+    if (!(await hasFeature(organizationId, 'WHOLESALE_OPPORTUNITIES'))) return { skipped: true, message: 'Restaurant Opportunities is not enabled.' };
     const reportDate = await latestCompletedReportDate(OhlqReportDataSource.ANNUAL_SALES_SUMMARY_BY_WHOLESALE);
-    if (!reportDate) return { skipped: true, message: 'No completed wholesale sales import is available yet.' };
+    if (!reportDate) return { skipped: true, message: 'No completed restaurant sales import is available yet.' };
     return evaluateOpportunityIntelligence({ asOfDate: reportDate, organizationId });
   }
 
@@ -172,7 +172,7 @@ export async function runProvisioning(runId: string) {
     await prisma.organizationProvisioningRun.update({ where: { id: runId }, data: { currentStep: step.kind } });
     await setStep(step.id, ProvisioningStepStatus.RUNNING);
     try {
-      const result = await executeStep(run.organizationId, step.kind);
+      const result = await runWithOrganizationStateAccess(run.organizationId, () => executeStep(run.organizationId, step.kind));
       if ('waiting' in result && result.waiting) {
         await setStep(step.id, ProvisioningStepStatus.WAITING_FOR_INPUT, { output: result });
         await prisma.organizationProvisioningRun.update({ where: { id: runId }, data: { status: ProvisioningRunStatus.WAITING_FOR_INPUT } });

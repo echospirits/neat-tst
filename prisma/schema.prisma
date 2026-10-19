@@ -76,6 +76,7 @@ enum WorklistSource {
 }
 
 enum OpportunityType {
+  COMMERCIAL_FOLLOW_UP
   LAPSED_BUYER
   FIRST_ORDER_FOLLOW_UP
   CATEGORY_CONQUEST
@@ -285,6 +286,20 @@ enum OrganizationAuditAction {
 enum AccountActivityType {
   EMAIL_INITIATED
   CALL_INITIATED
+  EMAIL
+  SMS
+  PHONE_CALL
+  VIRTUAL_MEETING
+  CALENDAR_MEETING
+  INTERNAL_NOTE
+  CUSTOMER_INTERACTION
+  SAMPLE_DELIVERY
+  TASTING
+  TRAINING
+  SALES_PRESENTATION
+  MENU_PLACEMENT
+  MERCHANDISING
+  SYSTEM_EVENT
 }
 
 enum GeocodeStatus {
@@ -415,6 +430,10 @@ model UserActivityDay {
 }
 
 model User {
+  contactSuggestionReviews ContactSuggestionReview[]
+  mailboxConnections MailboxConnection[]
+  mailboxOAuthStates MailboxOAuthState[]
+
   id                          String                 @id @default(cuid())
   organizationId              String?
   email                       String                 @unique
@@ -429,6 +448,8 @@ model User {
   image                       String?
   createdAt                   DateTime               @default(now())
   updatedAt                   DateTime               @updatedAt
+  supportTickets              SupportTicket[]        @relation("SupportReporter")
+  supportMessages             SupportMessage[]
   sessions                    UserSession[]
   invitations                 UserInvitation[]
   passwordResetTokens         PasswordResetToken[]
@@ -468,12 +489,29 @@ model User {
 }
 
 model Organization {
+  contactSuggestionReviews ContactSuggestionReview[]
+  eventShifts EventShift[]
+  eventbriteConnection EventbriteConnection?
+  recipeShares RecipeShare[]
+  salesPlaybooks SalesPlaybook[]
+  playbookRuns PlaybookRun[]
+  smsConnections SmsConnection[]
+  smsConsents SmsConsent[]
+  smsConsentEvents SmsConsentEvent[]
+  smsMessages SmsMessage[]
+  crmPreferences Json @default("{}")
+  mailboxConnections MailboxConnection[]
+  mailboxOAuthStates MailboxOAuthState[]
+  dealStages         DealStage[]
+  deals              Deal[]
+
   id                      String                            @id @default(cuid())
   name                    String
   displayName             String
   slug                    String                            @unique
   active                  Boolean                           @default(true)
   primaryState            String                            @default("OH")
+  enabledStates           String[]                          @default(["OH"])
   timezone                String                            @default("America/New_York")
   website                 String?
   logoUrl                 String?
@@ -494,6 +532,7 @@ model Organization {
   notes                   String?
   createdAt               DateTime                          @default(now())
   updatedAt               DateTime                          @updatedAt
+  supportTickets          SupportTicket[]
   vendorIdentifiers       OrganizationVendorIdentifier[]
   a3aStoreIdentifiers     OrganizationA3aStoreIdentifier[]
   products                OrganizationProduct[]
@@ -676,6 +715,10 @@ model OrganizationFeature {
 }
 
 model OrganizationAccountOverlay {
+  crmDetails Json @default("{}")
+  crmDetailsVersion Int @default(0)
+  salesPlan Json @default("{}")
+  salesPlanVersion Int @default(0)
   id                    String              @id @default(cuid())
   organizationId        String
   accountType           String
@@ -1294,6 +1337,22 @@ model MenuPlacement {
 }
 
 model EventShift {
+  organizationId String?
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  accountType SalesAccountType?
+  externalAccountId String?
+  staffUserIds String[] @default([])
+  eventType String @default("TASTING")
+  attendance Int?
+  details Json @default("{}")
+  submissionKey String?
+  version Int @default(1)
+  updatedAt DateTime @updatedAt
+  visits LoggedVisit[]
+  @@unique([organizationId, id])
+  @@unique([organizationId, submissionKey])
+  @@unique([organizationId, source, externalId])
+  @@index([organizationId, startsAt])
   id             String      @id @default(cuid())
   source         EventSource @default(MANUAL)
   externalId     String?
@@ -1308,6 +1367,11 @@ model EventShift {
 }
 
 model Recipe {
+  costing Json @default("{}")
+  version Int @default(1)
+  approvedAt DateTime?
+  approvedByUserId String?
+  shares RecipeShare[]
   id                String             @id @default(cuid())
   organizationId    String
   name              String
@@ -1342,6 +1406,7 @@ model Recipe {
   suggestions       RecipeSuggestion[]
   organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  @@unique([organizationId, id])
   @@unique([organizationId, importKey])
   @@index([name])
   @@index([organizationId])
@@ -1926,6 +1991,14 @@ model LocationTag {
 }
 
 model LocationContact {
+  phoneAliases String[] @default([])
+  personKey          String?
+  emailAliases       String[] @default([])
+  preferredChannel   String?
+  decisionAuthority  String?
+  influenceLevel     String?
+  relationshipOwnerId String?
+  mergedIntoContactId String?
   id                 String               @id @default(cuid())
   organizationId     String
   name               String
@@ -1954,6 +2027,9 @@ model LocationContact {
 }
 
 model LoggedVisit {
+  guidedAnswers Json @default("{}")
+  eventShiftId String?
+  eventShift EventShift? @relation(fields: [organizationId, eventShiftId], references: [organizationId, id], onDelete: Restrict)
   id                          String                     @id @default(cuid())
   organizationId              String
   visitAt                     DateTime                   @default(now())
@@ -2014,18 +2090,45 @@ model LoggedVisitContact {
 }
 
 model AccountActivity {
+  participantNames Json @default("{}")
+  providerSeenAt DateTime?
+  deliveryStatus String?
+  contactIds         String[] @default([])
+  followUps          WorklistItem[] @relation("ActivityFollowUps")
+  source             String              @default("MANUAL")
+  sourceKey          String?
+  connectionId       String?
+  threadId           String?
+  summary            String?
+  outcome            String?
+  direction          String?
+  visibility         String              @default("TEAM")
+  meaningful         Boolean             @default(false)
+  matchStatus        String              @default("MATCHED")
+  matchConfidence    Float?
+  participants       String[]            @default([])
+  externalUrl        String?
+  taskId             String?
+  dealId             String?
+  updatedAt          DateTime            @default(now()) @updatedAt
+  connection         MailboxConnection?  @relation(fields: [organizationId, connectionId], references: [organizationId, id], onDelete: Restrict)
+  audit              ActivityAudit[]
   id                 String              @id @default(cuid())
   organizationId     String
   activityType       AccountActivityType
-  contactId          String
+  contactId          String?
   agencyId           String?
   wholesaleAccountId String?
   createdByUserId    String
   occurredAt         DateTime            @default(now())
   organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  contact            LocationContact     @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  contact            LocationContact?    @relation(fields: [contactId], references: [id], onDelete: Restrict)
   createdByUser      User                @relation("AccountActivityCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
 
+  @@unique([organizationId, sourceKey])
+  @@unique([organizationId, id])
+  @@index([organizationId, createdByUserId, visibility, occurredAt])
+  @@index([organizationId, connectionId, threadId])
   @@index([organizationId, agencyId, occurredAt])
   @@index([organizationId, wholesaleAccountId, occurredAt])
   @@index([organizationId, contactId, occurredAt])
@@ -2052,6 +2155,11 @@ model VisitPhoto {
 }
 
 model WorklistItem {
+  routeOrder Int?
+  playbookRunId String?
+  playbookRun PlaybookRun? @relation(fields: [organizationId, playbookRunId], references: [organizationId, id], onDelete: Restrict)
+  sourceActivityId             String?
+  sourceActivity               AccountActivity? @relation("ActivityFollowUps", fields: [organizationId, sourceActivityId], references: [organizationId, id], onDelete: Restrict)
   id                          String                     @id @default(cuid())
   organizationId              String
   title                       String
@@ -2456,6 +2564,9 @@ model WholesaleAccountAssessment {
   researchAt         DateTime?
   evidenceMode       String
   state              String
+  rating             Int?
+  assessmentStatus   String @default("PENDING")
+  assessmentReason   String?
   priority           Float
   priorityBand       String
   effort             String
@@ -2473,6 +2584,8 @@ model WholesaleAccountAssessment {
   @@unique([organizationId, wholesaleAccountId])
   @@index([organizationId, evidenceMode, priority])
   @@index([organizationId, state, priority])
+  @@index([organizationId, rating])
+  @@index([organizationId, assessmentStatus, rating])
 }
 
 model WholesaleAssessmentRun {
@@ -2491,6 +2604,7 @@ model WholesaleAssessmentRun {
   evaluated       Int @default(0)
   persisted       Int @default(0)
   ineligible      Int @default(0)
+  skipped         Int @default(0)
   failed          Int @default(0)
   evidenceCounts  Json
   sourceCoverage  Json
@@ -2500,6 +2614,26 @@ model WholesaleAssessmentRun {
 
   @@index([organizationId, startedAt])
   @@index([organizationId, fullSweep, status, completedAt])
+}
+
+// Immutable commercial results by run. Historical legacy scores stay in existing
+// opportunity snapshots; migration never maps them into commercial stars.
+model WholesaleAssessmentSnapshot {
+  id                 String @id
+  organizationId     String
+  wholesaleAccountId String
+  runId              String
+  modelVersion       String
+  configurationId    String
+  asOfDate           DateTime @db.Date
+  calculatedAt       DateTime
+  rating             Int?
+  assessmentStatus   String
+  assessmentReason   String?
+  assessment         Json
+
+  @@unique([runId, wholesaleAccountId])
+  @@index([organizationId, wholesaleAccountId, calculatedAt])
 }
 
 model WholesaleSalesLedgerDay {
@@ -2553,4 +2687,349 @@ model WorklistCalendarEvent {
   @@unique([provider, externalEventId])
   @@index([connectionId])
   @@index([syncStatus])
+}
+
+// Support lives outside sales Worklist and its calendar/visit side effects.
+enum SupportCategory {
+  BUG
+  DATA
+  ENHANCEMENT
+  QUESTION
+}
+
+enum SupportStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_USER
+  PLANNED
+  COMPLETE
+}
+
+enum SupportPriority {
+  NORMAL
+  URGENT
+}
+
+model SupportTicket {
+  id                     String          @id @default(cuid())
+  number                 Int             @unique @default(autoincrement())
+  requestId              String          @unique
+  organizationId         String
+  reporterId             String
+  category               SupportCategory
+  title                  String
+  description            String
+  status                 SupportStatus   @default(OPEN)
+  priority               SupportPriority @default(NORMAL)
+  anticipatedFixDate     DateTime?       @db.Date
+  diagnostics            Json            @default("{}")
+  version                Int             @default(0)
+  responseVersion        Int             @default(0)
+  reporterReadVersion    Int             @default(0)
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  organization           Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  reporter               User            @relation("SupportReporter", fields: [reporterId], references: [id], onDelete: Restrict)
+  messages               SupportMessage[]
+  screenshot             SupportScreenshot?
+
+  @@index([organizationId, status, createdAt])
+  @@index([reporterId, createdAt])
+  @@index([status, priority, createdAt])
+}
+
+model SupportMessage {
+  id                     String        @id @default(cuid())
+  requestId              String        @unique
+  ticketId               String
+  authorId               String
+  body                   String
+  isInternal             Boolean       @default(false)
+  isPlatformReply        Boolean       @default(false)
+  status                 SupportStatus?
+  anticipatedFixDate     DateTime?      @db.Date
+  createdAt              DateTime      @default(now())
+  ticket                 SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author                 User          @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId, createdAt])
+}
+
+// One small screenshot per ticket, served only after ticket authorization.
+// Separate table keeps image bytes out of queue/detail/notification queries.
+model SupportScreenshot {
+  ticketId               String        @id
+  contentType            String
+  bytes                  Bytes
+  createdAt              DateTime      @default(now())
+  ticket                 SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+// Read-only mailbox authorization is separate from existing Worklist calendar consent.
+model MailboxConnection {
+  internalDomains String[] @default([])
+  failureCount Int @default(0)
+  nextRetryAt DateTime?
+  lastRetentionAt DateTime?
+  id                    String            @id @default(cuid())
+  organizationId        String
+  userId                String
+  provider              String
+  providerAccountId     String
+  email                 String
+  accessTokenEncrypted  String?
+  refreshTokenEncrypted String?
+  tokenExpiresAt        DateTime?
+  scope                 String
+  enabled               Boolean           @default(true)
+  historyDays           Int               @default(30)
+  retentionDays         Int               @default(90)
+  excludeInternal       Boolean           @default(true)
+  cursor                Json?
+  lastSyncAt            DateTime?
+  errorCode             String?
+  leaseId               String?
+  leaseUntil            DateTime?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  organization          Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activities            AccountActivity[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, userId, provider])
+  @@index([enabled, leaseUntil])
+}
+
+model MailboxOAuthState {
+  id                String       @id @default(cuid())
+  organizationId    String
+  userId            String
+  provider          String
+  stateHash         String       @unique
+  verifierEncrypted String
+  expiresAt         DateTime
+  createdAt         DateTime     @default(now())
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+}
+
+model ActivityAudit {
+  id             String          @id @default(cuid())
+  organizationId String
+  activityId     String
+  actorUserId    String
+  action         String
+  before         Json?
+  after          Json?
+  createdAt      DateTime        @default(now())
+  activity       AccountActivity @relation(fields: [organizationId, activityId], references: [organizationId, id], onDelete: Cascade)
+
+  @@index([organizationId, activityId, createdAt])
+}
+
+// Deals are manually managed revenue opportunities; SalesOpportunity remains a detected signal.
+model DealStage {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  position       Int
+  probability    Int
+  active         Boolean      @default(true)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deals          Deal[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, name])
+  @@index([organizationId, position])
+}
+
+model Deal {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  agencyId           String?
+  wholesaleAccountId String?
+  contactId          String?
+  ownerUserId        String
+  stageId            String
+  title              String
+  status             String       @default("OPEN")
+  revenueCents       Int?
+  volume             Float?
+  probability        Int
+  expectedCloseAt    DateTime?
+  targetProducts     String[]     @default([])
+  nextAction         String?
+  competitors        String?
+  objections         String?
+  notes              String?
+  submissionKey      String
+  version            Int          @default(1)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stage              DealStage    @relation(fields: [organizationId, stageId], references: [organizationId, id], onDelete: Restrict)
+  events             DealEvent[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, submissionKey])
+  @@index([organizationId, status, stageId])
+  @@index([organizationId, agencyId])
+  @@index([organizationId, wholesaleAccountId])
+}
+
+model DealEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  dealId         String
+  actorUserId    String
+  fromStageId    String?
+  toStageId      String
+  fromStatus     String?
+  toStatus       String
+  note           String?
+  occurredAt     DateTime @default(now())
+  deal           Deal     @relation(fields: [organizationId, dealId], references: [organizationId, id], onDelete: Cascade)
+
+  @@index([organizationId, dealId, occurredAt])
+}
+
+
+model SmsConnection {
+  id String @id @default(cuid())
+  organizationId String
+  provider String @default("MOCK")
+  accountSid String? @unique
+  sender String? @unique
+  credentialsEncrypted String?
+  enabled Boolean @default(false)
+  registrationVerified Boolean @default(false)
+  createdByUserId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messages SmsMessage[]
+  @@unique([organizationId, id])
+  @@unique([organizationId, provider])
+}
+model SmsConsent {
+  id String @id @default(cuid())
+  organizationId String
+  phone String
+  status String @default("UNKNOWN")
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@unique([organizationId, phone])
+}
+model SmsConsentEvent {
+  id String @id @default(cuid())
+  organizationId String
+  phone String
+  status String
+  evidence String
+  actorUserId String?
+  eventKey String
+  occurredAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@unique([organizationId, eventKey])
+  @@index([organizationId, phone, occurredAt])
+}
+model SmsMessage {
+  id String @id @default(cuid())
+  organizationId String
+  connectionId String
+  sourceKey String
+  providerId String?
+  contactId String?
+  agencyId String?
+  wholesaleAccountId String?
+  actorUserId String
+  phone String
+  body String
+  direction String
+  status String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  connection SmsConnection @relation(fields: [organizationId, connectionId], references: [organizationId, id], onDelete: Restrict)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@unique([organizationId, sourceKey])
+  @@unique([connectionId, providerId])
+  @@index([organizationId, phone, createdAt])
+}
+
+model SalesPlaybook {
+ id String @id @default(cuid())
+ organizationId String
+ name String
+ steps Json
+ version Int @default(1)
+ active Boolean @default(true)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+ runs PlaybookRun[]
+ @@unique([organizationId, id])
+ @@unique([organizationId, name])
+}
+model PlaybookRun {
+ id String @id @default(cuid())
+ organizationId String
+ playbookId String
+ accountType SalesAccountType
+ accountId String
+ submissionKey String
+ snapshot Json
+ status String @default("ACTIVE")
+ startedByUserId String
+ startedAt DateTime @default(now())
+ endedAt DateTime?
+ organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+ playbook SalesPlaybook @relation(fields: [organizationId, playbookId], references: [organizationId, id], onDelete: Restrict)
+ tasks WorklistItem[]
+ @@unique([organizationId, id])
+ @@unique([organizationId, submissionKey])
+ @@index([organizationId, accountType, accountId, status])
+}
+
+model RecipeShare {
+ id String @id @default(cuid())
+ organizationId String
+ recipeId String
+ tokenHash String @unique
+ snapshot Json
+ expiresAt DateTime
+ revokedAt DateTime?
+ createdByUserId String
+ createdAt DateTime @default(now())
+ organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+ recipe Recipe @relation(fields: [organizationId, recipeId], references: [organizationId, id], onDelete: Cascade)
+ @@index([organizationId, recipeId])
+}
+
+model EventbriteConnection {
+ id String @id @default(cuid())
+ organizationId String @unique
+ externalOrganizationId String
+ tokenEncrypted String?
+ mock Boolean @default(false)
+ enabled Boolean @default(true)
+ lastSyncAt DateTime?
+ cursor String?
+ updatedAt DateTime @updatedAt
+ organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model ContactSuggestionReview {
+  id String @id @default(cuid())
+  organizationId String
+  userId String
+  identityKey String
+  status String
+  contactId String?
+  updatedAt DateTime @default(now()) @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([organizationId, userId, identityKey])
 }

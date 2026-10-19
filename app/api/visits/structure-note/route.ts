@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   if (session.user.role === UserRole.TASTER) {
-    return NextResponse.json({ error: 'Taster accounts can only log agency visit comments and a picture.' }, { status: 403 });
+    return NextResponse.json({ error: 'Taster accounts can only log retail visit comments and a picture.' }, { status: 403 });
   }
 
   let payload: unknown;

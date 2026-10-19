@@ -1,9 +1,9 @@
 'use server';
 
-import { OpportunityEventType, OpportunityStatus, UserRole, WorklistCategory, WorklistSource, WorklistStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
-import { getUserDisplayName, requireUser } from '../../lib/auth';
-import { syncWorklistItemCalendar } from '../../lib/calendar/worklistSync';
+import { requireUser } from '../../lib/auth';
+import { scheduleWorklistSync } from '../../lib/calendar/scheduleWorklistSync';
+import { createAccountFollowUp, FollowUpError } from '../../lib/contextualFollowUp';
 import { normalizeCRMActionContext } from '../../lib/crmActionContext';
 import { parseTimeInputToMinutes } from '../../lib/dateTime';
 import { prisma } from '../../lib/prisma';
@@ -40,74 +40,19 @@ export async function createContextualFollowUp(formData: FormData): Promise<Cont
     return { ok: false, message: 'The account, title, and request key are required.' };
   }
 
-  const [agency, wholesale, opportunity, agencyIntelligence] = await Promise.all([
-    context.agencyId ? prisma.agency.findUnique({ where: { id: context.agencyId }, select: { id: true } }) : null,
-    context.wholesaleAccountId ? prisma.wholesaleAccount.findFirst({ where: { id: context.wholesaleAccountId, mergedIntoId: null }, select: { id: true } }) : null,
-    context.opportunityId ? prisma.salesOpportunity.findFirst({ where: { id: context.opportunityId, organizationId }, select: { id: true, wholesaleAccountId: true } }) : null,
-    context.agencyProductIntelligenceId ? prisma.agencyProductIntelligence.findFirst({ where: { id: context.agencyProductIntelligenceId, organizationId }, select: { id: true, agencyId: true, inventoryState: true, itemCode: true, opportunityState: true } }) : null,
-  ]);
-  if ((context.agencyId && !agency) || (context.wholesaleAccountId && !wholesale)) return { ok: false, message: 'The selected account is no longer available.' };
-  if ((context.opportunityId && opportunity?.wholesaleAccountId !== context.wholesaleAccountId) || (context.agencyProductIntelligenceId && agencyIntelligence?.agencyId !== context.agencyId)) {
-    return { ok: false, message: 'The originating context does not match this account.' };
-  }
-
-  const requestedAssigneeId = optional(formData.get('assignedToUserId')) ?? user.id;
-  const assignee = await prisma.user.findFirst({ where: { id: requestedAssigneeId, organizationId, isActive: true, role: { notIn: [UserRole.TASTER, UserRole.PLATFORM_ADMIN] } } });
-  if (!assignee) return { ok: false, message: 'Choose an active team member.' };
-  const dueDate = dateOnly(formData.get('dueDate'));
-  const dueTimeMinutes = dueDate ? parseTimeInputToMinutes(formData.get('dueTime')) : null;
-  const note = optional(formData.get('note'));
-  const detail = [context.reason, context.productItemCode || context.productName ? `Product: ${[context.productItemCode, context.productName].filter(Boolean).join(' - ')}` : null, note].filter(Boolean).join('\n\n') || null;
-
-  const existing = await prisma.worklistItem.findUnique({ where: { organizationId_submissionKey: { organizationId, submissionKey } }, select: { id: true } });
-  if (existing) return { ok: true, message: 'Follow-up already created.' };
-
-  let item: { id: string };
+  let item;
   try {
-    item = await prisma.worklistItem.create({
-      data: {
-      organizationId,
-      title,
-      detail,
-      status: WorklistStatus.OPEN,
-      source: context.opportunityId ? WorklistSource.OPPORTUNITY_INTELLIGENCE : context.agencyProductIntelligenceId ? WorklistSource.AGENCY_INTELLIGENCE : WorklistSource.MANUAL,
-      category: context.agencyId ? WorklistCategory.AGENCY : WorklistCategory.WHOLESALE,
-      agencyId: context.agencyId,
-      wholesaleAccountId: context.wholesaleAccountId,
-      salesOpportunityId: context.opportunityId,
-      agencyProductIntelligenceId: context.agencyProductIntelligenceId,
-      submissionKey,
-      dueDate,
-      dueTimeMinutes,
-      assignedToUserId: assignee.id,
-      assignedTo: getUserDisplayName(assignee),
-      createdByUserId: user.id,
-      createdBy: getUserDisplayName(user),
-      },
-      select: { id: true },
-    });
+    item = await prisma.$transaction(db => createAccountFollowUp(db, {
+      organizationId, user, context, title, submissionKey,
+      assignedToUserId: optional(formData.get('assignedToUserId')),
+      dueDate: dateOnly(formData.get('dueDate')), dueTimeMinutes: parseTimeInputToMinutes(formData.get('dueTime')),
+      note: optional(formData.get('note')),
+    }));
   } catch (error) {
-    if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002') {
-      return { ok: true, message: 'Follow-up already created.' };
-    }
+    if (error instanceof FollowUpError) return { ok: false, message: error.message };
     throw error;
   }
-  await syncWorklistItemCalendar(item.id);
-
-  if (opportunity) {
-    const now = new Date();
-    await prisma.$transaction([
-      prisma.salesOpportunity.update({ where: { id: opportunity.id }, data: { status: OpportunityStatus.ACTIONED, actionedAt: now, assignedToUserId: assignee.id } }),
-      prisma.opportunityEvent.create({ data: { organizationId, opportunityId: opportunity.id, eventType: OpportunityEventType.WORKLIST_CREATED, eventKey: `WORKLIST_CREATED:${item.id}`, wholesaleAccountId: opportunity.wholesaleAccountId, userId: user.id, worklistItemId: item.id, metadata: { assignedToUserId: assignee.id, sourceType: context.sourceType }, occurredAt: now } }),
-    ]);
-  }
-  if (agencyIntelligence) {
-    const now = new Date();
-    await prisma.$transaction([
-      prisma.agencyProductIntelligence.update({ where: { id: agencyIntelligence.id }, data: { status: OpportunityStatus.ACTIONED } }),
-      prisma.agencyIntelligenceEvent.create({ data: { organizationId, agencyId: agencyIntelligence.agencyId, agencyProductIntelligenceId: agencyIntelligence.id, eventKey: `${agencyIntelligence.id}:WORKLIST_CREATED:${item.id}`, eventType: 'WORKLIST_CREATED', inventoryState: agencyIntelligence.inventoryState, itemCode: agencyIntelligence.itemCode, opportunityState: agencyIntelligence.opportunityState, occurredAt: now, snapshot: { actorUserId: user.id, worklistItemId: item.id } } }),
-    ]);
-  }
+  scheduleWorklistSync(item.id);
 
   for (const path of ['/alerts', '/my-week', '/', context.returnTo].filter(Boolean) as string[]) revalidatePath(path);
   if (context.agencyId) revalidatePath(`/agencies/${context.agencyId}`);

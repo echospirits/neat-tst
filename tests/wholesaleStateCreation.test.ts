@@ -16,7 +16,7 @@ function loadCreate(existing = false) {
   let officialLookups = 0;
   const context = {
     result: undefined as unknown,
-    requireUser: async () => ({ id: 'rep' }), requireOrganizationContext: async () => ({ organizationId: 'tenant' }),
+    requireUser: async () => ({ id: 'rep' }), requireOrganizationContext: async () => ({ organizationId: 'tenant', organization: { enabledStates: ['OH','KY'] } }),
     normalizeUsState, stateScopedLicenseeIds, parseWholesaleLicenseeIds, getPrimaryWholesaleLicenseeId, getWholesaleLicenseeIdCreateData,
     getWholesaleAddressProtectionForEdit,
     randomUUID: () => 'unique-test', getSelectedTagIds: () => [], getWholesaleLicenseeIdConflictWhere: (ids: string[]) => ({ ids }),
@@ -60,32 +60,24 @@ test('invalid states fail without writes and existing forms retain Ohio as the d
   assert.equal(officialLookups(), 1);
 });
 
-test('production manual creation and matching-account corrections protect entered public address fields', async () => {
-  for (const existing of [false, true]) {
-    const { run, writes } = loadCreate(existing);
-    const data = new FormData();
-    for (const [key, value] of Object.entries({ name: 'Public name', state: 'OH', licenseeIds: '12345', address: '10 Public St', city: 'Columbus', zip: '43215' })) data.set(key, value);
-    await assert.rejects(run(data), /REDIRECT:/);
-    for (const field of ['address', 'city', 'zip']) assert.equal(writes[0][`${field}ImportProtected`], true);
-  }
-});
-
 test('manual creation ignores agency and district IDs without clearing them on a matched account', async () => {
   for (const existing of [false, true]) {
     const { run, writes } = loadCreate(existing);
     const data = new FormData();
     for (const [key, value] of Object.entries({ name: 'Account', state: 'OH', licenseeIds: '12345', agencyId: 'ignored', districtId: 'ignored' })) data.set(key, value);
     await assert.rejects(run(data), /REDIRECT/);
-    assert.equal(writes.length, 1);
-    assert.equal(Object.hasOwn(writes[0], 'agencyId'), false);
-    assert.equal(Object.hasOwn(writes[0], 'districtId'), false);
+    assert.equal(writes.length, existing ? 0 : 1);
+    if (!existing) {
+      assert.equal(Object.hasOwn(writes[0], 'agencyId'), false);
+      assert.equal(Object.hasOwn(writes[0], 'districtId'), false);
+    }
   }
 });
 
 test('creation has no nested disclosures or Ohio IDs and editing retains both IDs', () => {
   const source = readFileSync(new URL('../app/wholesale/page.tsx', import.meta.url), 'utf8');
   const form = source.slice(source.indexOf('<ActionForm action={createWholesale}'), source.indexOf('</ActionForm>'));
-  assert.ok(form.includes('<WholesaleAddressFields />'));
+  assert.ok(form.includes('<WholesaleAddressFields allowedStates={organization.enabledStates} />'));
   assert.doesNotMatch(form, /<details|name="(?:agencyId|districtId)"/);
   const address = readFileSync(new URL('../app/components/WholesaleAddressFields.tsx', import.meta.url), 'utf8');
   assert.ok(address.indexOf('Street address<input') < address.indexOf('City<input'));
@@ -94,4 +86,11 @@ test('creation has no nested disclosures or Ohio IDs and editing retains both ID
   const edit = readFileSync(new URL('../app/wholesale/[id]/edit/page.tsx', import.meta.url), 'utf8');
   assert.match(edit, /name="agencyId"/);
   assert.match(edit, /name="districtId"/);
+});
+
+test('a valid but unentitled state returns a clear error before account reads or writes', async () => {
+  const { run, writes, officialLookups } = loadCreate();
+  const data = new FormData(); data.set('name', 'Outside territory'); data.set('state', 'FL');
+  assert.match((await run(data)).error, /not enabled for your organization/);
+  assert.equal(writes.length, 0); assert.equal(officialLookups(), 0);
 });

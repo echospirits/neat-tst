@@ -29,9 +29,9 @@ const statusTimeZone = EASTERN_TIME_ZONE;
 const visibleDays = 14;
 
 const DAILY_DATA_SOURCE_CONFIGS = [
-  { source: OhlqReportDataSource.ANNUAL_SALES_SUMMARY, label: 'Agency sales' },
-  { source: OhlqReportDataSource.ANNUAL_SALES_SUMMARY_BY_WHOLESALE, label: 'Wholesale sales' },
-  { source: OhlqReportDataSource.AGENCY_INVENTORY_REPORT, label: 'Agency inventory' },
+  { source: OhlqReportDataSource.ANNUAL_SALES_SUMMARY, label: 'Retail sales' },
+  { source: OhlqReportDataSource.ANNUAL_SALES_SUMMARY_BY_WHOLESALE, label: 'Restaurant sales' },
+  { source: OhlqReportDataSource.AGENCY_INVENTORY_REPORT, label: 'Retail inventory' },
   { source: OhlqReportDataSource.ACCOUNT_MASTER, label: 'Account Master' },
   { source: OhlqReportDataSource.BRAND_MASTER, label: 'Brand Master' },
 ] as const;
@@ -142,7 +142,7 @@ const brandMasterStatusMessage = (params: {
   if (params.status === 'ohlq-imported') {
     return `OHLQ data refresh finished for ${params.date ?? 'the selected sales date'}: ${
       params.annualRows ?? '0'
-    } agency sales rows, ${params.wholesaleRows ?? '0'} wholesale rows, and ${
+    } retail sales rows, ${params.wholesaleRows ?? '0'} restaurant rows, and ${
       params.inventoryRows ?? '0'
     } current inventory rows loaded.`;
   }
@@ -447,7 +447,7 @@ export default async function DataStatusPage({
             <span className={statusClassName(latestAccountMasterStatus)}>{latestAccountMasterStatus}</span>
           </div>
           <p className="metric-value">{numberFormatter.format(latestAccountMasterSuccess?.rowCount ?? 0)}</p>
-          <p className="muted metric-caption">Active wholesale accounts after last load</p>
+          <p className="muted metric-caption">Active restaurant accounts after last load</p>
           <div className="account-master-metrics" aria-label="Latest Account Master changes">
             <div>
               <strong>{numberFormatter.format(accountMasterMetrics.created)}</strong>

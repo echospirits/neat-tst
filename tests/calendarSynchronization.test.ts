@@ -10,7 +10,7 @@ import { CalendarProviderError } from '../lib/calendar/types';
 // Execute the real sync, settings and lock code with a stateful database/provider.
 // No external credentials, database connections or Google writes are used.
 function fixture() {
-  const connection: any = { id: 'conn', userId: 'user', provider: 'GOOGLE', providerAccountId: 'account', selectedCalendarId: 'cal', syncEnabled: true, requiresReconnect: false, syncToken: 'cursor', lastSyncAt: new Date('2026-09-22T10:00Z') };
+  const connection: any = { id: 'conn', userId: 'user', user: { organizationId: 'org-test' }, provider: 'GOOGLE', providerAccountId: 'account', selectedCalendarId: 'cal', syncEnabled: true, requiresReconnect: false, syncToken: 'cursor', lastSyncAt: new Date('2026-09-22T10:00Z') };
   const item: any = { id: 'task', title: 'Call buyer', detail: 'Keep these notes', source: 'MANUAL', status: 'OPEN', dueDate: new Date('2026-09-23'), dueTimeMinutes: null, assignedToUserId: 'user', updatedAt: new Date('2026-09-23T08:00Z'), agencyId: null, wholesaleAccountId: null };
   const link: any = { id: 'link', provider: 'GOOGLE', worklistItemId: 'task', connectionId: 'conn', externalEventId: 'event', calendarId: 'cal', eventEtag: 'old', eventUpdatedAt: new Date('2026-09-23T07:00Z'), syncStatus: 'SYNCED' };
   const remote: any = { id: 'event', status: 'confirmed', title: 'Google title', description: 'Google notes', startDate: '2026-09-25', startDateTime: null, updatedAt: new Date('2026-09-23T09:00Z'), etag: 'new', privateMetadata: { echoCrmManaged: 'true', worklistItemId: 'task' } };
@@ -87,7 +87,7 @@ function fixture() {
     const source = readFileSync(filename, 'utf8');
     const code = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
     const exports = {}; cache.set(path, exports);
-    const mocks: any = { '../prisma': { prisma }, './index': { getCalendarProvider: () => provider }, '../appEnvironment': { isSideEffectEnabled: () => true, logEnvironmentEvent() {} }, './types': { CalendarProviderError } };
+    const mocks: any = { '../prisma': { prisma, runWithOrganizationStateAccess: async (organizationId: string, work: () => Promise<unknown>) => { assert.equal(organizationId, 'org-test'); return work(); } }, './index': { getCalendarProvider: () => provider }, '../appEnvironment': { isSideEffectEnabled: () => true, logEnvironmentEvent() {} }, './types': { CalendarProviderError } };
     runInNewContext(code, { exports, process, Date, console: { error() {} }, require: (name: string) => {
       if (name in mocks) return mocks[name];
       if (name === './syncLock' || name === './scheduling') return load('lib/calendar/' + name.slice(2) + '.ts');

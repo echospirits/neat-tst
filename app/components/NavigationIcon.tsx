@@ -4,6 +4,7 @@ const paths: Record<string, string> = {
   accounts: 'M5 21V3h14v18M3 21h18M9 7h1m4 0h1M9 11h1m4 0h1M10 21v-6h4v6',
   visits: 'M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM7 3v4m10-4v4M3 11h18',
   more: 'M4 12h.01M12 12h.01M20 12h.01',
+  support: 'M12 3a9 9 0 0 0-9 9v5h4v-6H3m18 0h-4v6h4v-5a9 9 0 0 0-9-9m9 14v2a2 2 0 0 1-2 2h-7',
 };
 
 export function NavigationIcon({ name }: { name: string }) {
