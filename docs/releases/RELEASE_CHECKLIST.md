@@ -2,6 +2,7 @@
 
 Release version: ______  Candidate commit: ______  Production base: ______
 
+- [ ] The GitHub Actions **Validate dependency lockfile** check passes for the exact candidate on Node 22/npm 10 before promotion. A successful Vercel build or local npm 11 install does not satisfy this gate.
 - [ ] `npm test` passes.
 - [ ] `npm run typecheck` passes.
 - [ ] `npm run build` passes for the release environment.
