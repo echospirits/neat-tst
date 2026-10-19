@@ -1,0 +1,91 @@
+{
+  "date": "2026-10-19",
+  "testedApplicationCommit": "4c7dc882e867595b88c38d0b1b8920847d6d902d",
+  "unit": {
+    "tests": 873,
+    "suites": 76,
+    "passed": 873,
+    "failed": 0,
+    "skipped": 0
+  },
+  "database": {
+    "branch": "br-long-snow-av3w59h0",
+    "project": "dawn-frog-33352119",
+    "parent": "br-divine-forest-avwq2b3g",
+    "suites": [
+      "crm-rehearsal",
+      "crm-sms-rehearsal",
+      "crm-playbooks-rehearsal",
+      "crm-recipes-rehearsal",
+      "crm-events-rehearsal",
+      "crm-field-profile-rehearsal",
+      "crm-final-rehearsal",
+      "contact-suggestions-rehearsal",
+      "contact-suggestions-edge-rehearsal",
+      "communications-pilot-rehearsal"
+    ],
+    "passed": true,
+    "statePolicyAccessCases": 114,
+    "echoStates": [
+      "FL",
+      "OH"
+    ],
+    "otherStates": [
+      "OH"
+    ]
+  },
+  "browser": {
+    "engine": "Headless installed Chrome",
+    "viewports": [
+      "390x844",
+      "1440x900"
+    ],
+    "suites": [
+      "crm-browser-acceptance",
+      "crm-extensions-browser",
+      "crm-final-fields-browser",
+      "contact-suggestions-browser",
+      "communications-access-browser"
+    ],
+    "passed": true,
+    "coreFixtureAdjustment": "Disposable browser copy scopes sync button to Demo mailbox after contact-suggestion fixtures add another mailbox; application/test source unchanged.",
+    "support": {
+      "passed": true,
+      "origin": "http://localhost:3102",
+      "results": [
+        {
+          "viewport": "390x844",
+          "created": 201,
+          "correctTenantAndReporter": true,
+          "anonymousDenied": 401,
+          "overflow": false
+        },
+        {
+          "viewport": "1440x900",
+          "created": 201,
+          "correctTenantAndReporter": true,
+          "anonymousDenied": 401,
+          "overflow": false
+        }
+      ],
+      "previousStateAssertions": [
+        "empty queue",
+        "required-field validation",
+        "disabled pending button",
+        "simulated error preserves entries",
+        "screenshots-unavailable explanation"
+      ],
+      "originDiagnosis": "127.0.0.1 origin rejected by local Next localhost request URL; canonical localhost saves pass. Public TST same-origin reaches unauthenticated 401 as expected.",
+      "productionModified": false
+    }
+  },
+  "visualReview": [
+    "communications-access-mobile.png",
+    "final-desktop-analytics.png",
+    "release-023-support-mobile-saved.png"
+  ],
+  "liveProvidersActivated": false,
+  "sharedDatabaseMutations": false,
+  "temporarySharedAdminSessions": false,
+  "rehearsalBranchesExpireAt": "2026-10-22T15:00:00Z"
+}
