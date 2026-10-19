@@ -2,6 +2,10 @@
 
 Start with [implementation progress](engineering/implementation-progress.md) and [feature inventory](product/feature-inventory.md). Existing canonical release and UI standards remain authoritative.
 
+## Current release
+
+**0.2.3 is frozen.** See the [plan](releases/0.2.3-plan.md), [checklist](releases/0.2.3-checklist.md) and [validation](releases/0.2.3-validation.md).
+
 ## architecture
 
 - [System overview](architecture/system-overview.md)

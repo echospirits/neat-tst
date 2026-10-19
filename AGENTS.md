@@ -1,5 +1,11 @@
 # Repository Agent Instructions
 
+## Release freeze: 0.2.3
+
+Owner-directed freeze began 2026-10-19. Normal feature development is paused. The only active release is **0.2.3**. Do not open another development version, add features, refactor, upgrade dependencies, or include unrelated work. Limit changes to packaging, validation evidence, and explicitly approved candidate fixes. Any code/schema/dependency change requires a replacement candidate and renewed affected checks.
+
+Use [the release plan](docs/releases/0.2.3-plan.md), [checklist](docs/releases/0.2.3-checklist.md), and [migration runbook](docs/releases/0.2.3-migrations.md). Historical 0.2.0/v0.2 records are evidence. Keep a dedicated frozen release ref. Main promotion, production migration, provider activation and tagging are subsequent operator steps. Lift the freeze only on owner instruction.
+
 ## Release Rules
 
 ### Feature development

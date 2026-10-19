@@ -1,0 +1,94 @@
+{
+  "date": "2026-10-19",
+  "counts": {
+    "info": 0,
+    "low": 1,
+    "moderate": 2,
+    "high": 3,
+    "critical": 0,
+    "total": 6
+  },
+  "findings": [
+    {
+      "name": "@prisma/config",
+      "severity": "high",
+      "direct": false,
+      "fixAvailable": {
+        "name": "prisma",
+        "version": "7.10.1",
+        "isSemVerMajor": true
+      },
+      "advisories": []
+    },
+    {
+      "name": "deepmerge-ts",
+      "severity": "high",
+      "direct": false,
+      "fixAvailable": {
+        "name": "prisma",
+        "version": "7.10.1",
+        "isSemVerMajor": true
+      },
+      "advisories": [
+        {
+          "title": "DeepmergeTS has stack exhaustion when merging recursive object graphs",
+          "url": "https://github.com/advisories/GHSA-ggr8-5vv4-36mx",
+          "affectedRange": "<8.0.0"
+        }
+      ]
+    },
+    {
+      "name": "esbuild",
+      "severity": "low",
+      "direct": false,
+      "fixAvailable": true,
+      "advisories": [
+        {
+          "title": "esbuild allows arbitrary file read when running the development server on Windows",
+          "url": "https://github.com/advisories/GHSA-g7r4-m6w7-qqqr",
+          "affectedRange": ">=0.27.3 <0.28.1"
+        }
+      ]
+    },
+    {
+      "name": "exceljs",
+      "severity": "moderate",
+      "direct": true,
+      "fixAvailable": {
+        "name": "exceljs",
+        "version": "3.4.0",
+        "isSemVerMajor": true
+      },
+      "advisories": []
+    },
+    {
+      "name": "prisma",
+      "severity": "high",
+      "direct": true,
+      "fixAvailable": {
+        "name": "prisma",
+        "version": "7.10.1",
+        "isSemVerMajor": true
+      },
+      "advisories": []
+    },
+    {
+      "name": "uuid",
+      "severity": "moderate",
+      "direct": false,
+      "fixAvailable": {
+        "name": "exceljs",
+        "version": "3.4.0",
+        "isSemVerMajor": true
+      },
+      "advisories": [
+        {
+          "title": "uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided",
+          "url": "https://github.com/advisories/GHSA-w5hq-g745-h8pq",
+          "affectedRange": "<11.1.1"
+        }
+      ]
+    }
+  ],
+  "disposition": "Unresolved; production security review remains a gate. No dependency upgrade during freeze."
+}

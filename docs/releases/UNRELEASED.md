@@ -1,13 +1,13 @@
-# Unreleased — v0.2 candidates
+# Frozen release package - 0.2.3
 
-The v0.2 development cycle opened on 2026-10-08, immediately after the verified 0.14 production release. Normal development targets only neat-tst/tst. A future production release requires separate explicit authorization.
+Development is frozen by owner instruction on **2026-10-19**. All pending v0.2/0.2.3-dev work is consolidated into **0.2.3**. This is a candidate, not a completed production release.
 
-- TST development version: `0.2.3-dev` (extended CRM work; historical 0.2 artifacts retained).
-- Verified production baseline: `0.14.0`, tag `v0.14.0`, commit `574bfd0c02c4246ae2a966d86a8a1f96264b3c40`.
-- TST opening base: `1d66a79ce361f2b6a3aee8f6a9f2865927682f54`; complete tree matches production `cde62a7b3470631069bd519dfd2a1c6147bee052`.
-- Previous release: [archive](0.14.0.md), [user notes](0.14.0-user-notes.md), [validation](0.14.0-validation.md), [checklist](0.14.0-checklist.md).
-- Current cycle: [plan](0.2.0-plan.md), [pending checklist](0.2.0-checklist.md), [validation](0.2.0-validation.md).
-- Candidate: not selected. Security fixes below are included in the development package; the owner-selected numbering is intentional and historical version records are retained.
+- Frozen development source: ac54063d12ccf87275da98b69707263d5b2f599c on neat-tst/tst. Package and root lockfile metadata agree on 0.2.3.
+- Current production base: **0.14.0** at 0a73323b61f96c27ccc4bb84d1e9bf42eae98959. Use this actual main head rather than the cycle-opening baseline.
+- Active records: [plan](0.2.3-plan.md), [checklist](0.2.3-checklist.md), [validation](0.2.3-validation.md), [migrations](0.2.3-migrations.md), [user notes](0.2.3-user-notes.md), [release lock](0.2.3/release-lock.json).
+- AGENTS.md pauses unrelated development. Required fixes replace the candidate and require renewed checks.
+- Entries below preserve original status/version/evidence. Later integrated implementation supersedes the early CRM checkpoint; it does not prove live-provider acceptance. Already-delivered 0.14 hotfixes/import protection are retained, not newly pending changes. The active 0.2.3 checklist determines readiness.
+- Production/main, production schema/configuration, live providers and stable tags have not changed during preparation. Do not archive/reset this manifest until production is verified.
 
 ## Entry template
 

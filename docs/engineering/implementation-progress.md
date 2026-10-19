@@ -1,5 +1,7 @@
 # Integrated CRM implementation progress
 
+> Release update, 2026-10-19: development is frozen at **0.2.3**. The [0.2.3 checklist](../releases/0.2.3-checklist.md) governs current readiness. Historical implementation/delivery evidence below is retained.
+
 ## Current state — 2026-10-11
 
 The remaining application areas from the master brief have been implemented by extending canonical workflows. This is **0.2.3-dev for TST**, not production promotion. Historical v0.2.0/v0.2.1/v0.2.2 artifacts remain untouched. The owner correction is permanent in AGENTS.md and ADR 0012: Pipeline replaces the duplicate Deals surface; Log Visit replaces the duplicate Activities entry surface.
