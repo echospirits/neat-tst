@@ -83,11 +83,12 @@ export async function runOhlqAnnualSalesWorkflow(options: OhlqAnnualSalesWorkflo
   const startedAt = Date.now();
   const completedSources = new Set<OhlqReportDataSource>();
 
-  await Promise.all(
-    sourceOrder.map((source) => recordOhlqReportRunStarted({ reportDate: reportDates.get(source)!, source })),
-  );
-
   try {
+    const starts = await Promise.allSettled(
+      sourceOrder.map((source) => recordOhlqReportRunStarted({ reportDate: reportDates.get(source)!, source })),
+    );
+    const failedStart = starts.find((result) => result.status === 'rejected');
+    if (failedStart?.status === 'rejected') throw failedStart.reason;
     const {
       annualSalesSummary: annualSalesDownload,
       annualSalesSummaryByWholesale: wholesaleDownload,
