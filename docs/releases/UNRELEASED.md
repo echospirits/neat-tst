@@ -11,6 +11,13 @@ Development remains frozen by owner instruction. Do not start a new version or f
 - Require the exact-candidate Node 22/npm 10 dependency check before future promotions; today's check 39285632962 had failed despite the application deployment succeeding.
 - Validation and deployment evidence: [Hotfix notes](0.2.3-ohlq-lockfile-hotfix.md).
 
+## Same-version production hotfix: OHLQ connectivity and inventory status (2026-10-21)
+
+- Recover transient database failures for fixed-value report-status upserts and inventory readiness reads with bounded retries. Imports and intelligence writes are never replayed by this retry helper.
+- Preserve COMPLETED inventory status when follow-up intelligence fails; report that failure separately and continue other tenants. Sales startup failures now reach error-status handling.
+- Version remains 0.2.3. No migration, credentials, flags, dependency, or UI changes.
+- Evidence: [Hotfix notes](0.2.3-ohlq-connectivity-hotfix.md).
+
 ## Entry template
 
 ### Feature/change name

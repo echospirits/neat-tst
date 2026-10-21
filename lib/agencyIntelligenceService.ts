@@ -1,3 +1,4 @@
+import { retryDatabaseRead } from './databaseReadRetry';
 import {
   AgencyProductOpportunityState,
   OhlqReportDataSource,
@@ -176,13 +177,13 @@ export async function assertAgencyIntelligenceInputsComplete({
   organizationId,
   salesReportDate,
 }: { db: PrismaClient; inventoryReportDate: Date; organizationId: string; salesReportDate: Date }) {
-  const [statuses, inventoryStatus] = await Promise.all([db.ohlqReportImportStatus.findMany({
+  const [statuses, inventoryStatus] = await retryDatabaseRead(() => Promise.all([db.ohlqReportImportStatus.findMany({
     where: {
       dataSource: { in: [OhlqReportDataSource.ANNUAL_SALES_SUMMARY, OhlqReportDataSource.ANNUAL_SALES_SUMMARY_BY_WHOLESALE] },
       reportDate: salesReportDate,
     },
     select: { dataSource: true, status: true },
-  }), db.ohlqTenantInventoryImportStatus.findUnique({ where: { organizationId_reportDate: { organizationId, reportDate: inventoryReportDate } }, select: { status: true } })]);
+  }), db.ohlqTenantInventoryImportStatus.findUnique({ where: { organizationId_reportDate: { organizationId, reportDate: inventoryReportDate } }, select: { status: true } })]));
   const complete = statuses.length === 2 && statuses.every((row) => row.status === OhlqReportRunStatus.COMPLETED) && inventoryStatus?.status === OhlqReportRunStatus.COMPLETED;
   if (!complete) {
     throw new Error('Retail intelligence skipped because all required OHLQ inputs have not completed successfully.');

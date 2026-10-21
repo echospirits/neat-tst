@@ -1,4 +1,5 @@
 import os from 'node:os';
+import { retryDatabaseRead } from './databaseReadRetry';
 import path from 'node:path';
 import { OhlqReportDataSource, OhlqReportRunStatus, type PrismaClient } from '@prisma/client';
 import { refreshAgencyIntelligence } from './agencyIntelligenceService';
@@ -9,20 +10,28 @@ import { completeTenantInventoryRun, errorTenantInventoryRun, startTenantInvento
 import { prisma } from './prisma';
 
 type Logger = Pick<Console, 'error' | 'log'>;
+const defaultServices = {
+  credentials: getOrganizationOhlqCredentials,
+  download: downloadOhlqAgencyInventoryReport,
+  importCsv: importOhlqAgencyInventoryCsv,
+  refresh: refreshAgencyIntelligence,
+};
 
 export async function runOhlqTenantInventoryWorkflow({
   db = prisma,
   logger = console,
+  services = defaultServices,
 }: {
   db?: PrismaClient;
   logger?: Logger;
+  services?: typeof defaultServices;
 } = {}) {
   if (!process.env.OHLQ_TENANT_CREDENTIAL_ENCRYPTION_KEY?.trim()) {
     throw new Error('OHLQ_TENANT_CREDENTIAL_ENCRYPTION_KEY is required.');
   }
 
   const reportDate = getOhlqAgencyInventoryObservationDate();
-  const organizations = await db.organization.findMany({
+  const organizations = await retryDatabaseRead(() => db.organization.findMany({
     where: {
       active: true,
       ohlqCredentials: { isNot: null },
@@ -38,21 +47,23 @@ export async function runOhlqTenantInventoryWorkflow({
       features: { where: { enabled: true, featureKey: 'AGENCY_INTELLIGENCE' }, select: { id: true } },
       accountOverlays: { where: { accountType: 'AGENCY', isTargeting: true }, select: { externalAccountId: true } },
     },
-  });
-  const latestSales = await db.ohlqReportImportStatus.findFirst({
+  }));
+  const latestSales = await retryDatabaseRead(() => db.ohlqReportImportStatus.findFirst({
     where: { dataSource: OhlqReportDataSource.ANNUAL_SALES_SUMMARY, status: OhlqReportRunStatus.COMPLETED },
     orderBy: { reportDate: 'desc' },
     select: { reportDate: true },
-  });
+  }));
   const failures: string[] = [];
+  const intelligenceFailures: string[] = [];
   let importedRows = 0;
 
   for (const organization of organizations) {
-    await startTenantInventoryRun(organization.id, reportDate, db);
+    let inventoryCompleted = false;
     try {
-      const credentials = await getOrganizationOhlqCredentials(organization.id, db);
+      await startTenantInventoryRun(organization.id, reportDate, db);
+      const credentials = await retryDatabaseRead(() => services.credentials(organization.id, db));
       if (!credentials) throw new Error('Tenant OHLQ credentials are no longer configured.');
-      const download = await downloadOhlqAgencyInventoryReport({
+      const download = await services.download({
         debugDir: path.join(os.tmpdir(), 'ohlq-playwright', organization.id),
         downloadDir: path.join(os.tmpdir(), 'ohlq-downloads', organization.id),
         headless: true,
@@ -62,11 +73,12 @@ export async function runOhlqTenantInventoryWorkflow({
         useServerlessChromium: process.env.VERCEL === '1',
       });
       if (!download.csvBuffer) throw new Error('Inventory download completed without a CSV buffer.');
-      const result = await importOhlqAgencyInventoryCsv({ csv: download.csvBuffer, db, organizationId: organization.id, reportDate: download.reportDate });
+      const result = await services.importCsv({ csv: download.csvBuffer, db, organizationId: organization.id, reportDate: download.reportDate });
       importedRows += result.importedRows;
       await completeTenantInventoryRun(organization.id, download, result, db);
+      inventoryCompleted = true;
       if ((organization.features.length || organization.accountOverlays.length) && latestSales) {
-        await refreshAgencyIntelligence({
+        await services.refresh({
           db,
           inventoryReportDate: new Date(`${download.reportDate}T00:00:00.000Z`),
           organizationId: organization.id,
@@ -76,6 +88,11 @@ export async function runOhlqTenantInventoryWorkflow({
       }
       logger.log(JSON.stringify({ organizationId: organization.id, inventoryRows: result.importedRows, reportDate: download.reportDate }));
     } catch (error) {
+      if (inventoryCompleted) {
+        intelligenceFailures.push(organization.id);
+        logger.error(`Inventory imported for ${organization.id}, but retail intelligence failed: ${error instanceof Error ? error.message : error}`);
+        continue;
+      }
       failures.push(organization.id);
       await errorTenantInventoryRun(organization.id, reportDate, error, db).catch(() => undefined);
       logger.error(`Tenant inventory failed for ${organization.displayName} (${organization.id}): ${error instanceof Error ? error.message : error}`);
@@ -83,6 +100,6 @@ export async function runOhlqTenantInventoryWorkflow({
   }
 
   logger.log(`Tenant inventory processed ${organizations.length} configured organization(s).`);
-  if (failures.length) throw new Error(`Tenant inventory failed for ${failures.length} organization(s): ${failures.join(', ')}`);
+  if (failures.length || intelligenceFailures.length) throw new Error(`Tenant inventory import failures: ${failures.join(', ') || 'none'}; retail intelligence failures after successful import: ${intelligenceFailures.join(', ') || 'none'}`);
   return { configuredOrganizations: organizations.length, importedRows };
 }

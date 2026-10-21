@@ -1,3 +1,4 @@
+import { retryDatabaseStatusWrite } from './databaseStatusRetry';
 import {
   OhlqReportDataSource,
   OhlqReportRunStatus,
@@ -61,7 +62,7 @@ export async function recordOhlqReportRunStarted({
   const reportDateValue = toOhlqDateOnlyUtc(reportDate);
   const startedAt = new Date();
 
-  return db.ohlqReportImportStatus.upsert({
+  return retryDatabaseStatusWrite(() => db.ohlqReportImportStatus.upsert({
     where: {
       dataSource_reportDate: {
         dataSource: source,
@@ -87,7 +88,7 @@ export async function recordOhlqReportRunStarted({
       startedAt,
       status: OhlqReportRunStatus.RUNNING,
     },
-  });
+  }));
 }
 
 export async function recordOhlqReportRunCompleted({
@@ -104,7 +105,7 @@ export async function recordOhlqReportRunCompleted({
   const reportDateValue = toOhlqDateOnlyUtc(importResult.reportDate);
   const completedAt = new Date();
 
-  return db.ohlqReportImportStatus.upsert({
+  return retryDatabaseStatusWrite(() => db.ohlqReportImportStatus.upsert({
     where: {
       dataSource_reportDate: {
         dataSource: source,
@@ -140,7 +141,7 @@ export async function recordOhlqReportRunCompleted({
       skippedRows: importResult.skippedRows,
       status: OhlqReportRunStatus.COMPLETED,
     },
-  });
+  }));
 }
 
 export async function recordOhlqReportRunErrored({
@@ -157,7 +158,7 @@ export async function recordOhlqReportRunErrored({
   const reportDateValue = toOhlqDateOnlyUtc(reportDate);
   const completedAt = new Date();
 
-  return db.ohlqReportImportStatus.upsert({
+  return retryDatabaseStatusWrite(() => db.ohlqReportImportStatus.upsert({
     where: {
       dataSource_reportDate: {
         dataSource: source,
@@ -177,5 +178,5 @@ export async function recordOhlqReportRunErrored({
       errorMessage: trimError(error),
       status: OhlqReportRunStatus.ERRORED,
     },
-  });
+  }));
 }
