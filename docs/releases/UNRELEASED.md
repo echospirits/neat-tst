@@ -18,6 +18,15 @@ Development remains frozen by owner instruction. Do not start a new version or f
 - Version remains 0.2.3. No migration, credentials, flags, dependency, or UI changes.
 - Evidence: [Hotfix notes](0.2.3-ohlq-connectivity-hotfix.md).
 
+## TST operational repair: Echo Spirits inventory credentials (2026-10-21)
+
+- Scope: TST only, organization org_echo_spirits, database target neon-neat-tst. Version remains 0.2.3; no application, migration, flag, or production change.
+- Oct 20 run 39450882806 and Oct 21 run 39630789234 completed shared reports but OHLQ rejected the tenant inventory login. Shared reports use the GitHub Environment OPS secrets; inventory uses separately encrypted organization credentials.
+- Used the existing explicit repairTenantCredentials workflow option with deploymentEnvironment=test to refresh only this tenant from the working TST secrets. No credentials were read into local files or logs.
+- Repair step succeeded in [run 39637440812](https://github.com/echospirits/neat-tst/actions/runs/39637440812); the two-day reload is still running. Inventory authentication and full-load completion remain unverified at documentation time.
+- Earlier failures (for example Oct 18 run 39137135917) were missing lockfile entries, fixed Oct 19. A green scheduled run can mean every import step was skipped: verify individual steps before claiming recovery.
+- On future OHLQ password changes, update the appropriate tenant organization settings as well as shared-report secrets; never copy a shared login to another tenant automatically.
+
 ## Entry template
 
 ### Feature/change name
