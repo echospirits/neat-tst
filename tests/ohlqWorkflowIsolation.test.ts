@@ -38,3 +38,19 @@ test('backfills refresh intelligence only once at the latest imported date', () 
   assert.doesNotMatch(refresh, /--days/);
   assert.doesNotMatch(refresh, /continue-on-error/);
 });
+test('independent imports survive master failure without bypassing setup, repair, schedule, or cancellation guards', () => {
+  const brand = step('Download and import current OHLQ Brand Master');
+  const sales = step('Run OHLQ annual sales import');
+  assert.match(step('Validate required secrets'), /id: required_secrets/);
+  assert.match(step('Repair selected tenant OHLQ credentials'), /id: credential_repair/);
+  for (const body of [brand, sales]) {
+    assert.match(body, /!cancelled\(\)/);
+    assert.match(body, /steps.required_secrets.outcome == 'success'/);
+    assert.match(body, /steps.credential_repair.outcome != 'failure'/);
+    assert.match(body, /steps.schedule_window.outputs.should_run == 'true'/);
+    assert.doesNotMatch(body, /steps.(account_master|brand_master).outcome/);
+    assert.doesNotMatch(body, /continue-on-error/);
+  }
+  assert.match(brand, /inputs.purchaseStateOnly != true/);
+  assert.doesNotMatch(step('Download and import current OHLQ Account Master'), /continue-on-error/);
+});

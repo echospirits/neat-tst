@@ -18,6 +18,13 @@ Development remains frozen by owner instruction. Do not start a new version or f
 - Version remains 0.2.3. No migration, credentials, flags, dependency, or UI changes.
 - Evidence: [Hotfix notes](0.2.3-ohlq-connectivity-hotfix.md).
 
+## Same-version production hotfix: independent OHLQ report steps (2026-10-27)
+
+- Production runs 40500292563 and 40500295861 stopped because the newest upstream Account Master was dated October 26, not October 27. This is an upstream publication delay; retain the freshness guard and its visible failure.
+- Permit Brand Master and sales imports to run after a master-report failure, allowing inventory and post-sales processing to continue. Require successful setup/secrets validation, no failed explicit credential repair, an active schedule slot, and no cancellation. Do not hide failures with continue-on-error or import stale master data.
+- Version remains 0.2.3. Workflow-only behavior change; no application, dependency, database, or credential changes.
+- Validation: focused workflow isolation/security/privacy tests and git diff --check. Live recovery verification follows publication.
+
 ## Entry template
 
 ### Feature/change name
