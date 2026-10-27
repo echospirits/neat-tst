@@ -23,9 +23,16 @@ Development remains frozen by owner instruction. Do not start a new version or f
 - Scope: TST only, organization org_echo_spirits, database target neon-neat-tst. Version remains 0.2.3; no application, migration, flag, or production change.
 - Oct 20 run 39450882806 and Oct 21 run 39630789234 completed shared reports but OHLQ rejected the tenant inventory login. Shared reports use the GitHub Environment OPS secrets; inventory uses separately encrypted organization credentials.
 - Used the existing explicit repairTenantCredentials workflow option with deploymentEnvironment=test to refresh only this tenant from the working TST secrets. No credentials were read into local files or logs.
-- Repair step succeeded in [run 39637440812](https://github.com/echospirits/neat-tst/actions/runs/39637440812); the two-day reload is still running. Inventory authentication and full-load completion remain unverified at documentation time.
+- Repair step succeeded in [run 39637440812](https://github.com/echospirits/neat-tst/actions/runs/39637440812); all import and intelligence steps subsequently succeeded, verified on October 27. The October 26 actual load (40369058352) also completed every import successfully.
 - Earlier failures (for example Oct 18 run 39137135917) were missing lockfile entries, fixed Oct 19. A green scheduled run can mean every import step was skipped: verify individual steps before claiming recovery.
 - On future OHLQ password changes, update the appropriate tenant organization settings as well as shared-report secrets; never copy a shared login to another tenant automatically.
+
+## Same-version production hotfix: independent OHLQ report steps (2026-10-27)
+
+- Production runs 40500292563 and 40500295861 stopped because the newest upstream Account Master was dated October 26, not October 27. This is an upstream publication delay; retain the freshness guard and its visible failure.
+- Permit Brand Master and sales imports to run after a master-report failure, allowing inventory and post-sales processing to continue. Require successful setup/secrets validation, no failed explicit credential repair, an active schedule slot, and no cancellation. Do not hide failures with continue-on-error or import stale master data.
+- Version remains 0.2.3. Workflow-only behavior change; no application, dependency, database, or credential changes.
+- Validation: focused workflow isolation/security/privacy tests and git diff --check. Live recovery verification follows publication.
 
 ## Entry template
 

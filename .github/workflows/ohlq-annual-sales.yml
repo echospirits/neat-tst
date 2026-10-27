@@ -202,6 +202,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Validate required secrets
+        id: required_secrets
         if: steps.schedule_window.outputs.should_run == 'true'
         shell: bash
         run: |
@@ -222,6 +223,7 @@ jobs:
         run: echo "environment=${APP_ENV} databaseTarget=${DATABASE_TARGET_ID:-unlabeled} runId=${GITHUB_RUN_ID}"
 
       - name: Repair selected tenant OHLQ credentials
+        id: credential_repair
         if: steps.schedule_window.outputs.should_run == 'true' && github.event_name == 'workflow_dispatch' && inputs.repairTenantCredentials == true
         shell: bash
         env:
@@ -241,13 +243,13 @@ jobs:
 
       - name: Download and import current OHLQ Brand Master
         id: brand_master
-        if: steps.schedule_window.outputs.should_run == 'true' && (github.event_name == 'schedule' || inputs.purchaseStateOnly != true)
+        if: ${{ !cancelled() && steps.required_secrets.outcome == 'success' && steps.credential_repair.outcome != 'failure' && steps.schedule_window.outputs.should_run == 'true' && (github.event_name == 'schedule' || inputs.purchaseStateOnly != true) }}
         timeout-minutes: 15
         run: npm run sync:ohlq-brand-master -- --environment "$APP_ENV" --apply --defer-product-discovery
 
       - name: Run OHLQ annual sales import
         id: sales_import
-        if: steps.schedule_window.outputs.should_run == 'true'
+        if: ${{ !cancelled() && steps.required_secrets.outcome == 'success' && steps.credential_repair.outcome != 'failure' && steps.schedule_window.outputs.should_run == 'true' }}
         # Multi-day recovery needs a larger budget than the daily import.
         timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && inputs.reportDate == '' && inputs.days != '1' && 120 || 40 }}
         shell: bash
