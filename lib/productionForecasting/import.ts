@@ -3,6 +3,7 @@ import Papa from 'papaparse';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { classifications, dateOnly, includedInDemand, validDay, type Classification } from './model';
 import { prisma } from '../prisma';
+import { assertEchoOrganization } from '../echoAccess';
 import { normalizeNativeOhio, ohioItemContext, type NativeOhioOptions } from './ohio';
 import { reconcileDemandRows, scopeIdentity } from './reconciliation';
 
@@ -86,6 +87,7 @@ export function parseProductionSource(csv: string, options: ImportOptions) {
 }
 type Db = PrismaClient | Prisma.TransactionClient;
 export async function forecastAccess(db: Db, organizationId: string) {
+  assertEchoOrganization(organizationId);
   const organization = await db.organization.findFirst({ where: { id: organizationId, active: true, accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] }, features: { some: { featureKey: 'PRODUCTION_FORECASTING', enabled: true } } }, select: { id: true, enabledStates: true, settings: true, timezone: true } });
   if (!organization) throw new Error('Production Forecasting is unavailable for this organization.');
   return organization;

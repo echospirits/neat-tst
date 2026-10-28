@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { CalendarProviderName, CalendarSyncStatus, WorklistStatus, type CalendarConnection } from '@prisma/client';
 import { prisma, runWithOrganizationStateAccess } from '../prisma';
+import { ECHO_ORGANIZATION_ID, hasEchoAccess } from '../echoAccess';
 import { EASTERN_TIME_ZONE, formatDateOnlyInputValue, getZonedDateTimeParts } from '../dateTime';
 import { isSideEffectEnabled, logEnvironmentEvent } from '../appEnvironment';
 import { getCalendarProvider } from './index';
@@ -17,6 +18,14 @@ type Link = Item['calendarEvents'][number];
 const actionable = (item: Pick<Item, 'dueDate' | 'assignedToUserId' | 'status'>) => Boolean(item.dueDate && item.assignedToUserId && ACTIVE.includes(item.status));
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error)).slice(0, 1000);
 type ItemStatus = 'synced' | 'unchanged' | 'missing' | 'disabled' | 'not-connected' | 'removed' | 'error' | 'busy' | 'environment-disabled';
+
+async function canSyncCalendarUser(userId: string) {
+  const [user, organization] = await Promise.all([
+    prisma.user.findFirst({ where: { id: userId, isActive: true, organizationId: ECHO_ORGANIZATION_ID }, select: { id: true } }),
+    prisma.organization.findFirst({ where: { id: ECHO_ORGANIZATION_ID, active: true, accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] } }, select: { id: true } }),
+  ]);
+  return Boolean(user && organization);
+}
 
 async function removeEvent(link: Link) {
   if (link.externalEventId) {
@@ -48,7 +57,7 @@ async function applyGoogleChange(connection: CalendarConnection, event: External
   return prisma.$transaction(async tx => {
     const item = await tx.worklistItem.findUnique({ where: { id: link.worklistItemId } });
     const current = await tx.worklistCalendarEvent.findUnique({ where: { id: link.id } });
-    if (!item || !current || current.externalEventId !== event.id || current.connectionId !== connection.id || current.calendarId !== connection.selectedCalendarId || item.assignedToUserId !== connection.userId || !actionable(item)) return 'ignored';
+    if (!item || !hasEchoAccess(item) || !current || current.externalEventId !== event.id || current.connectionId !== connection.id || current.calendarId !== connection.selectedCalendarId || item.assignedToUserId !== connection.userId || !actionable(item)) return 'ignored';
     if (event.etag && event.etag === current.eventEtag) return 'mirrored';
     const hash = getWorklistScheduleHash(item);
     const crmChanged = Boolean(current.crmScheduleHash && current.crmScheduleHash !== hash);
@@ -88,7 +97,11 @@ async function applyGoogleChange(connection: CalendarConnection, event: External
 async function syncItemUnlocked(id: string, force: boolean, checkBudget = () => {}): Promise<{ status: ItemStatus }> {
   let item = await loadItem(id);
   if (!item) return { status: 'missing' };
+  if (!hasEchoAccess(item)) return { status: 'disabled' };
   let link = item.calendarEvents.find(event => event.provider === GOOGLE);
+  // Retain outside calendar identities without contacting or cleaning up their provider.
+  if (link?.connection && !await canSyncCalendarUser(link.connection.userId)) return { status: 'disabled' };
+  if (item.assignedToUserId && !await canSyncCalendarUser(item.assignedToUserId)) return { status: 'disabled' };
   let connection: CalendarConnection | null = null;
   try {
     if (!actionable(item)) {
@@ -180,7 +193,9 @@ export async function syncWorklistItemCalendar(id: string, { force = false } = {
   try { return await withCalendarSyncLock(() => syncItemUnlocked(id, force)); }
   catch (error) {
     if (!(error instanceof CalendarSyncBusyError)) throw error;
-    if (!await loadItem(id)) return { status: 'missing' };
+    const item = await loadItem(id);
+    if (!item) return { status: 'missing' };
+    if (!hasEchoAccess(item) || (item.assignedToUserId && !await canSyncCalendarUser(item.assignedToUserId))) return { status: 'disabled' };
     await prisma.worklistCalendarEvent.upsert({ where: { worklistItemId_provider: { worklistItemId: id, provider: GOOGLE } }, create: { worklistItemId: id, provider: GOOGLE, syncStatus: CalendarSyncStatus.PENDING }, update: {} });
     return { status: 'busy' };
   }
@@ -190,6 +205,7 @@ const emptyCounts = (reason?: string) => ({ skipped: reason ? 1 : 0, reason: rea
 async function reconcileUnlocked(connectionId: string, restoreRemoved: boolean, budgetMs: number) {
   const connection = await prisma.calendarConnection.findUnique({ where: { id: connectionId } });
   if (!connection || connection.provider !== GOOGLE) return emptyCounts('not-connected');
+  if (!await canSyncCalendarUser(connection.userId)) return emptyCounts('echo-access-required');
   if (connection.requiresReconnect) return emptyCounts('reconnect');
   if (!connection.syncEnabled) return emptyCounts('paused');
   const counts = emptyCounts();
@@ -253,7 +269,7 @@ export async function syncGoogleCalendarConnection(connectionId: string, { resto
 export async function syncAllGoogleCalendarConnections() {
   const result = { attempted: 0, succeeded: 0, failed: 0, skipped: 0, updated: 0, removed: 0, ignored: 0, retried: 0 };
   if (!isSideEffectEnabled('calendar')) return result;
-  const connections = await prisma.calendarConnection.findMany({ where: { provider: GOOGLE, syncEnabled: true, requiresReconnect: false }, select: { id: true, user: { select: { organizationId: true } } } });
+  const connections = await prisma.calendarConnection.findMany({ where: { provider: GOOGLE, syncEnabled: true, requiresReconnect: false, user: { isActive: true, organizationId: ECHO_ORGANIZATION_ID } }, select: { id: true, user: { select: { organizationId: true } } } });
   result.attempted = connections.length;
   const started = Date.now();
   for (const [index, connection] of connections.entries()) {
@@ -264,8 +280,8 @@ export async function syncAllGoogleCalendarConnections() {
       break;
     }
     try {
-      if (!connection.user.organizationId) { result.skipped++; continue; }
-      const counts = await runWithOrganizationStateAccess(connection.user.organizationId, () => syncGoogleCalendarConnection(connection.id, { budgetMs: remaining - 30_000 }));
+      if (!hasEchoAccess(connection.user)) { result.skipped++; continue; }
+      const counts = await runWithOrganizationStateAccess(ECHO_ORGANIZATION_ID, () => syncGoogleCalendarConnection(connection.id, { budgetMs: remaining - 30_000 }));
       result.updated += counts.updated; result.removed += counts.removed; result.ignored += counts.ignored; result.retried += counts.pushed;
       if (counts.skipped) result.skipped++;
       else if (counts.failed) result.failed++;
@@ -283,6 +299,7 @@ export async function syncOutstandingWorklistItemsForUser(userId: string) {
 
 export async function changeGoogleCalendarSettings(userId: string, calendarId: string, syncEnabled: boolean, disconnect = false) {
   if (!isSideEffectEnabled('calendar')) return { status: 'environment-disabled' };
+  if (!await canSyncCalendarUser(userId)) return { status: 'disabled' };
   try {
     return await withCalendarSyncLock(async () => {
       const started = Date.now();

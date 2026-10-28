@@ -1,5 +1,7 @@
 # Integration architecture
 
+October 28 Echo-only TST transition: background consumers restrict processing to Echo without deleting stored outside connections or transferring ownership. OHLQ credential use, inventory/discovery and forecast sources reject foreign targets; calendar execution rechecks current Echo membership; mail/SMS consumers require Echo in addition to existing provider/pilot gates. No live provider activation, disconnection, message send or import was performed for this change. See [background jobs](background-jobs.md) and [transition validation](../releases/echo-only-transition-validation.md).
+
 Audit baseline: TST `5faee9df930bd76b5e56b669f58a57210527f7d5`, inspected 2026-10-10.
 
 Existing Google Calendar connects a user to Worklist events; this is not Gmail ingestion. Ohio integrations import shared directories and supplier-specific sales/inventory. Mailbox integrations use separately authorized Google/Microsoft connections, normalized changes, private visibility by default and persisted cursors. SMS, Eventbrite, Google Routes and reviewed AI now have replaceable adapters with mock/fallback acceptance. Never describe adapters or fixture tests as live provider verification.

@@ -16,25 +16,25 @@ describe('tenant OHLQ credentials', () => {
     let stored: Record<string, string> | null = null;
     const db = {
       organizationOhlqCredentials: {
-        findUnique: async ({ where }: { where: { organizationId: string } }) => where.organizationId === 'org-1' ? stored : null,
+        findUnique: async ({ where }: { where: { organizationId: string } }) => where.organizationId === 'org_echo_spirits' ? stored : null,
         upsert: async ({ create }: { create: Record<string, string> }) => { stored = create; return create; },
       },
     } as unknown as PrismaClient;
 
-    await saveOrganizationOhlqCredentials({ db, organizationId: 'org-1', password: 'private-password', updatedByUserId: 'user-1', username: 'tenant@example.com' });
+    await saveOrganizationOhlqCredentials({ db, organizationId: 'org_echo_spirits', password: 'private-password', updatedByUserId: 'user-1', username: 'tenant@example.com' });
     assert.ok(stored);
     const saved = stored as Record<string, string>;
     assert.notEqual(saved.usernameEncrypted, 'tenant@example.com');
     assert.notEqual(saved.passwordEncrypted, 'private-password');
     assert.equal(saved.usernameHint, 'te***@example.com');
-    assert.deepEqual(await getOrganizationOhlqCredentials('org-1', db), { password: 'private-password', username: 'tenant@example.com' });
-    assert.equal(await getOrganizationOhlqCredentials('org-2', db), null);
+    assert.deepEqual(await getOrganizationOhlqCredentials('org_echo_spirits', db), { password: 'private-password', username: 'tenant@example.com' });
+    await assert.rejects(getOrganizationOhlqCredentials('org-2', db), /restricted to Echo/);
   });
 
   it('requires a dedicated strong encryption key', async () => {
     process.env.OHLQ_TENANT_CREDENTIAL_ENCRYPTION_KEY = 'short';
     const db = { organizationOhlqCredentials: { upsert: async () => ({}) } } as unknown as PrismaClient;
-    await assert.rejects(saveOrganizationOhlqCredentials({ db, organizationId: 'org-1', password: 'secret', updatedByUserId: 'user-1', username: 'tenant' }), /at least 32 characters/);
+    await assert.rejects(saveOrganizationOhlqCredentials({ db, organizationId: 'org_echo_spirits', password: 'secret', updatedByUserId: 'user-1', username: 'tenant' }), /at least 32 characters/);
     assert.equal(maskOhlqUsername('tenant'), 'te***');
   });
 });

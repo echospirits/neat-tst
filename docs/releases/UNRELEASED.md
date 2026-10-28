@@ -52,6 +52,14 @@ Package version remains 0.2.3. On 2026-10-27 the owner explicitly authorized Pro
 
 None.
 
+## TST transition: confine background processing to Echo (2026-10-28)
+
+- Restrict scheduled OHLQ inventory/product discovery, Production Forecasting sources/refresh, sales-status updates, restaurant assessments, research/score refresh, retail market intelligence, calendar sync, digests and communications consumers to org_echo_spirits. Reject explicit foreign worker targets before credential reads or writes. Remove the digest fallback for platform administrators without Echo membership.
+- Keep shared Account/Brand Master and raw sales ingestion, global wholesale match-evidence claims, canonical Worklist/calendar lifecycle, audit provenance, retries/leases/checkpoints and environment/feature gates. Preserve outside records and stored connections; mailbox expiry touches Echo only. Outside SMS callbacks cannot decrypt credentials or mutate messages/consent; verified Echo STOP processing remains intact.
+- Read-only TST audit: Echo alone has configured OHLQ credentials and one open research run; all organizations have zero calendar/mailbox/SMS connections. No live worker/import/send, credential repair, provider activation/disconnection, configuration mutation or schema migration was performed. Existing cron schedules remain unchanged.
+- Version remains 0.2.3. TST only; production main is unchanged. Full Echo-only production readiness is not claimed. Remaining legacy role/Support paths, old setup scripts, public-share access and retention/export decisions require subsequent review.
+- Validation: 927 passing tests, typecheck/build and live deployment health; detailed checks and delivery receipt are recorded with [increment 3](echo-only-transition-validation.md#increment-3-background-processing).
+
 ## TST transition: retire the customer platform console (2026-10-28)
 
 - Remove company creation/list/detail pages, onboarding/provisioning actions and service, initial-customer invitation controls, and Support View endpoints. Removed routes return not found; existing company/user/history rows are retained.

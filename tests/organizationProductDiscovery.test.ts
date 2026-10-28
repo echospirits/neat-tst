@@ -45,7 +45,7 @@ describe('organization product discovery', () => {
       },
     } as unknown as PrismaClient;
 
-    const result = await discoverOrganizationProducts({ db, organizationId: 'middle-west' });
+    const result = await discoverOrganizationProducts({ db, organizationId: 'org_echo_spirits' });
 
     assert.deepEqual(result.inferredVendorNames, ['MIDDLE WEST SPIRITS LLC']);
     assert.equal(result.created, 2);
@@ -69,7 +69,7 @@ describe('organization product discovery', () => {
       organizationProduct: { count: async () => 1, createMany: async () => ({ count: 0 }) },
     } as unknown as PrismaClient;
 
-    const result = await discoverOrganizationProducts({ db, organizationId: 'existing' });
+    const result = await discoverOrganizationProducts({ db, organizationId: 'org_echo_spirits' });
     assert.equal(result.created, 0);
   });
 });

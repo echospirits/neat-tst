@@ -13,10 +13,10 @@ function fixture() {
   let detailReads = 0;
   const db = {
     $transaction: async (work: (tx: unknown) => Promise<unknown>) => work(db),
-    organization: { findFirst: async () => ({ id: 'tenant', enabledStates: ['OH', 'FL'], timezone: 'America/New_York', settings: {} }) },
+    organization: { findFirst: async () => ({ id: 'org_echo_spirits', enabledStates: ['OH', 'FL'], timezone: 'America/New_York', settings: {} }) },
     organizationProduct: { findMany: async (args: { where: Record<string, unknown> }) => {
       where.push(args.where);
-      assert.equal(args.where.organizationId, 'tenant'); assert.equal(args.where.active, true); assert.equal(args.where.discontinued, false);
+      assert.equal(args.where.organizationId, 'org_echo_spirits'); assert.equal(args.where.active, true); assert.equal(args.where.discontinued, false);
       assert.deepEqual(args.where.status, { in: ['OWNED', 'REPRESENTED'] });
       return args.where.market === 'OH' ? products.filter(p => p.market === 'OH') : products;
     } },
@@ -36,23 +36,23 @@ function fixture() {
   return { db, snapshots, where, snapshotReads, detailReads: () => detailReads };
 }
 test('current forecast portfolio omits Distillery Only and delisted items while preserving A3A Bail, unknown status and other markets', async () => {
-  const f = fixture(), products = await configuredProducts(f.db, 'tenant', ['OH', 'FL']);
+  const f = fixture(), products = await configuredProducts(f.db, 'org_echo_spirits', ['OH', 'FL']);
   assert.deepEqual(products.map(p => `${p.market}:${p.code}`), ['OH:ACTIVE', 'OH:BAIL', 'OH:UNKNOWN', 'OH:SPECIAL', 'FL:DELISTED']);
   assert.ok(products.every(p => !p.demandExcluded));
 });
 test('saved excluded snapshots cannot reappear as unavailable rows or contribute to dashboard results', async () => {
-  const f = fixture(), before = JSON.stringify(f.snapshots), dashboard = await getProductionDashboard('tenant', f.db);
+  const f = fixture(), before = JSON.stringify(f.snapshots), dashboard = await getProductionDashboard('org_echo_spirits', f.db);
   assert.deepEqual(dashboard.rows.map(r => r.product.id), ['OH-ACTIVE', 'OH-BAIL', 'OH-UNKNOWN', 'OH-SPECIAL', 'FL-DELISTED']);
   assert.equal(dashboard.rows.reduce((n, r) => n + (r.point ?? 0), 0), 50);
   const selected = f.snapshotReads[0] as { where: { organizationId: string; productId: { in: string[] } } };
-  assert.equal(selected.where.organizationId, 'tenant');
+  assert.equal(selected.where.organizationId, 'org_echo_spirits');
   assert.equal(selected.where.productId.in.includes('OH-DIST'), false); assert.equal(selected.where.productId.in.includes('OH-DELISTED'), false);
   assert.equal(JSON.stringify(f.snapshots), before, 'retained historical snapshots must remain unchanged');
 });
 test('excluded direct product links return no product before reading snapshot details or history', async () => {
   for (const id of ['OH-DIST', 'OH-DELISTED']) {
     const f = fixture();
-    assert.equal(await getProductionProduct('tenant', id, f.db), null);
+    assert.equal(await getProductionProduct('org_echo_spirits', id, f.db), null);
     assert.equal(f.detailReads(), 0); assert.equal(f.snapshotReads.length, 0);
   }
 });

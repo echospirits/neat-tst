@@ -9,15 +9,17 @@ async function forecastOrganizations() {
   'use step';
   const { prisma } = await import('../prisma');
   const { isSideEffectEnabled } = await import('../appEnvironment');
+  const { ECHO_ORGANIZATION_ID } = await import('../echoAccess');
   if (!isSideEffectEnabled('cron')) return [];
-  const organizations = await prisma.organization.findMany({ where: { active: true, accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] }, features: { some: { featureKey: 'PRODUCTION_FORECASTING', enabled: true } } }, select: { id: true }, orderBy: { id: 'asc' } });
-  return organizations.map(o => o.id);
+  const organizations = await prisma.organization.findMany({ where: { id: ECHO_ORGANIZATION_ID, active: true, accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] }, features: { some: { featureKey: 'PRODUCTION_FORECASTING', enabled: true } } }, select: { id: true }, orderBy: { id: 'asc' } });
+  return organizations.filter(o => o.id === ECHO_ORGANIZATION_ID).map(o => o.id);
 }
 async function refreshTenant(organizationId: string) {
   'use step';
   const { refreshProductionForecast } = await import('./service');
   const { isSideEffectEnabled } = await import('../appEnvironment');
-  if (!isSideEffectEnabled('cron')) return false;
+  const { ECHO_ORGANIZATION_ID } = await import('../echoAccess');
+  if (!isSideEffectEnabled('cron') || organizationId !== ECHO_ORGANIZATION_ID) return false;
   try { await refreshProductionForecast(organizationId); return true; }
   catch { console.error('Production forecast refresh failed for an enrolled organization.'); return false; }
 }

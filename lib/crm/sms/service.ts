@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { prisma } from "../../prisma";
+import { ECHO_ORGANIZATION_ID } from '../../echoAccess';
 import { getAppEnvironment } from "../../appEnvironment";
 import { decryptCalendarToken } from "../../calendar/crypto";
 import { CrmError, type CrmActor, type CrmDb } from "../activity";
@@ -323,6 +324,7 @@ export async function receiveSms(
     OptOutType?: string;
   },
 ) {
+  if (connection.organizationId !== ECHO_ORGANIZATION_ID) return null;
   const phone = normalizeSmsPhone(fields.From);
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${phoneLock(connection.organizationId, phone)}, 0))`;
   // A revoked pilot must still honor signed STOP callbacks for an existing sender.

@@ -1,4 +1,5 @@
 import { retryDatabaseRead } from './databaseReadRetry';
+import { assertEchoOrganization } from './echoAccess';
 import {
   AgencyProductOpportunityState,
   OhlqReportDataSource,
@@ -198,6 +199,7 @@ export async function refreshAgencyIntelligence({
   targetedAgencyIds,
   tenantConfig: configuredTenant,
 }: RefreshOptions) {
+  assertEchoOrganization(organizationId);
   await assertAgencyIntelligenceInputsComplete({ db, inventoryReportDate, organizationId, salesReportDate });
   const tenantConfig = configuredTenant ?? await getOrganizationTenantConfig(organizationId, db);
   const salesStart = addDays(salesReportDate, -29);

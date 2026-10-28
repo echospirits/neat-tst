@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { prisma } from './prisma';
+import { ECHO_ORGANIZATION_ID } from './echoAccess';
 import {
   lockWholesaleOrderLifecycle,
   wholesaleOrderSnapshotSchema,
@@ -326,7 +327,7 @@ export async function reconcileWholesaleOrdersAfterOhlqImport({
         status: true,
         wholesaleAccountId: true,
       },
-      where: { filedAt: null },
+      where: { organizationId: ECHO_ORGANIZATION_ID, filedAt: null },
     });
     if (pendingSnapshots.length === 0) {
       return {
@@ -360,6 +361,7 @@ export async function reconcileWholesaleOrdersAfterOhlqImport({
       },
       where: {
         filedSource: 'MANUAL',
+        organizationId: ECHO_ORGANIZATION_ID,
         saleDate: {
           gte: addUtcDays(earliestPending, -WHOLESALE_ORDER_RECONCILIATION_WINDOW_DAYS),
           lte: latestPending,

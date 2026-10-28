@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma, runWithOrganizationStateAccess } from "../../../../../lib/prisma";
 import { decryptCalendarToken } from "../../../../../lib/calendar/crypto";
+import { ECHO_ORGANIZATION_ID } from '../../../../../lib/echoAccess';
 import {
   validSmsSignature,
   normalizeSmsPhone,
@@ -55,6 +56,7 @@ export async function POST(
   const connection = await prisma.smsConnection.findUnique({ where: { id } });
   if (
     !connection ||
+    connection.organizationId !== ECHO_ORGANIZATION_ID ||
     connection.provider !== "TWILIO" ||
     !connection.credentialsEncrypted
   )

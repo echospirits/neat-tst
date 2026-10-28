@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { prisma } from './prisma';
+import { ECHO_ORGANIZATION_ID, assertEchoOrganization } from './echoAccess';
 import { getOrganizationTenantConfig } from './tenantConfig';
 import { getDistilleryOnlyItemCodes } from './ohlqProductEligibility';
 import { buildDailyPurchaseEvents } from './opportunitySalesLedger';
@@ -18,7 +19,7 @@ const DAY = 86_400_000;
 const LEASE_MS = 10 * 60_000;
 const BATCH_SIZE = 100;
 class AssessmentSourceChangedError extends Error {}
-export const enabledAssessmentTenants = { active: true, accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] }, features: { some: { enabled: true, featureKey: 'WHOLESALE_OPPORTUNITIES' } } } satisfies Prisma.OrganizationWhereInput;
+export const enabledAssessmentTenants = { id: ECHO_ORGANIZATION_ID, active: true, accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] }, features: { some: { enabled: true, featureKey: 'WHOLESALE_OPPORTUNITIES' } } } satisfies Prisma.OrganizationWhereInput;
 const groupByAccount = <T extends { wholesaleAccountId: string | null }>(rows: T[]) => {
   const map = new Map<string, T[]>();
   for (const row of rows) if (row.wholesaleAccountId) { const list = map.get(row.wholesaleAccountId) ?? []; list.push(row); map.set(row.wholesaleAccountId, list); }
@@ -28,7 +29,8 @@ const groupByAccount = <T extends { wholesaleAccountId: string | null }>(rows: T
 export async function evaluateWholesaleAssessments({ db = prisma, asOfDate = new Date(), accountIds, organizationId, dryRun = false, reconcileLedger = false }: {
   db?: PrismaClient; asOfDate?: Date; accountIds?: string[]; organizationId: string; dryRun?: boolean; reconcileLedger?: boolean;
 }) {
-  const eligible = await db.organization.findFirst({ where: { id: organizationId, ...enabledAssessmentTenants }, select: { id: true } });
+  assertEchoOrganization(organizationId);
+  const eligible = await db.organization.findFirst({ where: enabledAssessmentTenants, select: { id: true } });
   if (!eligible) throw new Error('Restaurant intelligence is unavailable for this organization.');
   const startedAt = new Date();
   let runId: string | null = null;
@@ -266,6 +268,7 @@ export async function runWholesaleAssessmentSweep({ db = prisma, reportDate = ne
   const results = [];
   const failures: string[] = [];
   for (const organization of organizations) {
+    if (organization.id !== ECHO_ORGANIZATION_ID) continue;
     try {
       const intelligence = await evaluateWholesaleAssessments({ db, asOfDate: reportDate, organizationId: organization.id, reconcileLedger: true });
       results.push({ organizationId: organization.id, intelligence });
@@ -284,6 +287,6 @@ export async function markWholesaleAssessmentSourceFailure({ db = prisma, report
   const latest = await db.ohlqReportImportStatus.findFirst({ where: { dataSource: 'ANNUAL_SALES_SUMMARY_BY_WHOLESALE', status: 'COMPLETED' }, orderBy: { reportDate: 'desc' }, select: { reportDate: true } });
   if (latest && latest.reportDate > reportDate) return { count: 0 };
   const organizations = await db.organization.findMany({ where: enabledAssessmentTenants, select: { id: true } });
-  return db.wholesaleAccountAssessment.updateMany({ where: { organizationId: { in: organizations.map(o => o.id) }, evidenceMode: { in: ['SALES_BACKED', 'PARTIAL_SALES'] } },
+  return db.wholesaleAccountAssessment.updateMany({ where: { organizationId: { in: organizations.filter(o => o.id === ECHO_ORGANIZATION_ID).map(o => o.id) }, evidenceMode: { in: ['SALES_BACKED', 'PARTIAL_SALES'] } },
     data: { assessmentStatus: 'SOURCE_ERROR', assessmentReason: 'Latest restaurant sales import failed; last valid commercial rating retained until recovery.', refreshRequestedAt: new Date() } });
 }

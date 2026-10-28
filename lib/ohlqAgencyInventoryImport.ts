@@ -6,6 +6,7 @@ import {
 } from './ohlqAgencyInventory';
 import { normalizeOhlqId } from './ohlqWholesaleMatching';
 import { prisma } from './prisma';
+import { assertEchoOrganization } from './echoAccess';
 import {
   DEFAULT_TENANT_EXCLUDED_ITEM_CODES,
   getOrganizationTenantConfig,
@@ -252,6 +253,7 @@ export async function importOhlqAgencyInventoryCsv({
   organizationId: string;
   reportDate: string;
 }) {
+  assertEchoOrganization(organizationId);
   const startedAt = Date.now();
   const config = await getOrganizationTenantConfig(organizationId, db);
   const parsed = parseOhlqAgencyInventoryCsv(csv, reportDate, { config, minimumQualifyingRows });

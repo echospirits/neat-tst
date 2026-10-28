@@ -10,8 +10,8 @@ import { CalendarProviderError } from '../lib/calendar/types';
 // Execute the real sync, settings and lock code with a stateful database/provider.
 // No external credentials, database connections or Google writes are used.
 function fixture() {
-  const connection: any = { id: 'conn', userId: 'user', user: { organizationId: 'org-test' }, provider: 'GOOGLE', providerAccountId: 'account', selectedCalendarId: 'cal', syncEnabled: true, requiresReconnect: false, syncToken: 'cursor', lastSyncAt: new Date('2026-09-22T10:00Z') };
-  const item: any = { id: 'task', title: 'Call buyer', detail: 'Keep these notes', source: 'MANUAL', status: 'OPEN', dueDate: new Date('2026-09-23'), dueTimeMinutes: null, assignedToUserId: 'user', updatedAt: new Date('2026-09-23T08:00Z'), agencyId: null, wholesaleAccountId: null };
+  const connection: any = { id: 'conn', userId: 'user', user: { organizationId: 'org_echo_spirits', isActive: true }, provider: 'GOOGLE', providerAccountId: 'account', selectedCalendarId: 'cal', syncEnabled: true, requiresReconnect: false, syncToken: 'cursor', lastSyncAt: new Date('2026-09-22T10:00Z') };
+  const item: any = { id: 'task', organizationId: 'org_echo_spirits', title: 'Call buyer', detail: 'Keep these notes', source: 'MANUAL', status: 'OPEN', dueDate: new Date('2026-09-23'), dueTimeMinutes: null, assignedToUserId: 'user', updatedAt: new Date('2026-09-23T08:00Z'), agencyId: null, wholesaleAccountId: null };
   const link: any = { id: 'link', provider: 'GOOGLE', worklistItemId: 'task', connectionId: 'conn', externalEventId: 'event', calendarId: 'cal', eventEtag: 'old', eventUpdatedAt: new Date('2026-09-23T07:00Z'), syncStatus: 'SYNCED' };
   const remote: any = { id: 'event', status: 'confirmed', title: 'Google title', description: 'Google notes', startDate: '2026-09-25', startDateTime: null, updatedAt: new Date('2026-09-23T09:00Z'), etag: 'new', privateMetadata: { echoCrmManaged: 'true', worklistItemId: 'task' } };
   const events = new Map<string, any>([['event', remote]]);
@@ -32,6 +32,8 @@ function fixture() {
   const assign = (row: any, data: any) => { for (const [key, value] of Object.entries(data)) if (value !== undefined) row[key] = value; return { ...row }; };
   const enrichedLink = () => ({ ...link, connection: link.connectionId === connection.id ? { ...connection } : null });
   const prisma: any = {
+    user: { findFirst: async ({ where }: any) => connection.user.isActive && connection.user.organizationId === where.organizationId ? { id: where.id } : null },
+    organization: { findFirst: async ({ where }: any) => { assert.equal(where.id, 'org_echo_spirits'); return { id: where.id }; } },
     calendarConnection: {
       findUnique: async ({ where }: any) => matches(connection, where) ? { ...connection } : null,
       findMany: async () => [{ ...connection }],
@@ -87,7 +89,7 @@ function fixture() {
     const source = readFileSync(filename, 'utf8');
     const code = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
     const exports = {}; cache.set(path, exports);
-    const mocks: any = { '../prisma': { prisma, runWithOrganizationStateAccess: async (organizationId: string, work: () => Promise<unknown>) => { assert.equal(organizationId, 'org-test'); return work(); } }, './index': { getCalendarProvider: () => provider }, '../appEnvironment': { isSideEffectEnabled: () => true, logEnvironmentEvent() {} }, './types': { CalendarProviderError } };
+    const mocks: any = { '../prisma': { prisma, runWithOrganizationStateAccess: async (organizationId: string, work: () => Promise<unknown>) => { assert.equal(organizationId, 'org_echo_spirits'); return work(); } }, './index': { getCalendarProvider: () => provider }, '../appEnvironment': { isSideEffectEnabled: () => true, logEnvironmentEvent() {} }, './types': { CalendarProviderError } };
     runInNewContext(code, { exports, process, Date, console: { error() {} }, require: (name: string) => {
       if (name in mocks) return mocks[name];
       if (name === './syncLock' || name === './scheduling') return load('lib/calendar/' + name.slice(2) + '.ts');
@@ -106,6 +108,25 @@ test('incoming Google reschedule updates only schedule and records a successful 
   assert.equal(f.item.dueDate.toISOString().slice(0, 10), '2026-09-25');
   assert.equal(f.item.title, 'Call buyer'); assert.equal(f.item.detail, 'Keep these notes');
   assert.equal(f.connection.syncToken, 'new-cursor'); assert.ok(!f.calls.includes('patch'));
+});
+
+test('outside or inactive owners cannot poll, push, clean up, or disconnect retained calendars', async () => {
+  for (const change of [{ organizationId: 'outside' }, { organizationId: null }, { isActive: false }]) {
+    const f = fixture();
+    Object.assign(f.connection.user, change);
+    const before = JSON.stringify([f.connection, f.item, f.link]);
+    assert.equal((await f.api.syncGoogleCalendarConnection('conn')).reason, 'echo-access-required');
+    assert.equal((await f.api.syncWorklistItemCalendar('task')).status, 'disabled');
+    assert.equal((await f.api.changeGoogleCalendarSettings('user', 'cal', false, true)).status, 'disabled');
+    assert.equal(JSON.stringify([f.connection, f.item, f.link]), before);
+    assert.deepEqual(f.calls, []);
+  }
+});
+
+test('foreign task ownership stops old-event cleanup even for an Echo calendar owner', async () => {
+  const f = fixture(); f.item.organizationId = 'outside'; f.item.status = 'COMPLETED';
+  assert.equal((await f.api.syncWorklistItemCalendar('task')).status, 'disabled');
+  assert.equal(f.link.externalEventId, 'event'); assert.deepEqual(f.calls, []);
 });
 
 test('bounded check retains the cursor and last success when its budget is exhausted', async () => {

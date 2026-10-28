@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import { evaluateOpportunityIntelligence } from './opportunityEngine';
 import { prisma } from './prisma';
+import { ECHO_ORGANIZATION_ID } from './echoAccess';
 import { enabledAssessmentTenants } from './wholesaleAssessmentService';
 
 export async function refreshTenantOpportunityScoresForAccounts({
@@ -20,11 +21,12 @@ export async function refreshTenantOpportunityScoresForAccounts({
   });
   const failures: string[] = [];
   for (const scope of scopes) {
+    if (scope.id !== ECHO_ORGANIZATION_ID) continue;
     try {
       const result = await evaluateOpportunityIntelligence({ db, asOfDate, accountIds: uniqueAccountIds, organizationId: scope.id });
       if (result.failed || result.persisted !== result.expected) failures.push(scope.id);
     } catch { failures.push(scope.id); }
   }
   if (failures.length) throw new Error(`Saved research needs score-only retry for organizations: ${failures.join(', ')}`);
-  return { organizations: scopes.length };
+  return { organizations: scopes.filter(scope => scope.id === ECHO_ORGANIZATION_ID).length };
 }

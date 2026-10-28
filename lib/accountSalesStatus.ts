@@ -10,6 +10,7 @@ import {
 import { captureWholesaleSalesEvents } from './accountSalesEvents';
 import { getTenantSalesWhere } from './ohlqSalesData';
 import { prisma } from './prisma';
+import { ECHO_ORGANIZATION_ID } from './echoAccess';
 import { getOrganizationTenantConfig } from './tenantConfig';
 
 export const SALES_STATUS_OPTIONS = [
@@ -208,9 +209,10 @@ export async function transitionEligibleSalesStatusPurchases({ db, organizationI
 }
 
 export async function reconcileAccountSalesStatusAfterImport({ db = prisma, reportDate }: { db?: PrismaClient; reportDate: Date }) {
-  const organizations = await db.organization.findMany({ where: { active: true, features: { some: { featureKey: 'ACCOUNT_SALES_STATUS', enabled: true } } }, select: { id: true } });
+  const organizations = await db.organization.findMany({ where: { id: ECHO_ORGANIZATION_ID, active: true, accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] }, features: { some: { featureKey: 'ACCOUNT_SALES_STATUS', enabled: true } } }, select: { id: true } });
   const results = [];
   for (const organization of organizations) {
+    if (organization.id !== ECHO_ORGANIZATION_ID) continue;
     const wholesaleCapture = await captureWholesaleSalesEvents({ db, organizationId: organization.id, reportDate });
     const config = await getOrganizationTenantConfig(organization.id, db);
     const [wholesaleRows, agencyRows, agencies] = await Promise.all([

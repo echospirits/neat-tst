@@ -119,7 +119,7 @@ test('scheduled refresh requires its secret and respects the existing disabled c
   } finally { if (previous === undefined) delete process.env.CRON_SECRET; else process.env.CRON_SECRET = previous; }
 });
 
-const options: ImportOptions = { organizationId: 'org-tenant', market: 'OH', source: 'BAILMENT_PO_INVOICE', start: '2026-10-01', end: '2026-10-20', observedOn: '2026-10-21', complete: true };
+const options: ImportOptions = { organizationId: 'org_echo_spirits', market: 'OH', source: 'BAILMENT_PO_INVOICE', start: '2026-10-01', end: '2026-10-20', observedOn: '2026-10-21', complete: true };
 const csv = SOURCE_HEADERS.BAILMENT_PO_INVOICE.join(',') + '\ni1,2026-10-13,2026-10-13,2847B,GPT,Groveport,A3A Bailment,SHIPPED,1.5';
 test('strict source contract preserves cases, status, coverage and idempotent identity; incomplete input is rejected', () => {
   const r = parseProductionSource(csv, options); assert.equal(r.rows[0].cases, 1.5); assert.equal(r.scopes.length, 1); assert.equal(r.excludedRows, 0);

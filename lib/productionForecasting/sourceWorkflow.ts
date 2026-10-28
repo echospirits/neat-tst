@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { PrismaClient } from '@prisma/client';
 import { prisma } from '../prisma';
+import { ECHO_ORGANIZATION_ID } from '../echoAccess';
 import { getOrganizationOhlqCredentials } from '../ohlqTenantCredentials';
 import { downloadOhlqBailmentInvoices, downloadOhlqPartnerDc } from '../ohlqAnnualSalesReport';
 import { formatDateInputValue } from '../dateTime';
@@ -21,10 +22,11 @@ export function ohioSourceConfiguration(settings: unknown) {
 /** Uses the existing OHLQ scheduled job and each enrolled tenant's credentials.
  * Sources and tenants fail independently; logs contain operational counts only. */
 export async function syncProductionSources({ db = prisma, services = defaults, logger = console, now = new Date() }: { db?: PrismaClient; services?: typeof defaults; logger?: Pick<Console, 'log' | 'error'>; now?: Date } = {}) {
-  const organizations = await db.organization.findMany({ where: { active: true, accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] }, enabledStates: { has: 'OH' }, ohlqCredentials: { isNot: null }, features: { some: { featureKey: 'PRODUCTION_FORECASTING', enabled: true } } }, orderBy: { id: 'asc' }, select: { id: true, settings: true, timezone: true } });
+  const organizations = await db.organization.findMany({ where: { id: ECHO_ORGANIZATION_ID, active: true, accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] }, enabledStates: { has: 'OH' }, ohlqCredentials: { isNot: null }, features: { some: { featureKey: 'PRODUCTION_FORECASTING', enabled: true } } }, orderBy: { id: 'asc' }, select: { id: true, settings: true, timezone: true } });
   const failures: string[] = [];
   let importedSources = 0;
   for (const organization of organizations) {
+    if (organization.id !== ECHO_ORGANIZATION_ID) continue;
     const today = formatDateInputValue(now, organization.timezone), end = shift(today, -1), config = ohioSourceConfiguration(organization.settings);
     const credentials = await services.credentials(organization.id, db).catch(() => null);
     for (const source of ['BAILMENT_PO_INVOICE', 'DISTRIBUTION_CENTER'] as SourceKind[]) {

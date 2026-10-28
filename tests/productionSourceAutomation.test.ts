@@ -64,21 +64,21 @@ test('date corrections reverse the old day; suspected truncation rejects atomica
   assert.deepEqual(mergeCoverage([{ start: '2026-01-01', end: '2026-10-27' }, { start: '2026-01-01', end: '2026-10-28' }, { start: '2026-10-29', end: '2026-10-30' }]), [{ start: '2026-01-01', end: '2026-10-30' }]);
 });
 
-test('scheduled sources and tenants fail independently, refresh, and never log provider payloads', async () => {
-  const organizations = ['a', 'b'].map(id => ({ id, timezone: 'America/New_York', settings: { productionForecasting: { ohio: { historyStart: '2019-01-01', directInvoices: 'invoice-date' } } } }));
+test('scheduled Echo sources fail independently, skip outside credentials, refresh, and never log provider payloads', async () => {
+  const organizations = ['org_echo_spirits', 'outside'].map(id => ({ id, timezone: 'America/New_York', settings: { productionForecasting: { ohio: { historyStart: '2019-01-01', directInvoices: 'invoice-date' } } } }));
   const called: string[] = [], messages: string[] = [], failures: unknown[] = [];
   let query: unknown;
   const db = { organization: { findMany: async (args: unknown) => { query = args; return organizations; } }, productionSourceImport: { upsert: async (args: unknown) => { failures.push(args); } } } as unknown as PrismaClient;
   const download = (organization: string) => ({ csvBuffer: Buffer.from(organization), reportDate: '2026-10-28', filename: 'private.csv', outputPath: '/private.csv', runDate: '2026-10-28', sizeBytes: 1 });
   const services = {
-    credentials: async (id: string) => ({ username: id, password: 'never-log' }),
-    bailment: async (o: { partnerCredentials?: { username: string }; fromDate: string }) => { called.push(`bailment:${o.partnerCredentials?.username}`); assert.equal(o.fromDate, '2019-01-01'); if (o.partnerCredentials?.username === 'a') throw new Error('private-provider-payload'); return download('b'); },
+    credentials: async (id: string) => { assert.equal(id, 'org_echo_spirits'); return { username: id, password: 'never-log' }; },
+    bailment: async (o: { partnerCredentials?: { username: string }; fromDate: string }) => { called.push(`bailment:${o.partnerCredentials?.username}`); assert.equal(o.fromDate, '2019-01-01'); throw new Error('private-provider-payload'); },
     dc: async (o: { partnerCredentials?: { username: string } }) => { called.push(`dc:${o.partnerCredentials?.username}`); return download(o.partnerCredentials!.username); },
     importCsv: async (_csv: string, o: { source: string; organizationId: string; end: string }) => { called.push(`import:${o.organizationId}:${o.source}`); if (o.source === 'BAILMENT_PO_INVOICE') assert.equal(o.end, '2026-10-27'); return { id: 'batch', replay: false, rowCount: 1, excludedRows: 0 }; },
     refresh: async (id: string) => { called.push(`refresh:${id}`); return { id: 'run', replay: false, products: 1 }; },
   } as unknown as NonNullable<Parameters<typeof syncProductionSources>[0]>['services'];
-  await assert.rejects(() => syncProductionSources({ db, services, now: new Date('2026-10-28T16:00:00Z'), logger: { log: m => messages.push(m), error: m => messages.push(m) } }), /a:BAILMENT_PO_INVOICE/);
-  assert.ok(called.includes('import:a:DISTRIBUTION_CENTER')); assert.ok(called.includes('bailment:b')); assert.ok(called.includes('refresh:a')); assert.ok(called.includes('refresh:b'));
+  await assert.rejects(() => syncProductionSources({ db, services, now: new Date('2026-10-28T16:00:00Z'), logger: { log: m => messages.push(m), error: m => messages.push(m) } }), /org_echo_spirits:BAILMENT_PO_INVOICE/);
+  assert.ok(called.includes('import:org_echo_spirits:DISTRIBUTION_CENTER')); assert.ok(called.includes('refresh:org_echo_spirits')); assert.ok(!called.some(call => call.includes('outside')));
   assert.equal(failures.length, 1); assert.doesNotMatch(JSON.stringify([messages, failures]), /never-log|private-provider-payload/);
   assert.match(JSON.stringify(query), /PRODUCTION_FORECASTING/); assert.match(JSON.stringify(query), /SUSPENDED/); assert.match(JSON.stringify(query), /ohlqCredentials/);
 });

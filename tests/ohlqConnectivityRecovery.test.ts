@@ -44,7 +44,7 @@ test('intelligence readiness retries a transient read but still rejects incomple
       return { status: 'COMPLETED' };
     } },
   } as unknown as PrismaClient;
-  const options = { db, organizationId: 'org-a', inventoryReportDate: new Date(), salesReportDate: new Date() };
+  const options = { db, organizationId: 'org_echo_spirits', inventoryReportDate: new Date(), salesReportDate: new Date() };
   await assertAgencyIntelligenceInputsComplete(options);
   assert.equal(calls, 2);
   (db.ohlqTenantInventoryImportStatus.findUnique as unknown) = async () => ({ status: 'ERRORED' });
@@ -52,18 +52,18 @@ test('intelligence readiness retries a transient read but still rejects incomple
 });
 
 for (const failedStage of ['intelligence', 'import', 'start'] as const) {
-  test(`inventory retains truthful status when ${failedStage} fails and continues other tenants`, async () => {
+  test(`inventory retains truthful status when ${failedStage} fails and leaves other tenants untouched`, async () => {
     const previous = process.env.OHLQ_TENANT_CREDENTIAL_ENCRYPTION_KEY;
     process.env.OHLQ_TENANT_CREDENTIAL_ENCRYPTION_KEY = 'test-key';
     try {
       const states: Record<string, string[]> = {};
       const imports: string[] = [], refreshes: string[] = [];
       const db = {
-        organization: { findMany: async () => ['org-a', 'org-b'].map(id => ({ id, displayName: id, features: [{}], accountOverlays: [] })) },
+        organization: { findMany: async () => ['org_echo_spirits', 'org-b'].map(id => ({ id, displayName: id, features: [{}], accountOverlays: [] })) },
         ohlqReportImportStatus: { findFirst: async () => ({ reportDate: new Date('2026-10-20') }) },
         ohlqTenantInventoryImportStatus: { upsert: async ({ where, update }: any) => {
           const id = where.organizationId_reportDate.organizationId;
-          if (failedStage === 'start' && id === 'org-a' && update.status === 'RUNNING') throw { code: 'P1000' };
+          if (failedStage === 'start' && id === 'org_echo_spirits' && update.status === 'RUNNING') throw { code: 'P1000' };
           (states[id] ??= []).push(update.status);
           return {};
         } },
@@ -74,21 +74,21 @@ for (const failedStage of ['intelligence', 'import', 'start'] as const) {
         download: async () => ({ csvBuffer: Buffer.from('test'), reportDate: '2026-10-21', filename: 'test.csv', sizeBytes: 4 }),
         importCsv: async ({ organizationId }: any) => {
           imports.push(organizationId);
-          if (failedStage === 'import' && organizationId === 'org-a') throw new Error('import failed');
+          if (failedStage === 'import' && organizationId === 'org_echo_spirits') throw new Error('import failed');
           return { importedRows: 1, deletedRows: 0, parsedRows: 1, skippedRows: 0, diagnostics: {}, reportDate: '2026-10-21' };
         },
         refresh: async ({ organizationId }: any) => {
           refreshes.push(organizationId);
-          if (failedStage === 'intelligence' && organizationId === 'org-a') throw { code: 'P1001' };
+          if (failedStage === 'intelligence' && organizationId === 'org_echo_spirits') throw { code: 'P1001' };
           return {};
         },
       } as unknown as Services;
       await assert.rejects(runOhlqTenantInventoryWorkflow({ db, services, logger: { log() {}, error() {} } }),
-        failedStage === 'intelligence' ? /import failures: none; retail intelligence failures after successful import: org-a/ : /import failures: org-a/);
-      assert.equal(states['org-a'].at(-1), failedStage === 'intelligence' ? 'COMPLETED' : 'ERRORED');
-      assert.equal(states['org-b'].at(-1), 'COMPLETED');
-      assert.equal(imports.filter(id => id === 'org-a').length, failedStage === 'start' ? 0 : 1);
-      assert.ok(refreshes.includes('org-b'));
+        failedStage === 'intelligence' ? /import failures: none; retail intelligence failures after successful import: org_echo_spirits/ : /import failures: org_echo_spirits/);
+      assert.equal(states['org_echo_spirits'].at(-1), failedStage === 'intelligence' ? 'COMPLETED' : 'ERRORED');
+      assert.equal(states['org-b'], undefined);
+      assert.equal(imports.filter(id => id === 'org_echo_spirits').length, failedStage === 'start' ? 0 : 1);
+      assert.ok(!refreshes.includes('org-b')); assert.ok(!imports.includes('org-b'));
     } finally {
       if (previous === undefined) delete process.env.OHLQ_TENANT_CREDENTIAL_ENCRYPTION_KEY;
       else process.env.OHLQ_TENANT_CREDENTIAL_ENCRYPTION_KEY = previous;

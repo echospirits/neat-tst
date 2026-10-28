@@ -1,6 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, type CipherKey } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
 import { prisma } from './prisma';
+import { assertEchoOrganization } from './echoAccess';
 
 const getKey = () => {
   const configured = process.env.OHLQ_TENANT_CREDENTIAL_ENCRYPTION_KEY?.trim();
@@ -34,6 +35,7 @@ export const maskOhlqUsername = (username: string) => {
 export async function saveOrganizationOhlqCredentials({ db = prisma, organizationId, password, updatedByUserId, username }: {
   db?: PrismaClient; organizationId: string; password: string; updatedByUserId?: string | null; username: string;
 }) {
+  assertEchoOrganization(organizationId);
   const cleanUsername = username.trim();
   if (!cleanUsername || password.length < 1) throw new Error('Both OHLQ username and password are required.');
   return db.organizationOhlqCredentials.upsert({
@@ -44,6 +46,7 @@ export async function saveOrganizationOhlqCredentials({ db = prisma, organizatio
 }
 
 export async function getOrganizationOhlqCredentials(organizationId: string, db: PrismaClient = prisma) {
+  assertEchoOrganization(organizationId);
   const stored = await db.organizationOhlqCredentials.findUnique({ where: { organizationId } });
   if (!stored) return null;
   return { password: decrypt(stored.passwordEncrypted), username: decrypt(stored.usernameEncrypted) };
