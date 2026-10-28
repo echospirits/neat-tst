@@ -1,8 +1,8 @@
 # Unreleased
 
-No pending changes. Neat **0.2.3** was released on 2026-10-19. [Archived technical release](0.2.3.md) | [Tenant announcement](0.2.3-user-notes.md) | [Production receipt](0.2.3/production-rollout.json).
+Neat **0.2.3** was released on 2026-10-19. [Archived technical release](0.2.3.md) | [Tenant announcement](0.2.3-user-notes.md) | [Production receipt](0.2.3/production-rollout.json).
 
-Development remains frozen by owner instruction. Do not start a new version or feature cycle until the owner explicitly opens it. Package version remains 0.2.3.
+Package version remains 0.2.3. On 2026-10-27 the owner explicitly authorized Production Forecasting feature development in neat-tst only, without a new version/cycle, production version bump or release tag. Production promotion remains a separate task.
 
 ## Same-version production hotfix: OHLQ dependency installation (2026-10-19)
 
@@ -51,3 +51,16 @@ Development remains frozen by owner instruction. Do not start a new version or f
 ## Pending changes
 
 None.
+
+## TST feature: Production Forecasting (2026-10-27)
+
+- Feature: Production Forecasting. User-visible: **Yes**. Pilot entitlement: `PRODUCTION_FORECASTING`; default **Disabled**; Echo Spirits **Enabled** by explicit organization-ID seed; other tenants remain dark, including under broad TST feature enablement.
+- Description: product-first next-30-day outbound case forecasts, conservative ranges, confidence, configurable uncertainty-margin planning targets, weekly buckets, market/location drill-down, prior-year/recent trends, deterministic explanations and material exceptions. Mobile cards and desktop/tablet comparison table live under Analytics.
+- Sources: native Bailment PO / Invoice CSV/TSV is primary demand; shipped date, configured Brand and DC_Name, Cases plus fractional Odd_Bottles using Cases_Bottles. Native Distribution Center Groveport/Green min/max is secondary context. Retail bottle sales and agency minimum/onHand are not substituted. A-3a Bail is included; configured Distillery Only / A-3a Dist is excluded centrally.
+- Statistical methods: mean, weighted mean, exponential smoothing, seasonal naive, damped growth/seasonality and Croston SBA; rolling 30-day backtests select by common-origin MAE, with WAPE/MASE/bias and volatility/stability evidence. No LLM. Missing coverage stays unknown.
+- Persistence: append-only source slices, forecast runs and product snapshots; idempotent import/run replay; actuals evaluated after complete horizon coverage. Source-posting chronology prevents future data in fitting. Audited source-revision editing is deferred; changed overlapping slices are rejected.
+- Migration: `prisma/migrations/20261028010000_production_forecasting/migration.sql` (five additive tables, composite tenant foreign keys, indexes/checks, pilot enrollment). Apply only this named migration to verified TST; no blanket history replay.
+- Environment/config: no new secrets or provider. Existing CRON_SECRET and cron side-effect policy; 12:30 UTC daily Workflow refresh when allowed, immediate refresh after successful source import. TST's existing disabled cron policy is preserved. Optional Organization.settings.productionForecasting.safety controls 0–30% margins; inventory is not subtracted.
+- Validation: [receipt](production-forecasting-validation.md), [source/model/operations guide](../production-forecasting.md). Real full-history source exports are still needed before using live Echo forecasts for planning.
+- Relevant commit: commit titled Add pilot production demand forecasting (TST SHA recorded in delivery receipt).
+- Production readiness: not reviewed; TST pilot only, no main push/merge, release tag or version change.

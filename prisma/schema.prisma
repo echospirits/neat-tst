@@ -536,6 +536,11 @@ model Organization {
   vendorIdentifiers       OrganizationVendorIdentifier[]
   a3aStoreIdentifiers     OrganizationA3aStoreIdentifier[]
   products                OrganizationProduct[]
+  productionSourceImports ProductionSourceImport[]
+  productionDemand        ProductionDemandObservation[]
+  productionGuidance      ProductionGuidanceObservation[]
+  productionForecastRuns  ProductionForecastRun[]
+  productionForecasts     ProductionForecastSnapshot[]
   features                OrganizationFeature[]
   accountOverlays         OrganizationAccountOverlay[]
   accountTargetingHistory AccountTargetingHistory[]
@@ -694,8 +699,12 @@ model OrganizationProduct {
   createdAt         DateTime                  @default(now())
   updatedAt         DateTime                  @updatedAt
   organization      Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  productionDemand ProductionDemandObservation[]
+  productionGuidance ProductionGuidanceObservation[]
+  productionForecasts ProductionForecastSnapshot[]
 
   @@unique([organizationId, market, externalItemCode])
+  @@unique([organizationId, id])
   @@index([market, externalItemCode])
   @@index([organizationId, status, active])
 }
@@ -3032,4 +3041,122 @@ model ContactSuggestionReview {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([organizationId, userId, identityKey])
+}
+
+// Append-only complete source slices. Separate availability and receipt dates
+// preserve source chronology for historical rolling-origin evaluation.
+model ProductionSourceImport {
+  id             String @id @default(cuid())
+  organizationId String
+  market         String
+  source         String
+  contentHash    String
+  status         String
+  coverageStart  DateTime @db.Date
+  coverageEnd    DateTime @db.Date
+  observedOn     DateTime @db.Date
+  importedAt     DateTime @default(now())
+  rowCount       Int @default(0)
+  excludedRows   Int @default(0)
+  summary        Json
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  demand         ProductionDemandObservation[]
+  guidance       ProductionGuidanceObservation[]
+
+  @@unique([organizationId, market, source, contentHash])
+  @@unique([organizationId, id])
+  @@index([organizationId, market, source, status, coverageEnd])
+  @@index([organizationId, importedAt])
+}
+
+model ProductionDemandObservation {
+  id             String @id @default(cuid())
+  organizationId String
+  importId       String
+  market         String
+  itemCode       String
+  locationCode   String
+  locationName   String
+  sourceLineId   String
+  date           DateTime @db.Date
+  availableOn    DateTime @db.Date
+  cases          Decimal @db.Decimal(14, 4)
+  classification String
+  transactionStatus String
+  sourceEvidence Json?
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sourceImport   ProductionSourceImport @relation(fields: [organizationId, importId], references: [organizationId, id], onDelete: Cascade)
+  product        OrganizationProduct @relation(fields: [organizationId, market, itemCode], references: [organizationId, market, externalItemCode], onDelete: Restrict)
+
+  @@unique([organizationId, importId, sourceLineId])
+  @@index([organizationId, market, itemCode, date], map: "production_demand_product_date_idx")
+  @@index([organizationId, market, itemCode, locationCode, date], map: "production_demand_location_date_idx")
+}
+
+model ProductionGuidanceObservation {
+  id             String @id @default(cuid())
+  organizationId String
+  importId       String
+  market         String
+  itemCode       String
+  locationCode   String
+  locationName   String
+  observedOn     DateTime @db.Date
+  minimum        Decimal? @db.Decimal(14, 4)
+  maximum        Decimal? @db.Decimal(14, 4)
+  classification String
+  sourceEvidence Json?
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sourceImport   ProductionSourceImport @relation(fields: [organizationId, importId], references: [organizationId, id], onDelete: Cascade)
+  product        OrganizationProduct @relation(fields: [organizationId, market, itemCode], references: [organizationId, market, externalItemCode], onDelete: Restrict)
+
+  @@unique([organizationId, importId, itemCode, locationCode])
+  @@index([organizationId, market, itemCode, observedOn])
+}
+
+model ProductionForecastRun {
+  id             String @id @default(cuid())
+  organizationId String
+  runKey         String
+  generatedAt    DateTime @default(now())
+  horizonStart   DateTime @db.Date
+  horizonEnd     DateTime @db.Date
+  dataThrough    DateTime? @db.Date
+  modelVersion   String
+  configuration  Json
+  sourceSummary  Json
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  snapshots      ProductionForecastSnapshot[]
+
+  @@unique([organizationId, runKey])
+  @@unique([organizationId, id])
+  @@index([organizationId, generatedAt])
+}
+
+model ProductionForecastSnapshot {
+  id             String @id @default(cuid())
+  organizationId String
+  runId          String
+  productId      String
+  market         String
+  itemCode       String
+  horizonStart   DateTime @db.Date
+  horizonEnd     DateTime @db.Date
+  point          Decimal? @db.Decimal(14, 4)
+  lower          Decimal? @db.Decimal(14, 4)
+  upper          Decimal? @db.Decimal(14, 4)
+  target         Decimal? @db.Decimal(14, 4)
+  confidence     String
+  method         String
+  summary        Json
+  detail         Json
+  actualCases    Decimal? @db.Decimal(14, 4)
+  actualEvaluatedAt DateTime?
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  run            ProductionForecastRun @relation(fields: [organizationId, runId], references: [organizationId, id], onDelete: Cascade)
+  product        OrganizationProduct @relation(fields: [organizationId, productId], references: [organizationId, id], onDelete: Restrict)
+
+  @@unique([organizationId, runId, productId])
+  @@index([organizationId, productId, horizonStart])
+  @@index([organizationId, horizonEnd, actualEvaluatedAt])
 }
