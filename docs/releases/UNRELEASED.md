@@ -2,7 +2,14 @@
 
 Neat **0.2.3** was released on 2026-10-19. [Archived technical release](0.2.3.md) | [Tenant announcement](0.2.3-user-notes.md) | [Production receipt](0.2.3/production-rollout.json).
 
-Package version remains 0.2.3. On 2026-10-27 the owner explicitly authorized Production Forecasting feature development in neat-tst only, without a new version/cycle, production version bump or release tag. On October 28 the owner also authorized an incremental Echo-only transition in neat-tst. Production promotion remains a separate task.
+**Frozen candidate version: 0.3.0.** On October 28 the owner directed packaging the complete Echo-only transition and Production Forecasting work into one new version, locking development and preparing for main. [Release plan](0.3.0-plan.md), [checklist](0.3.0-checklist.md), [validation](0.3.0-validation.md), [migration/cutover runbook](0.3.0-migrations.md) and [user notes](0.3.0-user-notes.md) govern this candidate. Production remains 0.2.3; no main push or production mutation is performed by preparation.
+
+## 0.3.0 packaging and development lock (2026-10-28)
+
+- Source baseline: TST `38bb39829997a0bef03ca7bc08baa691a13512e6`; production `e05e4e86bd5816c420462319c36b638bfc97571e`. Release contents are the exact tree comparison, not divergent commit counts or old numeric tags.
+- Package version/lockfile root metadata becomes 0.3.0. No application behavior, dependencies, migration bytes, credentials or live feature choices change during packaging. Preserve historical entries below as implementation evidence; the plan describes final behavior where later increments supersede earlier platform access.
+- Freeze the exact validated candidate at `codex/rc-0.3.0`. Only approved candidate fixes and renewed affected checks may replace it. No subsequent development version opens automatically.
+- Prepare a canonical single-migration runbook and reviewed Echo configuration/owner-role cutover SQL. Rehearse only on an isolated expiring production-data branch; do not apply these operations to production during preparation.
 
 ## Same-version production hotfix: OHLQ dependency installation (2026-10-19)
 

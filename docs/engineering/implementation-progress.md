@@ -1,6 +1,6 @@
 # Integrated CRM implementation progress
 
-> Release update, 2026-10-19: **0.2.3 is released to production; development remains frozen**. [Production receipt](../releases/0.2.3/production-rollout.json). The [0.2.3 checklist](../releases/0.2.3-checklist.md) governs current readiness. Historical implementation/delivery evidence below is retained.
+> Release update, 2026-10-28: **0.3.0 is frozen for release preparation; production remains 0.2.3.** Echo-only access and Production Forecasting are packaged together. The [0.3.0 plan](../releases/0.3.0-plan.md), [checklist](../releases/0.3.0-checklist.md) and [migration runbook](../releases/0.3.0-migrations.md) govern current readiness. Development remains locked; production cutover requires separate authorization. Historical implementation/delivery evidence below is retained.
 
 ## Current state — 2026-10-11
 

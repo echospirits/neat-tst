@@ -1,10 +1,10 @@
 # Repository Agent Instructions
 
-## Release freeze: 0.2.3
+## Release freeze: 0.3.0
 
-Owner-directed freeze began 2026-10-19. Normal feature development is paused. **0.2.3 has been released to production**; development remains frozen. Do not open another development version, add features, refactor, upgrade dependencies, or include unrelated work. Limit changes to packaging, validation evidence, and explicitly approved candidate fixes. Any code/schema/dependency change requires a replacement candidate and renewed affected checks.
+Owner directed a new release freeze on 2026-10-28: package the complete tested Echo-only transition and Production Forecasting work as **0.3.0** and prepare it for main. **Production remains 0.2.3 until a separately authorized cutover.** Normal feature development is paused. Do not open another development version, add features, refactor, upgrade dependencies, or include unrelated work. Limit changes to packaging, validation evidence, and explicitly approved candidate fixes. Any code/schema/dependency change requires a replacement candidate and renewed affected checks.
 
-Use [the release plan](docs/releases/0.2.3-plan.md), [checklist](docs/releases/0.2.3-checklist.md), and [migration runbook](docs/releases/0.2.3-migrations.md). Historical 0.2.0/v0.2 records are evidence. Keep a dedicated frozen release ref. Production promotion and the 16 reviewed migrations are complete; deployment/tag receipts are retained with the release. Live provider activation remains a separate operator step. Lift the freeze only on owner instruction.
+Use [the release plan](docs/releases/0.3.0-plan.md), [checklist](docs/releases/0.3.0-checklist.md), and [migration runbook](docs/releases/0.3.0-migrations.md). Keep the dedicated frozen `codex/rc-0.3.0` ref. Historical 0.2.3 and earlier records are evidence; do not replay their migrations. No main push, production migration/configuration/account-role change, source initialization or stable release tag is authorized by preparation alone. Live provider activation remains a separate operator step. Lift the freeze only on owner instruction.
 
 ## Release Rules
 

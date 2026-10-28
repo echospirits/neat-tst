@@ -1,0 +1,26 @@
+{
+  "version": "0.3.0",
+  "status": "frozen-release-preparation",
+  "candidateRef": "refs/heads/codex/rc-0.3.0",
+  "sourceCommit": "38bb39829997a0bef03ca7bc08baa691a13512e6",
+  "sourceTree": "fb40c49648ccb2d40e17d0b940bb7e01d1d30db3",
+  "productionBase": "e05e4e86bd5816c420462319c36b638bfc97571e",
+  "productionTree": "08f18b2d96bcc4c32aeb154b43d6ae8d9061516f",
+  "productionExecutionAuthorized": false,
+  "migrations": [
+    {
+      "name": "20261028010000_production_forecasting",
+      "path": "prisma/migrations/20261028010000_production_forecasting/migration.sql",
+      "sha256": "013f61facef70ec93e99a03f69952340b57083e8ecf90a2c712d88600e921f70",
+      "destructive": false,
+      "tablesAdded": 5,
+      "activation": "PRODUCTION_FORECASTING enabled for Echo, disabled for other organizations; replay preserves existing choices"
+    }
+  ],
+  "cutover": {
+    "operatorInstructions": "retained in the private local release package",
+    "initialSourceLoad": "controlled post-cutover operation; never copy private TST rows",
+    "newSecrets": [],
+    "preserve": ["outside history", "retired module storage", "Echo calendar connections", "existing provider gates"]
+  }
+}
