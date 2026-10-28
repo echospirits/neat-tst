@@ -1,5 +1,7 @@
 # CRM feature inventory
 
+October 28 TST increment 4 retires Support and Recipes at the owner's request, removes their public/API/UI entry points and old setup scripts, and confines User Activity to Echo admins. Storage/history and legacy merge references remain. [Validation and recovery](../releases/echo-only-transition-validation.md#increment-4-module-retirement-and-remaining-administration).
+
 October 28 TST increment 3 confines scheduled inventory/product discovery, intelligence, research, forecasts, digest delivery and communications/calendar workers to Echo. Existing feature and environment gates remain; outside stored connections/history are retained. This is an incremental TST delivery, not a completed production teardown. [Scope and evidence](../releases/echo-only-transition-validation.md).
 
 October 28 TST increment 2 removes the customer onboarding/platform console and Support View routes. Echo administrators retain approved shared-data maintenance, and Echo Settings owns product, selling-location, state and Vendor ID controls. Forecast company selection is retired in favor of entitled Echo context. Existing data and job/provider behavior are retained; see [transition scope](../releases/echo-only-transition-validation.md).
@@ -26,13 +28,14 @@ Updated 2026-10-11 for the integrated 0.2.3-dev TST work. Existing workflows are
 | Playbooks | Account Worklist / Organization Setup; crm/playbooks, contextualFollowUp | SalesPlaybook, PlaybookRun; canonical WorklistItem | DB concurrency/replay/cancellation test and browser start; no automated outbound messages |
 | Guided/mobile visits | Existing Log Visit, visitGuides, VisitDraft, existing voice/photo tools | Guide prompt/answer snapshot; opt-in local draft with 24-hour expiry | crmField tests and browser; draft is not full offline synchronization |
 | Territory / routes | Existing Pipeline filters, account maps, My Schedule RoutePlanner | Tenant territories/teams; Worklist routeOrder | Route unit/DB checks; Google Routes adapter, explicit manual/fallback review; no fabricated ETA |
-| Recipe sales tools | Existing Recipe schema; /recipes, account recipe suggestions, approved public sheet | Recipe costing/version/approval; RecipeShare token hash/snapshot | Costing tests, DB and browser approval/privacy/revocation; no costs on public sheet |
+| Recipes (retired in TST) | No catalog, editor, recommendation or public share route remains | Existing Recipe/RecipeSuggestion/RecipeShare records retained | Retired-route/navigation checks; legacy ownership/merge preservation |
 | Events / staffing / Eventbrite | Existing EventShift and My Schedule; /events detail; linked Log Visit | Tenant-scoped EventShift, EventbriteConnection; existing visit/photo evidence | Event tests, DB conflict/isolation/replay, browser; Eventbrite fixture or live read token |
 | Production Forecasting pilot | Analytics → Production Forecasting; productionForecasting adapters/engine/service | Tenant source imports, demand/guidance observations, immutable runs/snapshots | Native report mapping, rolling backtests, source coverage, tenant/FK/replay/actuals rehearsal; full source history required; [guide](../production-forecasting.md) |
 | Analytics and exports | Existing Analytics/OHLQ adapters, purchaseOutcomes, RelationshipReport | Existing sales coverage, visits, Worklist, overlays | Analytics + continuity tests; CSV export; dates and partial coverage disclosed |
 | Reviewed communication AI | Account briefing; crm/ai and aiEvidence | Read-only retrieval; operational audit counts only, no stored generated prose | Mock and Responses fixture tests; DB private/tenant tests; live deployment configuration and tenant opt-in required |
 | Tenant settings, access, branding, products, feature flags | Existing auth/organizations/featureRegistry/Organization Setup | Existing User.organizationId + role, tenant branding/products/features | Existing security/feature suites; no parallel membership/auth system |
-| Support, imports, calendar, orders | Existing implementations retained | Existing source-of-truth models | Full regression suite; worklist side effects reuse canonical services |
+| Support (retired in TST) | Pages/APIs, polling/trail collection and navigation removed | Ticket/message/screenshot history retained | Retired-route/layout checks; no schema or operational deletion |
+| Imports, calendar, orders | Existing canonical implementations retained | Existing source-of-truth models | Full regression suite; Echo-only workers and existing side-effect gates |
 
 ## Deliberate limits
 

@@ -87,12 +87,8 @@ test('organization admins do not see platform administration', () => {
   assert.equal(groups.flatMap((group) => group.items).some((item) => item.key === 'platform-administration'), false);
 });
 
-test('platform admins outside a support view retain global administration access', () => {
+test('a legacy platform flag cannot grant administration without Echo admin context', () => {
   assert.ok(!getMoreNavigationItems(false, [], true).some((item) => item.key === 'user-activity'));
   const groups = getAdministrationNavigationGroups([], true, false);
-  assert.deepEqual(groups.flatMap((group) => group.items).map((item) => item.key), [
-    'user-activity',
-    'data-health',
-    'environment',
-  ]);
+  assert.deepEqual(groups, []);
 });

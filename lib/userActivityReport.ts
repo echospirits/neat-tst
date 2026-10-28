@@ -21,6 +21,7 @@ export async function getUserActivityReport(
   const filters = activityFilters(params, now);
   const scope = activityScope(user, filters.organizationId);
   const organization = scope.organizationId;
+  filters.organizationId = typeof organization === 'string' ? organization : '';
   const conditions = [Prisma.sql`a."day" BETWEEN ${filters.from}::date AND ${filters.to}::date`];
   if (typeof organization === 'string') conditions.push(Prisma.sql`a."organizationId" = ${organization}`);
   if (filters.activity === 'login') conditions.push(Prisma.sql`a."loginCount" > 0`);

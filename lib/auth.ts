@@ -117,21 +117,6 @@ export async function requireAdminSession() {
   return session;
 }
 
-export async function requirePlatformAdminSession() {
-  const session = await requireUserSession();
-
-  if (session.user.role !== UserRole.PLATFORM_ADMIN) {
-    redirect('/');
-  }
-
-  return session;
-}
-
-export async function requirePlatformAdmin() {
-  const { user } = await requirePlatformAdminSession();
-  return user;
-}
-
 export async function requireAdmin() {
   const { user } = await requireAdminSession();
 

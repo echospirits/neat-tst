@@ -1,5 +1,11 @@
 # Neat multi-tenant architecture
 
+October 28, 2026: the owner is returning Neat to Echo only in TST. Current access requires active Echo membership; no role or Support View can switch companies. Background consumers select/execute Echo only. Customer provisioning, platform/bootstrap seeds and all-feature seed commands are retired. Support and Recipes are removed, while their tables/history remain. Echo Users invitations and Echo Settings remain the supported administration paths. See [current transition validation](releases/echo-only-transition-validation.md).
+
+The former architecture and rollout below are historical design evidence, not current operating instructions. Its removed bootstrap/platform routes must not be run or recreated. Production promotion and schema/data retirement remain separate decisions.
+
+## Historical design before Echo-only retirement
+
 ## Tenant boundary
 
 `Organization` is the customer boundary. A normal user belongs to one organization through `User.organizationId`; organization-owned records carry the same identifier. Shared Ohio reference data—agencies, official wholesale accounts, OHLQ catalog, raw sales, and raw inventory—remains platform-level. Private activity and interpretation—visits, worklist items, contacts, tags, opportunities, intelligence, product decisions, and account overlays—are organization-scoped.

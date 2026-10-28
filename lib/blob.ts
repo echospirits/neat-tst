@@ -18,7 +18,6 @@ export type UploadedVisitPhoto = {
   sizeBytes: number;
 };
 
-export type UploadedRecipePhoto = UploadedVisitPhoto;
 export type UploadedMenuPlacementProof = UploadedVisitPhoto;
 
 export function validatePhotoFile(file: File) {
@@ -83,23 +82,6 @@ export async function verifyClientUploadedVisitPhoto({
     storageKey: blob.pathname,
     url: blob.url,
   };
-}
-
-export async function uploadRecipePhoto(file: File, recipeId: string, userId: string) {
-  assertSideEffectEnabled('fileUploads');
-  const extension = extensionByContentType[file.type] ?? 'jpg';
-  const storageKey = `recipe-photos/${recipeId}/${Date.now()}-${userId}.${extension}`;
-  const blob = await put(storageKey, file, {
-    access: 'public',
-    contentType: file.type,
-  });
-
-  return {
-    url: blob.url,
-    storageKey: blob.pathname ?? storageKey,
-    contentType: file.type,
-    sizeBytes: file.size,
-  } satisfies UploadedRecipePhoto;
 }
 
 export async function uploadMenuPlacementProof(file: File, accountId: string, userId: string) {

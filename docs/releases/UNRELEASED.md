@@ -52,6 +52,14 @@ Package version remains 0.2.3. On 2026-10-27 the owner explicitly authorized Pro
 
 None.
 
+## TST transition: retire Support, Recipes and legacy setup (2026-10-28)
+
+- Owner selected **Retire in-app Support** and **Remove recipes from Neat**. Delete their pages/actions/APIs/services, catalog/costing/approval/account recommendations, public recipe sheets, recipe-photo upload helper, Support screenshot/reply/update/trail controls and navigation. Existing public share URLs no longer resolve through the new application.
+- Retain schema, stored Support/Recipe/history/blob records, ownership and passive legacy account-merge references. No migration, revocation write, export or deletion is performed. Read-only TST counts found zero Support tickets/private notes, recipes/suggestions/share records across all three organizations.
+- Restrict User Activity page and every report query to Echo-admin context, including retained PLATFORM_ADMIN role callers. Ignore forged company filters; remove company-switch UI and platform navigation fallback. Remove the remaining Analytics forecast-link role bypass, unused platform guard exports and unused organization bootstrap helper. Existing private communication/assignee protections stay in place.
+- Retire unsafe staging/password-admin/sample seeds, all-feature reconciliation, platform bootstrap and recipe-import commands. Package scripts change only; version 0.2.3, dependencies/lockfile, schedules, credentials and persisted feature flags are unchanged. Existing Users invitations/Echo Settings remain supported; new-database/initial-owner provisioning requires a separate reviewed procedure.
+- Validation: 908 passing tests / 76 suites, typecheck, optimized build, retired-route checks and actual-layout/activity static preview at 390x844 and 1440x900. Exact deployment/health evidence: [increment 4](echo-only-transition-validation.md#increment-4-module-retirement-and-remaining-administration). TST only; production remains unchanged.
+
 ## TST transition: confine background processing to Echo (2026-10-28)
 
 - Restrict scheduled OHLQ inventory/product discovery, Production Forecasting sources/refresh, sales-status updates, restaurant assessments, research/score refresh, retail market intelligence, calendar sync, digests and communications consumers to org_echo_spirits. Reject explicit foreign worker targets before credential reads or writes. Remove the digest fallback for platform administrators without Echo membership.

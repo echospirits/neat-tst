@@ -17,7 +17,7 @@ See [implementation progress](../engineering/implementation-progress.md), [featu
 
 ## Integrated CRM extension
 
-`lib/crm` supplies domain services for existing Pipeline, Log Visit, Contacts, Worklist, account history and Organization Setup. Recipes adds management and approved sharing to existing Recipe records. My Schedule adds event staff scheduling and reviewed route order. No competing Deals or Activities workflow remains.
+`lib/crm` supplies domain services for existing Pipeline, Log Visit, Contacts, Worklist, account history and Echo Settings. Support and Recipes are retired in the October 28 Echo-only TST transition; their history remains stored. My Schedule adds event staff scheduling and reviewed route order. No competing Deals or Activities workflow remains.
 
 ```mermaid
 flowchart LR

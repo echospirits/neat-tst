@@ -128,7 +128,6 @@
 .interaction-channel-options { display:flex; flex-wrap:wrap; gap:.5rem; }
 .interaction-channel-options button { flex:1 1 calc(33.333% - .5rem); min-width:0; min-height:44px; }
 
-@media print { body:has(.recipe-sheet) aside, body:has(.recipe-sheet) nav, body:has(.recipe-sheet) header, body:has(.recipe-sheet) .environment-banner, .recipe-print { display:none !important; } body:has(.recipe-sheet) main { margin:0; padding:0; } .recipe-sheet { color:#111; background:white; box-shadow:none; } }
 
 .contact-suggestion { margin-block: .75rem; overflow-wrap: anywhere; }
 .contact-suggestion .contact-card-body { min-width: 0; }

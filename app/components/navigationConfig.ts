@@ -36,11 +36,9 @@ export const navigationItems: NavigationItem[] = [
   { key: 'wholesale', href: '/wholesale', label: 'Restaurants', section: 'accounts', moreOrder: 3 },
   { key: 'wholesale-orders', href: '/wholesale-orders', label: 'Wholesale Orders', section: 'accounts', moreOrder: 4, featureKey: 'OHIO_DIRECT_WHOLESALE_ORDERS' },
   { key: 'pipeline', href: '/pipeline', label: 'Pipeline', section: 'accounts', moreOrder: 5, featureKey: 'ACCOUNT_SALES_STATUS' },
-  { key: 'recipes', href: '/recipes', label: 'Recipes', section: 'utility', moreOrder: 6.2, featureKey: 'CORE_CRM' },
   { key: 'communications', href: '/settings/communications', label: 'Communications', section: 'work', moreOrder: 6.1, featureKey: 'COMMUNICATIONS' },
   { key: 'tags', href: '/tags', label: 'Tags', section: 'utility', moreOrder: 5 },
   { key: 'profile', href: '/profile', label: 'Profile', section: 'utility', moreOrder: 6 },
-  { key: 'support', href: '/support', label: 'Support', section: 'utility', moreOrder: 6.5 },
   { key: 'users', href: '/users', label: 'Users', section: 'admin', adminGroup: 'Echo', adminOnly: true, moreOrder: 7 },
   { key: 'user-activity', href: '/admin/user-activity', label: 'User activity', section: 'admin', adminGroup: 'Echo', adminOnly: true, moreOrder: 9 },
   { key: 'organization-setup', href: '/admin/organization', label: 'Echo Settings', section: 'admin', adminGroup: 'Echo', adminOnly: true, moreOrder: 7.1 },
@@ -76,7 +74,7 @@ export const getAdministrationNavigationGroups = (enabledFeatures?: readonly str
         item.adminGroup === label &&
         featureVisible(item, enabledFeatures) &&
         (!item.platformAdminOnly || isPlatformAdmin) &&
-        (hasOrganizationAdminAccess || ['data-health', 'environment', 'platform-administration', 'user-activity'].includes(item.key))
+        hasOrganizationAdminAccess
       ),
     }))
     .filter((group) => group.items.length > 0);

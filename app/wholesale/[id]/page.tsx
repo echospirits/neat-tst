@@ -1,6 +1,5 @@
 import { accountWorkAndEvents } from '../../../lib/crm/accountTimeline';
 import { AccountProfile } from '../../components/AccountProfile';
-import { AccountRecipes } from '../../components/AccountRecipes';
 import { AccountBriefing } from '../../components/AccountBriefing';
 import { activityLabels } from '../../../lib/crm/activity';
 import { Suspense } from 'react';
@@ -311,7 +310,6 @@ export default async function WholesaleActivityPage({
         { href: '#activity', label: 'Activity' },
       ]} />
 
-      <AccountRecipes organizationId={organizationId} accountId={account.id} />
       <AccountProfile organizationId={organizationId} accountType="WHOLESALE" accountId={account.id} />
       <AccountMemoryPanel users={actionUsers} accountId={account.id} accountType="WHOLESALE" contacts={accountContacts} notes={overlay?.notes ?? null} returnTo={`/wholesale/${account.id}`} />
 

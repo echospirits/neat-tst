@@ -14,9 +14,6 @@ import './redesign.css';
 import './theme.css';
 import { AppearanceSync } from './components/AppearanceSync';
 import { UsageTracker } from './components/UsageTracker';
-import { SupportTrailTracker } from './components/SupportTrailTracker';
-import { SupportUpdates } from './components/SupportUpdates';
-import './support/support.css';
 import { getAppEnvironment, getEnvironmentLabel } from '../lib/appEnvironment';
 
 export const metadata: Metadata = {
@@ -61,7 +58,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={appEnvironment !== 'production' ? 'has-environment-banner' : undefined} style={tenantTheme}>
         {user ? <AppearanceSync darkMode={user.darkMode} /> : null}
         {user ? <UsageTracker userId={user.id} /> : null}
-        {user ? <SupportTrailTracker scope={`${user.id}:${organizationContext?.organizationId ?? ''}`} /> : null}
         {appEnvironment !== 'production' ? (
           <div className="environment-banner" role="status">
             {APP_NAME} — {getEnvironmentLabel().toUpperCase()} ENVIRONMENT
@@ -81,9 +77,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <span className="sr-only">Signed in as</span>
                 <strong>{getUserDisplayName(user)}</strong>
                 <span className="pill">{isAdmin ? 'Admin' : isTaster ? 'Taster' : 'User'}</span>
-                <nav className="user-card-links" aria-label="Account and support">
+                <nav className="user-card-links" aria-label="Account">
                   <Link className="user-card-profile" href="/profile">Profile &amp; preferences</Link>
-                  <Link className="user-card-profile" href="/support">Support</Link>
                 </nav>
                 <form action="/api/auth/logout" method="post">
                   <button className="secondary" type="submit">
@@ -95,7 +90,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <main id="main-content">
               <AppBreadcrumbs isTaster={isTaster} />
               <ActionNotice />
-              <SupportUpdates userId={user.id} />
               {children}
             </main>
             <FloatingVisitAction />

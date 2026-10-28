@@ -1,5 +1,9 @@
 # In-app Support
 
+Retired from TST on October 28, 2026 at the owner's request. Pages, APIs, screenshots/replies, polling banners, session trail collection and navigation are removed. Existing ticket/message/screenshot tables and history are retained without a migration or deletion. See [transition validation](releases/echo-only-transition-validation.md#increment-4-module-retirement-and-remaining-administration).
+
+The guide below describes historical behavior before retirement; it is not an available application workflow.
+
 Support is included in Core CRM and available to every authenticated role, including tasters. On desktop, find it directly below **Profile & preferences** in the sidebar user card; on mobile, find it under More (or in the taster tab bar). It is independent of Neat's sales Worklist, scheduling and calendar sync. It does not require the Intelligence add-on or a separate feature toggle.
 
 ## Reporting and reviewing

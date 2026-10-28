@@ -14,6 +14,8 @@ The owner-requested TST account `joe@echospirits.com` is an Echo `ADMIN`, with a
 
 ## Implementation references
 
+October 28 increment 4 removes the global Support surface entirely and restricts every User Activity query, including legacy PLATFORM_ADMIN callers, to Echo. Administration navigation requires organization-admin context; old standalone platform guard exports and bootstrap helpers are removed. A retained database role value is not global authority. No membership/role migration or broad grant is performed. Recipes and public recipe shares are retired, eliminating their anonymous application entry point. Existing private correspondence and assignment rules remain intact.
+
 October 28 TST increment 2 retires the customer console and its Support View endpoints. Approved shared-maintenance tools use `requireEchoAdmin` / `requireEchoAdminSession`, requiring both admin authority and Echo membership. General user/taster roles remain restricted. Production Forecasting also requires Echo membership for every role and rejects foreign explicit targets before imports; no platform-role feature bypass remains there. Other private Support permissions are unchanged in this bounded increment.
 
 - `lib/auth.ts`

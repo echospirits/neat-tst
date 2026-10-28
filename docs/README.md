@@ -32,7 +32,7 @@ Start with [implementation progress](engineering/implementation-progress.md) and
 - [Sales intelligence](product/sales-intelligence.md)
 - [Field execution](product/field-execution.md)
 - [Events and tastings](product/events-and-tastings.md)
-- [Recipes and sales enablement](product/recipe-management.md)
+- [Retired Recipes design history](product/recipe-management.md)
 - [Management reporting](product/management-reporting.md)
 - [Multi-tenant configuration](product/multi-tenant-configuration.md)
 

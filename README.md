@@ -9,7 +9,6 @@ Sales intelligence and field CRM for Echo Spirits, covering liquor agency and ba
 - Alert/worklist model for lapsed buyers and follow-ups
 - Visit/photo model for shelf, display, menu, back bar, competitor evidence
 - EventShift model for tour guide scheduling and future Eventbrite sync
-- Recipe database for cocktail suggestions
 - Weekly digest emails for rep activity, completed work, and upcoming follow-ups
 
 ## Setup
@@ -19,9 +18,10 @@ Sales intelligence and field CRM for Echo Spirits, covering liquor agency and ba
 ```bash
 npm install
 npm run db:push
-npm run import:sample
 npm run dev
 ```
+
+Echo-only TST transition: Support and Recipes, including public recipe links, are retired. Legacy sample imports, password-admin seeds, staging-tenant seeds, all-feature reconciliation and platform bootstrap commands are removed. Use the existing Echo Users invitation workflow for account access; provisioning a new database/initial owner requires a separately reviewed procedure. Existing records and schema are retained.
 
 ## Deploy to Vercel
 - Follow [docs/environment-isolation.md](docs/environment-isolation.md). Production and staging use separate Vercel projects, databases, Blob stores, OAuth clients, secrets, and GitHub Environments.

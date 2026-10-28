@@ -1,29 +1,10 @@
-import { OrganizationAuditAction, OrganizationProductStatus, OrganizationStatus, Prisma, UserRole } from '@prisma/client';
+import { OrganizationAuditAction, OrganizationStatus, Prisma, UserRole } from '@prisma/client';
 import { notFound, redirect } from 'next/navigation';
-import { ECHO_FEATURE_KEYS, FEATURE_KEYS, getEnvironmentFeatureKeys, type FeatureKey, validateFeatureSelection } from './featureRegistry';
+import { FEATURE_KEYS, getEnvironmentFeatureKeys, type FeatureKey, validateFeatureSelection } from './featureRegistry';
 import { prisma } from './prisma';
-import { DEFAULT_TENANT_ENTITY_NAME, DEFAULT_TENANT_EXCLUDED_ITEM_CODES, DEFAULT_TENANT_OHLQ_VENDOR_IDS } from './tenantConfig';
 import { ECHO_ORGANIZATION_ID, hasEchoAccess } from './echoAccess';
 
 export { ECHO_ORGANIZATION_ID } from './echoAccess';
-
-let echoBootstrap: Promise<void> | null = null;
-
-export function ensureEchoOrganization() {
-  echoBootstrap ??= (async () => {
-    await prisma.organization.upsert({
-      where: { id: ECHO_ORGANIZATION_ID },
-      create: { id: ECHO_ORGANIZATION_ID, name: DEFAULT_TENANT_ENTITY_NAME, displayName: 'Echo Spirits', slug: 'echo-spirits', active: true, primaryState: 'OH', enabledStates: ['OH', 'FL'], timezone: 'America/New_York', accountStatus: OrganizationStatus.ACTIVE, onboardingStatus: 'READY', onboardingData: { migrated: true } },
-      update: {},
-    });
-    await prisma.organizationVendorIdentifier.createMany({ skipDuplicates: true, data: DEFAULT_TENANT_OHLQ_VENDOR_IDS.map((vendorId) => ({ organizationId: ECHO_ORGANIZATION_ID, market: 'OH', vendorId, label: 'Echo Spirits' })) });
-    await prisma.organizationFeature.createMany({ skipDuplicates: true, data: ECHO_FEATURE_KEYS.map((featureKey) => ({ organizationId: ECHO_ORGANIZATION_ID, featureKey, enabled: true, source: 'migration' })) });
-    await prisma.organizationProduct.createMany({ skipDuplicates: true, data: DEFAULT_TENANT_EXCLUDED_ITEM_CODES.map((externalItemCode) => ({ organizationId: ECHO_ORGANIZATION_ID, market: 'OH', externalItemCode, status: OrganizationProductStatus.EXCLUDED, active: true, notes: 'Migrated from the legacy Echo exclusion list.' })) });
-    const echoProducts = await prisma.ohlqAgencyInventoryCurrent.findMany({ where: { organizationId: ECHO_ORGANIZATION_ID, vendorId: { in: [...DEFAULT_TENANT_OHLQ_VENDOR_IDS] }, itemCode: { notIn: [...DEFAULT_TENANT_EXCLUDED_ITEM_CODES] } }, distinct: ['itemCode'], orderBy: { itemCode: 'asc' }, select: { itemCode: true, itemName: true } });
-    await prisma.organizationProduct.createMany({ skipDuplicates: true, data: echoProducts.map((product) => ({ organizationId: ECHO_ORGANIZATION_ID, market: 'OH', externalItemCode: product.itemCode, displayName: product.itemName, status: OrganizationProductStatus.OWNED, active: true, notes: 'Discovered from the migrated Echo Vendor ID.' })) });
-  })().catch((error) => { echoBootstrap = null; throw error; });
-  return echoBootstrap;
-}
 
 export async function getOrganizationContext(user: { id: string; organizationId: string | null; role: UserRole }) {
   if (!hasEchoAccess(user)) return null;
