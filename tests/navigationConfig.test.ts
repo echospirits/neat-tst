@@ -11,7 +11,7 @@ import {
 test('desktop navigation keeps work and account areas intentionally grouped', () => {
   assert.deepEqual(
     getNavigationItems('work').map((item) => item.key),
-    ['home', 'worklist', 'visits', 'analytics', 'communications'],
+    ['home', 'worklist', 'visits', 'analytics', 'production-forecasting', 'communications'],
   );
   assert.deepEqual(
     getNavigationItems('work').find((item) => item.key === 'home'),

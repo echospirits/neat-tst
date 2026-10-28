@@ -5,7 +5,7 @@ import { EmptyState } from '../../components/PageChrome';
 import type { ForecastSummary } from '../../../lib/productionForecasting/service';
 import { cases, trend } from '../../../lib/productionForecasting/presentation';
 export function ConfidenceBadge({ value }: { value: string }) { return <span className={`pill pf-confidence pf-${value.toLowerCase()}`}>{value} confidence</span>; }
-export function ForecastTable({ rows, initial = {} }: { rows: ForecastSummary[]; initial?: Record<string, string> }) {
+export function ForecastTable({ rows, initial = {}, organizationId }: { rows: ForecastSummary[]; initial?: Record<string, string>; organizationId?: string }) {
   const [query, setQuery] = useState(initial.q ?? ''), [market, setMarket] = useState(initial.market ?? 'all'), [confidence, setConfidence] = useState(initial.confidence ?? 'all'), [sort, setSort] = useState(initial.sort ?? 'need');
   const [filtersOpen, setFiltersOpen] = useState(Boolean(initial.q));
   useEffect(() => { if (window.matchMedia('(min-width:768px)').matches) setFiltersOpen(true); }, []);
@@ -13,6 +13,7 @@ export function ForecastTable({ rows, initial = {} }: { rows: ForecastSummary[];
   selected.sort((a, b) => sort === 'name' ? a.product.name.localeCompare(b.product.name) : sort === 'change' ? Math.abs(b.change ?? 0) - Math.abs(a.change ?? 0) : (b.target ?? -1) - (a.target ?? -1));
   const known = selected.filter(r => r.point !== null);
   const params = new URLSearchParams({ q: query, market, confidence, sort });
+  if (organizationId) params.set('organization', organizationId);
   const href = (row: ForecastSummary) => `/analytics/production/${encodeURIComponent(row.product.id)}?${params}`;
   const guidance = (r: ForecastSummary) => r.guidanceThrough ? <>{cases(r.guidanceMinimum)}–{cases(r.guidanceMaximum)}<small>Min/max · through {r.guidanceThrough}</small></> : 'Not imported';
   return <>

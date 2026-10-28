@@ -73,4 +73,12 @@ None.
 - Environment: existing OHLQ tenant encryption and Microsoft credentials, no new secrets. Raw exports/screenshots remain private; sanitized failure artifact adds productionSources status.
 - Validation: 902 full-suite tests passed, including complete DC pagination and dispatch input validation; typecheck, optimized build, database rehearsals with actual supplied files and forecast isolation/actuals passed. Deployment and live automation receipts are recorded in [validation](production-forecasting-validation.md). Live Power BI rendering was unavailable during development; download success must be verified separately.
 - Production readiness: TST pilot only; production promotion is a separate task. Version remains 0.2.3; no release tag.
+
+## TST fix: platform-admin Production Forecasting access (2026-10-28)
+
+- Problem: platform administrators in Neat Staging could not see the forecasting link or open Echo's pilot page because access inherited their current organization's feature flag.
+- Show a direct Production Forecasting entry in desktop navigation, mobile More, Analytics and Platform administration. Platform admins can open active enrolled organizations without first entering Support View; label the selected organization and use the shared searchable picker when multiple organizations are enrolled.
+- Carry organization scope through product details, return/filter links and source imports. Reauthorize explicit import targets on the server; ordinary user/admin cross-tenant targets, unknown/disabled/suspended organizations and implicit platform import targets remain blocked. Pilot flags, organization memberships and global Support View context are unchanged.
+- No database migration, data backfill, new secret or environment change. Version remains 0.2.3, TST only. Production main remains out of scope.
+- Validation: seven focused authorization/navigation/action cases; 909 full-suite tests passing; responsive review at 390×844 and 1440×1000, including platform navigation, organization labels/search, empty state and no page overflow. Typecheck/build and deployment receipt: [validation](production-forecasting-validation.md).
 - Production readiness: not reviewed; TST pilot only, no main push/merge, release tag or version change.

@@ -22,6 +22,7 @@ export const navigationItems: NavigationItem[] = [
   { key: 'agency-intelligence', href: '/agency-focus', label: 'Retail Intelligence', section: 'intelligence', featureKey: 'AGENCY_INTELLIGENCE' },
   { key: 'visits', href: '/visits', label: 'Visit History', mobileLabel: 'Visits', section: 'work', mobileOrder: 4 },
   { key: 'analytics', href: '/analytics', label: 'Analytics', section: 'work', moreOrder: 1, featureKey: 'ANALYTICS' },
+  { key: 'production-forecasting', href: '/analytics/production', label: 'Production Forecasting', section: 'work', moreOrder: 1.1, featureKey: 'PRODUCTION_FORECASTING' },
   {
     key: 'accounts',
     href: '/search',
@@ -51,11 +52,11 @@ export const navigationItems: NavigationItem[] = [
   { key: 'platform-administration', href: '/platform', label: 'Platform Administration', section: 'admin', adminGroup: 'Platform', adminOnly: true, platformAdminOnly: true },
 ];
 
-const featureVisible = (item: NavigationItem, enabledFeatures?: readonly string[]) =>
-  !item.featureKey || !enabledFeatures || enabledFeatures.includes(item.featureKey);
+const featureVisible = (item: NavigationItem, enabledFeatures?: readonly string[], isPlatformAdmin = false) =>
+  !item.featureKey || !enabledFeatures || enabledFeatures.includes(item.featureKey) || (isPlatformAdmin && item.key === 'production-forecasting');
 
 export const getNavigationItems = (section: NavigationSection, enabledFeatures?: readonly string[], isPlatformAdmin = false) =>
-  navigationItems.filter((item) => item.section === section && featureVisible(item, enabledFeatures) && (!item.platformAdminOnly || isPlatformAdmin));
+  navigationItems.filter((item) => item.section === section && featureVisible(item, enabledFeatures, isPlatformAdmin) && (!item.platformAdminOnly || isPlatformAdmin));
 
 export const getIntelligenceNavigationItems = (enabledFeatures: readonly string[], isAdmin: boolean, isPlatformAdmin: boolean) =>
   getNavigationItems('intelligence', enabledFeatures, isPlatformAdmin)
@@ -83,6 +84,6 @@ export const getAdministrationNavigationGroups = (enabledFeatures?: readonly str
 
 export const getMoreNavigationItems = (isAdmin: boolean, enabledFeatures?: readonly string[], isPlatformAdmin = false) =>
   navigationItems
-    .filter((item) => item.moreOrder !== undefined && (!item.adminOnly || isAdmin || (isPlatformAdmin && item.key === 'user-activity')) && featureVisible(item, enabledFeatures) && (!item.platformAdminOnly || isPlatformAdmin))
+    .filter((item) => item.moreOrder !== undefined && (!item.adminOnly || isAdmin || (isPlatformAdmin && item.key === 'user-activity')) && featureVisible(item, enabledFeatures, isPlatformAdmin) && (!item.platformAdminOnly || isPlatformAdmin))
     .sort((left, right) => (left.moreOrder ?? 99) - (right.moreOrder ?? 99));
 import type { FeatureKey } from '../../lib/featureRegistry';

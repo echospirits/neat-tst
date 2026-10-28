@@ -1,13 +1,22 @@
 'use server';
 import { revalidatePath } from 'next/cache';
-import { requireAdmin } from '../../../lib/auth';
-import { requireFeatureForUser } from '../../../lib/organizations';
+import { notFound } from 'next/navigation';
+import { requireUserSession } from '../../../lib/auth';
+import { isAdminRole } from '../../../lib/userAccess';
+import { requireProductionForecastContext } from '../../../lib/productionForecasting/access';
 import { importProductionSource, type SourceKind } from '../../../lib/productionForecasting/import';
 import { refreshProductionForecast } from '../../../lib/productionForecasting/service';
 export type ImportState = { ok: boolean; message: string };
 export async function importForecastSource(form: FormData): Promise<ImportState> {
-  const user = await requireAdmin();
-  const { organizationId } = await requireFeatureForUser(user, 'PRODUCTION_FORECASTING');
+  const { user } = await requireUserSession();
+  if (!isAdminRole(user.role)) notFound();
+  const requestedOrganization = String(form.get('organizationId') ?? '').trim();
+  // Imports must name the organization shown on the form. A stale or forged
+  // target cannot fall back to another tenant, even for a platform admin.
+  if (user.role === 'PLATFORM_ADMIN' && !requestedOrganization) notFound();
+  const context = await requireProductionForecastContext(user, requestedOrganization || undefined);
+  if (!context.organization) notFound();
+  const organizationId = context.organization.id;
   const file = form.get('file');
   if (!(file instanceof File) || !file.size || file.size > 8 * 1024 * 1024) return { ok: false, message: 'Choose a source CSV or TSV file up to 8 MiB.' };
   const field = (name: string) => String(form.get(name) ?? '').trim();

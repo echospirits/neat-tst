@@ -22,6 +22,7 @@ const mobileItems = getMobileNavigationItems();
 const isActivePath = (pathname: string, item: NavigationItem, useSectionMatch = false) => {
   if (item.href === '/') return pathname === '/';
   if (item.href === '/visits') return pathname === item.href;
+  if (item.key === 'analytics' && pathname.startsWith('/analytics/production')) return false;
   if (useSectionMatch && item.matchPrefixes) {
     return item.matchPrefixes.some(
       (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
@@ -83,7 +84,7 @@ function IntelligenceMenu({ enabledFeatures, isAdmin, isPlatformAdmin, pathname 
 
 export function AppSidebarNavigation({ enabledFeatures, isAdmin, isPlatformAdmin, isTaster }: { enabledFeatures: string[]; isAdmin: boolean; isPlatformAdmin: boolean; isTaster: boolean }) {
   const pathname = usePathname();
-  const workItems = getNavigationItems('work', enabledFeatures);
+  const workItems = getNavigationItems('work', enabledFeatures, isPlatformAdmin);
   const accountItems = getNavigationItems('accounts', enabledFeatures);
 
   if (isTaster) {
