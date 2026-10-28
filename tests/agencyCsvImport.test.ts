@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { isAdminRole } from '../lib/userAccess';
+import { hasEchoAccess } from '../lib/echoAccess';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { runInNewContext } from 'node:vm';
@@ -11,7 +13,7 @@ import {
   AgencyCsvValidationError, importAgencyCsv, parseAgencyCsv,
 } from '../lib/agencyCsvImport';
 
-const platformAdmin = { id: 'platform-admin', role: UserRole.PLATFORM_ADMIN };
+const platformAdmin = { id: 'echo-admin', role: UserRole.ADMIN, organizationId: 'org_echo_spirits' };
 const row = ['102', 'Agency One', '1 Main St', 'Columbus', 'Franklin', '43215', '6145550100', 'yes', 'A', 'Monday', '1', 'Tuesday', 'Contact One', '6145550101', 'Active'];
 const makeCsv = (rows = [row], headers: readonly string[] = AGENCY_CSV_COLUMNS) => Papa.unparse([headers, ...rows]) as string;
 
@@ -22,7 +24,7 @@ function database(failOn?: 'agency' | 'contact') {
     ]),
     contacts: new Map<string, Record<string, unknown>>([
       ['org-other-agency-102-default', { organizationId: 'org-other', name: 'Other tenant contact' }],
-      ['org-current-agency-102-default', { organizationId: 'org-current', createdByUserId: 'original-author', name: 'Old contact' }],
+      ['org_echo_spirits-agency-102-default', { organizationId: 'org_echo_spirits', createdByUserId: 'original-author', name: 'Old contact' }],
     ]),
   };
   let transactions = 0;
@@ -59,8 +61,8 @@ function database(failOn?: 'agency' | 'contact') {
 
 test('tenant users, tenant admins and tasters cannot call the write helper', async () => {
   const store = database();
-  for (const role of [UserRole.USER, UserRole.ADMIN, UserRole.TASTER]) {
-    await assert.rejects(importAgencyCsv({ csv: makeCsv(), user: { id: 'tenant-user', role }, organizationId: 'org-current', db: store.db }), /Platform administrator required/);
+  for (const role of [UserRole.USER, UserRole.TASTER]) {
+    await assert.rejects(importAgencyCsv({ csv: makeCsv(), user: { id: 'tenant-user', role, organizationId: 'org_echo_spirits' }, organizationId: 'org_echo_spirits', db: store.db }), /Echo administrator required/);
   }
   assert.equal(store.transactions(), 0);
   assert.equal(store.state().agencies.get('102')!.name, 'Original');
@@ -98,7 +100,7 @@ test('invalid files are fully rejected before opening a transaction', async () =
     makeCsv(Array.from({ length: AGENCY_CSV_MAX_ROWS + 1 }, (_, i) => [String(i + 1), ...row.slice(1)])),
   ];
   for (const csv of invalidFiles) {
-    await assert.rejects(importAgencyCsv({ csv, user: platformAdmin, organizationId: 'org-current', db: store.db }), AgencyCsvValidationError);
+    await assert.rejects(importAgencyCsv({ csv, user: platformAdmin, organizationId: 'org_echo_spirits', db: store.db }), AgencyCsvValidationError);
   }
   assert.equal(store.transactions(), 0);
   assert.equal(store.state().agencies.get('102')!.name, 'Original');
@@ -107,23 +109,23 @@ test('invalid files are fully rejected before opening a transaction', async () =
 test('platform import updates global agencies and only current-organization contacts together', async () => {
   const store = database();
   const secondRow = ['103', ...row.slice(1)];
-  const count = await importAgencyCsv({ csv: makeCsv([row, secondRow]), user: platformAdmin, organizationId: 'org-current', db: store.db });
+  const count = await importAgencyCsv({ csv: makeCsv([row, secondRow]), user: platformAdmin, organizationId: 'org_echo_spirits', db: store.db });
   assert.equal(count, 2);
   assert.equal(store.transactions(), 1);
   assert.equal(store.state().agencies.get('102')!.name, 'Agency One');
   assert.equal(store.state().agencies.get('102')!.latitude, null);
   assert.equal(store.state().agencies.get('102')!.geocodeStatus, 'PENDING');
   assert.equal(store.state().agencies.get('103')!.state, 'OH');
-  assert.equal(store.state().contacts.get('org-current-agency-102-default')!.createdByUserId, 'original-author');
-  assert.equal(store.state().contacts.get('org-current-agency-103-default')!.createdByUserId, platformAdmin.id);
-  assert.equal(store.state().contacts.get('org-current-agency-103-default')!.agencyId, 'agency-103');
+  assert.equal(store.state().contacts.get('org_echo_spirits-agency-102-default')!.createdByUserId, 'original-author');
+  assert.equal(store.state().contacts.get('org_echo_spirits-agency-103-default')!.createdByUserId, platformAdmin.id);
+  assert.equal(store.state().contacts.get('org_echo_spirits-agency-103-default')!.agencyId, 'agency-103');
   assert.deepEqual(store.state().contacts.get('org-other-agency-102-default'), { organizationId: 'org-other', name: 'Other tenant contact' });
 });
 
 test('an unchanged address preserves the existing geocode', async () => {
   const store = database();
   const sameAddress = [...row]; sameAddress[2] = 'Old St';
-  await importAgencyCsv({ csv: makeCsv([sameAddress]), user: platformAdmin, organizationId: 'org-current', db: store.db });
+  await importAgencyCsv({ csv: makeCsv([sameAddress]), user: platformAdmin, organizationId: 'org_echo_spirits', db: store.db });
   assert.equal(store.state().agencies.get('102')!.latitude, 39);
   assert.equal(store.state().agencies.get('102')!.geocodeStatus, 'SUCCESS');
 });
@@ -132,7 +134,7 @@ test('a later agency or contact failure rolls back the entire batch', async () =
   for (const failOn of ['agency', 'contact'] as const) {
     const store = database(failOn);
     const before = structuredClone(store.state());
-    await assert.rejects(importAgencyCsv({ csv: makeCsv([row, ['103', ...row.slice(1)]]), user: platformAdmin, organizationId: 'org-current', db: store.db }), /write failed/);
+    await assert.rejects(importAgencyCsv({ csv: makeCsv([row, ['103', ...row.slice(1)]]), user: platformAdmin, organizationId: 'org_echo_spirits', db: store.db }), /write failed/);
     assert.deepEqual(store.state(), before);
     assert.equal(store.transactions(), 1);
   }
@@ -143,14 +145,14 @@ test('a later agency or contact failure rolls back the entire batch', async () =
 function loadAction(role: UserRole | null, store = database()) {
   const source = readFileSync('app/agencies/page.tsx', 'utf8');
   const authSource = readFileSync('lib/auth.ts', 'utf8');
-  const auth = authSource.slice(authSource.indexOf('export async function requirePlatformAdminSession('), authSource.indexOf('export async function requireAdmin()'));
+  const auth = authSource.slice(authSource.indexOf('export async function requireEchoAdminSession('), authSource.indexOf('type DisplayUser'));
   const action = source.slice(source.indexOf('async function importAgencies('), source.indexOf('export default async function AgenciesPage('));
   const effects = { reads: 0, contexts: 0, revalidated: [] as string[], errors: 0 };
-  const user = role ? { id: 'caller', role } : null;
+  const user = role ? { id: 'caller', role, organizationId: 'org_echo_spirits' } : null;
   const context: Record<string, unknown> = {
-    UserRole, File, AGENCY_CSV_MAX_BYTES, AgencyCsvValidationError,
+    UserRole, isAdminRole, hasEchoAccess, File, AGENCY_CSV_MAX_BYTES, AgencyCsvValidationError,
     requireUserSession: async () => { if (!user) throw new Error('redirect:/login'); return { user }; },
-    requireOrganizationContext: async () => { effects.contexts += 1; return { organizationId: 'org-current' }; },
+    requireOrganizationContext: async () => { effects.contexts += 1; return { organizationId: 'org_echo_spirits' }; },
     importAgencyCsv: (input: Parameters<typeof importAgencyCsv>[0]) => importAgencyCsv({ ...input, db: store.db }),
     redirect: (url: string) => { throw new Error(`redirect:${url}`); },
     revalidatePath: (url: string) => effects.revalidated.push(url),
@@ -167,7 +169,7 @@ function loadAction(role: UserRole | null, store = database()) {
 }
 
 test('direct action requests from unauthorized sessions are denied before reading the upload or tenant context', async () => {
-  for (const role of [null, UserRole.USER, UserRole.ADMIN, UserRole.TASTER]) {
+  for (const role of [null, UserRole.USER, UserRole.TASTER]) {
     const fixture = loadAction(role);
     await assert.rejects(fixture.action(fixture.form), role ? /redirect:\/$/ : /redirect:\/login/);
     assert.equal(fixture.effects.reads, 0);

@@ -118,7 +118,7 @@ test('artifact generation excludes raw reports, screenshots, logs, secrets and a
       job: 'failure',
       steps: {
         accountMaster: 'success', brandMaster: 'failure', salesImport: 'skipped',
-        tenantInventory: 'cancelled', intelligence: 'unknown', productDiscovery: 'unknown',
+        tenantInventory: 'cancelled', intelligence: 'unknown', productDiscovery: 'unknown', productionSources: 'unknown',
       },
     });
     assert.equal(readFileSync(path.join(privateDirectories.downloadDir, 'accounts.csv'), 'utf8'), `account,sales\n${sensitive},100\n`);

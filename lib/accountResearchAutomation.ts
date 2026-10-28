@@ -15,6 +15,7 @@ import { assertAccountResearchAutomationEnabled } from './accountResearchOpenAI'
 import { ACCOUNT_RESEARCH_ACTIONABLE_REVIEW_PREFIX } from './accountResearchFailures';
 import { pollAccountResearchPilot, submitQueuedPilotJobs } from './accountResearchPilotService';
 import { prisma } from './prisma';
+import { ECHO_ORGANIZATION_ID, hasEchoAccess } from './echoAccess';
 
 const ACTIVE_RUN_STATUSES: AccountResearchPilotStatus[] = [AccountResearchPilotStatus.RUNNING, AccountResearchPilotStatus.PAUSED, AccountResearchPilotStatus.READY_FOR_REVIEW];
 const ACTIVE_JOB_STATUSES: AccountResearchJobStatus[] = [AccountResearchJobStatus.SUBMITTED, AccountResearchJobStatus.RUNNING, AccountResearchJobStatus.NEEDS_REVIEW];
@@ -23,9 +24,9 @@ const startOfUtcDay = (now: Date) => new Date(Date.UTC(now.getUTCFullYear(), now
 
 export async function getAutomaticAccountResearchStatus({ db = prisma, now = new Date() }: { db?: PrismaClient; now?: Date } = {}) {
   const today = startOfUtcDay(now);
-  const automaticJobs = { pilot: { startedByUserId: ACCOUNT_RESEARCH_AUTOMATIC_RUN_ACTOR } };
+  const automaticJobs = { organizationId: ECHO_ORGANIZATION_ID, pilot: { organizationId: ECHO_ORGANIZATION_ID, startedByUserId: ACCOUNT_RESEARCH_AUTOMATIC_RUN_ACTOR } };
   const [queue, submittedToday, uniqueAccountRowsToday, todayStatusCounts, allTimeStatusCounts, actionableFailuresToday, actionableFailuresAllTime, outstandingJobs, latestRun] = await Promise.all([
-    getPrioritizedAccountResearchQueue({ db, now, limit: null }),
+    getPrioritizedAccountResearchQueue({ db, now, limit: null, organizationId: ECHO_ORGANIZATION_ID }),
     db.accountResearchJob.count({
       where: { submittedAt: { gte: today }, ...automaticJobs },
     }),
@@ -43,10 +44,10 @@ export async function getAutomaticAccountResearchStatus({ db = prisma, now = new
       where: { status: AccountResearchJobStatus.REJECTED, reviewNote: { startsWith: ACCOUNT_RESEARCH_ACTIONABLE_REVIEW_PREFIX }, ...automaticJobs },
     }),
     db.accountResearchJob.count({
-      where: { status: { in: [AccountResearchJobStatus.QUEUED, ...ACTIVE_JOB_STATUSES] }, pilot: { startedByUserId: ACCOUNT_RESEARCH_AUTOMATIC_RUN_ACTOR } },
+      where: { status: { in: [AccountResearchJobStatus.QUEUED, ...ACTIVE_JOB_STATUSES] }, ...automaticJobs },
     }),
     db.accountResearchPilot.findFirst({
-      where: { startedByUserId: ACCOUNT_RESEARCH_AUTOMATIC_RUN_ACTOR },
+      where: { organizationId: ECHO_ORGANIZATION_ID, startedByUserId: ACCOUNT_RESEARCH_AUTOMATIC_RUN_ACTOR },
       orderBy: { startedAt: 'desc' },
       select: { id: true, status: true, startedAt: true, completedAt: true, estimatedSpendMicros: true, maxAccounts: true },
     }),
@@ -74,9 +75,9 @@ export async function getAutomaticAccountResearchStatus({ db = prisma, now = new
 }
 
 async function createAutomaticRun({ db, now, maxAccounts }: { db: PrismaClient; now: Date; maxAccounts: number }) {
-  const organization = await db.organization.findFirst({ where: { active: true }, orderBy: { createdAt: 'asc' }, select: { id: true } });
-  if (!organization) throw new Error('Automatic account research requires at least one active organization for run ownership.');
-  const candidates = await getPrioritizedAccountResearchQueue({ db, now, limit: maxAccounts });
+  const organization = await db.organization.findFirst({ where: { id: ECHO_ORGANIZATION_ID, active: true, accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] } }, select: { id: true } });
+  if (organization?.id !== ECHO_ORGANIZATION_ID) throw new Error('Automatic account research requires active Echo ownership.');
+  const candidates = await getPrioritizedAccountResearchQueue({ db, now, limit: maxAccounts, organizationId: ECHO_ORGANIZATION_ID });
   if (candidates.length === 0) return null;
   const reservedMicros = candidates.length * ACCOUNT_RESEARCH_JOB_RESERVE_MICROS;
   if (reservedMicros > ACCOUNT_RESEARCH_AUTOMATIC_DAILY_BUDGET_MICROS) throw new Error('Automatic research reservation exceeds the daily spending ceiling.');
@@ -134,11 +135,12 @@ export async function runAutomaticAccountResearch({
   assertAccountResearchAutomationEnabled();
   let remainingCapacity = Math.max(0, Math.min(ACCOUNT_RESEARCH_AUTOMATIC_DAILY_LIMIT, remainingRunCapacity));
   let run = await db.accountResearchPilot.findFirst({
-    where: { startedByUserId: ACCOUNT_RESEARCH_AUTOMATIC_RUN_ACTOR, status: { in: ACTIVE_RUN_STATUSES } },
+    where: { organizationId: ECHO_ORGANIZATION_ID, organization: { active: true, accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] } }, startedByUserId: ACCOUNT_RESEARCH_AUTOMATIC_RUN_ACTOR, status: { in: ACTIVE_RUN_STATUSES } },
     orderBy: { startedAt: 'asc' },
     select: { id: true, organizationId: true },
   });
   let poll = null;
+  if (run && !hasEchoAccess(run)) run = null;
   if (run) {
     poll = await pollAccountResearchPilot({ pilotId: run.id, organizationId: run.organizationId, db, mode: 'automatic' });
     const current = await db.accountResearchPilot.findUnique({ where: { id: run.id }, select: { status: true } });

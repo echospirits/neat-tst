@@ -20,7 +20,7 @@ test('feature packages keep Core mandatory and group every intelligence capabili
   assert.deepEqual(DEFAULT_FEATURE_KEYS, CORE_PACKAGE_FEATURE_KEYS);
   assert.deepEqual(INTELLIGENCE_PACKAGE_FEATURE_KEYS, ['AGENCY_INTELLIGENCE', 'WHOLESALE_OPPORTUNITIES', 'ADVANCED_INTELLIGENCE']);
   assert.deepEqual(getPackageFeatureKeys(false), CORE_PACKAGE_FEATURE_KEYS);
-  assert.deepEqual(getPackageFeatureKeys(true), FEATURE_KEYS.filter(key => key !== 'COMMUNICATIONS'));
+  assert.deepEqual(getPackageFeatureKeys(true), FEATURE_KEYS.filter(key => key !== 'COMMUNICATIONS' && key !== 'PRODUCTION_FORECASTING'));
   assert.equal(hasIntelligencePackage(['AGENCY_INTELLIGENCE']), true);
   assert.equal(hasIntelligencePackage(CORE_PACKAGE_FEATURE_KEYS), false);
 });
@@ -34,22 +34,10 @@ test('invalid entitlement combinations report every missing dependency', () => {
 });
 
 test('test environment enables standard features while respecting explicit pilot enrollment', () => {
-  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'test' }), FEATURE_KEYS.filter(key => key !== 'COMMUNICATIONS'));
-  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM', 'COMMUNICATIONS'], { APP_ENV: 'test' }), FEATURE_KEYS);
+  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'test' }), FEATURE_KEYS.filter(key => key !== 'COMMUNICATIONS' && key !== 'PRODUCTION_FORECASTING'));
+  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM', 'COMMUNICATIONS'], { APP_ENV: 'test' }), FEATURE_KEYS.filter(key => key !== 'PRODUCTION_FORECASTING'));
   assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'production' }), ['CORE_CRM']);
   assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'development' }), ['CORE_CRM']);
-});
-
-test('staging tenant creation, editing, and seeding preserve standard entitlements without enrolling pilots', () => {
-  const newOrganization = readFileSync('app/platform/organizations/new/page.tsx', 'utf8');
-  const editOrganization = readFileSync('app/platform/organizations/[id]/page.tsx', 'utf8');
-  const seed = readFileSync('scripts/seed-staging.ts', 'utf8');
-  const reconcile = readFileSync('scripts/enable-all-staging-features.ts', 'utf8');
-  assert.match(newOrganization, /getEnvironmentFeatureKeys\(getPackageFeatureKeys/);
-  assert.match(editOrganization, /getEnvironmentFeatureKeys\(getPackageFeatureKeys/);
-  assert.match(seed, /getEnvironmentFeatureKeys\(\[\]\)\.map/);
-  assert.match(reconcile, /getAppEnvironment\(\) !== 'test'/);
-  assert.match(reconcile, /getEnvironmentFeatureKeys\(\[\]\)/);
 });
 
 test('former Pilot capabilities are included in Core without buying Intelligence', () => {
@@ -67,12 +55,6 @@ test('former Pilot capabilities are included in Core without buying Intelligence
   for (const path of ['app/analytics/page.tsx', 'app/analytics/export/route.ts']) {
     const source = readFileSync(path, 'utf8');
     assert.match(source, /requireFeatureForUser\(user, 'ANALYTICS'\)/);
-  }
-  for (const path of ['app/platform/organizations/new/page.tsx', 'app/platform/organizations/[id]/page.tsx']) {
-    const source = readFileSync(path, 'utf8');
-    assert.match(source, /getPackageFeatureKeys\(intelligenceEnabled\)/);
-    assert.doesNotMatch(source, /name="(?:analytics|accountSalesStatus|directWholesaleOrders)"/);
-    assert.match(source, /name="intelligence" type="checkbox"/);
   }
 });
 
@@ -129,14 +111,14 @@ test('direct wholesale PDF entry points are feature gated and contain no email s
 test('manual shared OHLQ data loads require Platform Admin', () => {
   const dataStatus = readFileSync('app/admin/data-status/page.tsx', 'utf8');
   const manualImport = readFileSync('app/api/admin/ohlq-manual-import/route.ts', 'utf8');
-  assert.match(dataStatus, /requirePlatformAdminSession/);
+  assert.match(dataStatus, /requireEchoAdminSession/);
   assert.match(dataStatus, /requireUserSession\(\{ allowTaster: true \}\)/);
-  assert.match(dataStatus, /canRefresh = session.user.role === UserRole.PLATFORM_ADMIN/);
+  assert.match(dataStatus, /canRefresh = isAdminRole\(session.user.role\)/);
   assert.equal((dataStatus.match(/\{canRefresh \? <details/g) ?? []).length, 2);
   assert.doesNotMatch(dataStatus, /requireAdminSession/);
-  assert.match(manualImport, /session\.user\.role !== UserRole\.PLATFORM_ADMIN/);
+  assert.match(manualImport, /!isAdminRole\(session.user.role\) \|\| !hasEchoAccess\(session.user\)/);
   for (const path of ['app/admin/account-research/page.tsx', 'app/admin/account-research/actions.ts', 'app/api/admin/account-research/export/route.ts']) {
-    assert.match(readFileSync(path, 'utf8'), /requirePlatformAdmin/);
+    assert.match(readFileSync(path, 'utf8'), /requireEchoAdmin/);
   }
 });
 
@@ -156,14 +138,4 @@ test('private visit and worklist entry points include organization scoping', () 
     assert.match(source, /requireOrganizationContext/);
     assert.match(source, /organizationId/);
   }
-});
-
-test('platform support view is explicit, short-lived, and audited', () => {
-  const enter = readFileSync('app/platform/support-view/[id]/route.ts', 'utf8');
-  const layout = readFileSync('app/layout.tsx', 'utf8');
-  assert.match(enter, /requirePlatformAdmin/);
-  assert.match(enter, /SUPPORT_VIEW_STARTED/);
-  assert.match(enter, /maxAge: 60 \* 60 \* 8/);
-  assert.match(layout, /Viewing Neat as/);
-  assert.match(layout, /Exit Support View/);
 });

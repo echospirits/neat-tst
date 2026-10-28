@@ -237,7 +237,7 @@ export async function getPrioritizedAccountResearchQueue({
       address: { not: null },
       city: { not: null },
       zip: { not: null },
-      accountResearchJobs: { none: { OR: [
+      accountResearchJobs: { none: { ...scope, OR: [
         { status: { in: ACTIVE_RESEARCH_JOB_STATUSES } },
       ] } },
     },
@@ -255,7 +255,7 @@ export async function getPrioritizedAccountResearchQueue({
       opportunities: { where: scope, select: { productionScore: true, status: true, actionedAt: true, lastDetectedAt: true } },
       currentAssessments: { where: scope, select: { rating: true, evidenceMode: true } },
       accountResearchJobs: {
-        where: { status: { in: TERMINAL_RESEARCH_RETRY_STATUSES } },
+        where: { ...scope, status: { in: TERMINAL_RESEARCH_RETRY_STATUSES } },
         orderBy: { createdAt: 'desc' },
         take: 1,
         select: { status: true, submittedAt: true, createdAt: true, updatedAt: true, error: true, reviewNote: true, inputSnapshot: true },
@@ -266,6 +266,7 @@ export async function getPrioritizedAccountResearchQueue({
   const work = await db.worklistItem.findMany({
     where: {
       wholesaleAccountId: { in: accounts.map((item) => item.id) },
+      ...scope,
       status: { in: [WorklistStatus.OPEN, WorklistStatus.IN_PROGRESS] },
       OR: [{ dueDate: { lte: new Date(now.getTime() + 7 * DAY) } }, { dueDate: null, createdAt: { gte: ageCutoff(now, 1) } }],
     },

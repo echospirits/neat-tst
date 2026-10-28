@@ -6,7 +6,7 @@ import { SubmitButton } from '../../components/SubmitButton';
 import { AccountResearchJobStatus, AccountResearchPilotStatus } from '@prisma/client';
 import Link from 'next/link';
 import { buildPageMetadata } from '../../../lib/appBrand';
-import { requirePlatformAdmin } from '../../../lib/auth';
+import { requireEchoAdmin } from '../../../lib/auth';
 import { ACCOUNT_RESEARCH_AUTOMATIC_DAILY_BUDGET_MICROS, ACCOUNT_RESEARCH_AUTOMATIC_DAILY_LIMIT, ACCOUNT_RESEARCH_PILOT_BUDGET_MICROS, ACCOUNT_RESEARCH_PILOT_MAX_ACCOUNTS, ACCOUNT_RESEARCH_SUBMISSION_WAVE_SIZE, formatUsdMicros } from '../../../lib/accountResearchPilot';
 import { getAutomaticAccountResearchStatus } from '../../../lib/accountResearchAutomation';
 import { getAccountResearchAutomationAvailability, getAccountResearchPilotAvailability } from '../../../lib/accountResearchOpenAI';
@@ -69,7 +69,7 @@ const friendlyPilotError = (errors: Array<string | null>) => {
 };
 
 export default async function AccountResearchPage({ searchParams }: { searchParams?: Promise<PageParams> }) {
-  const user = await requirePlatformAdmin();
+  const user = await requireEchoAdmin();
   const { organizationId } = await requireOrganizationContext(user);
   await requireFeatureForUser(user, 'ADVANCED_INTELLIGENCE');
   const params = (await searchParams) ?? {};

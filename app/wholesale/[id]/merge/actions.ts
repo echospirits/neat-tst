@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { requirePlatformAdmin } from '../../../../lib/auth';
+import { requireEchoAdmin } from '../../../../lib/auth';
 import {
   mergeWholesaleAccounts,
   WholesaleMergeError,
@@ -12,7 +12,7 @@ import {
 const toRequired = (value: FormDataEntryValue | null) => String(value ?? '').trim();
 
 export async function mergeWholesaleAccountAction(formData: FormData) {
-  await requirePlatformAdmin();
+  await requireEchoAdmin();
   const sourceId = toRequired(formData.get('sourceId'));
   const targetId = toRequired(formData.get('targetId'));
   const confirmation = toRequired(formData.get('confirmation'));

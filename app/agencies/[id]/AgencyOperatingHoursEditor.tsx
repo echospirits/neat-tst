@@ -32,7 +32,7 @@ export function AgencyOperatingHoursEditor({
     <p className="muted">{canEdit ? 'Leave a day blank when its hours are unknown. Use “Closed” for a known closure. ' : ''}Retail tasks outside listed hours are marked red in My Schedule and the Worklist.</p>
     {sourceName ? <p className="account-hours-source">Source: {sourceUrl ? <a href={sourceUrl} rel="noreferrer" target="_blank">{sourceName}</a> : sourceName}{researchedAt ? ` · checked ${researchedAt.slice(0, 10)}` : ''}</p> : null}
     {!canEdit ? <>
-      <p className="muted">These hours are shared across organizations. A platform administrator can update them.</p>
+      <p className="muted">An Echo administrator can update these shared reference hours.</p>
       {schedule?.length ? <dl>{schedule.map((entry) => <div key={entry.day}><dt>{entry.day}</dt><dd>{entry.hours}</dd></div>)}</dl> : <p className="muted">Operating hours are not set.</p>}
     </> : <>
     <p className="muted">Updates apply to every organization that uses this retail.</p>

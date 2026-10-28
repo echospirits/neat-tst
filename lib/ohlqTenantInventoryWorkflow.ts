@@ -8,6 +8,7 @@ import { downloadOhlqAgencyInventoryReport, getOhlqAgencyInventoryObservationDat
 import { getOrganizationOhlqCredentials } from './ohlqTenantCredentials';
 import { completeTenantInventoryRun, errorTenantInventoryRun, startTenantInventoryRun } from './ohlqTenantInventoryStatus';
 import { prisma } from './prisma';
+import { ECHO_ORGANIZATION_ID } from './echoAccess';
 
 type Logger = Pick<Console, 'error' | 'log'>;
 const defaultServices = {
@@ -33,7 +34,9 @@ export async function runOhlqTenantInventoryWorkflow({
   const reportDate = getOhlqAgencyInventoryObservationDate();
   const organizations = await retryDatabaseRead(() => db.organization.findMany({
     where: {
+      id: ECHO_ORGANIZATION_ID,
       active: true,
+      accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] },
       ohlqCredentials: { isNot: null },
       OR: [
         { features: { some: { enabled: true, featureKey: 'AGENCY_INTELLIGENCE' } } },
@@ -58,6 +61,7 @@ export async function runOhlqTenantInventoryWorkflow({
   let importedRows = 0;
 
   for (const organization of organizations) {
+    if (organization.id !== ECHO_ORGANIZATION_ID) continue;
     let inventoryCompleted = false;
     try {
       await startTenantInventoryRun(organization.id, reportDate, db);

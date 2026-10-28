@@ -9,7 +9,7 @@ function stub(t: TestContext, target: any, method: string, fn: (...args: any[]) 
   const original = target[method]; target[method] = fn; t.after(() => { target[method] = original; });
 }
 
-test('all tenant roles get identical briefs; separate tenants get separate data; duplicate addresses and triggers are suppressed', async (t) => {
+test('all Echo roles get identical briefs; outside and unassigned admins are excluded; duplicate addresses and triggers are suppressed', async (t) => {
   const users = [
     { id: 'rep', role: 'USER', email: 'rep@example.com', organizationId: 'org_echo_spirits' },
     { id: 'admin', role: 'ADMIN', email: 'admin@example.com', organizationId: 'org_echo_spirits' },
@@ -26,7 +26,7 @@ test('all tenant roles get identical briefs; separate tenants get separate data;
   });
   stub(t, prisma.user, 'findMany', async (args) => {
     assert.equal(args.where.isActive, true);
-    assert.equal(args.where.OR[0].role, undefined); // Tasters are included.
+    assert.deepEqual(args.where.organizationId.in, ['org_echo_spirits']); // Tasters are included.
     return users;
   });
   const logs = new Map<string, any>();
@@ -45,29 +45,29 @@ test('all tenant roles get identical briefs; separate tenants get separate data;
   const options = { digestLoader: async (id: string) => { generated.push(id); return makeTenantDigest(id, id === 'org_other' ? 'Other Distillery' : 'Echo Spirits'); },
     emailSender: async (email: any) => { emails.push(email); return { providerMessageId: 'message' }; } };
   const first = await sendWeeklyDigestForAllUsers(options);
-  assert.equal(first.sent, 5); assert.equal(first.missingEmailSkipped, 1);
-  assert.deepEqual(generated, ['org_echo_spirits', 'org_other']);
-  assert.equal(new Set(emails.slice(0, 4).map((email) => email.html)).size, 1);
-  assert.match(emails[4].subject, /Other Distillery/); assert.doesNotMatch(emails[4].html, /Echo Spirits/);
-  assert.equal((await sendWeeklyDigestForAllUsers(options)).skipped, 5);
-  assert.equal(emails.length, 5);
+  assert.equal(first.sent, 3); assert.equal(first.missingEmailSkipped, 1);
+  assert.deepEqual(generated, ['org_echo_spirits']);
+  assert.equal(new Set(emails.map((email) => email.html)).size, 1);
+  assert.deepEqual(emails.map(email => email.to), ['rep@example.com', 'admin@example.com', 'taster@example.com']);
+  assert.equal((await sendWeeklyDigestForAllUsers(options)).skipped, 3);
+  assert.equal(emails.length, 3);
 });
 
-test('manual sends filter feature eligibility by the current tenant', async (t) => {
-  stub(t, prisma.organizationFeature, 'findMany', async (args) => { assert.equal(args.where.organizationId, 'org_one'); return [{ organizationId: 'org_one' }]; });
-  stub(t, prisma.user, 'findMany', async (args) => { assert.deepEqual(args.where.OR, [{ organizationId: { in: ['org_one'] } }]); return []; });
+test('foreign manual sends stop before any recipient or entitlement lookup', async (t) => {
+  stub(t, prisma.organizationFeature, 'findMany', async () => { assert.fail('must not query outside scope'); });
+  stub(t, prisma.user, 'findMany', async () => { assert.fail('must not query outside scope'); });
   assert.equal((await sendWeeklyDigestForAllUsers({ organizationId: 'org_one' })).attempted, 0);
 });
 
-test('one tenant generation failure does not prevent another tenant from receiving its brief', async (t) => {
-  stub(t, prisma.organizationFeature, 'findMany', async () => [{ organizationId: 'broken' }, { organizationId: 'good' }]);
-  stub(t, prisma.user, 'findMany', async () => ['broken', 'good'].map((id) => ({ id, organizationId: id, role: 'USER', email: `${id}@example.com` })));
+test('Echo generation failure is reported without processing another tenant', async (t) => {
+  stub(t, prisma.organizationFeature, 'findMany', async () => [{ organizationId: 'org_echo_spirits' }, { organizationId: 'good' }]);
+  stub(t, prisma.user, 'findMany', async () => ['org_echo_spirits', 'good'].map((id) => ({ id, organizationId: id, role: 'USER', email: `${id}@example.com` })));
   stub(t, prisma.weeklyDigestLog, 'findFirst', async () => null);
   stub(t, prisma.weeklyDigestLog, 'upsert', async () => ({ id: 'log' }));
   stub(t, prisma.weeklyDigestLog, 'updateMany', async () => ({ count: 1 }));
   stub(t, prisma.weeklyDigestLog, 'update', async () => ({}));
-  const result = await sendWeeklyDigestForAllUsers({ digestLoader: async (id) => { if (id === 'broken') throw new Error('data unavailable'); return makeTenantDigest(id, id); }, emailSender: async () => ({ providerMessageId: 'ok' }) });
-  assert.equal(result.failed, 1); assert.equal(result.sent, 1);
+  const result = await sendWeeklyDigestForAllUsers({ digestLoader: async (id) => { assert.equal(id, 'org_echo_spirits'); throw new Error('data unavailable'); }, emailSender: async () => { assert.fail('must not send'); } });
+  assert.equal(result.failed, 1); assert.equal(result.sent, 0);
 });
 
 test('tenant-wide counts include all activity once and use date-only worklist boundaries', async (t) => {
@@ -91,13 +91,13 @@ test('tenant-wide counts include all activity once and use date-only worklist bo
 });
 
 test('a concurrent send claim and legacy successful log each prevent delivery', async (t) => {
-  stub(t, prisma.organizationFeature, 'findMany', async () => [{ organizationId: 'one' }]);
-  stub(t, prisma.user, 'findMany', async () => [{ id: 'rep', organizationId: 'one', role: 'USER', email: 'rep@example.com' }]);
+  stub(t, prisma.organizationFeature, 'findMany', async () => [{ organizationId: 'org_echo_spirits' }]);
+  stub(t, prisma.user, 'findMany', async () => [{ id: 'rep', organizationId: 'org_echo_spirits', role: 'USER', email: 'rep@example.com' }]);
   let legacy = false;
   stub(t, prisma.weeklyDigestLog, 'findFirst', async (args) => { assert.equal(args.where.digestType, undefined); return legacy ? { status: 'SENT' } : null; });
   stub(t, prisma.weeklyDigestLog, 'upsert', async () => ({ id: 'pending' }));
   stub(t, prisma.weeklyDigestLog, 'updateMany', async () => ({ count: 0 }));
-  const options = { digestLoader: async () => makeTenantDigest('one'), emailSender: async () => { assert.fail('must not send'); } };
+  const options = { digestLoader: async () => makeTenantDigest('org_echo_spirits'), emailSender: async () => { assert.fail('must not send'); } };
   assert.equal((await sendWeeklyDigestForAllUsers(options)).skipped, 1);
   legacy = true;
   assert.equal((await sendWeeklyDigestForAllUsers(options)).skipped, 1);

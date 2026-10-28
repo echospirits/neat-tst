@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { isAdminRole } from '../lib/userAccess';
+import { hasEchoAccess } from '../lib/echoAccess';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
@@ -29,23 +31,23 @@ function platformGuard(actor: { id: string; role: UserRole; organizationId: stri
   const source = readFileSync('lib/auth.ts', 'utf8');
   const ast = ts.createSourceFile('auth.ts', source, ts.ScriptTarget.Latest, true);
   const guards = ast.statements.filter(node => ts.isFunctionDeclaration(node)
-    && ['requirePlatformAdminSession', 'requirePlatformAdmin'].includes(node.name?.text ?? ''));
-  const context: Record<string, any> = { UserRole,
+    && ['requireEchoAdminSession', 'requireEchoAdmin'].includes(node.name?.text ?? ''));
+  const context: Record<string, any> = { UserRole, isAdminRole, hasEchoAccess,
     requireUserSession: async () => { if (!actor) throw new Error('redirect:/login'); return { user: actor }; },
     redirect: (path: string) => { throw new Error(`redirect:${path}`); },
   };
   runInNewContext(ts.transpileModule(guards.map(node => node.getText(ast).replace(/^export\s+/, '')).join('\n')
-    + '\nglobalThis.guard = requirePlatformAdmin;', { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, context);
+    + '\nglobalThis.guard = requireEchoAdmin;', { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, context);
   return context.guard;
 }
 
-function fixture(role: UserRole | null = UserRole.PLATFORM_ADMIN, organizationId = 'org-a', conflict: boolean | 'same-time' = false) {
+function fixture(role: UserRole | null = UserRole.ADMIN, organizationId = 'org_echo_spirits', conflict: boolean | 'same-time' = false) {
   const actor = role ? { id: 'actor', role, organizationId } : null;
   const original = { schedule: [{ day: 'Monday', hours: '9:00 AM–5:00 PM' }], sourceType: 'legacy' };
   const agency: any = { id: 'agency-1', agencyId: '12345', name: 'Agency Store', address: '123 Main Street', city: 'Columbus', state: 'OH', zip: '43215', businessHours: original, updatedAt: new Date('2026-10-01') };
   const calls = { reads: 0, writes: 0, organization: 0, provider: 0, revalidated: [] as string[] };
   const api = loadModule('app/agencies/[id]/actions.ts', {
-    '../../../lib/auth': { requirePlatformAdmin: platformGuard(actor), requireUser: async () => actor },
+    '../../../lib/auth': { requireEchoAdmin: platformGuard(actor), requireUser: async () => actor },
     '../../../lib/organizations': { requireOrganizationContext: async () => { calls.organization++; return { organizationId }; } },
     '../../../lib/operatingHours': operatingHours,
     '../../../lib/prisma': { prisma: { agency: {
@@ -88,9 +90,9 @@ function form(hours = 'Closed') {
 }
 
 for (const action of ['saveAgencyOperatingHours', 'researchAgencyOperatingHours']) {
-  for (const role of [UserRole.USER, UserRole.ADMIN, UserRole.TASTER, null]) {
+  for (const role of [UserRole.USER, UserRole.TASTER, null]) {
     test(`${action} rejects ${role ?? 'unauthenticated'} callers before any shared-data or provider access`, async () => {
-      for (const organizationId of ['org-a', 'org-b']) {
+      for (const organizationId of ['org_echo_spirits', 'org-b']) {
         const f = fixture(role, organizationId);
         await assert.rejects(f.api[action](form()), /redirect:/);
         assert.deepEqual(f.agency.businessHours, f.original);
@@ -146,14 +148,14 @@ test('invalid manual schedules and missing agencies do not write shared hours', 
 
 for (const action of ['saveAgencyOperatingHours', 'researchAgencyOperatingHours']) {
   test(`${action} reports concurrent changes without losing shared hours or history`, async () => {
-    const f = fixture(UserRole.PLATFORM_ADMIN, 'org-a', true);
+    const f = fixture(UserRole.PLATFORM_ADMIN, 'org_echo_spirits', true);
     const result = await f.api[action](form());
     assert.ok('error' in result && result.error.includes('changed'));
     assert.deepEqual(f.agency.businessHours, f.original);
     assert.deepEqual(f.calls.revalidated, []);
   });
   test(`${action} preserves another save even when its timestamp matches`, async () => {
-    const f = fixture(UserRole.PLATFORM_ADMIN, 'org-a', 'same-time');
+    const f = fixture(UserRole.PLATFORM_ADMIN, 'org_echo_spirits', 'same-time');
     assert.ok('error' in await f.api[action](form()));
     assert.equal(f.agency.businessHours.sourceType, 'concurrent');
     assert.deepEqual(f.calls.revalidated, []);
@@ -172,7 +174,7 @@ for (const schedule of [null, [{ day: 'Monday', hours: 'Closed' }]]) {
     const html = renderToStaticMarkup(React.createElement(Editor, { agencyId: 'agency-1', schedule, canEdit: false,
       sourceName: null, sourceUrl: null, researchedAt: null, researchAvailable: true }));
     assert.doesNotMatch(html, /<form|<input|<button/);
-    assert.match(html, /platform administrator can update/);
+    assert.match(html, /Echo administrator can update/);
     assert.match(html, schedule ? /Monday.*Closed/ : /Operating hours are not set/);
   });
 }

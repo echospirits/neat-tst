@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { hashPassword } from '../../lib/password';
 import { prisma } from '../../lib/prisma';
 import { hashUserInvitationToken } from '../../lib/userInvitations';
+import { ECHO_ORGANIZATION_ID } from '../../lib/echoAccess';
 
 const redirectToInvite = (token: string, status: string): never => {
   const params = new URLSearchParams({ token, status });
@@ -33,6 +34,7 @@ export async function acceptUserInvitation(formData: FormData) {
       tokenHash,
       acceptedAt: null,
       expiresAt: { gt: new Date() },
+      user: { organizationId: ECHO_ORGANIZATION_ID },
     },
     select: {
       id: true,
@@ -55,6 +57,7 @@ export async function acceptUserInvitation(formData: FormData) {
         id: invitation.id,
         acceptedAt: null,
         expiresAt: { gt: new Date() },
+        user: { organizationId: ECHO_ORGANIZATION_ID },
       },
       data: {
         acceptedAt: new Date(),
@@ -65,13 +68,14 @@ export async function acceptUserInvitation(formData: FormData) {
       return false;
     }
 
-    await tx.user.update({
-      where: { id: invitation.userId },
+    const activated = await tx.user.updateMany({
+      where: { id: invitation.userId, organizationId: ECHO_ORGANIZATION_ID },
       data: {
         isActive: true,
         passwordHash,
       },
     });
+    if (activated.count !== 1) throw new Error('Invitation account is no longer available.');
     await tx.userSession.deleteMany({ where: { userId: invitation.userId } });
     await tx.userInvitation.deleteMany({
       where: {
@@ -85,7 +89,7 @@ export async function acceptUserInvitation(formData: FormData) {
     }
 
     return true;
-  });
+  }).catch(() => false);
 
   if (!accepted) {
     redirect('/accept-invite?status=invalid');

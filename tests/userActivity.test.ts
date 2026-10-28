@@ -13,11 +13,12 @@ test('activity uses UTC day boundaries and validates real calendar dates', () =>
 });
 
 test('admins cannot widen their organization scope and ordinary users are denied', () => {
-  assert.deepEqual(activityScope({ role: UserRole.ADMIN, organizationId: 'own' }, 'other'), { organizationId: 'own' });
-  assert.deepEqual(activityScope({ role: UserRole.PLATFORM_ADMIN, organizationId: 'own' }), {});
-  assert.deepEqual(activityScope({ role: UserRole.PLATFORM_ADMIN, organizationId: null }, 'other'), { organizationId: 'other' });
-  for (const role of [UserRole.USER, UserRole.TASTER, UserRole.ADMIN]) {
-    assert.throws(() => activityScope({ role, organizationId: role === UserRole.ADMIN ? null : 'own' }));
+  for (const role of [UserRole.ADMIN, UserRole.PLATFORM_ADMIN]) for (const requested of [undefined, 'other', 'org_echo_spirits']) {
+    assert.deepEqual(activityScope({ role, organizationId: 'org_echo_spirits' }, requested), { organizationId: 'org_echo_spirits' });
+  }
+  for (const role of Object.values(UserRole)) for (const organizationId of [null, 'other', 'org_echo_spirits']) {
+    if (organizationId === 'org_echo_spirits' && (role === UserRole.ADMIN || role === UserRole.PLATFORM_ADMIN)) continue;
+    assert.throws(() => activityScope({ role, organizationId }, 'org_echo_spirits'));
   }
 });
 
@@ -68,11 +69,11 @@ test('all report queries enforce scope, parameterize search, and clamp page to a
     return queries.length === 1 ? [{ total: 2 }] : [];
   } } as unknown as Pick<Prisma.TransactionClient, '$queryRaw'>;
   const attack = "%' OR 1=1 --";
-  const result = await getUserActivityReport(db, { role: UserRole.ADMIN, organizationId: 'own' }, { organization: 'other', q: attack, page: '999', activity: 'login' });
+  const result = await getUserActivityReport(db, { role: UserRole.ADMIN, organizationId: 'org_echo_spirits' }, { organization: 'other', q: attack, page: '999', activity: 'login' });
   assert.equal(result.page, 1);
   assert.equal(queries.length, 4);
   for (const query of queries) {
-    assert.ok(query.values.includes('own'));
+    assert.ok(query.values.includes('org_echo_spirits'));
     assert.ok(!query.values.includes('other'));
     assert.ok(query.values.includes(attack.toLowerCase()));
     assert.ok(!query.text.includes(attack));

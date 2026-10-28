@@ -4,7 +4,7 @@ Start with [implementation progress](engineering/implementation-progress.md) and
 
 ## Current release
 
-**0.2.3 is released; development remains frozen.** [Archived release](releases/0.2.3.md) | [Tenant announcement](releases/0.2.3-user-notes.md). See the [plan](releases/0.2.3-plan.md), [checklist](releases/0.2.3-checklist.md) and [validation](releases/0.2.3-validation.md).
+**0.3.0 is frozen for release preparation; production remains 0.2.3.** Echo-only access and Production Forecasting are packaged together. See the [plan](releases/0.3.0-plan.md), [checklist](releases/0.3.0-checklist.md), [validation](releases/0.3.0-validation.md) and [migration runbook](releases/0.3.0-migrations.md). [Previous production release](releases/0.2.3.md). Development remains locked until owner instruction.
 
 ## architecture
 
@@ -32,7 +32,7 @@ Start with [implementation progress](engineering/implementation-progress.md) and
 - [Sales intelligence](product/sales-intelligence.md)
 - [Field execution](product/field-execution.md)
 - [Events and tastings](product/events-and-tastings.md)
-- [Recipes and sales enablement](product/recipe-management.md)
+- [Retired Recipes design history](product/recipe-management.md)
 - [Management reporting](product/management-reporting.md)
 - [Multi-tenant configuration](product/multi-tenant-configuration.md)
 

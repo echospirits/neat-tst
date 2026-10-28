@@ -115,7 +115,7 @@ test("service guards reject disabled tenants before mail ingestion or contact di
   await assert.rejects(loadContactSuggestions(db, actor), /pilot access/);
 });
 
-test("disabling the pilot suppresses inbound SMS storage while still recording verified STOP opt-outs idempotently", async () => {
+test("disabling Echo's pilot suppresses inbound SMS storage while still recording verified STOP opt-outs idempotently", async () => {
   let events = 0,
     updates = 0;
   const db = {
@@ -136,7 +136,7 @@ test("disabling the pilot suppresses inbound SMS storage while still recording v
   } as any;
   const connection = {
     id: "sender",
-    organizationId: "other",
+    organizationId: "org_echo_spirits",
     createdByUserId: "owner",
     provider: "TWILIO",
   };

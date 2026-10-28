@@ -33,6 +33,11 @@ on:
         description: "Update wholesale account Echo purchase state/worklist without replacing raw sales rows."
         required: false
         type: boolean
+      productionSourcesOnly:
+        default: false
+        description: "Run only enrolled tenants' Bailment / Partner DC imports and forecast refresh."
+        required: false
+        type: boolean
       deploymentEnvironment:
         default: production
         description: "GitHub Environment whose isolated database and OHLQ secrets will be used."
@@ -145,6 +150,7 @@ jobs:
           from_date: ${{ github.event.inputs.fromDate || '' }}
           to_date: ${{ github.event.inputs.toDate || '' }}
           purchase_state_only: ${{ github.event.inputs.purchaseStateOnly || 'false' }}
+          production_sources_only: ${{ github.event.inputs.productionSourcesOnly || 'false' }}
         run: |
           if [[ -z "$days" ]]; then
             if [[ "$EVENT_NAME" == "schedule" ]]; then
@@ -170,6 +176,14 @@ jobs:
             false) max_days=30 ;;
             *) echo "purchaseStateOnly must be true or false." >&2; exit 1 ;;
           esac
+          case "$production_sources_only" in
+            true|false) ;;
+            *) echo "productionSourcesOnly must be true or false." >&2; exit 1 ;;
+          esac
+          if [[ "$production_sources_only" == "true" && "$purchase_state_only" == "true" ]]; then
+            echo "Choose only one focused import mode." >&2
+            exit 1
+          fi
           if [[ ! "$days" =~ ^[1-9][0-9]{0,2}$ ]] || (( days > max_days )); then
             echo "days must be a whole number between 1 and $max_days." >&2
             exit 1
@@ -237,19 +251,19 @@ jobs:
 
       - name: Download and import current OHLQ Account Master
         id: account_master
-        if: steps.schedule_window.outputs.should_run == 'true' && (github.event_name == 'schedule' || inputs.purchaseStateOnly != true)
+        if: steps.schedule_window.outputs.should_run == 'true' && (github.event_name == 'schedule' || (inputs.purchaseStateOnly != true && inputs.productionSourcesOnly != true))
         timeout-minutes: 50
         run: npm run sync:ohlq-account-master -- --environment "$APP_ENV" --apply
 
       - name: Download and import current OHLQ Brand Master
         id: brand_master
-        if: ${{ !cancelled() && steps.required_secrets.outcome == 'success' && steps.credential_repair.outcome != 'failure' && steps.schedule_window.outputs.should_run == 'true' && (github.event_name == 'schedule' || inputs.purchaseStateOnly != true) }}
+        if: ${{ !cancelled() && steps.required_secrets.outcome == 'success' && steps.credential_repair.outcome != 'failure' && steps.schedule_window.outputs.should_run == 'true' && (github.event_name == 'schedule' || (inputs.purchaseStateOnly != true && inputs.productionSourcesOnly != true)) }}
         timeout-minutes: 15
         run: npm run sync:ohlq-brand-master -- --environment "$APP_ENV" --apply --defer-product-discovery
 
       - name: Run OHLQ annual sales import
         id: sales_import
-        if: ${{ !cancelled() && steps.required_secrets.outcome == 'success' && steps.credential_repair.outcome != 'failure' && steps.schedule_window.outputs.should_run == 'true' }}
+        if: ${{ !cancelled() && steps.required_secrets.outcome == 'success' && steps.credential_repair.outcome != 'failure' && steps.schedule_window.outputs.should_run == 'true' && (github.event_name == 'schedule' || inputs.productionSourcesOnly != true) }}
         # Multi-day recovery needs a larger budget than the daily import.
         timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && inputs.reportDate == '' && inputs.days != '1' && 120 || 40 }}
         shell: bash
@@ -286,6 +300,12 @@ jobs:
         timeout-minutes: 10
         run: npx tsx scripts/discover-ohlq-products.ts --environment "$APP_ENV"
 
+      - name: Download and import production forecasting sources
+        id: production_sources
+        if: ${{ !cancelled() && steps.required_secrets.outcome == 'success' && steps.credential_repair.outcome != 'failure' && steps.schedule_window.outputs.should_run == 'true' && (github.event_name == 'schedule' || inputs.purchaseStateOnly != true) }}
+        timeout-minutes: 40
+        run: npm run sync:production-sources -- --environment "$APP_ENV" --apply
+
       - name: Refresh post-import intelligence and retention
         id: intelligence
         if: ${{ !cancelled() && steps.sales_import.outcome == 'success' && (github.event_name == 'schedule' || inputs.purchaseStateOnly != true) }}
@@ -308,6 +328,7 @@ jobs:
           OHLQ_TENANT_INVENTORY_STATUS: ${{ steps.tenant_inventory.outcome }}
           OHLQ_INTELLIGENCE_STATUS: ${{ steps.intelligence.outcome }}
           OHLQ_PRODUCT_DISCOVERY_STATUS: ${{ steps.product_discovery.outcome }}
+          OHLQ_PRODUCTION_SOURCES_STATUS: ${{ steps.production_sources.outcome }}
         run: node scripts/write-ohlq-artifact-summary.cjs
 
       - name: Upload sanitized OHLQ failure summary

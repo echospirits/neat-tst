@@ -14,9 +14,9 @@ const florida: StateScope = { states: ['FL'], agencyIds: ['fl-retail'], agencyNu
 test('state choices require a supported nonempty set, deduplicate and stay independent of plan', () => {
   assert.deepEqual(parseEnabledStates(['OH', 'FL', 'OH']), ['FL', 'OH']);
   for (const values of [[], ['XX'], ['oh'], ['OH', 'Florida'], [null]]) assert.throws(() => parseEnabledStates(values));
-  const source = readFileSync('app/platform/organizations/[id]/page.tsx', 'utf8');
-  assert.ok(source.includes('<form action={saveStates}'));
-  assert.ok(source.includes('<form action={saveFeatures}'));
+  const source = readFileSync('app/admin/organization/data-actions.ts', 'utf8');
+  assert.ok(source.includes('saveEchoStates'));
+  assert.ok(!source.includes('saveFeatures'));
 });
 
 test('legacy blank Ohio state remains Ohio, while a Florida-only tenant cannot match blank or Ohio rows', () => {
@@ -69,24 +69,24 @@ test('concurrent request contexts keep independent states and guard reads and up
   assert.ok(JSON.stringify(fl).includes('Florida')); assert.ok(!JSON.stringify(fl).includes('Ohio'));
 });
 
-function stateAction(requirePlatformAdmin: () => Promise<unknown>, transaction: (work: (tx: any) => Promise<unknown>) => Promise<unknown>) {
-  const source = readFileSync('app/platform/organizations/[id]/page.tsx', 'utf8');
-  const action = source.slice(source.indexOf('async function saveStates('), source.indexOf('async function addVendor('));
-  const context: any = { requirePlatformAdmin, prisma: { $transaction: transaction }, parseEnabledStates, OrganizationAuditAction, clean: (value: unknown) => String(value ?? '').trim(), revalidatePath: () => {}, redirect: (url: string) => { throw new Error(`redirect:${url}`); } };
-  runInNewContext(ts.transpileModule(`${action}\nglobalThis.action = saveStates;`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, context);
+function stateAction(requireEchoAdmin: () => Promise<unknown>, transaction: (work: (tx: any) => Promise<unknown>) => Promise<unknown>) {
+  const source = readFileSync('app/admin/organization/data-actions.ts', 'utf8');
+  const action = source.slice(source.indexOf('export async function saveEchoStates('), source.indexOf('export async function addEchoVendor('));
+  const context: any = { requireEchoAdmin, requireOrganizationContext: async () => ({ organizationId: 'org_echo_spirits' }), prisma: { $transaction: transaction }, parseEnabledStates, OrganizationAuditAction, clean: (value: unknown) => String(value ?? '').trim(), revalidatePath: () => {}, redirect: (url: string) => { throw new Error(`redirect:${url}`); } };
+  runInNewContext(ts.transpileModule(`${action.replace('export ', '')}\nglobalThis.action = saveEchoStates;`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, context);
   return context.action as (data: FormData) => Promise<void>;
 }
-test('only a platform admin can save state access; successful changes are audited without modifying plan', async () => {
+test('only an Echo admin can save state access; successful changes are audited without modifying plan', async () => {
   const form = new FormData(); form.set('organizationId', 'echo'); form.append('enabledStates', 'OH'); form.append('enabledStates', 'FL'); form.set('intelligence', 'on');
   let writes = 0, saved: unknown, audit: any;
   const transaction = async (work: (tx: any) => Promise<unknown>) => { writes++; return work({ organization: { findUniqueOrThrow: async () => ({ enabledStates: ['OH'] }), update: async ({ data }: any) => { saved = data; } }, organizationAuditEvent: { create: async ({ data }: any) => { audit = data; } } }); };
   await assert.rejects(stateAction(async () => { throw new Error('Forbidden'); }, transaction)(form), /Forbidden/);
   assert.equal(writes, 0);
-  await assert.rejects(stateAction(async () => ({ id: 'platform' }), transaction)(form), /state-access-saved/);
+  await assert.rejects(stateAction(async () => ({ id: 'platform' }), transaction)(form), /states-saved/);
   assert.equal(JSON.stringify(saved), JSON.stringify({ enabledStates: ['FL', 'OH'] }));
   assert.equal(audit.actorUserId, 'platform'); assert.equal(audit.metadata.setting, 'enabledStates');
   form.delete('enabledStates');
-  await assert.rejects(stateAction(async () => ({ id: 'platform' }), transaction)(form), /select-at-least-one-valid-state/);
+  await assert.rejects(stateAction(async () => ({ id: 'platform' }), transaction)(form), /invalid-states/);
   assert.equal(writes, 1);
 });
 

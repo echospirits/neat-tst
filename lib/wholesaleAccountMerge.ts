@@ -1,5 +1,7 @@
 import { Prisma, UserRole, type PrismaClient } from '@prisma/client';
-import { requirePlatformAdmin } from './auth';
+import { requireEchoAdmin } from './auth';
+import { isAdminRole } from './userAccess';
+import { hasEchoAccess } from './echoAccess';
 import { prisma } from './prisma';
 import { getGeocodeResetForAddressChange } from './location/geocode';
 import { getWholesaleAddressValuesForMerge, type WholesaleAddressProtection } from './wholesaleAddressProtection';
@@ -168,7 +170,7 @@ export async function getWholesaleMergeCandidates({
   query: string;
   source: WholesaleMergeCandidate;
 }) {
-  await requirePlatformAdmin();
+  await requireEchoAdmin();
   const allCandidates = await db.wholesaleAccount.findMany({
     where: {
       id: { not: source.id },
@@ -292,7 +294,7 @@ const getAccountForMerge = (db: Prisma.TransactionClient | typeof prisma, id: st
   });
 
 export async function getWholesaleAccountMergePreview(sourceId: string, targetId: string) {
-  await requirePlatformAdmin();
+  await requireEchoAdmin();
   const [source, target] = await Promise.all([
     getAccountForMerge(prisma, sourceId),
     getAccountForMerge(prisma, targetId),
@@ -380,16 +382,16 @@ export async function mergeWholesaleAccounts({
   sourceId: string;
   targetId: string;
 }) {
-  const actor = await requirePlatformAdmin();
+  const actor = await requireEchoAdmin();
   return prisma.$transaction(
     async (tx) => {
       // Recheck current authority in the same transaction as the shared-record writes.
       const currentActor = await tx.user.findUnique({
         where: { id: actor.id },
-        select: { isActive: true, role: true },
+        select: { isActive: true, role: true, organizationId: true },
       });
-      if (!currentActor?.isActive || currentActor.role !== UserRole.PLATFORM_ADMIN) {
-        throw new WholesaleMergeError('forbidden', 'Only an active platform administrator can merge shared accounts.');
+      if (!currentActor?.isActive || !isAdminRole(currentActor.role) || !hasEchoAccess(currentActor)) {
+        throw new WholesaleMergeError('forbidden', 'Only an active Echo administrator can merge shared accounts.');
       }
       const [source, target] = await Promise.all([
         getAccountForMerge(tx, sourceId),

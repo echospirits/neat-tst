@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { ECHO_ORGANIZATION_ID } from '../../echoAccess';
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../../prisma";
@@ -326,13 +327,16 @@ export function safeOriginalUrl(value?: string): string | null {
   } catch { return null; }
 }
 export async function sweepMailboxRetention(limit = 20, now = new Date()) {
-  const connections = await prisma.mailboxConnection.findMany({ where: { OR: [{ lastRetentionAt: null }, { lastRetentionAt: { lt: new Date(now.getTime() - 86400000) } }] }, orderBy: { lastRetentionAt: { sort: 'asc', nulls: 'first' } }, take: Math.min(100, Math.max(1, limit)), select: { id: true, organizationId: true, retentionDays: true } });
+  const connections = await prisma.mailboxConnection.findMany({ where: { organizationId: ECHO_ORGANIZATION_ID, OR: [{ lastRetentionAt: null }, { lastRetentionAt: { lt: new Date(now.getTime() - 86400000) } }] }, orderBy: { lastRetentionAt: { sort: 'asc', nulls: 'first' } }, take: Math.min(100, Math.max(1, limit)), select: { id: true, organizationId: true, retentionDays: true } });
   let removed = 0;
-  for (const connection of connections) removed += await prisma.$transaction(async tx => {
+  for (const connection of connections) {
+    if (connection.organizationId !== ECHO_ORGANIZATION_ID) continue;
+    removed += await prisma.$transaction(async tx => {
     const result = await tx.accountActivity.deleteMany({ where: { organizationId: connection.organizationId, connectionId: connection.id, occurredAt: { lt: new Date(now.getTime() - connection.retentionDays * 86400000) } } });
     await tx.mailboxConnection.updateMany({ where: { id: connection.id, organizationId: connection.organizationId }, data: { lastRetentionAt: now } });
     return result.count;
   });
+  }
   return removed;
 }
 

@@ -2,6 +2,7 @@ import { after, NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createPasswordResetToken, PASSWORD_RESET_COOLDOWN_MS, sendPasswordResetEmail } from '../../../../lib/passwordReset';
 import { prisma } from '../../../../lib/prisma';
+import { ECHO_ORGANIZATION_ID, hasEchoAccess } from '../../../../lib/echoAccess';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -29,16 +30,17 @@ export async function POST(request: NextRequest) {
     try {
       const user = await prisma.user.findUnique({
         where: { email: parsed.email },
-        select: { id: true, isActive: true, passwordHash: true },
+        select: { id: true, isActive: true, passwordHash: true, organizationId: true },
       });
 
-      if (user?.isActive && user.passwordHash) {
+      if (user?.isActive && user.passwordHash && hasEchoAccess(user)) {
         const issuance = await prisma.$transaction(async (tx) => {
           // Serialize issuance across all app instances before checking the cooldown.
           // Recheck eligibility while locking the existing user row.
           const eligibleUsers = await tx.$queryRaw<Array<{ id: string }>>`
             SELECT "id" FROM "User"
             WHERE "id" = ${user.id} AND "isActive" = TRUE AND "passwordHash" IS NOT NULL
+              AND "organizationId" = ${ECHO_ORGANIZATION_ID}
             FOR UPDATE
           `;
           if (eligibleUsers.length !== 1) return null;

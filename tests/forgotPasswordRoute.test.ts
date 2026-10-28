@@ -6,9 +6,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import ts from 'typescript';
 import { z } from 'zod';
 import { createPasswordResetToken, hashPasswordResetToken, PASSWORD_RESET_COOLDOWN_MS, PASSWORD_RESET_HOURS } from '../lib/passwordReset';
+import * as echoAccess from '../lib/echoAccess';
 
-type User = { id: string; isActive: boolean; passwordHash: string | null };
-const activeUser: User = { id: 'user-1', isActive: true, passwordHash: 'hash' };
+type User = { id: string; isActive: boolean; passwordHash: string | null; organizationId: string | null };
+const activeUser: User = { id: 'user-1', isActive: true, passwordHash: 'hash', organizationId: echoAccess.ECHO_ORGANIZATION_ID };
 const message = 'If an active account uses that email, a password reset link will arrive shortly.';
 
 // Execute the complete production route. The after mock holds callbacks until
@@ -48,9 +49,9 @@ function loadRoute(options: {
         if (operation === 'consume' && options.cleanupFailure) throw new Error('cleanup unavailable');
       },
     },
-    $queryRaw: async (parts: TemplateStringsArray, userId: string) => {
-      record('lock', { sql: parts.join('?'), userId });
-      return options.user?.id === userId && options.user.isActive && options.user.passwordHash ? [{ id: userId }] : [];
+    $queryRaw: async (parts: TemplateStringsArray, userId: string, organizationId: string) => {
+      record('lock', { sql: parts.join('?'), userId, organizationId });
+      return options.user?.id === userId && options.user.isActive && options.user.passwordHash && options.user.organizationId === organizationId ? [{ id: userId }] : [];
     },
     $transaction: async (callback: (tx: unknown) => Promise<unknown>, transactionOptions: unknown) => {
       record('transaction', transactionOptions);
@@ -61,6 +62,7 @@ function loadRoute(options: {
     'next/server': { NextResponse, after: (callback: () => Promise<void>) => callbacks.push(callback) },
     zod: { z },
     '../../../../lib/prisma': { prisma },
+    '../../../../lib/echoAccess': echoAccess,
     '../../../../lib/passwordReset': {
       createPasswordResetToken,
       PASSWORD_RESET_COOLDOWN_MS,
@@ -96,6 +98,8 @@ for (const [name, user, cooldown] of [
   ['missing', null, false],
   ['inactive', { ...activeUser, isActive: false }, false],
   ['passwordless', { ...activeUser, passwordHash: null }, false],
+  ['outside Echo', { ...activeUser, organizationId: 'another-company' }, false],
+  ['unaffiliated', { ...activeUser, organizationId: null }, false],
   ['cooldown', activeUser, true],
 ] as const) {
   test(`${name} account receives the same response before any account-dependent work`, async () => {

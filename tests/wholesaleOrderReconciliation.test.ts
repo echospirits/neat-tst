@@ -177,7 +177,7 @@ describe('wholesale order reconciliation persistence adapter', () => {
         lines: [{ itemCode: '2804B', itemName: 'Product', quantityBottles: 2, unitPriceCents: 1000, wholesalePrice: 10, vendor: 'Z90399001' }],
         totals: { sinTaxCents: 0, subtotalCents: 2000, totalCents: 2000 },
       },
-      organizationId: 'organization-1',
+      organizationId: 'org_echo_spirits',
       saleDate: day('2026-08-01'),
       sellerStoreNumber: '90399',
       sentAt: day('2026-08-01'),
@@ -196,6 +196,7 @@ describe('wholesale order reconciliation persistence adapter', () => {
       wholesaleOrder: {
         findMany: async (args: { where: Record<string, unknown> }) => {
           orderRead += 1;
+          if (orderRead === 1 || 'filedSource' in args.where) assert.equal(args.where.organizationId, 'org_echo_spirits');
           if (orderRead === 1) return [pending];
           if ('filedSource' in args.where) return [];
           return [];
@@ -222,5 +223,6 @@ describe('wholesale order reconciliation persistence adapter', () => {
     assert.equal((data.reconciliationEvidence as { reportDate: string }).reportDate, '2026-08-02');
     assert.equal(where.automaticMatchKey, null);
     assert.equal(where.filedAt, null);
+    assert.equal(where.organizationId, 'org_echo_spirits');
   });
 });

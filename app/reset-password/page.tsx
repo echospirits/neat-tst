@@ -7,6 +7,7 @@ import { hashPasswordResetToken, isValidPasswordResetToken } from '../../lib/pas
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '../../lib/passwordPolicy';
 import { prisma } from '../../lib/prisma';
 import { ResetPasswordForm } from './ResetPasswordForm';
+import { ECHO_ORGANIZATION_ID } from '../../lib/echoAccess';
 
 export const metadata = buildPageMetadata('Reset Password');
 
@@ -30,7 +31,7 @@ export default async function ResetPasswordPage({
           tokenHash: hashPasswordResetToken(token),
           usedAt: null,
           expiresAt: { gt: new Date() },
-          user: { isActive: true, passwordHash: { not: null } },
+          user: { isActive: true, passwordHash: { not: null }, organizationId: ECHO_ORGANIZATION_ID },
         },
         select: { id: true },
       })

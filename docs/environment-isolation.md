@@ -63,18 +63,9 @@ Migration workflow:
 
 `npm run db:push` is forbidden in production and requires one-time `ALLOW_SCHEMA_PUSH=true` elsewhere. `npm run db:reset:test` requires `APP_ENV=test`, matching resource labels, and one-time `ALLOW_DATABASE_RESET=true`; production reset is unconditionally refused. Do not persist either override.
 
-Seed staging only after migrations:
+October 28 Echo-only TST transition retires the staging/sample/admin seeds, all-feature reconciliation and platform bootstrap commands. Do not recreate a staging tenant or reset an existing user's password through a seed. The existing Echo Users invitation workflow manages access. New-database/initial-owner provisioning requires a separately reviewed procedure; this transition performs none.
 
-```powershell
-$env:APP_ENV='test'
-$env:DATABASE_ENVIRONMENT='test'
-$env:DATABASE_TARGET_ID='neon-neat-tst'
-$env:EXPECTED_DATABASE_HOST='<test database pooler hostname>'
-$env:STAGING_ADMIN_PASSWORD='<temporary password of at least 12 characters>'
-npm run seed:staging
-```
-
-The seed creates only synthetic `.test`/sandbox records. Public OHLQ market data may be imported independently after `OHLQ_IMPORT_ENABLED=true`; private CRM records, sessions, OAuth tokens, calendar tokens, email credentials, and Blob tokens must never be copied. There is no automatic production-to-test clone.
+Public OHLQ market data may be imported independently after approved `OHLQ_IMPORT_ENABLED=true` configuration; private CRM records, sessions, OAuth tokens, calendar tokens, email credentials, and Blob tokens must never be copied. There is no automatic production-to-test clone.
 
 ## Environment variable matrix
 

@@ -17,3 +17,7 @@ See [implementation progress](../engineering/implementation-progress.md), [featu
 ## CRM migration
 
 Follow the [exact migration runbook](crm-migration-runbook.md). TST legacy activity rows were fingerprinted before/after the additive migration; no new connection/deal row is seeded automatically. Only the named migration is registered; the pre-existing password-reset ledger gap is not repaired.
+
+## Production Forecasting pilot
+
+`20261028010000_production_forecasting` adds tenant-owned source/demand/guidance/run/snapshot tables, composite tenant/source/product keys, quantity/date checks, indexes and explicit Echo pilot enrollment. Apply only this reviewed migration using the target/checksum-guarded `scripts/production-forecasting.ts`; no historical ledger reconciliation. See [validation](../releases/production-forecasting-validation.md) and [operations](../production-forecasting.md).

@@ -1,5 +1,6 @@
 import { OrganizationProductStatus, Prisma, type PrismaClient } from '@prisma/client';
 import { prisma } from './prisma';
+import { ECHO_ORGANIZATION_ID, assertEchoOrganization } from './echoAccess';
 import { retryDatabaseRead } from './databaseReadRetry';
 
 type ProductDiscoveryDb = Pick<
@@ -26,8 +27,9 @@ export async function discoverOrganizationProducts({
   db?: ProductDiscoveryDb;
   organizationId: string;
 }) {
+  assertEchoOrganization(organizationId);
   const organization = await retryDatabaseRead(() => db.organization.findUnique({
-    where: { id: organizationId },
+    where: { id: organizationId, active: true, accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] } },
     select: {
       onboardingData: true,
       primaryState: true,
@@ -122,14 +124,15 @@ export async function discoverOrganizationProducts({
 
 export async function discoverProductsForOrganizations({ db = prisma }: { db?: ProductDiscoveryDb } = {}) {
   const organizations = await retryDatabaseRead(() => db.organization.findMany({
-    where: { vendorIdentifiers: { some: { active: true } } },
+    where: { id: ECHO_ORGANIZATION_ID, active: true, accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] }, vendorIdentifiers: { some: { active: true } } },
     orderBy: { id: 'asc' },
     select: { id: true },
   }));
   let productsDiscovered = 0;
   for (const organization of organizations) {
+    if (organization.id !== ECHO_ORGANIZATION_ID) continue;
     const result = await discoverOrganizationProducts({ db, organizationId: organization.id });
     productsDiscovered += result.created;
   }
-  return { organizationsScanned: organizations.length, productsDiscovered };
+  return { organizationsScanned: organizations.filter(organization => organization.id === ECHO_ORGANIZATION_ID).length, productsDiscovered };
 }

@@ -3,6 +3,7 @@ import { SESSION_COOKIE, createUserSession, getSessionCookieOptions } from '../.
 import { verifyPassword } from '../../../../lib/password';
 import { prisma } from '../../../../lib/prisma';
 import { getSignedInHomePath } from '../../../../lib/userAccess';
+import { hasEchoAccess } from '../../../../lib/echoAccess';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
 
   const user = await prisma.user.findUnique({ where: { email } });
 
-  if (!user || !user.isActive || !verifyPassword(password, user.passwordHash)) {
+  if (!user || !user.isActive || !hasEchoAccess(user) || !verifyPassword(password, user.passwordHash)) {
     await recordFailedLogin(email);
     return redirectToLogin(request, 'invalid-credentials');
   }

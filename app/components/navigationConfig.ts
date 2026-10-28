@@ -1,7 +1,7 @@
 export type NavigationSection = 'work' | 'accounts' | 'intelligence' | 'admin' | 'utility';
 
 export type NavigationItem = {
-  adminGroup?: 'Organization' | 'Data & insights' | 'Platform';
+  adminGroup?: 'Echo' | 'Data & insights' | 'System';
   adminOnly?: boolean;
   featureKey?: FeatureKey;
   href: string;
@@ -22,6 +22,7 @@ export const navigationItems: NavigationItem[] = [
   { key: 'agency-intelligence', href: '/agency-focus', label: 'Retail Intelligence', section: 'intelligence', featureKey: 'AGENCY_INTELLIGENCE' },
   { key: 'visits', href: '/visits', label: 'Visit History', mobileLabel: 'Visits', section: 'work', mobileOrder: 4 },
   { key: 'analytics', href: '/analytics', label: 'Analytics', section: 'work', moreOrder: 1, featureKey: 'ANALYTICS' },
+  { key: 'production-forecasting', href: '/analytics/production', label: 'Production Forecasting', section: 'work', moreOrder: 1.1, featureKey: 'PRODUCTION_FORECASTING' },
   {
     key: 'accounts',
     href: '/search',
@@ -35,38 +36,35 @@ export const navigationItems: NavigationItem[] = [
   { key: 'wholesale', href: '/wholesale', label: 'Restaurants', section: 'accounts', moreOrder: 3 },
   { key: 'wholesale-orders', href: '/wholesale-orders', label: 'Wholesale Orders', section: 'accounts', moreOrder: 4, featureKey: 'OHIO_DIRECT_WHOLESALE_ORDERS' },
   { key: 'pipeline', href: '/pipeline', label: 'Pipeline', section: 'accounts', moreOrder: 5, featureKey: 'ACCOUNT_SALES_STATUS' },
-  { key: 'recipes', href: '/recipes', label: 'Recipes', section: 'utility', moreOrder: 6.2, featureKey: 'CORE_CRM' },
   { key: 'communications', href: '/settings/communications', label: 'Communications', section: 'work', moreOrder: 6.1, featureKey: 'COMMUNICATIONS' },
   { key: 'tags', href: '/tags', label: 'Tags', section: 'utility', moreOrder: 5 },
   { key: 'profile', href: '/profile', label: 'Profile', section: 'utility', moreOrder: 6 },
-  { key: 'support', href: '/support', label: 'Support', section: 'utility', moreOrder: 6.5 },
-  { key: 'users', href: '/users', label: 'Users', section: 'admin', adminGroup: 'Organization', adminOnly: true, moreOrder: 7 },
-  { key: 'user-activity', href: '/admin/user-activity', label: 'User activity', section: 'admin', adminGroup: 'Organization', adminOnly: true, moreOrder: 9 },
-  { key: 'organization-setup', href: '/admin/organization', label: 'Organization Setup', section: 'admin', adminGroup: 'Organization', adminOnly: true },
-  { key: 'weekly-digest', href: '/admin/weekly-digest', label: 'Weekly Digest', section: 'admin', adminGroup: 'Organization', adminOnly: true },
+  { key: 'users', href: '/users', label: 'Users', section: 'admin', adminGroup: 'Echo', adminOnly: true, moreOrder: 7 },
+  { key: 'user-activity', href: '/admin/user-activity', label: 'User activity', section: 'admin', adminGroup: 'Echo', adminOnly: true, moreOrder: 9 },
+  { key: 'organization-setup', href: '/admin/organization', label: 'Echo Settings', section: 'admin', adminGroup: 'Echo', adminOnly: true, moreOrder: 7.1 },
+  { key: 'weekly-digest', href: '/admin/weekly-digest', label: 'Weekly Digest', section: 'admin', adminGroup: 'Echo', adminOnly: true },
   { key: 'data-health', href: '/admin/data-status', label: 'Data Status', section: 'utility', adminGroup: 'Data & insights', moreOrder: 8 },
-  { key: 'account-research', href: '/admin/account-research', label: 'Account Research', section: 'intelligence', adminOnly: true, featureKey: 'ADVANCED_INTELLIGENCE', platformAdminOnly: true },
+  { key: 'account-research', href: '/admin/account-research', label: 'Account Research', section: 'intelligence', adminOnly: true, featureKey: 'ADVANCED_INTELLIGENCE' },
   { key: 'opportunity-performance', href: '/admin/opportunity-performance', label: 'Opportunity Performance', section: 'intelligence', adminOnly: true, featureKey: 'WHOLESALE_OPPORTUNITIES' },
-  { key: 'environment', href: '/admin/environment', label: 'Environment Diagnostics', section: 'admin', adminGroup: 'Platform', adminOnly: true },
-  { key: 'platform-administration', href: '/platform', label: 'Platform Administration', section: 'admin', adminGroup: 'Platform', adminOnly: true, platformAdminOnly: true },
+  { key: 'environment', href: '/admin/environment', label: 'Environment Diagnostics', section: 'admin', adminGroup: 'System', adminOnly: true },
 ];
 
-const featureVisible = (item: NavigationItem, enabledFeatures?: readonly string[]) =>
+const featureVisible = (item: NavigationItem, enabledFeatures?: readonly string[], isPlatformAdmin = false) =>
   !item.featureKey || !enabledFeatures || enabledFeatures.includes(item.featureKey);
 
 export const getNavigationItems = (section: NavigationSection, enabledFeatures?: readonly string[], isPlatformAdmin = false) =>
-  navigationItems.filter((item) => item.section === section && featureVisible(item, enabledFeatures) && (!item.platformAdminOnly || isPlatformAdmin));
+  navigationItems.filter((item) => item.section === section && featureVisible(item, enabledFeatures, isPlatformAdmin) && (!item.platformAdminOnly || isPlatformAdmin));
 
 export const getIntelligenceNavigationItems = (enabledFeatures: readonly string[], isAdmin: boolean, isPlatformAdmin: boolean) =>
   getNavigationItems('intelligence', enabledFeatures, isPlatformAdmin)
-    .filter((item) => !item.adminOnly || isAdmin || isPlatformAdmin);
+    .filter((item) => !item.adminOnly || isAdmin);
 
 export const getMobileNavigationItems = () =>
   navigationItems
     .filter((item) => item.mobileOrder !== undefined)
     .sort((left, right) => (left.mobileOrder ?? 99) - (right.mobileOrder ?? 99));
 
-const administrationGroupOrder = ['Organization', 'Data & insights', 'Platform'] as const;
+const administrationGroupOrder = ['Echo', 'Data & insights', 'System'] as const;
 
 export const getAdministrationNavigationGroups = (enabledFeatures?: readonly string[], isPlatformAdmin = false, hasOrganizationAdminAccess = true) =>
   administrationGroupOrder
@@ -76,13 +74,13 @@ export const getAdministrationNavigationGroups = (enabledFeatures?: readonly str
         item.adminGroup === label &&
         featureVisible(item, enabledFeatures) &&
         (!item.platformAdminOnly || isPlatformAdmin) &&
-        (hasOrganizationAdminAccess || ['data-health', 'environment', 'platform-administration', 'user-activity'].includes(item.key))
+        hasOrganizationAdminAccess
       ),
     }))
     .filter((group) => group.items.length > 0);
 
 export const getMoreNavigationItems = (isAdmin: boolean, enabledFeatures?: readonly string[], isPlatformAdmin = false) =>
   navigationItems
-    .filter((item) => item.moreOrder !== undefined && (!item.adminOnly || isAdmin || (isPlatformAdmin && item.key === 'user-activity')) && featureVisible(item, enabledFeatures) && (!item.platformAdminOnly || isPlatformAdmin))
+    .filter((item) => item.moreOrder !== undefined && (!item.adminOnly || isAdmin) && featureVisible(item, enabledFeatures, isPlatformAdmin) && (!item.platformAdminOnly || isPlatformAdmin))
     .sort((left, right) => (left.moreOrder ?? 99) - (right.moreOrder ?? 99));
 import type { FeatureKey } from '../../lib/featureRegistry';

@@ -42,7 +42,7 @@ export const defaultPlaybooks = [
   {
     name: "Menu placement",
     steps: [
-      { title: "Review menu and choose a recipe", day: 0 },
+      { title: "Review menu placement opportunities", day: 0 },
       { title: "Arrange a sample and tasting", day: 3 },
       { title: "Confirm menu placement evidence", day: 14 },
     ],

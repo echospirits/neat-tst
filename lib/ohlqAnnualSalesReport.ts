@@ -1,6 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import Papa from 'papaparse';
 import { EASTERN_TIME_ZONE, getZonedDateTimeParts } from './dateTime';
 import { getOhlqReportStorageDirectories } from './ohlqReportStorage';
 import {
@@ -83,6 +84,7 @@ type OhlqPowerBiReportConfig = {
   };
   reportId: string;
   renderedTitle?: string | RegExp;
+  parameterFallback?: 'Brand' | 'Vendor';
 };
 
 const buildPowerBiReportUrl = (reportId: string) =>
@@ -105,6 +107,14 @@ export const OHLQ_ANNUAL_SALES_BY_WHOLESALE_REPORT = {
 } satisfies OhlqPowerBiReportConfig;
 
 export const OHLQ_AGENCY_INVENTORY_REPORT_ID = '5079ab3f-ff48-4f50-a1b4-3264862af239';
+export const OHLQ_BAILMENT_INVOICE_REPORT = {
+  dateRange: true,
+  fileSlug: 'bailment-po-invoice',
+  parameter: { name: 'Vendor', values: 'all' },
+  parameterFallback: 'Brand',
+  reportId: 'bdf38254-b332-4d12-b689-1113a2644a40',
+  renderedTitle: /Bailment PO and Invoice/i,
+} satisfies OhlqPowerBiReportConfig;
 
 export function getOhlqAgencyInventoryReportConfig() {
   return {
@@ -144,6 +154,7 @@ export type OhlqAnnualSalesDownloadOptions = {
   logger?: Logger;
   partnerCredentials?: { password: string; username: string };
   reportDate?: string;
+  fromDate?: string;
   returnBuffer?: boolean;
   useServerlessChromium?: boolean;
 };
@@ -900,6 +911,7 @@ type OhlqDownloadRuntime = {
   logger: Logger;
   partnerCredentials?: { password: string; username: string };
   reportDate: ReportDate;
+  fromDate: ReportDate;
   returnBuffer: boolean;
   runDateIso: string;
 };
@@ -917,6 +929,7 @@ function createDownloadRuntime(options: OhlqAnnualSalesDownloadOptions): OhlqDow
     logger,
     partnerCredentials: options.partnerCredentials,
     reportDate,
+    fromDate: options.fromDate ? getOhlqAnnualSalesReportDate(options.fromDate) : reportDate,
     returnBuffer: options.returnBuffer ?? false,
     runDateIso,
   };
@@ -1117,11 +1130,13 @@ async function downloadOhlqPowerBiReportFromPage(
 
   const frame = await waitForPowerBiReportFrame(page, report, debugDir, ohlqReportRedirectUrl);
   if (report.dateRange) {
-    await setDate(frame, 'From date', reportDate);
+    await setDate(frame, 'From date', runtime.fromDate);
     await setDate(frame, 'To date', reportDate);
   }
 
-  await selectReportParameter(frame, report.parameter);
+  const primary = frame.locator(`span[aria-label="Open ${report.parameter.name}"]`);
+  const parameter = report.parameterFallback && !await primary.isVisible() ? { ...report.parameter, name: report.parameterFallback } : report.parameter;
+  await selectReportParameter(frame, parameter);
 
   await viewReportIfReady(frame);
   const exportMenu = await waitForReportExport(frame, report);
@@ -1299,6 +1314,51 @@ export async function downloadOhlqAnnualSalesSummaryByWholesale(options: OhlqAnn
 
 export async function downloadOhlqAgencyInventoryReport(options: OhlqAnnualSalesDownloadOptions = {}) {
   return downloadOhlqPowerBiReport(getOhlqAgencyInventoryReportConfig(), options);
+}
+
+export async function downloadOhlqBailmentInvoices(options: OhlqAnnualSalesDownloadOptions & { fromDate: string }) {
+  const from = getOhlqAnnualSalesReportDate(options.fromDate), to = getOhlqAnnualSalesReportDate(options.reportDate ?? getOhlqAgencyInventoryObservationDate());
+  if (from.iso !== options.fromDate || from.iso > to.iso) throw new Error('Bailment history requires a valid complete date range.');
+  return downloadOhlqPowerBiReport(OHLQ_BAILMENT_INVOICE_REPORT, { ...options, reportDate: to.iso });
+}
+
+export function validateOhlqPartnerDcExport(csv: string, tableSummary: string) {
+  const match = /Showing [\d,]+ to [\d,]+ of ([\d,]+) entries/i.exec(tableSummary);
+  if (!match || /filtered from/i.test(tableSummary)) throw new Error('Partner DC must show an unfiltered complete table.');
+  const expected = Number(match[1].replaceAll(',', ''));
+  const parsed = Papa.parse(csv, { header: true, skipEmptyLines: 'greedy' });
+  if (!expected || parsed.errors.length || parsed.data.length !== expected) throw new Error('Partner DC CSV row count does not match the full source table.');
+}
+
+/** Partner DC is an OPS DataTables export, not a Power BI report. */
+export async function downloadOhlqPartnerDc(options: OhlqAnnualSalesDownloadOptions = {}) {
+  const runtime = createDownloadRuntime(options);
+  const { browser, context, page } = await openBrowserPage(options);
+  try {
+    await signInToOhlqPartner(page, options.partnerCredentials);
+    await gotoWithRetry(page, 'https://ops.ohlq.com/partner/DC', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    if (isOhlqOpsLoginUrl(page.url())) throw new Error('Partner DC session returned to login.');
+    const wrapper = page.locator('#tblPartnerDC_wrapper');
+    await wrapper.waitFor({ state: 'visible', timeout: 60000 });
+    // A new isolated browser has no saved search. Clear a visible search field
+    // defensively so a partial table can never become complete guidance.
+    const search = wrapper.locator('input[type="search"]');
+    if (await search.isVisible()) await search.fill('');
+    const tableSummary = await wrapper.innerText();
+    const downloadPromise = page.waitForEvent('download', { timeout: 120000 });
+    await wrapper.getByRole('button', { name: /CSV/i }).click();
+    const download = await downloadPromise;
+    const filename = `ohlq-partner-dc-${runtime.runDateIso}.csv`, outputPath = path.join(runtime.downloadDir, filename);
+    await saveDownloadWithTimeout(download, outputPath, 'Partner DC');
+    const sizeBytes = fs.statSync(outputPath).size;
+    if (!sizeBytes) throw new Error('Partner DC export is empty.');
+    const buffer = fs.readFileSync(outputPath);
+    validateOhlqPartnerDcExport(buffer.toString('utf8'), tableSummary);
+    return { csvBuffer: runtime.returnBuffer ? buffer : undefined, filename, outputPath, reportDate: runtime.runDateIso, runDate: runtime.runDateIso, sizeBytes } satisfies OhlqAnnualSalesDownloadResult;
+  } catch (error) {
+    await saveDebugScreenshot(page, 'ohlq-partner-dc-error', runtime.debugDir);
+    throw error;
+  } finally { await closeBrowserPage(context, browser); }
 }
 
 export async function downloadOhlqSharedSalesReports(options: OhlqAnnualSalesDownloadOptions = {}) {

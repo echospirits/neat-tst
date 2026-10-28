@@ -3,7 +3,7 @@ import { getUserDisplayName } from './auth';
 import { EASTERN_TIME_ZONE, formatDateInputValue, addDaysToDateInputValue, zonedDateTimeToUtc } from './dateTime';
 import { getEmailAppBaseUrl, sendEmail, type SendEmailFn } from './email/sendEmail';
 import { prisma, runWithOrganizationStateAccess } from './prisma';
-import { ECHO_ORGANIZATION_ID } from './organizations';
+import { ECHO_ORGANIZATION_ID, hasEchoAccess } from './echoAccess';
 import { formatWholesaleLicenseeIds } from './wholesaleAccounts';
 import { getWeeklyDigestSales, type WeeklyDigestSales } from './weeklyDigestSales';
 import { generateWeeklyDigestNarrative, type DigestNarrative, type DigestEvidence } from './weeklyDigestNarrative';
@@ -509,18 +509,16 @@ export async function sendWeeklyDigestForAllUsers(options: {
   digestLoader?: typeof getTenantWeeklyDigest;
 } = {}): Promise<DigestRunResult> {
   const window = options.window ?? getWeeklyDigestWindow();
+  if (options.organizationId && options.organizationId !== ECHO_ORGANIZATION_ID) {
+    return { attempted: 0, sent: 0, skipped: 0, failed: 0, missingEmailSkipped: 0, results: [] };
+  }
   const entitledOrganizations = await prisma.organizationFeature.findMany({
-    where: { ...(options.organizationId ? { organizationId: options.organizationId } : {}), featureKey: 'WEEKLY_DIGEST', enabled: true,
+    where: { organizationId: ECHO_ORGANIZATION_ID, featureKey: 'WEEKLY_DIGEST', enabled: true,
       organization: { active: true, accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] } } }, select: { organizationId: true },
   });
-  const entitled = new Set(entitledOrganizations.map((item) => item.organizationId));
+  const entitled = new Set(entitledOrganizations.filter(hasEchoAccess).map((item) => item.organizationId));
   const recipients = await prisma.user.findMany({
-    where: { isActive: true, OR: [
-      { organizationId: { in: [...entitled] } },
-      // Preserve Echo delivery for platform administrators without a home tenant.
-      // Administrators who belong to a tenant receive that tenant's brief.
-      ...(entitled.has(ECHO_ORGANIZATION_ID) ? [{ role: UserRole.PLATFORM_ADMIN, organizationId: null }] : []),
-    ] },
+    where: { isActive: true, organizationId: { in: [...entitled] } },
     orderBy: [{ organizationId: 'asc' }, { id: 'asc' }],
     select: { id: true, organizationId: true, email: true, role: true },
   });
@@ -529,8 +527,8 @@ export async function sendWeeklyDigestForAllUsers(options: {
   let missingEmailSkipped = 0;
   const seen = new Set<string>();
   for (const user of recipients) {
-    const organizationId = user.organizationId ?? (user.role === UserRole.PLATFORM_ADMIN ? ECHO_ORGANIZATION_ID : null);
-    if (!organizationId || !entitled.has(organizationId)) continue;
+    const organizationId = user.organizationId;
+    if (!hasEchoAccess(user) || !organizationId || !entitled.has(organizationId)) continue;
     const email = user.email?.trim().toLowerCase();
     if (!email) { missingEmailSkipped++; continue; }
     const key = `${organizationId}:${email}`;

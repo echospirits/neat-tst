@@ -22,6 +22,7 @@ const mobileItems = getMobileNavigationItems();
 const isActivePath = (pathname: string, item: NavigationItem, useSectionMatch = false) => {
   if (item.href === '/') return pathname === '/';
   if (item.href === '/visits') return pathname === item.href;
+  if (item.key === 'analytics' && pathname.startsWith('/analytics/production')) return false;
   if (useSectionMatch && item.matchPrefixes) {
     return item.matchPrefixes.some(
       (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
@@ -83,7 +84,7 @@ function IntelligenceMenu({ enabledFeatures, isAdmin, isPlatformAdmin, pathname 
 
 export function AppSidebarNavigation({ enabledFeatures, isAdmin, isPlatformAdmin, isTaster }: { enabledFeatures: string[]; isAdmin: boolean; isPlatformAdmin: boolean; isTaster: boolean }) {
   const pathname = usePathname();
-  const workItems = getNavigationItems('work', enabledFeatures);
+  const workItems = getNavigationItems('work', enabledFeatures, isPlatformAdmin);
   const accountItems = getNavigationItems('accounts', enabledFeatures);
 
   if (isTaster) {
@@ -125,9 +126,6 @@ const getBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
 
   const home = { href: '/', label: 'Home' };
   const routeMap: Array<{ prefix: string; crumbs: BreadcrumbItem[] }> = [
-    { prefix: '/support/new', crumbs: [{ href: '/support', label: 'Support' }, { href: pathname, label: 'New support ticket' }] },
-    { prefix: '/support/', crumbs: [{ href: '/support', label: 'Support' }, { href: pathname, label: 'Ticket' }] },
-    { prefix: '/support', crumbs: [{ href: '/support', label: 'Support' }] },
     { prefix: '/analytics', crumbs: [{ href: '/analytics', label: 'Analytics' }] },
     { prefix: '/visits/new', crumbs: [{ href: '/visits/new', label: 'Log Visit' }] },
     { prefix: '/visits/confirmed', crumbs: [{ href: '/visits', label: 'Visits' }, { href: pathname, label: 'Confirmed' }] },
@@ -146,7 +144,7 @@ const getBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
     { prefix: '/accounts', crumbs: [{ href: '/search', label: 'Accounts' }] },
     { prefix: '/users', crumbs: [{ href: '/users', label: 'Administration' }, { href: '/users', label: 'Users' }] },
     { prefix: '/admin/account-research', crumbs: [{ href: pathname, label: 'Account Research' }] },
-    { prefix: '/admin/organization', crumbs: [{ href: '/users', label: 'Administration' }, { href: pathname, label: 'Organization Setup' }] },
+    { prefix: '/admin/organization', crumbs: [{ href: '/users', label: 'Administration' }, { href: pathname, label: 'Echo Settings' }] },
     { prefix: '/admin/data-status', crumbs: [{ href: '/users', label: 'Administration' }, { href: pathname, label: 'Data Health' }] },
     { prefix: '/admin/weekly-digest', crumbs: [{ href: '/users', label: 'Administration' }, { href: pathname, label: 'Weekly Digest' }] },
     { prefix: '/admin/opportunity-performance', crumbs: [{ href: pathname, label: 'Opportunity Performance' }] },
@@ -186,7 +184,6 @@ export function MobileTabbar({ enabledFeatures, isAdmin, isPlatformAdmin, isTast
   if (isTaster) return <nav className="mobile-tabbar mobile-tabbar-taster" aria-label="Quick field actions">
     <NavLink item={{ href: '/visits/new', key: 'visits', label: 'Log Visit', section: 'work' }} pathname={pathname} />
     <NavLink item={{ href: '/profile', key: 'profile', label: 'Profile', section: 'utility' }} pathname={pathname} />
-    <NavLink item={{ href: '/support', key: 'support', label: 'Support', section: 'utility' }} pathname={pathname} />
   </nav>;
 
   return (
@@ -208,7 +205,5 @@ export function MobileTabbar({ enabledFeatures, isAdmin, isPlatformAdmin, isTast
 }
 
 export function FloatingVisitAction() {
-  const pathname = usePathname();
-  if (pathname === '/support' || pathname.startsWith('/support/')) return null;
   return <Link className="fab" href="/visits/new" aria-label="Log Visit"><span aria-hidden="true">＋</span> Log visit</Link>;
 }

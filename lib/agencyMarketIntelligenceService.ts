@@ -11,6 +11,7 @@ import { toAffinityProduct, type BuyerBasket } from './opportunityAffinity';
 import { getAgencyMarketEligibleItemCodes } from './agencyMarketEligibility';
 import { normalizeOhlqId } from './ohlqSalesData';
 import { prisma } from './prisma';
+import { ECHO_ORGANIZATION_ID, assertEchoOrganization } from './echoAccess';
 
 const DAY = 86_400_000;
 const addDays = (date: Date, days: number) => new Date(date.getTime() + days * DAY);
@@ -56,6 +57,7 @@ export async function refreshAgencyMarketIntelligence({
   db?: PrismaClient;
   organizationId: string;
 }) {
+  assertEchoOrganization(organizationId);
   const windowStart = addDays(asOfDate, -(AGENCY_MARKET_WINDOW_DAYS - 1));
   const [
     agencies,
@@ -301,12 +303,13 @@ export async function runAgencyMarketIntelligenceAfterImport({
   db?: PrismaClient;
 }) {
   const organizations = await db.organization.findMany({
-    where: { active: true, features: { some: { enabled: true, featureKey: 'AGENCY_INTELLIGENCE' } } },
+    where: { id: ECHO_ORGANIZATION_ID, active: true, accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] }, features: { some: { enabled: true, featureKey: 'AGENCY_INTELLIGENCE' } } },
     orderBy: { id: 'asc' },
     select: { id: true },
   });
   const results = [];
   for (const organization of organizations) {
+    if (organization.id !== ECHO_ORGANIZATION_ID) continue;
     results.push({
       organizationId: organization.id,
       ...(await refreshAgencyMarketIntelligence({ asOfDate, db, organizationId: organization.id })),

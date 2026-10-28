@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { isAdminRole } from '../lib/userAccess';
+import { hasEchoAccess } from '../lib/echoAccess';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import test from 'node:test';
@@ -34,9 +36,9 @@ function loadEdit(role: UserRole | null, accountOverrides: Record<string, unknow
     ...accountOverrides,
   };
   const context: Record<string, unknown> = {
-    ...wholesaleAccounts, UserRole, isTasterRole, normalizeUsState, stateScopedLicenseeIds,
+    ...wholesaleAccounts, UserRole, isTasterRole, isAdminRole, hasEchoAccess, normalizeUsState, stateScopedLicenseeIds,
     getWholesaleAddressProtectionForEdit,
-    getCurrentSession: async () => role ? { user: { id: 'caller', role } } : null,
+    getCurrentSession: async () => role ? { user: { id: 'caller', role, organizationId: 'org_echo_spirits' } } : null,
     toOptional: (value: unknown) => String(value ?? '').trim() || null,
     findOfficialWholesaleAccountByLicenseeIds: async () => { effects.push('official-lookup'); return official; },
     getGeocodeResetForAddressChange: () => ({ geocodeStatus: 'PENDING' }),
@@ -64,7 +66,7 @@ function loadEdit(role: UserRole | null, accountOverrides: Record<string, unknow
     notFound: () => { throw new Error('NOT_FOUND'); },
   };
   const code = [
-    functionSource(authSource, ['requireUserSession', 'requireUser', 'requirePlatformAdminSession', 'requirePlatformAdmin']),
+    functionSource(authSource, ['requireUserSession', 'requireUser', 'requireEchoAdminSession', 'requireEchoAdmin']),
     functionSource(editSource, ['updateWholesaleAccount', 'EditWholesaleAccountPage']),
     'globalThis.action = updateWholesaleAccount; globalThis.page = EditWholesaleAccountPage;',
   ].join('\n');
@@ -87,7 +89,7 @@ function submittedData() {
   return data;
 }
 
-for (const role of [null, UserRole.USER, UserRole.ADMIN, UserRole.TASTER]) {
+for (const role of [null, UserRole.USER, UserRole.TASTER]) {
   test(`wholesale edit direct submission rejects ${role ?? 'anonymous'} before all reads and side effects`, async () => {
     const { action, effects, updates } = loadEdit(role);
     const destination = role === null ? '/login' : role === UserRole.TASTER ? '/visits/new' : '/';
@@ -104,7 +106,7 @@ for (const role of [null, UserRole.USER, UserRole.ADMIN, UserRole.TASTER]) {
 }
 
 test('platform admin can update the shared account and retain licensee and assessment side effects', async () => {
-  const { action, effects, updates } = loadEdit(UserRole.PLATFORM_ADMIN);
+  const { action, effects, updates } = loadEdit(UserRole.ADMIN);
   await assert.rejects(action(submittedData()), /REDIRECT:\/wholesale\/shared-account\?status=updated/);
   assert.equal(updates.length, 1);
   assert.equal(updates[0].name, 'Changed canonical name');
@@ -147,7 +149,7 @@ test('official relinking does not refill a deliberately cleared public address',
   assert.equal(updates[0].addressImportProtected, true);
 });
 
-test('wholesale detail renders the Edit link only for platform admins', () => {
+test('wholesale detail renders the Edit link only for Echo admins', () => {
   const source = readFileSync('app/wholesale/[id]/page.tsx', 'utf8');
   const ast = ts.createSourceFile('page.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   let header: ts.JsxElement | undefined;
@@ -162,14 +164,14 @@ test('wholesale detail renders the Edit link only for platform admins', () => {
   }).outputText;
   for (const role of Object.values(UserRole)) {
     const context: Record<string, unknown> = {
-      React, UserRole, SalesAccountType, user: { id: 'caller', role }, id: 'shared-account', overlay: null,
+      React, UserRole, SalesAccountType, user: { id: 'caller', role, organizationId: 'org_echo_spirits' }, id: 'shared-account', overlay: null,
       account: { id: 'shared-account', name: 'Account', city: 'Columbus', tags: [], officialAccountId: 'official' },
-      isAdminRole: () => false, hasDirectWholesaleOrders: false, actionUsers: [],
+      isAdminRole, hasDirectWholesaleOrders: false, actionUsers: [],
       Link: ({ children, ...props }: { children: React.ReactNode; href: string }) => React.createElement('a', props, children),
       TargetAccountControl: () => null, ContextualActions: () => null, TagBadges: () => null,
     };
     runInNewContext(code, context);
     const html = renderToStaticMarkup(context.header as React.ReactElement);
-    assert.equal(html.includes('href="/wholesale/shared-account/edit"'), role === UserRole.PLATFORM_ADMIN, role);
+    assert.equal(html.includes('href="/wholesale/shared-account/edit"'), isAdminRole(role), role);
   }
 });

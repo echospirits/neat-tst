@@ -36,7 +36,6 @@ async function main() {
       for (const [path, label] of [
         ["/", "schedule"],
         ["/admin/organization", "organization"],
-        ["/recipes", "recipes"],
       ] as const) {
         const response = await page.goto(base + path);
         assert.equal(response?.status(), 200);
@@ -69,79 +68,6 @@ async function main() {
       ),
     );
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(base + "/recipes");
-    await page.getByText("Create recipe", { exact: true }).click();
-    await page
-      .getByLabel("Name", { exact: true })
-      .fill("Browser training recipe");
-    await page.getByLabel("Primary spirit / product").fill("Fixture spirit");
-    await page
-      .getByLabel("Ingredients", { exact: true })
-      .fill("2 oz spirit\n1 oz mixer");
-    await page.getByLabel("Preparation instructions").fill("Stir over ice.");
-    await page
-      .getByText("Cost and menu price assumptions", { exact: true })
-      .click();
-    await page
-      .getByRole("button", { name: "Add cost item", exact: true })
-      .click();
-    await page.getByLabel("Ingredient / cost item").fill("Spirit and mixer");
-    await page.getByLabel("Batch cost (USD)").fill("3");
-    await page.getByLabel("Menu price (USD)").fill("12");
-    await page.getByLabel("Target gross margin (%)").fill("75");
-    await page.getByText("Cost per serving: $3.00", { exact: false }).waitFor();
-    await page
-      .getByRole("button", { name: "Save recipe", exact: true })
-      .click();
-    await page.waitForURL(/\/recipes\/[^/]+$/);
-    const recipeUrl = page.url();
-    await page
-      .getByRole("button", { name: "Approve current recipe", exact: true })
-      .click();
-    await page
-      .getByRole("status")
-      .filter({ hasText: "Recipe approved" })
-      .waitFor();
-    await page
-      .getByRole("button", { name: "Create shareable sheet", exact: true })
-      .click();
-    await page.waitForURL(/\/shared\/recipes\//);
-    const publicUrl = page.url();
-    const publicPage = await browser.newPage();
-    await publicPage.goto(publicUrl);
-    await publicPage
-      .getByRole("heading", { name: "Browser training recipe", exact: true })
-      .waitFor();
-    assert.equal(
-      await publicPage.getByText("Cost per serving", { exact: false }).count(),
-      0,
-    );
-    await publicPage.screenshot({
-      path: "output/playwright/recipe-public-sheet.png",
-      fullPage: true,
-    });
-    await page.goto(recipeUrl);
-    await page
-      .getByLabel("Name", { exact: true })
-      .fill("Revised browser training recipe");
-    await page
-      .getByRole("button", { name: "Save recipe", exact: true })
-      .click();
-    await page
-      .getByRole("status")
-      .filter({ hasText: "Recipe saved" })
-      .waitFor();
-    await publicPage.goto(publicUrl);
-    await publicPage
-      .getByText("This page could not be found.", { exact: true })
-      .waitFor();
-    assert.equal(
-      await publicPage
-        .getByRole("heading", { name: "Browser training recipe", exact: true })
-        .count(),
-      0,
-    );
-    await publicPage.close();
     await page.goto(base + "/admin/organization");
     await page
       .getByText("Relationship health & Pipeline thresholds", { exact: true })
@@ -182,7 +108,7 @@ async function main() {
       .waitFor();
     await work
       .getByRole("article", {
-        name: "Review menu and choose a recipe",
+        name: "Review menu placement opportunities",
         exact: true,
       })
       .first()
@@ -258,7 +184,7 @@ async function main() {
     });
     assert.deepEqual(errors, []);
     console.log(
-      "PASS responsive extension pages; recipe costing/approval/public privacy/revocation; health settings; playbook Worklist; SMS sending/STOP; scheduled event.",
+      "PASS responsive extension pages; health settings; playbook Worklist; SMS sending/STOP; scheduled event.",
     );
   } finally {
     await browser.close();

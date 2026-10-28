@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, runWithOrganizationStateAccess } from "../../../../lib/prisma";
 import { isSideEffectEnabled } from "../../../../lib/appEnvironment";
+import { ECHO_ORGANIZATION_ID } from '../../../../lib/echoAccess';
 import { syncMailbox, sweepMailboxRetention } from "../../../../lib/crm/mail/sync";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -23,9 +24,10 @@ export async function GET(request: NextRequest) {
   if (process.env.CRM_MAIL_ENABLED !== "true") return NextResponse.json({ status: "mail-disabled", removed });
   const connections = await prisma.mailboxConnection.findMany({
     where: {
+      organizationId: ECHO_ORGANIZATION_ID,
       enabled: true,
       provider: { in: ["GOOGLE", "MICROSOFT"] },
-      user: { isActive: true },
+      user: { isActive: true, organizationId: ECHO_ORGANIZATION_ID },
       organization: {
         active: true,
         accountStatus: { notIn: ["SUSPENDED", "CANCELLED"] },
@@ -46,6 +48,7 @@ export async function GET(request: NextRequest) {
   let processed = 0,
     failed = 0;
   for (const c of connections) {
+    if (c.organizationId !== ECHO_ORGANIZATION_ID) continue;
     try {
       await runWithOrganizationStateAccess(c.organizationId, () => syncMailbox(
         { userId: c.userId, organizationId: c.organizationId },

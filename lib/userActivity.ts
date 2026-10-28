@@ -1,4 +1,6 @@
 import { Prisma, UserRole } from '@prisma/client';
+import { isAdminRole } from './userAccess';
+import { ECHO_ORGANIZATION_ID, hasEchoAccess } from './echoAccess';
 
 export const activityDay = (now = new Date()) => new Date(`${now.toISOString().slice(0, 10)}T00:00:00.000Z`);
 
@@ -27,9 +29,8 @@ export async function recordUserActivity(
 }
 
 export function activityScope(user: { role: UserRole; organizationId: string | null }, organizationId?: string): Prisma.UserActivityDayWhereInput {
-  if (user.role === UserRole.PLATFORM_ADMIN) return organizationId ? { organizationId } : {};
-  if (user.role !== UserRole.ADMIN || !user.organizationId) throw new Error('Organization admin access required.');
-  return { organizationId: user.organizationId };
+  if (!isAdminRole(user.role) || !hasEchoAccess(user)) throw new Error('Echo admin access required.');
+  return { organizationId: ECHO_ORGANIZATION_ID };
 }
 
 export function validActivityDate(value?: string) {

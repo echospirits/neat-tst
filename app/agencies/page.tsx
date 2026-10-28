@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { buildPageMetadata } from '../../lib/appBrand';
-import { requirePlatformAdmin, requireUser } from '../../lib/auth';
+import { requireEchoAdmin, requireUser } from '../../lib/auth';
 import { AGENCY_CSV_MAX_BYTES, AgencyCsvValidationError, importAgencyCsv } from '../../lib/agencyCsvImport';
 import { getDirectionsHref } from '../../lib/crmActionContext';
 import { formatEasternDate } from '../../lib/dateTime';
@@ -24,7 +24,7 @@ export const metadata = buildPageMetadata('Retail');
 async function importAgencies(formData: FormData) {
   'use server';
 
-  const user = await requirePlatformAdmin();
+  const user = await requireEchoAdmin();
   const { organizationId } = await requireOrganizationContext(user);
   const file = formData.get('csvFile');
   if (!(file instanceof File) || file.size === 0) {
