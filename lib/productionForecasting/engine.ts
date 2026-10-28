@@ -10,7 +10,14 @@ import {
 export function valuesKnownAt(series: DemandSeries, origin: string) {
   const values = new Map<string, number>();
   for (const coverage of series.coverage) for (const date of days(coverage.start, coverage.end < origin ? coverage.end : origin)) values.set(date, 0);
-  for (const row of series.observations) if (row.date <= origin && row.availableOn <= origin && includedInDemand(row.classification) && values.has(row.date)) values.set(row.date, (values.get(row.date) ?? 0) + row.cases);
+  const revisions = new Map<string, DemandSeries['observations'][number]>();
+  const unversioned: DemandSeries['observations'] = [];
+  for (const row of series.observations) if (row.date <= origin && row.availableOn <= origin) {
+    if (!row.sourceLineId) { unversioned.push(row); continue; }
+    const key = JSON.stringify([row.sourceLineId, row.date]), old = revisions.get(key);
+    if (!old || (row.versionAt ?? row.availableOn) >= (old.versionAt ?? old.availableOn)) revisions.set(key, row);
+  }
+  for (const row of [...unversioned, ...revisions.values()]) if (includedInDemand(row.classification) && row.transactionStatus !== 'CANCELLED' && values.has(row.date)) values.set(row.date, (values.get(row.date) ?? 0) + row.cases);
   return values;
 }
 const window = (values: Map<string, number>, end: string, count: number) => days(shift(end, 1 - count), end).map(d => values.get(d) ?? null);

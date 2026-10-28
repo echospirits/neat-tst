@@ -1,8 +1,9 @@
 import Papa from 'papaparse';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { getDistilleryOnlyItemCodes } from '../ohlqProductEligibility';
-import { dateOnly, type Classification, validDay } from './model';
+import { type Classification, validDay } from './model';
 export type OhioItemContext = { included: Set<string>; distilleryOnly: Set<string>; bailment: Set<string> };
+export type NativeOhioOptions = { start: string; end: string; directInvoices?: 'invoice-date' | 'shipment-only'; fullPortfolio?: boolean };
 export async function ohioItemContext(db: PrismaClient | Prisma.TransactionClient, organizationId: string): Promise<OhioItemContext> {
   const [products, listings, status] = await Promise.all([
     db.organizationProduct.findMany({ where: { organizationId, market: 'OH', active: true, discontinued: false, status: { in: ['OWNED', 'REPRESENTED'] } }, select: { externalItemCode: true } }),
@@ -37,7 +38,7 @@ const numeric = (value: string, field: string) => {
   return Number(cleaned);
 };
 const headerKey = (value: string) => value.replace(/^\uFEFF/, '').replaceAll('\u00a0', ' ').replace(/[–—]/g, '-').replace(/\s+/g, ' ').trim();
-export function normalizeNativeOhio(csv: string, source: string, context: OhioItemContext) {
+export function normalizeNativeOhio(csv: string, source: string, context: OhioItemContext, options?: NativeOhioOptions) {
   const parsed = Papa.parse(csv, { header: true, skipEmptyLines: 'greedy', transformHeader: headerKey }) as { data: Record<string, string>[]; errors: unknown[]; meta: { fields?: string[] } };
   if (parsed.errors.length) throw new Error('Native source CSV/TSV is malformed. Export the report as a delimited file.');
   const fields = parsed.meta.fields ?? [];
@@ -49,7 +50,7 @@ export function normalizeNativeOhio(csv: string, source: string, context: OhioIt
   if (missing.length) throw new Error(`Native source headers missing: ${missing.join(', ')}.`);
   const normalized: Record<string, string | number>[] = [];
   const evidence = new Map<string, Record<string, string>>();
-  let outOfScopeRows = 0;
+  let outOfScopeRows = 0, outsideWindowRows = 0, directRows = 0, unshippedRows = 0;
   for (const [index, row] of parsed.data.entries()) {
     const code = (row[demand ? 'Brand' : 'Code'] ?? '').trim().toUpperCase();
     if (!code) throw new Error(`Native source row ${index + 2} has no item code; completeness cannot be verified.`);
@@ -57,17 +58,24 @@ export function normalizeNativeOhio(csv: string, source: string, context: OhioIt
     if (!context.included.has(code)) { outOfScopeRows++; continue; }
     const classification = classificationForItem(code, context);
     if (demand) {
-      if (!row.Invoice_Number?.trim() || !row.Transfer_Order_Ship_Date?.trim()) throw new Error(`Native source row ${index + 2} is not a shipped invoice. Choose a complete shipped-history export.`);
-      const date = sourceDate(row.Transfer_Order_Ship_Date, 'ship date'), invoiceDate = sourceDate(row.Invoice_Date, 'invoice date');
+      if (!row.Invoice_Number?.trim()) throw new Error(`Native source row ${index + 2} has no invoice number.`);
+      const shipped = Boolean(row.Transfer_Order_Ship_Date?.trim());
+      if (!shipped && !options?.directInvoices) throw new Error(`Native source row ${index + 2} is not a shipped invoice. Configure how direct invoices are treated before importing full history.`);
+      if (!shipped && options?.directInvoices === 'shipment-only') { unshippedRows++; continue; }
+      if (!shipped && (row.Transfer_Order_Number?.trim() || row.DC_Name?.trim())) throw new Error(`Native source row ${index + 2} has incomplete shipment evidence.`);
+      const invoiceDate = sourceDate(row.Invoice_Date, 'invoice date');
+      const date = shipped ? sourceDate(row.Transfer_Order_Ship_Date, 'ship date') : invoiceDate;
+      if (options && (date < options.start || date > options.end)) { outsideWindowRows++; continue; }
       if (!row.Cases?.trim() && !row.Odd_Bottles?.trim()) throw new Error(`Native source row ${index + 2} has no case or bottle quantity.`);
       const cases = numeric(row.Cases?.trim() || '0', 'Cases'), odd = numeric(row.Odd_Bottles?.trim() || '0', 'Odd_Bottles');
       const pack = /^C(\d+)$/i.exec((row.Cases_Bottles ?? '').trim());
       if (odd && (!pack || Number(pack[1]) <= 0)) throw new Error(`Native source row ${index + 2}: odd bottles require a valid C6/C12/etc. case pack.`);
-      const location = row.DC_Name.trim();
+      const location = shipped ? row.DC_Name.trim() : row.Agency?.trim() ? `DIRECT:${row.Agency.trim()}` : 'DIRECT:UNSPECIFIED';
       if (!location) throw new Error(`Native source row ${index + 2} has no fulfillment location.`);
       const id = JSON.stringify([row.Invoice_Number.trim(), row.Transfer_Order_Number.trim(), row.Agency.trim(), code, location]);
       if (id.length > 200) throw new Error('Native source invoice identity exceeds the supported length.');
-      normalized.push({ source_line_id: id, movement_date: date, available_on: invoiceDate > date ? invoiceDate : date, item_code: code, location_code: location.toUpperCase(), location_name: location, classification, transaction_status: 'SHIPPED', cases: Math.round((cases + (odd ? odd / Number(pack![1]) : 0)) * 10000) / 10000 });
+      if (!shipped) directRows++;
+      normalized.push({ source_line_id: id, movement_date: date, available_on: invoiceDate > date ? invoiceDate : date, item_code: code, location_code: location.toUpperCase(), location_name: !shipped ? row.Agency?.trim() ? `Direct fulfillment ${row.Agency.trim()}` : 'Unspecified fulfillment' : location, classification, transaction_status: shipped ? 'SHIPPED' : 'POSTED', cases: Math.round((cases + (odd ? odd / Number(pack![1]) : 0)) * 10000) / 10000 });
       evidence.set(id, row);
     } else {
       for (const [name, codeName] of [['Groveport', 'GPT'], ['Green', 'GRN']]) {
@@ -76,6 +84,16 @@ export function normalizeNativeOhio(csv: string, source: string, context: OhioIt
       }
     }
   }
-  if (!normalized.length) throw new Error('Native source contains no active owned or represented Organization items.');
-  return { csv: Papa.unparse(normalized), evidence, outOfScopeRows, adapterVersion: demand ? 'ohio-bailment-invoice-v1' : 'ohio-distribution-center-v1' };
+  if (!normalized.length) throw new Error('Native source contains no active owned or represented Organization items in the requested period.');
+  // Only a verified, unfiltered full-portfolio export may establish zeroes for
+  // configured products absent from the report. Manual slices keep their scope.
+  if (demand && options?.fullPortfolio) {
+    const locations = new Map<string, string>([['GPT', 'Groveport'], ['GRN', 'Green']]);
+    for (const row of normalized) locations.set(String(row.location_code), String(row.location_name));
+    const present = new Set(normalized.map(r => JSON.stringify([r.item_code, r.location_code])));
+    for (const code of context.included) for (const [location, name] of locations) if (!present.has(JSON.stringify([code, location]))) {
+      normalized.push({ source_line_id: `coverage:${code}:${location}`, movement_date: options.start, available_on: options.start, item_code: code, location_code: location, location_name: name, classification: classificationForItem(code, context), transaction_status: 'POSTED', cases: 0 });
+    }
+  }
+  return { csv: Papa.unparse(normalized), evidence, outOfScopeRows, outsideWindowRows, directRows, unshippedRows, adapterVersion: demand ? 'ohio-bailment-invoice-v2' : 'ohio-distribution-center-v1' };
 }

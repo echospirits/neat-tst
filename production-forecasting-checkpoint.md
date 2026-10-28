@@ -19,9 +19,9 @@
 - Candidate models: recent mean, weighted mean, simple exponential smoothing, seasonal naive, damped growth + seasonality, Croston SBA for intermittent demand. Rolling 30-day origins, deterministic mean absolute error selection with WAPE/MASE/bias reporting.
 - Planning targets use a centralized configurable confidence safety margin; finished inventory is not subtracted. DC guidance never enters the demand equation.
 
-## Remaining
+## Initial feature status
 
-2 source ingestion; 3 model/backtests; 4 snapshots; 5 refresh; 6 dashboard; 7 drill-down; 8 validation/tenant/performance; 9 manifest/TST commit/push/deployment.
+Checkpoints 2–9 completed and delivered to TST at 8c2c3aac76dc834a1c990288bd6589c42eaa3be7; deployment READY and health neon-neat-tst. The sections below retain the original audit timeline.
 
 ## Checkpoints 2–8 complete
 
@@ -37,4 +37,12 @@
 
 ## Checkpoint 9
 
-Manifest/guide/validation updated. Pending final TST commit, push and deployment health receipt. Production origin/main verified e05e4e86bd5816c420462319c36b638bfc97571e; no production write or tag.
+Initial feature delivered at 8c2c3aac76dc834a1c990288bd6589c42eaa3be7, tree 164e07fcf73f936fb7109f81d8a445879228c59f. Production origin/main e05e4e86bd5816c420462319c36b638bfc97571e; no production write or tag.
+
+## October 28 source automation follow-up
+
+- Owner supplied full 6,064-row Bailment / 33-row DC files, confirmed history complete since 2019-01-01 and invoiced direct demand on Invoice_Date. Missing locations use Unspecified fulfillment. Configured Echo policy saved in TST only.
+- Both direct-invoice and shipment-only hypotheses rehearsed using actual full files in the isolated branch. Each had 23 numeric forecasts; rolling the coverage forward one day added seven versions, with earlier snapshots unchanged. The approved invoice-date policy is used in TST.
+- TST imports: demand cmvs7nlpy0001upg46mpbambf, 6,001 normalized rows / 247 excluded; guidance cmvs7nosj04msupg4adlpar6n, 60 rows / 14 excluded. Run cmvs7nvw304oiupg44lnoje36, 30 products / 23 numeric forecasts. Seven configured Distillery Only products remain excluded.
+- Reconciliation, bounded merged coverage, scheduled tenant source workflow, OHLQ authenticated report downloaders, focused dispatch and privacy status added. No new schema migration, secrets, production write, app-cron activation or version bump.
+- Full suite 902 passing; focused source/workflow checks passing, typecheck, optimized build and database integration/replay/tenant/actuals passed. Deployment receipt follows final publication. Live Power BI returns a render error; the available GitHub browser session offers no Run workflow control. Live automated download is not yet verified.

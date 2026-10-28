@@ -63,4 +63,14 @@ None.
 - Environment/config: no new secrets or provider. Existing CRON_SECRET and cron side-effect policy; 12:30 UTC daily Workflow refresh when allowed, immediate refresh after successful source import. TST's existing disabled cron policy is preserved. Optional Organization.settings.productionForecasting.safety controls 0–30% margins; inventory is not subtracted.
 - Validation: [receipt](production-forecasting-validation.md), [source/model/operations guide](../production-forecasting.md). Real full-history source exports are still needed before using live Echo forecasts for planning.
 - Relevant commit: commit titled Add pilot production demand forecasting (TST SHA recorded in delivery receipt).
+
+## TST follow-up: automated forecasting sources and historical load (2026-10-28)
+
+- Reuse the authenticated OHLQ Actions job for tenant-scoped full-history Bailment PO / Invoice and current native Partner DC exports, followed by forecast refresh. Sources and tenants fail independently; focused productionSourcesOnly dispatch avoids unrelated imports. Existing TST schedule and app-cron gates remain intact.
+- Owner supplied full 2019-onward history/current DC files and approved direct invoices using Invoice_Date, with Unspecified fulfillment for missing locations. Cases include odd-bottle equivalents; configured portfolio and Distillery Only exclusions remain authoritative.
+- Add audited source versions for daily full-report reconciliation: replay/unchanged history does not duplicate demand, corrections/removals preserve earlier evidence, late revisions cannot leak into earlier backtests, and suspicious truncation fails atomically. Model version production-demand-v1.1. No new database migration.
+- TST data/config: only org_echo_spirits, neon-neat-tst; historyStart=2019-01-01, directInvoices=invoice-date. Imported 6,001 normalized demand rows / 60 guidance rows; seven excluded products, 23 numeric forecasts. Previous snapshots retained. No production database/configuration change.
+- Environment: existing OHLQ tenant encryption and Microsoft credentials, no new secrets. Raw exports/screenshots remain private; sanitized failure artifact adds productionSources status.
+- Validation: 902 full-suite tests passed, including complete DC pagination and dispatch input validation; typecheck, optimized build, database rehearsals with actual supplied files and forecast isolation/actuals passed. Deployment and live automation receipts are recorded in [validation](production-forecasting-validation.md). Live Power BI rendering was unavailable during development; download success must be verified separately.
+- Production readiness: TST pilot only; production promotion is a separate task. Version remains 0.2.3; no release tag.
 - Production readiness: not reviewed; TST pilot only, no main push/merge, release tag or version change.

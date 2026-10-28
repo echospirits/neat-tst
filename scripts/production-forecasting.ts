@@ -36,6 +36,30 @@ async function main() {
       console.log(JSON.stringify({ migration, checksum, appliedOrVerified: true }));
     }
     const organizationId = argument('organization');
+    const bailmentFile = argument('bailment-file'), dcFile = argument('dc-file');
+    if (bailmentFile || dcFile || process.argv.includes('--configure-ohio')) {
+      if (!organizationId) throw new Error('Provide --organization for source imports.');
+      const { importProductionSource, forecastAccess } = await import('../lib/productionForecasting/import');
+      const { ohioSourceConfiguration } = await import('../lib/productionForecasting/sourceWorkflow');
+      const { formatDateInputValue } = await import('../lib/dateTime');
+      const { shift, validDay } = await import('../lib/productionForecasting/model');
+      const organization = await forecastAccess(db, organizationId), config = ohioSourceConfiguration(organization.settings);
+      const today = formatDateInputValue(new Date(), organization.timezone);
+      const historyStart = argument('history-start') ?? config.historyStart;
+      const direct = argument('direct-invoices') ?? config.directInvoices;
+      if (process.argv.includes('--configure-ohio')) {
+        if (!historyStart || !validDay(historyStart) || historyStart > shift(today, -1) || !['invoice-date', 'shipment-only'].includes(direct ?? '')) throw new Error('A confirmed history start and direct invoice policy are required.');
+        const configuration = JSON.stringify({ historyStart, directInvoices: direct });
+        await db.$executeRaw`UPDATE "Organization" SET settings = jsonb_set(COALESCE(settings,'{}'::jsonb), '{productionForecasting}', COALESCE(settings->'productionForecasting','{}'::jsonb) || jsonb_build_object('ohio', ${configuration}::jsonb), true) WHERE id=${organizationId}`;
+        console.log(JSON.stringify({ sourceConfiguration: 'saved', organizationId, historyStart, directInvoices: direct }));
+      }
+      if (bailmentFile) {
+        if (!historyStart || !validDay(historyStart) || !['invoice-date', 'shipment-only'].includes(direct ?? '')) throw new Error('Full Bailment import requires a confirmed --history-start and --direct-invoices policy.');
+        const result = await importProductionSource(readFileSync(path.resolve(bailmentFile), 'utf8'), { organizationId, market: 'OH', source: 'BAILMENT_PO_INVOICE', start: historyStart, end: shift(today, -1), observedOn: today, complete: true, nativeHistory: { fullPortfolio: true, directInvoices: direct as 'invoice-date' | 'shipment-only' } }, db);
+        console.log(JSON.stringify({ source: 'BAILMENT_PO_INVOICE', ...result }));
+      }
+      if (dcFile) console.log(JSON.stringify({ source: 'DISTRIBUTION_CENTER', ...await importProductionSource(readFileSync(path.resolve(dcFile), 'utf8'), { organizationId, market: 'OH', source: 'DISTRIBUTION_CENTER', start: today, end: today, observedOn: today, complete: true }, db) }));
+    }
     if (process.argv.includes('--refresh')) {
       if (!organizationId) throw new Error('Provide --organization for refresh.');
       const { refreshProductionForecast } = await import('../lib/productionForecasting/service');

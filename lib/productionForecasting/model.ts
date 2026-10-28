@@ -1,11 +1,11 @@
 // Market adapters normalize source facts before the statistical engine sees them.
-export const MODEL_VERSION = 'production-demand-v1';
+export const MODEL_VERSION = 'production-demand-v1.1';
 export const classifications = ['BAILMENT', 'A3A_BAIL', 'A3A_DIST', 'OTHER_OUTBOUND'] as const;
 export type Classification = typeof classifications[number];
 export const includedInDemand = (classification: Classification) => classification !== 'A3A_DIST';
 export type ForecastProduct = { id: string; market: string; code: string; name: string; demandExcluded?: boolean };
 export type FulfillmentLocation = { code: string; name: string };
-export type DemandObservation = { date: string; availableOn: string; cases: number; classification: Classification };
+export type DemandObservation = { date: string; availableOn: string; cases: number; classification: Classification; sourceLineId?: string; versionAt?: string; transactionStatus?: string };
 export type Coverage = { start: string; end: string };
 export type DemandSeries = {
   market: string; itemCode: string; location: FulfillmentLocation;

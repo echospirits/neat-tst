@@ -116,6 +116,8 @@ test('dates, bounded decimal counts, range pairing and booleans validate before 
   }
   assertRejected(inputEnvironment({ purchaseStateOnly: 'true', days: '121' }));
   assertRejected(inputEnvironment({ purchaseStateOnly: 'invalid' }));
+  assertRejected(inputEnvironment({ productionSourcesOnly: '$(touch injection-marker)' }));
+  assertRejected(inputEnvironment({ productionSourcesOnly: 'true', purchaseStateOnly: 'true' }));
   assertRejected(inputEnvironment({ purchaseStateOnly: 'true', fromDate: '2026-10-01' }));
   assertRejected(inputEnvironment({ purchaseStateOnly: 'true', toDate: '2026-10-07' }));
   assertRejected(inputEnvironment({ purchaseStateOnly: 'true', fromDate: '2026-10-07', toDate: '2026-10-01' }));

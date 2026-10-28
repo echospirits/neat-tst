@@ -3,10 +3,11 @@ import Papa from 'papaparse';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { classifications, dateOnly, includedInDemand, validDay, type Classification } from './model';
 import { prisma } from '../prisma';
-import { normalizeNativeOhio, ohioItemContext } from './ohio';
+import { normalizeNativeOhio, ohioItemContext, type NativeOhioOptions } from './ohio';
+import { reconcileDemandRows, scopeIdentity } from './reconciliation';
 
 export type SourceKind = 'BAILMENT_PO_INVOICE' | 'DISTRIBUTION_CENTER';
-export type ImportOptions = { organizationId: string; market: string; source: SourceKind; start: string; end: string; observedOn: string; complete: boolean };
+export type ImportOptions = { organizationId: string; market: string; source: SourceKind; start: string; end: string; observedOn: string; complete: boolean; nativeHistory?: Pick<NativeOhioOptions, 'directInvoices' | 'fullPortfolio'> };
 export type NormalizedRow = { itemCode: string; locationCode: string; locationName: string; classification: Classification; sourceLineId: string; date: string; availableOn: string; cases: number; status: string; minimum: number | null; maximum: number | null };
 export type SourceScope = { itemCode: string; locationCode: string; locationName: string; classification: Classification };
 export const SOURCE_HEADERS = {
@@ -97,7 +98,8 @@ export async function importProductionSource(csv: string, options: ImportOptions
     const organization = await forecastAccess(tx, options.organizationId);
     if (!organization.enabledStates.includes(options.market)) throw new Error('This market is not enabled for the organization.');
     const context = await ohioItemContext(tx, options.organizationId);
-    const native = normalizeNativeOhio(csv, options.source, context);
+    const native = normalizeNativeOhio(csv, options.source, context, options.nativeHistory ? { ...options.nativeHistory, start: options.start, end: options.end } : undefined);
+    if (options.nativeHistory && !native) throw new Error('Automatic reconciliation requires a recognized native Ohio report.');
     const parsed = parseProductionSource(native?.csv ?? csv, options);
     const allowed = context.included;
     if (parsed.rows.some(r => !allowed.has(r.itemCode))) throw new Error('Every item must be an active owned or represented Organization product. No unconfigured items were imported.');
@@ -107,19 +109,34 @@ export async function importProductionSource(csv: string, options: ImportOptions
     parsed.excludedRows = parsed.rows.filter(r => !includedInDemand(r.classification) || r.status === 'CANCELLED').length;
     const prior = await tx.productionSourceImport.findUnique({ where: { organizationId_market_source_contentHash: { organizationId: options.organizationId, market: options.market, source: options.source, contentHash: parsed.hash } } });
     if (prior) return { id: prior.id, replay: true, rowCount: prior.rowCount, excludedRows: prior.excludedRows };
+    let revision: ReturnType<typeof reconcileDemandRows> | null = null;
     if (options.source === 'BAILMENT_PO_INVOICE') {
-      const overlaps = await tx.productionSourceImport.findMany({ where: { organizationId: options.organizationId, market: options.market, source: options.source, status: 'COMPLETE', coverageStart: { lte: new Date(options.end) }, coverageEnd: { gte: new Date(options.start) } }, select: { summary: true } });
+      const overlaps = await tx.productionSourceImport.findMany({ where: { organizationId: options.organizationId, market: options.market, source: options.source, status: 'COMPLETE', coverageStart: { lte: new Date(options.end) }, coverageEnd: { gte: new Date(options.start) } }, select: { summary: true, coverageStart: true, coverageEnd: true } });
       const incoming = new Set(parsed.scopes.map(s => JSON.stringify([s.itemCode, s.locationCode])));
-      for (const overlap of overlaps) {
+      if (native && options.nativeHistory?.fullPortfolio) {
+        // A full provider export revises facts in its declared interval only.
+        // Old rows and forecast snapshots remain immutable audit evidence.
+        const previous = await tx.productionDemandObservation.findMany({ where: { organizationId: options.organizationId, market: options.market, itemCode: { in: [...allowed] }, date: { gte: new Date(options.start), lte: new Date(options.end) }, sourceImport: { status: 'COMPLETE' } }, select: { id: true, sourceLineId: true, date: true, availableOn: true, cases: true, itemCode: true, locationCode: true, locationName: true, classification: true, transactionStatus: true, sourceImport: { select: { importedAt: true } } } });
+        const priorCoverage = new Map<string, string>();
+        for (const overlap of overlaps) for (const scope of (overlap.summary as unknown as { scopes: SourceScope[] }).scopes) {
+          const key = scopeIdentity(scope), end = dateOnly(overlap.coverageEnd);
+          if (end > (priorCoverage.get(key) ?? '')) priorCoverage.set(key, end);
+          // Preserve known fulfillment scopes even if a corrected full report
+          // no longer contains any movements at that location.
+          if (allowed.has(scope.itemCode) && !incoming.has(key)) { parsed.scopes.push(scope); incoming.add(key); }
+        }
+        revision = reconcileDemandRows(parsed.rows, previous.map(r => ({ ...r, date: dateOnly(r.date), availableOn: dateOnly(r.availableOn), cases: Number(r.cases), classification: r.classification as Classification, status: r.transactionStatus, versionAt: r.sourceImport.importedAt.toISOString() })), priorCoverage, options.observedOn);
+      } else for (const overlap of overlaps) {
         const summary = overlap.summary as unknown as { scopes: SourceScope[] };
         if (summary.scopes.some(s => incoming.has(JSON.stringify([s.itemCode, s.locationCode])))) throw new Error('This product/location already has an immutable demand slice in this period. Upload a non-overlapping period; corrections require an audited source revision.');
       }
     }
-    const batch = await tx.productionSourceImport.create({ data: { organizationId: options.organizationId, market: options.market, source: options.source, status: 'COMPLETE', contentHash: parsed.hash, coverageStart: new Date(options.start), coverageEnd: new Date(options.end), observedOn: new Date(options.observedOn), rowCount: parsed.rows.length, excludedRows: parsed.excludedRows, summary: { scopes: parsed.scopes, adapterVersion: native?.adapterVersion ?? 'normalized-ohio-v1', outsidePortfolioRows: native?.outOfScopeRows ?? 0, completenessConfirmed: true } as Prisma.InputJsonValue } });
+    const batch = await tx.productionSourceImport.create({ data: { organizationId: options.organizationId, market: options.market, source: options.source, status: 'COMPLETE', contentHash: parsed.hash, coverageStart: new Date(options.start), coverageEnd: new Date(options.end), observedOn: new Date(options.observedOn), rowCount: parsed.rows.length, excludedRows: parsed.excludedRows, summary: { scopes: parsed.scopes, adapterVersion: native?.adapterVersion ?? 'normalized-ohio-v1', outsidePortfolioRows: native?.outOfScopeRows ?? 0, outsideWindowRows: native?.outsideWindowRows ?? 0, directRows: native?.directRows ?? 0, unshippedRows: native?.unshippedRows ?? 0, directInvoicePolicy: options.nativeHistory?.directInvoices ?? null, completenessConfirmed: true, revisions: revision ? { added: revision.added, changed: revision.changed, removed: revision.removed, unchanged: revision.unchanged } : null } as Prisma.InputJsonValue } });
+    const writes = revision?.writes ?? parsed.rows.map(row => ({ row, originalSourceLineId: row.sourceLineId, previousObservationId: null, removed: false }));
     // Bounded writes avoid oversized PostgreSQL bind-parameter statements.
-    for (let offset = 0; offset < parsed.rows.length; offset += 1000) {
-      const chunk = parsed.rows.slice(offset, offset + 1000);
-      if (options.source === 'BAILMENT_PO_INVOICE') await tx.productionDemandObservation.createMany({ data: chunk.map(r => ({ organizationId: options.organizationId, importId: batch.id, market: options.market, itemCode: r.itemCode, locationCode: r.locationCode, locationName: r.locationName, sourceLineId: r.sourceLineId, date: new Date(r.date), availableOn: new Date(r.availableOn), cases: r.cases, classification: r.classification, transactionStatus: r.status, sourceEvidence: native?.evidence.get(r.sourceLineId) ?? Prisma.JsonNull })) });
+    for (let offset = 0; offset < writes.length; offset += 1000) {
+      const chunk = writes.slice(offset, offset + 1000).map(w => w.row);
+      if (options.source === 'BAILMENT_PO_INVOICE') await tx.productionDemandObservation.createMany({ data: writes.slice(offset, offset + 1000).map(w => { const r = w.row; return { organizationId: options.organizationId, importId: batch.id, market: options.market, itemCode: r.itemCode, locationCode: r.locationCode, locationName: r.locationName, sourceLineId: r.sourceLineId, date: new Date(r.date), availableOn: new Date(r.availableOn), cases: r.cases, classification: r.classification, transactionStatus: r.status, sourceEvidence: native ? { original: w.originalSourceLineId ? native.evidence.get(w.originalSourceLineId) ?? null : null, previousObservationId: w.previousObservationId, removed: w.removed } : Prisma.JsonNull }; }) });
       else await tx.productionGuidanceObservation.createMany({ data: chunk.map(r => ({ organizationId: options.organizationId, importId: batch.id, market: options.market, itemCode: r.itemCode, locationCode: r.locationCode, locationName: r.locationName, observedOn: new Date(options.observedOn), minimum: r.minimum, maximum: r.maximum, classification: r.classification, sourceEvidence: native?.evidence.get(JSON.stringify([r.itemCode, r.locationCode])) ?? Prisma.JsonNull })) });
     }
     return { id: batch.id, replay: false, rowCount: parsed.rows.length, excludedRows: parsed.excludedRows };

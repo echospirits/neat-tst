@@ -4,6 +4,7 @@ import { prisma } from '../prisma';
 import { formatDateInputValue } from '../dateTime';
 import { forecastAccess, type SourceScope } from './import';
 import { ohioItemContext } from './ohio';
+import { demandIdentity, mergeCoverage } from './reconciliation';
 import { forecastProduct, valuesKnownAt } from './engine';
 import { MODEL_VERSION, type Classification, type DemandSeries, type ForecastProduct, type GuidanceObservation, type ProductForecast, completeSum, dateOnly, days, forecastConfiguration, forecastRules, includedInDemand, shift } from './model';
 
@@ -26,7 +27,7 @@ export async function loadForecastSources(db: Db, organizationId: string, produc
   const start = shift(asOf, 1 - forecastRules.maxHistoryDays);
   const [imports, observations, guidanceRows] = await Promise.all([
     db.productionSourceImport.findMany({ where: { organizationId, market: { in: markets }, status: 'COMPLETE', source: 'BAILMENT_PO_INVOICE', coverageStart: { lte: new Date(asOf) } }, orderBy: { importedAt: 'asc' }, select: { id: true, market: true, coverageStart: true, coverageEnd: true, summary: true, rowCount: true, excludedRows: true, importedAt: true } }),
-    productWhere.length ? db.productionDemandObservation.findMany({ where: { organizationId, OR: productWhere, date: { gte: new Date(start), lte: new Date(asOf) }, availableOn: { lte: new Date(asOf) }, transactionStatus: { in: ['POSTED', 'SHIPPED'] }, classification: { not: 'A3A_DIST' }, sourceImport: { status: 'COMPLETE' } }, select: { market: true, itemCode: true, locationCode: true, locationName: true, date: true, availableOn: true, cases: true, classification: true } }) : [],
+    productWhere.length ? db.productionDemandObservation.findMany({ where: { organizationId, OR: productWhere, date: { gte: new Date(start), lte: new Date(asOf) }, availableOn: { lte: new Date(asOf) }, sourceImport: { status: 'COMPLETE' } }, orderBy: { id: 'asc' }, select: { market: true, itemCode: true, locationCode: true, locationName: true, date: true, availableOn: true, cases: true, classification: true, transactionStatus: true, sourceLineId: true, sourceImport: { select: { importedAt: true } } } }) : [],
     productWhere.length ? db.productionGuidanceObservation.findMany({ where: { organizationId, OR: productWhere, observedOn: { lte: new Date(shift(asOf, 1)) }, classification: { not: 'A3A_DIST' }, sourceImport: { status: 'COMPLETE' } }, distinct: ['market', 'itemCode', 'locationCode'], orderBy: [{ observedOn: 'desc' }, { id: 'desc' }], select: { market: true, itemCode: true, locationCode: true, locationName: true, observedOn: true, minimum: true, maximum: true, classification: true } }) : [],
   ]);
   const allowed = new Set(products.filter(p => !p.demandExcluded).map(p => JSON.stringify([p.market, p.code])));
@@ -43,9 +44,10 @@ export async function loadForecastSources(db: Db, organizationId: string, produc
       seriesMap.set(key, series);
     }
   }
-  for (const row of observations) seriesMap.get(JSON.stringify([row.market, row.itemCode, row.locationCode]))?.observations.push({ date: dateOnly(row.date), availableOn: dateOnly(row.availableOn), cases: Number(row.cases), classification: row.classification as Classification });
+  for (const row of observations) seriesMap.get(JSON.stringify([row.market, row.itemCode, row.locationCode]))?.observations.push({ date: dateOnly(row.date), availableOn: dateOnly(row.availableOn), cases: Number(row.cases), classification: row.classification as Classification, sourceLineId: demandIdentity(row.sourceLineId, dateOnly(row.date)), versionAt: row.sourceImport.importedAt.toISOString(), transactionStatus: row.transactionStatus });
+  for (const series of seriesMap.values()) series.coverage = mergeCoverage(series.coverage);
   const guidance: GuidanceObservation[] = guidanceRows.map(r => ({ market: r.market, itemCode: r.itemCode, location: { code: r.locationCode, name: r.locationName }, date: dateOnly(r.observedOn), minimum: r.minimum === null ? null : Number(r.minimum), maximum: r.maximum === null ? null : Number(r.maximum), classification: r.classification as Classification }));
-  return { series: [...seriesMap.values()], guidance, imports, sourceSummary: { source: 'Bailment PO / Invoice (verified normalized CSV)', batches: imports.length, importedRows: imports.reduce((n, i) => n + i.rowCount, 0), excludedRows: imports.reduce((n, i) => n + i.excludedRows, 0), latestImport: imports.at(-1)?.importedAt.toISOString() ?? null } };
+  return { series: [...seriesMap.values()], guidance, imports, sourceSummary: { source: 'Bailment PO / Invoice', batches: imports.length, importedRows: imports.at(-1)?.rowCount ?? 0, excludedRows: imports.at(-1)?.excludedRows ?? 0, latestImport: imports.at(-1)?.importedAt.toISOString() ?? null } };
 }
 
 export async function refreshProductionForecast(organizationId: string, db: PrismaClient = prisma, now = new Date()) {
