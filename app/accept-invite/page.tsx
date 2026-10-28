@@ -9,6 +9,7 @@ import { formatEasternDateTime } from '../../lib/dateTime';
 import { prisma } from '../../lib/prisma';
 import { hashUserInvitationToken } from '../../lib/userInvitations';
 import { acceptUserInvitation } from './actions';
+import { ECHO_ORGANIZATION_ID } from '../../lib/echoAccess';
 
 export const metadata = buildPageMetadata('Accept Invitation');
 
@@ -34,6 +35,7 @@ export default async function AcceptInvitePage({
           tokenHash: hashUserInvitationToken(token),
           acceptedAt: null,
           expiresAt: { gt: new Date() },
+          user: { organizationId: ECHO_ORGANIZATION_ID },
         },
         select: {
           expiresAt: true,

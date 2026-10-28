@@ -1,5 +1,7 @@
 # CRM feature inventory
 
+October 28, 2026 TST transition: interactive access, invitations, password recovery and organization context are now limited to Echo Spirits. Existing ownership and per-user role checks remain. Platform UI and background-job removal are later increments; see [transition scope and validation](../releases/echo-only-transition-validation.md). Production is unchanged.
+
 Updated 2026-10-11 for the integrated 0.2.3-dev TST work. Existing workflows are authoritative; ADR 0012 supersedes the separate Deals/Activities design. “Implemented” means application code and the listed local/isolated tests; it does not mean a live provider was authorized.
 
 2026-10-12 rollout policy: connected mail/imported appointments, business SMS and reviewed contact suggestions are grouped under **Communications Pilot**, initially enrolled only for Echo Spirits in v0.2. Standard packages and broad TST feature enablement exclude it. See [review guide](communications-pilot-review.md). Existing captured history and ordinary Core workflows are preserved.

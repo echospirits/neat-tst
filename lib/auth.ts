@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { prisma } from './prisma';
 import { isAdminRole, isTasterRole } from './userAccess';
 import { recordUserActivity } from './userActivity';
+import { ECHO_ORGANIZATION_ID, hasEchoAccess } from './echoAccess';
 
 export const SESSION_COOKIE = 'echo_session';
 
@@ -33,7 +34,8 @@ export async function createUserSession(userId: string) {
   const expiresAt = getSessionExpiresAt();
 
   await prisma.$transaction(async (tx) => {
-    const user = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { id: true, organizationId: true } });
+    const user = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { id: true, organizationId: true, isActive: true } });
+    if (!user.isActive || !hasEchoAccess(user)) throw new Error('This account cannot access Neat.');
     await tx.userSession.create({
       data: {
         tokenHash: hashSessionToken(sessionToken),
@@ -65,7 +67,7 @@ export async function getCurrentSession() {
     where: {
       tokenHash: hashSessionToken(token),
       expiresAt: { gt: new Date() },
-      user: { isActive: true },
+      user: { isActive: true, organizationId: ECHO_ORGANIZATION_ID },
     },
     include: { user: true },
   });

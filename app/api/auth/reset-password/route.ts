@@ -3,6 +3,7 @@ import { hashPassword } from '../../../../lib/password';
 import { hashPasswordResetToken, isValidPasswordResetToken } from '../../../../lib/passwordReset';
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '../../../../lib/passwordPolicy';
 import { prisma } from '../../../../lib/prisma';
+import { ECHO_ORGANIZATION_ID, hasEchoAccess } from '../../../../lib/echoAccess';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -39,10 +40,10 @@ export async function POST(request: NextRequest) {
   const now = new Date();
   const reset = await prisma.passwordResetToken.findUnique({
     where: { tokenHash: hashPasswordResetToken(token) },
-    select: { id: true, userId: true, usedAt: true, expiresAt: true, user: { select: { email: true, isActive: true } } },
+    select: { id: true, userId: true, usedAt: true, expiresAt: true, user: { select: { email: true, isActive: true, organizationId: true } } },
   });
 
-  if (!reset || reset.usedAt || reset.expiresAt <= now || !reset.user.isActive) {
+  if (!reset || reset.usedAt || reset.expiresAt <= now || !reset.user.isActive || !hasEchoAccess(reset.user)) {
     return redirectToReset(request, '', 'invalid');
   }
 
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
       }
 
       const updatedUser = await tx.user.updateMany({
-        where: { id: reset.userId, isActive: true, passwordHash: { not: null } },
+        where: { id: reset.userId, isActive: true, passwordHash: { not: null }, organizationId: ECHO_ORGANIZATION_ID },
         data: { passwordHash: hashPassword(password) },
       });
 

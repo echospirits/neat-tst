@@ -2,7 +2,7 @@
 
 Neat **0.2.3** was released on 2026-10-19. [Archived technical release](0.2.3.md) | [Tenant announcement](0.2.3-user-notes.md) | [Production receipt](0.2.3/production-rollout.json).
 
-Package version remains 0.2.3. On 2026-10-27 the owner explicitly authorized Production Forecasting feature development in neat-tst only, without a new version/cycle, production version bump or release tag. Production promotion remains a separate task.
+Package version remains 0.2.3. On 2026-10-27 the owner explicitly authorized Production Forecasting feature development in neat-tst only, without a new version/cycle, production version bump or release tag. On October 28 the owner also authorized an incremental Echo-only transition in neat-tst. Production promotion remains a separate task.
 
 ## Same-version production hotfix: OHLQ dependency installation (2026-10-19)
 
@@ -51,6 +51,16 @@ Package version remains 0.2.3. On 2026-10-27 the owner explicitly authorized Pro
 ## Pending changes
 
 None.
+
+## TST transition: Echo-only interactive access (2026-10-28)
+
+- Description: first incremental step toward an Echo-only application. Sign-in, new and existing sessions, account-state request scope, invitation display/acceptance and password recovery require Echo membership. A platform role or Echo email domain cannot bypass membership. Support View cookies cannot select another organization.
+- User-visible: sign-in identifies the Echo Spirits account. Outside credentials use the existing generic failure; old outside invitation/reset links are unavailable. Existing outside cookies no longer authenticate. Echo admin, user and taster roles remain supported.
+- TST account: owner-requested joe@echospirits.com, org_echo_spirits, ADMIN; pending one-time password activation. No global platform role or copied password. The setup capability is shared privately with the owner, never committed.
+- Feature flag/default: fixed application access policy; enabled in this TST candidate, no environment bypass. Environment/config: none. Version remains 0.2.3.
+- Migrations: none. Existing outside data, users, session rows and history remain owned by their original organizations. The only operational TST inserts are the requested new Echo user and its hashed invitation.
+- Validation: [transition receipt](echo-only-transition-validation.md). Relevant commit: titled Restrict TST interactive access to Echo Spirits.
+- Production readiness: first increment only; platform/onboarding UI and background dispatchers remain for later removal. No main push/merge, production database/config change, provider activation or release tag.
 
 ## TST feature: Production Forecasting (2026-10-27)
 

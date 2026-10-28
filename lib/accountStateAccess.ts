@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { cookies, headers } from 'next/headers';
+import { ECHO_ORGANIZATION_ID } from './echoAccess';
 import { assertStateWrite, combineWhere, modelStateWhere, scopeReadArgs, stateWhere, type StateScope } from './accountStatePolicy';
 
 const explicitScope = new AsyncLocalStorage<StateScope | null>();
@@ -109,9 +110,9 @@ async function resolveRequestScope(base: PrismaClient): Promise<StateScope | nul
         if(expected && authorization && Buffer.byteLength(authorization)===Buffer.byteLength(expected) && timingSafeEqual(new TextEncoder().encode(authorization),new TextEncoder().encode(expected)))return null;
         return emptyScope();
       }
-      const session=await base.userSession.findFirst({where:{tokenHash:createHash('sha256').update(token).digest('hex'),expiresAt:{gt:new Date()},user:{isActive:true}},include:{user:true}});
+      const session=await base.userSession.findFirst({where:{tokenHash:createHash('sha256').update(token).digest('hex'),expiresAt:{gt:new Date()},user:{isActive:true,organizationId:ECHO_ORGANIZATION_ID}},include:{user:true}});
       if(!session)return emptyScope();
-      const organizationId=(session.user.role==='PLATFORM_ADMIN' ? store.get('neat_support_organization')?.value : null) || session.user.organizationId;
+      const organizationId=session.user.organizationId;
       return organizationId ? loadStateScope(base,organizationId) : emptyScope();
     })();
     requestScopes.set(store,result);

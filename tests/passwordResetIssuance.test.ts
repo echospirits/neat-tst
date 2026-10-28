@@ -7,6 +7,7 @@ import test from 'node:test';
 import ts from 'typescript';
 import type { SendEmailInput } from '../lib/email/sendEmail';
 import * as passwordReset from '../lib/passwordReset';
+import { ECHO_ORGANIZATION_ID } from '../lib/echoAccess';
 
 type ResetRecord = {
   id: string;
@@ -16,15 +17,15 @@ type ResetRecord = {
   expiresAt: Date;
   usedAt: Date | null;
 };
-type UserRecord = { id: string; email: string; isActive: boolean; passwordHash: string | null };
+type UserRecord = { id: string; email: string; isActive: boolean; passwordHash: string | null; organizationId: string | null };
 type Response = { status: number; body: { message: string } };
 
 // Run the actual route with committed/staged token state and per-user row locks.
 // Concurrent transactions are unrestricted until the route acquires its SQL lock.
 function fixture(source = readFileSync('app/api/auth/forgot-password/route.ts', 'utf8')) {
   const users: UserRecord[] = [
-    { id: 'user-1', email: 'alex@example.com', isActive: true, passwordHash: 'hash' },
-    { id: 'user-2', email: 'sam@example.com', isActive: true, passwordHash: 'hash' },
+    { id: 'user-1', email: 'alex@example.com', isActive: true, passwordHash: 'hash', organizationId: ECHO_ORGANIZATION_ID },
+    { id: 'user-2', email: 'sam@example.com', isActive: true, passwordHash: 'hash', organizationId: ECHO_ORGANIZATION_ID },
   ];
   const records: ResetRecord[] = [];
   const emails: SendEmailInput[] = [];
@@ -95,18 +96,20 @@ function fixture(source = readFileSync('app/api/auth/forgot-password/route.ts', 
       let release: (() => void) | undefined;
       const tx = {
         passwordResetToken: tokenApi(staged),
-        $queryRaw: async (parts: TemplateStringsArray, userId: string) => {
+        $queryRaw: async (parts: TemplateStringsArray, userId: string, organizationId: string) => {
           const sql = parts.join('?');
           assert.match(sql, /SELECT "id" FROM "User"/);
           assert.match(sql, /"isActive" = TRUE AND "passwordHash" IS NOT NULL/);
           assert.match(sql, /FOR UPDATE/);
-          assert.equal(parts.length, 2, 'user id is a bound parameter');
+          assert.match(sql, /"organizationId" = \?/);
+          assert.equal(parts.length, 3, 'user and organization ids are bound parameters');
+          assert.equal(organizationId, ECHO_ORGANIZATION_ID);
           assert.equal(options?.isolationLevel, 'ReadCommitted', 'cooldown sees preceding commits after waiting');
           const previous = lockTails.get(userId) ?? Promise.resolve();
           const current = new Promise<void>((resolveLock) => { release = resolveLock; });
           lockTails.set(userId, current);
           await previous;
-          const user = users.find((candidate) => candidate.id === userId && candidate.isActive && candidate.passwordHash);
+          const user = users.find((candidate) => candidate.id === userId && candidate.isActive && candidate.passwordHash && candidate.organizationId === organizationId);
           return user ? [{ id: user.id }] : [];
         },
       };
@@ -264,6 +267,15 @@ test('parallel reset batches for different users each receive one capability', a
   assert.equal(f.emails.length, 2);
   assert.equal(new Set(f.records.map((record) => record.userId)).size, 2);
   assert.equal(f.errors.length, 0);
+});
+
+test('reset issuance rechecks Echo membership under the lock after lookup', async () => {
+  const f = fixture();
+  f.afterLookup(() => { f.users[0].organizationId = 'outside-company'; });
+  assertGeneric([await f.post()]);
+  assert.equal(f.transactions(), 1);
+  assert.equal(f.records.length, 0);
+  assert.equal(f.emails.length, 0);
 });
 
 test('invalid email input is rejected before lookup or issuance', async () => {

@@ -1,11 +1,11 @@
 import { OrganizationAuditAction, OrganizationProductStatus, OrganizationStatus, Prisma, UserRole } from '@prisma/client';
-import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { ECHO_FEATURE_KEYS, FEATURE_KEYS, getEnvironmentFeatureKeys, type FeatureKey, validateFeatureSelection } from './featureRegistry';
 import { prisma } from './prisma';
 import { DEFAULT_TENANT_ENTITY_NAME, DEFAULT_TENANT_EXCLUDED_ITEM_CODES, DEFAULT_TENANT_OHLQ_VENDOR_IDS } from './tenantConfig';
+import { ECHO_ORGANIZATION_ID, hasEchoAccess } from './echoAccess';
 
-export const ECHO_ORGANIZATION_ID = 'org_echo_spirits';
+export { ECHO_ORGANIZATION_ID } from './echoAccess';
 export const SUPPORT_VIEW_COOKIE = 'neat_support_organization';
 
 let echoBootstrap: Promise<void> | null = null;
@@ -27,11 +27,9 @@ export function ensureEchoOrganization() {
 }
 
 export async function getOrganizationContext(user: { id: string; organizationId: string | null; role: UserRole }) {
-  const supportOrganizationId = user.role === UserRole.PLATFORM_ADMIN ? (await cookies()).get(SUPPORT_VIEW_COOKIE)?.value : null;
-  const organizationId = supportOrganizationId || user.organizationId;
-  if (!organizationId) return null;
-  const organization = await prisma.organization.findFirst({ where: { id: organizationId, ...(user.role === UserRole.PLATFORM_ADMIN ? {} : { active: true, accountStatus: { notIn: [OrganizationStatus.SUSPENDED, OrganizationStatus.CANCELLED] } }) } });
-  return organization ? { organization, isSupportView: Boolean(supportOrganizationId), organizationId: organization.id } : null;
+  if (!hasEchoAccess(user)) return null;
+  const organization = await prisma.organization.findFirst({ where: { id: ECHO_ORGANIZATION_ID, active: true, accountStatus: { notIn: [OrganizationStatus.SUSPENDED, OrganizationStatus.CANCELLED] } } });
+  return organization ? { organization, isSupportView: false, organizationId: organization.id } : null;
 }
 
 export async function requireOrganizationContext(user: { id: string; organizationId: string | null; role: UserRole }) {
