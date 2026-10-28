@@ -24,6 +24,15 @@ export async function ohioItemContext(db: PrismaClient | Prisma.TransactionClien
 export function classificationForItem(code: string, context: OhioItemContext): Classification {
   return context.distilleryOnly.has(code) ? 'A3A_DIST' : context.bailment.has(code) ? 'A3A_BAIL' : 'BAILMENT';
 }
+/** Current planning/display eligibility; source imports retain historical facts. */
+export async function ohioForecastExcludedItemCodes(db: PrismaClient | Prisma.TransactionClient, organizationId: string, itemCodes: string[]) {
+  const [context, catalog] = await Promise.all([
+    ohioItemContext(db, organizationId),
+    db.ohlqBrandMasterItem.findMany({ where: { itemCode: { in: itemCodes } }, select: { itemCode: true, solItemStatusCode: true } }),
+  ]);
+  // Brand Master status 30 is delisted; missing status is not a delisting.
+  return new Set([...context.distilleryOnly, ...catalog.filter(p => p.solItemStatusCode?.trim() === '30').map(p => p.itemCode)]);
+}
 function sourceDate(value: string, field: string) {
   const trimmed = value.trim();
   if (validDay(trimmed)) return trimmed;

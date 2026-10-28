@@ -3,7 +3,7 @@ import { Prisma, type PrismaClient } from '@prisma/client';
 import { prisma } from '../prisma';
 import { formatDateInputValue } from '../dateTime';
 import { forecastAccess, type SourceScope } from './import';
-import { ohioItemContext } from './ohio';
+import { ohioForecastExcludedItemCodes } from './ohio';
 import { demandIdentity, mergeCoverage } from './reconciliation';
 import { forecastProduct, valuesKnownAt } from './engine';
 import { MODEL_VERSION, type Classification, type DemandSeries, type ForecastProduct, type GuidanceObservation, type ProductForecast, completeSum, dateOnly, days, forecastConfiguration, forecastRules, includedInDemand, shift } from './model';
@@ -17,8 +17,11 @@ export function summaryFor(forecast: ProductForecast): ForecastSummary {
 }
 export async function configuredProducts(db: Db, organizationId: string, markets: string[]): Promise<ForecastProduct[]> {
   const products = await db.organizationProduct.findMany({ where: { organizationId, market: { in: markets }, active: true, discontinued: false, status: { in: ['OWNED', 'REPRESENTED'] } }, orderBy: [{ market: 'asc' }, { externalItemCode: 'asc' }], select: { id: true, market: true, externalItemCode: true, displayName: true } });
-  const context = markets.includes('OH') ? await ohioItemContext(db, organizationId) : null;
-  return products.map(p => ({ id: p.id, market: p.market, code: p.externalItemCode, name: p.displayName || p.externalItemCode, demandExcluded: p.market === 'OH' && Boolean(context?.distilleryOnly.has(p.externalItemCode)) }));
+  const ohioCodes = products.filter(p => p.market === 'OH').map(p => p.externalItemCode);
+  const excluded = ohioCodes.length ? await ohioForecastExcludedItemCodes(db, organizationId, ohioCodes) : new Set<string>();
+  // Apply current eligibility before reading saved summaries or computing runs.
+  // Previously saved excluded snapshots remain intact but never become rows.
+  return products.filter(p => p.market !== 'OH' || !excluded.has(p.externalItemCode)).map(p => ({ id: p.id, market: p.market, code: p.externalItemCode, name: p.displayName || p.externalItemCode, demandExcluded: false }));
 }
 /** Batched reads, bounded demand history, explicit tenant and product scope. */
 export async function loadForecastSources(db: Db, organizationId: string, products: ForecastProduct[], asOf: string) {

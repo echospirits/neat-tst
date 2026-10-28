@@ -18,10 +18,13 @@ async function main() {
     for (const id of [a, b]) await db.organization.create({ data: { id, name: id, displayName: id, slug: id, active: true, accountStatus: 'ACTIVE', enabledStates: ['OH'], features: { create: [{ featureKey: 'CORE_CRM', enabled: true }, { featureKey: 'ANALYTICS', enabled: true }, { featureKey: 'PRODUCTION_FORECASTING', enabled: id === a }] } } });
     const p = await db.organizationProduct.create({ data: { organizationId: a, market: 'OH', externalItemCode: 'RUM', displayName: 'Rehearsal Rum', status: 'OWNED' } });
     await db.organizationProduct.create({ data: { organizationId: a, market: 'OH', externalItemCode: 'DIST', displayName: 'Distillery only', status: 'OWNED' } });
+    const delistedCode = `QA_DELIST_${token.toUpperCase()}`;
+    const delisted = await db.organizationProduct.create({ data: { organizationId: a, market: 'OH', externalItemCode: delistedCode, displayName: 'Rehearsal delisted product', status: 'OWNED' } });
+    await db.ohlqBrandMasterItem.create({ data: { itemCode: delistedCode, name: 'Rehearsal delisted product', solItemStatusCode: '70' } });
     const other = await db.organizationProduct.create({ data: { organizationId: b, market: 'OH', externalItemCode: 'SECRET', status: 'REPRESENTED' } });
     await db.ohlqTenantInventoryImportStatus.create({ data: { organizationId: a, reportDate: new Date('2026-07-31'), status: 'COMPLETED', diagnostics: { distilleryOnlyItemCodes: ['DIST'] } } });
     const header = 'source_line_id,movement_date,available_on,item_code,location_code,location_name,classification,transaction_status,cases';
-    const file = (start: string, end: string) => header + '\n' + days(start, end).flatMap(date => [`${date}-gpt,${date},${date},RUM,GPT,Groveport,A3A_BAIL,SHIPPED,2`, `${date}-grn,${date},${date},RUM,GRN,Green,BAILMENT,SHIPPED,1`, `${date}-dist,${date},${date},DIST,GPT,Groveport,BAILMENT,SHIPPED,100000`]).join('\n');
+    const file = (start: string, end: string) => header + '\n' + days(start, end).flatMap(date => [`${date}-gpt,${date},${date},RUM,GPT,Groveport,A3A_BAIL,SHIPPED,2`, `${date}-grn,${date},${date},RUM,GRN,Green,BAILMENT,SHIPPED,1`, `${date}-dist,${date},${date},DIST,GPT,Groveport,BAILMENT,SHIPPED,100000`, `${date}-delisted,${date},${date},${delistedCode},GPT,Groveport,BAILMENT,SHIPPED,1`]).join('\n');
     const options = { organizationId: a, market: 'OH', source: 'BAILMENT_PO_INVOICE' as const, start: '2024-01-01', end: '2026-07-31', observedOn: '2026-07-31', complete: true };
     const imported = await importProductionSource(file(options.start, options.end), options, db);
     assert.equal(imported.replay, false); assert.ok(imported.excludedRows > 0);
@@ -36,7 +39,8 @@ async function main() {
     assert.equal(await db.productionForecastSnapshot.count({ where: { organizationId: a } }), count);
     let detail = await getProductionProduct(a, p.id, db);
     assert.equal(detail?.forecast?.point, 90); assert.equal(detail?.forecast?.locations.length, 2);
-    const dist = await db.productionForecastSnapshot.findFirstOrThrow({ where: { organizationId: a, itemCode: 'DIST' } }); assert.equal(dist.point, null);
+    assert.equal(await db.productionForecastSnapshot.count({ where: { organizationId: a, itemCode: 'DIST' } }), 0);
+    assert.equal(await getProductionProduct(a, (await db.organizationProduct.findFirstOrThrow({ where: { organizationId: a, externalItemCode: 'DIST' } })).id, db), null);
     await db.organizationFeature.update({ where: { organizationId_featureKey: { organizationId: b, featureKey: 'PRODUCTION_FORECASTING' } }, data: { enabled: true } });
     assert.equal(await getProductionProduct(b, p.id, db), null); assert.equal(await getProductionProduct(a, other.id, db), null);
     const bDashboard = await getProductionDashboard(b, db); assert.deepEqual(bDashboard.rows.map(r => r.product.code), ['SECRET']); assert.equal(bDashboard.rows[0].point, null);
@@ -45,10 +49,19 @@ async function main() {
     await importProductionSource(file('2026-08-01', '2026-10-26'), { ...options, start: '2026-08-01', end: '2026-10-26', observedOn: '2026-10-26' }, db);
     const second = await refreshProductionForecast(a, db, new Date('2026-10-27T12:00:00Z')); assert.notEqual(second.id, first.id);
     const old = await db.productionForecastSnapshot.findFirstOrThrow({ where: { organizationId: a, runId: first.id, productId: p.id } }); assert.equal(Number(old.point), 90); assert.equal(Number(old.actualCases), 90); assert.ok(old.actualEvaluatedAt);
-    const dashboard = await getProductionDashboard(a, db); assert.equal(dashboard.rows.find(r => r.product.id === p.id)?.point, 90); assert.equal(dashboard.rows.find(r => r.product.code === 'DIST')?.point, null);
+    const dashboard = await getProductionDashboard(a, db); assert.equal(dashboard.rows.find(r => r.product.id === p.id)?.point, 90); assert.equal(dashboard.rows.some(r => r.product.code === 'DIST'), false);
     detail = await getProductionProduct(a, p.id, db); assert.equal(detail?.forecast?.point, 90); assert.equal(detail?.history.length, 2);
     // Actual observation content remains tenant scoped and old predictions remain immutable.
     const records = await db.productionDemandObservation.count({ where: { organizationId: b } }); assert.equal(records, 0);
+    // Current delisting hides already saved results immediately, while all
+    // historical forecast/source evidence remains untouched.
+    const savedDelisted = await db.productionForecastSnapshot.findMany({ where: { organizationId: a, productId: delisted.id } });
+    assert.ok(savedDelisted.length > 0);
+    await db.ohlqBrandMasterItem.update({ where: { itemCode: delistedCode }, data: { solItemStatusCode: '30' } });
+    assert.equal((await getProductionDashboard(a, db)).rows.some(r => r.product.id === delisted.id), false);
+    assert.equal(await getProductionProduct(a, delisted.id, db), null);
+    assert.deepEqual(await db.productionForecastSnapshot.findMany({ where: { organizationId: a, productId: delisted.id } }), savedDelisted);
+    assert.ok(await db.productionDemandObservation.count({ where: { organizationId: a, itemCode: delistedCode } }) > 0);
     console.log(JSON.stringify({ rehearsal: 'passed', importReplay: true, overlapRejected: true, configuredDistExcluded: true, tenantIsolation: true, compositeForeignKeys: true, snapshotReplay: true, snapshotsPreserved: true, completedHorizonActual: Number(old.actualCases), forecast: 90, backtests: detail?.forecast?.locations[0].backtests.map(s => ({ method: s.method, folds: s.folds.length, wape: s.wape })), syntheticOrganizations: [a, b] }));
   } finally { await db.$disconnect(); }
 }

@@ -81,4 +81,11 @@ None.
 - Carry organization scope through product details, return/filter links and source imports. Reauthorize explicit import targets on the server; ordinary user/admin cross-tenant targets, unknown/disabled/suspended organizations and implicit platform import targets remain blocked. Pilot flags, organization memberships and global Support View context are unchanged.
 - No database migration, data backfill, new secret or environment change. Version remains 0.2.3, TST only. Production main remains out of scope.
 - Validation: seven focused authorization/navigation/action cases; 909 full-suite tests passing; responsive review at 390×844 and 1440×1000, including platform navigation, organization labels/search, empty state and no page overflow. Typecheck/build and deployment receipt: [validation](production-forecasting-validation.md).
+
+## TST fix: hide ineligible production forecast products (2026-10-28)
+
+- Omit Distillery Only / A-3a Dist and delisted Ohio products entirely, rather than showing unavailable rows. Check current inventory classification/retained diagnostics and Brand Master status 30 on the server before loading dashboard results, totals/search, product details or new forecast runs. Active A-3a Bailment remains included. An empty portfolio now says No eligible products.
+- Current Echo TST portfolio: 19 visible eligible items after removing seven Distillery Only and four delisted items. A saved snapshot cannot make an excluded product reappear; direct detail links also apply current eligibility. Historical source observations and saved forecasts remain intact.
+- No migration, backfill, organization configuration, source import or environment change. TST only, version 0.2.3 unchanged; production main remains out of scope.
+- Validation: focused current-status, cached-snapshot, aggregate, direct-link and market-isolation checks; database rehearsal verifies that a newly delisted product disappears immediately while its history remains retained. Final checks/deployment are recorded in [validation](production-forecasting-validation.md).
 - Production readiness: not reviewed; TST pilot only, no main push/merge, release tag or version change.

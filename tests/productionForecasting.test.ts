@@ -160,5 +160,5 @@ test('rendered dashboard and drill-down use the same saved totals, freshness, gu
   assert.match(table, /60 forecast cases/); assert.match(table, /30-day forecast/); assert.match(table, /Not imported/);
   assert.match(detail, /60 cases/); assert.match(detail, /Forecast data through 2026-10-26/); assert.match(detail, /Why this forecast/);
   assert.match(detail, /finished inventory/i); assert.match(detail, /Distribution Center guidance/);
-  const empty = renderToStaticMarkup(createElement(ForecastTable, { rows: [] })); assert.match(empty, /No configured products/);
+  const empty = renderToStaticMarkup(createElement(ForecastTable, { rows: [] })); assert.match(empty, /No eligible products/);
 });
