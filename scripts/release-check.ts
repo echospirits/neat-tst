@@ -76,19 +76,15 @@ function featureKeysAt(ref: string) {
   return new Set([...block.matchAll(/'([A-Z][A-Z0-9_]*)'/g)].map((match) => match[1]));
 }
 
-function latestReleaseTag(ref: string) {
-  return lines(git(['tag', '--merged', ref, '--sort=-version:refname'], true))
-    .find((tag) => /^v\d+\.\d+\.\d+$/.test(tag)) ?? null;
-}
-
 export function runReleaseCheck(options: Options) {
   verifyRef(options.productionRef);
   verifyRef(options.tstRef);
 
   const productionSha = git(['rev-parse', options.productionRef]);
   const tstSha = git(['rev-parse', options.tstRef]);
-  const releaseTag = latestReleaseTag(options.productionRef);
-  const comparisonBase = releaseTag ?? options.productionRef;
+  // Releases can reset numbering and the two repositories have divergent
+  // histories. The current production tree defines what is already deployed.
+  const comparisonBase = productionSha;
   const worktree = lines(git(['status', '--short']));
   const commits = lines(git(['log', '--format=%h %s', `${comparisonBase}..${options.tstRef}`]));
   const changedFiles = lines(git(['diff', '--name-status', comparisonBase, options.tstRef]));
@@ -110,11 +106,12 @@ export function runReleaseCheck(options: Options) {
   console.log('Neat release audit (read-only)');
   console.log(`Production: ${options.productionRef} @ ${productionSha.slice(0, 12)} (version ${versionAt(options.productionRef)})`);
   console.log(`TST:        ${options.tstRef} @ ${tstSha.slice(0, 12)} (version ${versionAt(options.tstRef)})`);
-  console.log(`Release base: ${releaseTag ?? `${options.productionRef} (no strict vX.Y.Z production tag found)`}`);
+  console.log(`Comparison base: ${options.productionRef} @ ${productionSha}`);
   console.log(`Working tree: ${worktree.length ? `DIRTY (${worktree.length} entries)` : 'clean'}`);
-  console.log(`Pending commits: ${commits.length}; changed paths: ${changedFiles.length}`);
+  console.log(`TST-only history commits: ${commits.length}; changed paths: ${changedFiles.length}`);
+  console.log('Release contents use the tree comparison; commit history is context for divergent branches.');
 
-  section('Commits since release base', commits, 'None');
+  section('Commits reachable only from TST (history context)', commits, 'None');
   section('Changed paths', changedFiles, 'None');
   section('Migration changes', migrations, 'None');
   section('Potentially new environment variable names', newEnvironmentNames, 'None');

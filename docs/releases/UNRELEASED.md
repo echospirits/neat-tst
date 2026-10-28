@@ -52,6 +52,14 @@ Package version remains 0.2.3. On 2026-10-27 the owner explicitly authorized Pro
 
 None.
 
+## TST audit: final Echo-only access and release comparison (2026-10-28)
+
+- Audit the current application surface and exact main/TST trees. All 69 eligible anonymous GET probes across the 81-entry-point inventory passed, including follow-through of two guarded legacy aliases. Older immutable TST builds redirect to Vercel authentication. No authenticated job, app session, provider operation, export or outside deletion was performed.
+- Correct release:check to compare the exact current production SHA/tree. Numerically highest historical tags and divergent commit lists no longer determine pending release contents. Two disposable-Git regression cases cover the older higher-version tag and equivalent trees on divergent histories. No application UI/domain change.
+- Owner chose **Include Forecasting in future release**. The audit identifies the single pending Forecasting migration, preserved historical ledger/line-ending differences, missing production Forecasting source configuration and required production owner ADMIN normalization. These are future cutover steps, not operations authorized/executed by this audit.
+- Production/main and both live databases are unchanged. Version remains 0.2.3; no dependencies, migration files, configuration or credentials changed. Evidence and the concrete cutover sequence: [final audit](echo-only-final-audit.md).
+- Validation: 910 tests / 76 suites, typecheck, whitespace checks and a fresh isolated Node 22/npm 10 clean install passed. Detailed customer activity metrics remain in the ignored local receipt because this repository is public.
+
 ## TST transition: retire Support, Recipes and legacy setup (2026-10-28)
 
 - Owner selected **Retire in-app Support** and **Remove recipes from Neat**. Delete their pages/actions/APIs/services, catalog/costing/approval/account recommendations, public recipe sheets, recipe-photo upload helper, Support screenshot/reply/update/trail controls and navigation. Existing public share URLs no longer resolve through the new application.
