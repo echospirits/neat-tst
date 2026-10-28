@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { getUserDisplayName, requirePlatformAdmin } from '../../../lib/auth';
+import { getUserDisplayName, requireEchoAdmin } from '../../../lib/auth';
 import { importAccountResearchCsv } from '../../../lib/accountResearch';
 import {
   approveAccountResearchJob,
@@ -20,7 +20,7 @@ const returnWith = (values: Record<string, string | number>): never => {
 };
 
 export async function uploadAccountResearchCsv(formData: FormData) {
-  const user = await requirePlatformAdmin();
+  const user = await requireEchoAdmin();
   const { organizationId } = await requireOrganizationContext(user);
   await requireFeatureForUser(user, 'ADVANCED_INTELLIGENCE');
   const file = formData.get('researchFile');
@@ -53,7 +53,7 @@ export async function uploadAccountResearchCsv(formData: FormData) {
 }
 
 const getPilotActor = async () => {
-  const user = await requirePlatformAdmin();
+  const user = await requireEchoAdmin();
   const { organizationId } = await requireOrganizationContext(user);
   await requireFeatureForUser(user, 'ADVANCED_INTELLIGENCE');
   return { user, organizationId };

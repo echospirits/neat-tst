@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { Prisma } from '@prisma/client';
 import type { ActionResult } from '../../components/ActionForm';
-import { requirePlatformAdmin } from '../../../lib/auth';
+import { requireEchoAdmin } from '../../../lib/auth';
 import { requireOrganizationContext } from '../../../lib/organizations';
 import { isSupportedOperatingHoursText, OPERATING_HOURS_DAYS, type OperatingHoursDay } from '../../../lib/operatingHours';
 import { prisma } from '../../../lib/prisma';
@@ -150,7 +150,7 @@ async function saveCuratedAgencyHours(agencyId: string, actorUserId: string, hou
 }
 
 export async function saveAgencyOperatingHours(formData: FormData): Promise<ActionResult> {
-  const user = await requirePlatformAdmin();
+  const user = await requireEchoAdmin();
   await requireOrganizationContext(user);
   const agencyId = String(formData.get('agencyId') ?? '').trim();
   if (!agencyId || !(await prisma.agency.findUnique({ where: { id: agencyId }, select: { id: true } }))) {
@@ -177,7 +177,7 @@ export async function saveAgencyOperatingHours(formData: FormData): Promise<Acti
 }
 
 export async function researchAgencyOperatingHours(formData: FormData): Promise<ActionResult> {
-  const user = await requirePlatformAdmin();
+  const user = await requireEchoAdmin();
   await requireOrganizationContext(user);
   const agencyId = String(formData.get('agencyId') ?? '').trim();
   const agency = agencyId ? await prisma.agency.findUnique({

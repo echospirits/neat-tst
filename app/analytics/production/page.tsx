@@ -6,7 +6,6 @@ import { isAdminRole } from '../../../lib/userAccess';
 import { PageHeader } from '../../components/PageChrome';
 import { ForecastTable } from './ForecastTable';
 import { SourceImportForm } from './SourceImportForm';
-import { ForecastOrganizationScope } from './ForecastOrganizationScope';
 import './forecast.css';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -15,12 +14,11 @@ export default async function ProductionForecastPage({ searchParams }: { searchP
   const { user } = await requireUserSession();
   const query = await searchParams;
   const context = await requireProductionForecastContext(user, typeof query.organization === 'string' ? query.organization : undefined);
-  if (!context.organization) return <div className="pf-page"><PageHeader title="Production Forecasting" /><p>No active organizations have Production Forecasting enabled.</p><Link href="/platform/organizations">Manage organization access</Link></div>;
+  if (!context.organization) return <div className="pf-page"><PageHeader title="Production Forecasting" /><p>No active organizations have Production Forecasting enabled.</p><Link href="/admin/organization">Echo Settings</Link></div>;
   const organizationId = context.organization.id;
   const { rows, run, today, latestImports } = await getProductionDashboard(organizationId);
   const initial = Object.fromEntries(['q', 'market', 'confidence', 'sort'].flatMap(key => typeof query[key] === 'string' ? [[key, query[key]]] : []));
   return <div className="pf-page"><Link href="/analytics">← Analytics</Link><PageHeader eyebrow="Pilot · production planning" title="Production Forecasting" description="Expected outbound case demand over the next 30 days." actions={isAdminRole(user.role) ? <a className="button secondary" href="#source-import">Import source reports</a> : undefined} />
-    {context.platform ? <ForecastOrganizationScope organization={context.organization} organizations={context.organizations} filters={initial} /> : null}
     <div className="pf-freshness" role="status"><strong>{run ? `${run.horizonStart} – ${run.horizonEnd}` : 'Awaiting first forecast snapshot'}</strong><span>Forecast data through {run?.dataThrough ?? 'unavailable'}{run ? ` · generated ${run.generatedAt.slice(0, 16).replace('T', ' ')} UTC` : ''}</span>{run && run.horizonStart < today ? <span className="pf-warning">This saved horizon is stale. The next successful refresh will create a new 30-day forecast.</span> : null}</div>
     <p className="muted">Planning targets include a modest uncertainty margin. Finished inventory has not been subtracted. DC min/max values are guidance; producing above the maximum is allowed.</p>
     {latestImports.some(i => i.status !== 'COMPLETE') ? <p className="pf-warning" role="alert">A recent source import failed or was incomplete. Forecasts retain the last complete source data; review Sources and data quality before planning.</p> : null}

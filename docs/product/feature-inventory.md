@@ -1,5 +1,7 @@
 # CRM feature inventory
 
+October 28 TST increment 2 removes the customer onboarding/platform console and Support View routes. Echo administrators retain approved shared-data maintenance, and Echo Settings owns product, selling-location, state and Vendor ID controls. Forecast company selection is retired in favor of entitled Echo context. Existing data and job/provider behavior are retained; see [transition scope](../releases/echo-only-transition-validation.md).
+
 October 28, 2026 TST transition: interactive access, invitations, password recovery and organization context are now limited to Echo Spirits. Existing ownership and per-user role checks remain. Platform UI and background-job removal are later increments; see [transition scope and validation](../releases/echo-only-transition-validation.md). Production is unchanged.
 
 Updated 2026-10-11 for the integrated 0.2.3-dev TST work. Existing workflows are authoritative; ADR 0012 supersedes the separate Deals/Activities design. “Implemented” means application code and the listed local/isolated tests; it does not mean a live provider was authorized.

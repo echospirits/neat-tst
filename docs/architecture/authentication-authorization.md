@@ -14,6 +14,8 @@ The owner-requested TST account `joe@echospirits.com` is an Echo `ADMIN`, with a
 
 ## Implementation references
 
+October 28 TST increment 2 retires the customer console and its Support View endpoints. Approved shared-maintenance tools use `requireEchoAdmin` / `requireEchoAdminSession`, requiring both admin authority and Echo membership. General user/taster roles remain restricted. Production Forecasting also requires Echo membership for every role and rejects foreign explicit targets before imports; no platform-role feature bypass remains there. Other private Support permissions are unchanged in this bounded increment.
+
 - `lib/auth.ts`
 - `lib/echoAccess.ts`
 - `lib/passwordReset.ts`

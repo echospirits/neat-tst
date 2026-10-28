@@ -44,7 +44,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const isTaster = user ? isTasterRole(user.role) : false;
   const organizationContext = user ? await getOrganizationContext(user) : null;
   const enabledFeatures = organizationContext ? [...await getOrganizationFeatures(organizationContext.organizationId)] : [];
-  const isPlatformAdmin = user?.role === 'PLATFORM_ADMIN';
+  const isPlatformAdmin = false;
   const isAdmin = Boolean(user && isAdminRole(user.role) && (!isPlatformAdmin || organizationContext));
   const tenantAppName = organizationContext?.organization.appName || APP_NAME;
   const tenantCompany = organizationContext?.organization.displayName || APP_COMPANY;
@@ -80,7 +80,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <div className="user-card">
                 <span className="sr-only">Signed in as</span>
                 <strong>{getUserDisplayName(user)}</strong>
-                <span className="pill">{isPlatformAdmin ? 'Platform Admin' : user.role === 'ADMIN' ? 'Admin' : isTaster ? 'Taster' : 'User'}</span>
+                <span className="pill">{isAdmin ? 'Admin' : isTaster ? 'Taster' : 'User'}</span>
                 <nav className="user-card-links" aria-label="Account and support">
                   <Link className="user-card-profile" href="/profile">Profile &amp; preferences</Link>
                   <Link className="user-card-profile" href="/support">Support</Link>
@@ -93,7 +93,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </div>
             </aside>
             <main id="main-content">
-              {organizationContext?.isSupportView ? <div className="support-view-banner"><strong>Viewing Neat as {organizationContext.organization.displayName}</strong><form action="/platform/support-view/exit" method="post"><button className="secondary" type="submit">Exit Support View</button></form></div> : null}
               <AppBreadcrumbs isTaster={isTaster} />
               <ActionNotice />
               <SupportUpdates userId={user.id} />

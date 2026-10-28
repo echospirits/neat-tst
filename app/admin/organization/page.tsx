@@ -24,10 +24,12 @@ import { saveOrganizationOhlqCredentials } from '../../../lib/ohlqTenantCredenti
 import { prisma } from '../../../lib/prisma';
 import { PageHeader } from '../../components/PageChrome';
 import { A3aLocationForm } from '../../components/A3aLocationForm';
-import { ProductSelectionEditor } from '../../platform/organizations/[id]/ProductSelectionEditor';
+import { ProductSelectionEditor } from './ProductSelectionEditor';
 import { OpportunityStrategy } from './OpportunityStrategy';
+import { EchoDataSettings } from './EchoDataSettings';
+import { saveEchoStates, addEchoVendor } from './data-actions';
 
-export const metadata = buildPageMetadata('Organization Setup');
+export const metadata = buildPageMetadata('Echo Settings');
 
 const clean = (value: FormDataEntryValue | null) => String(value ?? '').trim();
 
@@ -133,18 +135,14 @@ export default async function OrganizationSetupPage({ searchParams }: { searchPa
   if (!organization) redirect('/');
 
   return <>
-    <PageHeader eyebrow="Administration" title="Organization setup" description="Maintain the location and product lists that belong to your organization." />
+    <PageHeader eyebrow="Administration" title="Echo Settings" description="Maintain Echo's selling locations, products, data connections, and team workflows." />
     {status ? <p className="notice" role="status">{status.replaceAll('-', ' ')}</p> : null}
+    <EchoDataSettings enabledStates={organization.enabledStates} vendors={organization.vendorIdentifiers} saveStates={saveEchoStates} addVendor={addEchoVendor} />
     <section className="platform-grid">
       <article className="card a3a-location-settings">
         <div className="section-heading"><div><span className="page-eyebrow">Organization locations</span><h2>A-3a selling locations</h2><p className="muted">This information fills the seller section of downloaded wholesale-order PDFs.</p></div></div>
         {organization.a3aStoreIdentifiers.map((location) => <A3aLocationForm action={saveA3aLocation} key={location.id} location={location} />)}
         <A3aLocationForm action={saveA3aLocation} />
-      </article>
-      <article className="card">
-        <span className="page-eyebrow">Product discovery</span><h2>Vendor IDs</h2>
-        <p className="muted">These identifiers determine which products can be discovered. Only the Platform Admin can change them.</p>
-        <div className="platform-list">{organization.vendorIdentifiers.map((vendor) => <div key={vendor.id}><strong>{vendor.vendorId}</strong><span className="pill">Managed by platform</span></div>)}</div>
       </article>
     </section>
     <section className="platform-grid">
@@ -165,7 +163,7 @@ export default async function OrganizationSetupPage({ searchParams }: { searchPa
     <AiSettings organizationId={organizationId} />
     <EventbriteSettings organizationId={organizationId} />
     <article className="card product-selection-card">
-      <div className="section-heading"><div><span className="page-eyebrow">Catalog configuration</span><h2>Product selection</h2><p className="muted">Choose which discovered item codes your organization includes. Brand Master imports remain Platform Admin-only.</p></div><form action={refreshProductCandidates}><SubmitButton className="compact-btn secondary" type="submit">Check for new products</SubmitButton></form></div>
+      <div className="section-heading"><div><span className="page-eyebrow">Catalog configuration</span><h2>Product selection</h2><p className="muted">Choose which discovered item codes Echo includes. Echo administrators can maintain Brand Master imports.</p></div><form action={refreshProductCandidates}><SubmitButton className="compact-btn secondary" type="submit">Check for new products</SubmitButton></form></div>
       <ProductSelectionEditor action={saveProductSelection} organizationId={organizationId} products={organization.products.map((product) => ({ id: product.id, itemCode: product.externalItemCode, name: product.displayName, status: product.status }))} />
     </article>
   </>;

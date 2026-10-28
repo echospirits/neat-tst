@@ -13,7 +13,7 @@ export async function importForecastSource(form: FormData): Promise<ImportState>
   const requestedOrganization = String(form.get('organizationId') ?? '').trim();
   // Imports must name the organization shown on the form. A stale or forged
   // target cannot fall back to another tenant, even for a platform admin.
-  if (user.role === 'PLATFORM_ADMIN' && !requestedOrganization) notFound();
+  if (!requestedOrganization) notFound();
   const context = await requireProductionForecastContext(user, requestedOrganization || undefined);
   if (!context.organization) notFound();
   const organizationId = context.organization.id;

@@ -12,6 +12,8 @@ This first step does not remove provisioning/platform screens, modify background
 
 ## Implementation references
 
+October 28 TST increment 2 removes company provisioning/list/detail routes and the provisioning service, customer packages UI, Support View routes and global forecast company selection. Echo Settings owns state and Vendor ID maintenance with audited server-derived scope. Existing database models/ownership, background jobs and legacy Support/activity role branches remain pending later increments; this is not a schema flattening or production release.
+
 - `lib/organizations.ts`
 - `lib/userAccess.ts`
 - `tests/multiTenantFoundation.test.ts`

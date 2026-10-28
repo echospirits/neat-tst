@@ -5,7 +5,7 @@ import { SubmitButton } from '../../../components/SubmitButton';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { buildPageMetadata } from '../../../../lib/appBrand';
-import { requirePlatformAdmin } from '../../../../lib/auth';
+import { requireEchoAdmin } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
 import {
   getWholesaleAccountMergePreview,
@@ -21,7 +21,7 @@ export const metadata = buildPageMetadata('Merge Restaurant Account');
 const statusMessages: Record<string, string> = {
   'already-merged': 'This manual account has already been merged.',
   'confirmation-required': 'Confirm that you understand the merge is permanent before continuing.',
-  forbidden: 'Only an active platform administrator can merge shared accounts.',
+  forbidden: 'Only an active Echo administrator can merge shared accounts.',
   'invalid-source': 'The manual account could not be found.',
   'invalid-target': 'The official account could not be found.',
   'same-account': 'Choose a different destination account.',
@@ -45,7 +45,7 @@ export default async function MergeWholesaleAccountPage({
   params: Promise<{ id: string }>;
   searchParams?: Promise<{ q?: string; status?: string; targetId?: string }>;
 }) {
-  await requirePlatformAdmin();
+  await requireEchoAdmin();
   const { id: sourceId } = await params;
   const query = (await searchParams) ?? {};
   const q = (query.q ?? '').trim();

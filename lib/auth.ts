@@ -138,6 +138,19 @@ export async function requireAdmin() {
   return user;
 }
 
+// Maintenance tools explicitly migrated from the former platform console.
+// This does not change the authority of unrelated administration guards.
+export async function requireEchoAdminSession() {
+  const session = await requireUserSession();
+  if (!isAdminRole(session.user.role) || !hasEchoAccess(session.user)) redirect('/');
+  return session;
+}
+
+export async function requireEchoAdmin() {
+  const { user } = await requireEchoAdminSession();
+  return user;
+}
+
 type DisplayUser = {
   email?: string | null;
   firstName?: string | null;

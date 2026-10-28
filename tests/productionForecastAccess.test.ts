@@ -12,41 +12,33 @@ import { ForecastTable } from '../app/analytics/production/ForecastTable';
 import { summaryFor } from '../lib/productionForecasting/service';
 import { forecastProduct } from '../lib/productionForecasting/engine';
 
-const echo = { id: 'echo', displayName: 'Echo Spirits' }, other = { id: 'other', displayName: 'Other distillery' };
-const actor = (role: UserRole, organizationId: string | null = 'staging') => ({ id: 'actor', role, organizationId });
+const echo = { id: 'org_echo_spirits', displayName: 'Echo Spirits' }, other = { id: 'other', displayName: 'Other distillery' };
+const actor = (role: UserRole, organizationId: string | null = 'org_echo_spirits') => ({ id: 'actor', role, organizationId });
 function dependencies(currentId: string | null = 'staging', enrolled = [echo]) {
   return {
-    tenant: async () => ({ organizationId: 'own', organization: { id: 'own', displayName: 'Own organization' } }),
+    tenant: async () => ({ organizationId: 'org_echo_spirits', organization: { id: 'org_echo_spirits', displayName: 'Echo Spirits' } }),
     current: async () => currentId ? { organizationId: currentId } : null,
     organizations: async () => enrolled,
   };
 }
-test('platform administrators outside the pilot or without membership can directly open the enrolled forecast organization', async () => {
-  for (const membership of ['staging', null]) {
-    const result = await requireProductionForecastContext(actor(UserRole.PLATFORM_ADMIN, membership), undefined, dependencies(membership));
-    assert.equal(result.organization?.id, 'echo'); assert.equal(result.platform, true);
+test('forecast access requires Echo membership and its active pilot entitlement for every role', async () => {
+  for (const role of [UserRole.USER, UserRole.ADMIN, UserRole.PLATFORM_ADMIN]) {
+    const result = await requireProductionForecastContext(actor(role), 'org_echo_spirits', dependencies());
+    assert.equal(result.organization.id, 'org_echo_spirits'); assert.equal(result.platform, false);
+    assert.equal(result.organizations.length, 0);
+    await assert.rejects(() => requireProductionForecastContext(actor(role), 'other', dependencies()), /NEXT_HTTP_ERROR_FALLBACK;404|404/);
+    await assert.rejects(() => requireProductionForecastContext(actor(role, 'other'), undefined, dependencies()), /404/);
+    await assert.rejects(() => requireProductionForecastContext(actor(role), undefined, { tenant: async () => { throw Error('pilot-disabled'); } }), /pilot-disabled/);
   }
 });
-test('platform forecast selection preserves eligible Support View and explicit target; unknown, disabled or suspended targets are not accepted', async () => {
-  const user = actor(UserRole.PLATFORM_ADMIN);
-  assert.equal((await requireProductionForecastContext(user, undefined, dependencies('other', [echo, other]))).organization?.id, 'other');
-  assert.equal((await requireProductionForecastContext(user, 'echo', dependencies('other', [echo, other]))).organization?.id, 'echo');
-  for (const id of ['unknown', 'disabled', 'suspended']) await assert.rejects(() => requireProductionForecastContext(user, id, dependencies()), /404/);
-  assert.equal((await requireProductionForecastContext(user, undefined, dependencies(null, []))).organization, null);
+test('a foreign organization context cannot be returned even by a faulty resolver', async () => {
+  await assert.rejects(() => requireProductionForecastContext(actor(UserRole.ADMIN), undefined, { tenant: async () => ({ organizationId: 'other', organization: other }) }), /404/);
 });
-test('tenant users and organization admins cannot select another organization or bypass their feature check', async () => {
-  for (const role of [UserRole.USER, UserRole.ADMIN]) {
-    const services = { ...dependencies(), current: async () => { throw Error('must not read global context'); }, organizations: async () => { throw Error('must not list other tenants'); } };
-    const result = await requireProductionForecastContext(actor(role, 'own'), 'own', services);
-    assert.equal(result.organization?.id, 'own'); assert.equal(result.platform, false);
-    await assert.rejects(() => requireProductionForecastContext(actor(role, 'own'), 'echo', services), /404/);
-    await assert.rejects(() => requireProductionForecastContext(actor(role, 'own'), undefined, { ...services, tenant: async () => { throw Error('pilot-disabled'); } }), /pilot-disabled/);
-  }
-});
+
 test('forecast discovery appears in desktop and mobile navigation for platform admins while regular tenant gating remains intact', () => {
   for (const platform of [false, true]) {
-    assert.equal(getNavigationItems('work', [], platform).some(i => i.key === 'production-forecasting'), platform);
-    assert.equal(getMoreNavigationItems(false, [], platform).some(i => i.key === 'production-forecasting'), platform);
+    assert.equal(getNavigationItems('work', [], platform).some(i => i.key === 'production-forecasting'), false);
+    assert.equal(getMoreNavigationItems(false, [], platform).some(i => i.key === 'production-forecasting'), false);
   }
   assert.equal(getNavigationItems('work', ['PRODUCTION_FORECASTING']).some(i => i.key === 'production-forecasting'), true);
   assert.equal(getMoreNavigationItems(false, ['PRODUCTION_FORECASTING']).some(i => i.key === 'production-forecasting'), true);
@@ -55,7 +47,7 @@ test('mobile and desktop product links carry selected organization and filters i
   const product = { id: 'p', name: 'Rum', code: 'RUM', market: 'OH' };
   const row = summaryFor(forecastProduct(product, [], [], '2026-10-27'));
   const html = renderToStaticMarkup(createElement(ForecastTable, { rows: [row], initial: { q: 'Rum', confidence: 'Low' }, organizationId: echo.id }));
-  assert.equal((html.match(/organization=echo/g) ?? []).length, 2);
+  assert.equal((html.match(/organization=org_echo_spirits/g) ?? []).length, 2);
   assert.equal((html.match(/q=Rum/g) ?? []).length, 2);
 });
 
@@ -76,10 +68,10 @@ function importAction(user: ReturnType<typeof actor>) {
   return { execute: exports.importForecastSource!, events };
 }
 test('source actions require an explicit platform target, reauthorize it, and import/refresh only that organization', async () => {
-  const { execute, events } = importAction(actor(UserRole.PLATFORM_ADMIN));
-  const form = new FormData(); form.set('file', new File(['test'], 'source.csv')); form.set('organizationId', 'echo');
+  const { execute, events } = importAction(actor(UserRole.ADMIN));
+  const form = new FormData(); form.set('file', new File(['test'], 'source.csv')); form.set('organizationId', 'org_echo_spirits');
   assert.deepEqual(JSON.parse(JSON.stringify(await execute(form))), { ok: true, message: 'Imported: 1 rows, 0 excluded. Forecast snapshot is ready.' });
-  assert.deepEqual(events, ['authorize:echo', 'import:echo', 'refresh:echo']);
+  assert.deepEqual(events, ['authorize:org_echo_spirits', 'import:org_echo_spirits', 'refresh:org_echo_spirits']);
   for (const target of ['', 'unknown']) {
     const attempt = importAction(actor(UserRole.PLATFORM_ADMIN)); form.set('organizationId', target);
     await assert.rejects(() => attempt.execute(form), /404/);
@@ -88,7 +80,7 @@ test('source actions require an explicit platform target, reauthorize it, and im
 });
 test('forged cross-tenant import targets and non-admin imports stop before side effects', async () => {
   for (const role of [UserRole.USER, UserRole.ADMIN]) {
-    const attempt = importAction(actor(role, 'own')), form = new FormData(); form.set('organizationId', 'echo');
+    const attempt = importAction(actor(role, 'own')), form = new FormData(); form.set('organizationId', 'org_echo_spirits');
     await assert.rejects(() => attempt.execute(form), /404/);
     assert.equal(attempt.events.some(e => /^(import|refresh):/.test(e)), false);
   }

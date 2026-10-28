@@ -7,7 +7,7 @@ import { loadMergeAuth, loadMergeModule, loadMergeService, redirectForTest } fro
 type Row = Record<string, any>;
 const tenantModels = ['loggedVisit', 'worklistItem', 'locationContact', 'locationTag', 'menuPlacement', 'recipeSuggestion', 'targetAccountProfile'];
 const targetModels = ['targetAccountProfile', 'targetAccountScoreHistory', 'targetAccountMetric', 'targetPublicResearch', 'targetSkuOpportunity', 'targetHeatLossAlert', 'targetChainMembership'];
-function fixture({ role = UserRole.PLATFORM_ADMIN, isActive = true, targetConflict = false }: {
+function fixture({ role = UserRole.ADMIN, isActive = true, targetConflict = false }: {
   role?: UserRole; isActive?: boolean; targetConflict?: boolean;
 } = {}) {
   const calls: { model: string; operation: string; args: Row }[] = [];
@@ -55,7 +55,7 @@ function fixture({ role = UserRole.PLATFORM_ADMIN, isActive = true, targetConfli
   }
   db.user = { findUnique: async (args: Row) => {
     calls.push({ model: 'user', operation: 'findUnique', args });
-    return { role, isActive };
+    return { role, isActive, organizationId: 'org_echo_spirits' };
   } };
   db.wholesaleAccount = {
     findUnique: async ({ where }: Row) => accounts[where.id] ?? null,
@@ -76,7 +76,7 @@ function fixture({ role = UserRole.PLATFORM_ADMIN, isActive = true, targetConfli
 }
 
 describe('wholesale merge authorization', () => {
-  for (const role of [UserRole.ADMIN, UserRole.USER, UserRole.TASTER, null]) {
+  for (const role of [UserRole.USER, UserRole.TASTER, null]) {
     it(`denies ${role ?? 'anonymous'} before candidate reads, preview reads, or a transaction`, async () => {
       const forbiddenDb = new Proxy({}, { get: () => { throw new Error('unauthorized database access'); } });
       const service = loadMergeService(forbiddenDb, role);
@@ -93,7 +93,7 @@ describe('wholesale merge authorization', () => {
     await assert.rejects(service.mergeWholesaleAccounts({ sourceId: 'source', targetId: 'target' }), /redirect:\/login/);
   });
 
-  for (const actor of [{ role: UserRole.ADMIN, isActive: true }, { role: UserRole.PLATFORM_ADMIN, isActive: false }]) {
+  for (const actor of [{ role: UserRole.USER, isActive: true }, { role: UserRole.PLATFORM_ADMIN, isActive: false }]) {
     it(`rechecks the actor inside the transaction (${actor.role}, active=${actor.isActive})`, async () => {
       const f = fixture(actor);
       const service = loadMergeService(f.db);
@@ -105,7 +105,7 @@ describe('wholesale merge authorization', () => {
   }
 
   it('denies tenant admins at the action and page boundaries, including forged confirmation', async () => {
-    const auth = loadMergeAuth(UserRole.ADMIN);
+    const auth = loadMergeAuth(UserRole.USER);
     const deps = {
       '../../../../lib/auth': auth,
       '../../../../lib/prisma': { prisma: new Proxy({}, { get: () => { throw new Error('unauthorized page read'); } }) },
@@ -191,7 +191,7 @@ describe('wholesale merge authorization', () => {
 
   it('shows the shared merge entry only to platform admins and explains the global confirmation', () => {
     const detail = readFileSync('app/wholesale/[id]/page.tsx', 'utf8');
-    assert.match(detail, /user.role === UserRole.PLATFORM_ADMIN && !account.officialAccountId/);
+    assert.match(detail, /isAdminRole\(user.role\) && !account.officialAccountId/);
     const page = readFileSync('app/wholesale/[id]/merge/page.tsx', 'utf8');
     assert.match(page, /activity from every organization/);
   });

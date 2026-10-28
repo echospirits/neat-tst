@@ -52,6 +52,16 @@ Package version remains 0.2.3. On 2026-10-27 the owner explicitly authorized Pro
 
 None.
 
+## TST transition: retire the customer platform console (2026-10-28)
+
+- Remove company creation/list/detail pages, onboarding/provisioning actions and service, initial-customer invitation controls, and Support View endpoints. Removed routes return not found; existing company/user/history rows are retained.
+- Consolidate navigation around Echo Settings, Users, User activity, Weekly Digest and System diagnostics. Retain product selection at its Echo administration path. Move state-access and Vendor ID maintenance into Echo Settings with server-derived ownership and audited writes; submitted company IDs and role fields are ignored.
+- Owner explicitly selected **Make them Echo-admin tools** for former platform-only maintenance. Introduce a dedicated Echo-membership plus admin guard only at approved OHLQ imports, shared account edits/hours/merges and Account Research entry points. CSV writes and merge transactions also check Echo membership. Preserve validation, tenant-owned contacts, merge provenance, state restrictions, assessment/calendar/revalidation side effects and environment gates.
+- Remove the Production Forecasting company picker and global role override; every role must use active, entitled Echo context. Unknown/foreign targets fail before source imports. Pilot flags and forecast data remain unchanged.
+- Version 0.2.3, TST only. No migration, data deletion/reassignment, credential/entitlement/environment change, import dispatch or provider activation. Legacy role values and historical platform tables remain for later cleanup.
+- Validation and scope: [transition receipt](echo-only-transition-validation.md). Relevant commit: titled Retire customer onboarding and keep Echo administration.
+- Production readiness: incremental TST delivery only. Background dispatchers and remaining legacy Support/activity role paths require follow-up before a full Echo-only production candidate. No main push/merge or release tag.
+
 ## TST transition: Echo-only interactive access (2026-10-28)
 
 - Description: first incremental step toward an Echo-only application. Sign-in, new and existing sessions, account-state request scope, invitation display/acceptance and password recovery require Echo membership. A platform role or Echo email domain cannot bypass membership. Support View cookies cannot select another organization.

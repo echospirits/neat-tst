@@ -2,7 +2,8 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
-import { UserRole } from '@prisma/client';
+import { isAdminRole } from '../../../../lib/userAccess';
+import { hasEchoAccess } from '../../../../lib/echoAccess';
 import { revalidatePath } from 'next/cache';
 import { NextResponse } from 'next/server';
 import { getCurrentSession } from '../../../../lib/auth';
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
     return NextResponse.redirect(new URL('/login', request.url), 303);
   }
 
-  if (session.user.role !== UserRole.PLATFORM_ADMIN) {
+  if (!isAdminRole(session.user.role) || !hasEchoAccess(session.user)) {
     return NextResponse.redirect(new URL('/', request.url), 303);
   }
 

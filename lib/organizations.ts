@@ -6,7 +6,6 @@ import { DEFAULT_TENANT_ENTITY_NAME, DEFAULT_TENANT_EXCLUDED_ITEM_CODES, DEFAULT
 import { ECHO_ORGANIZATION_ID, hasEchoAccess } from './echoAccess';
 
 export { ECHO_ORGANIZATION_ID } from './echoAccess';
-export const SUPPORT_VIEW_COOKIE = 'neat_support_organization';
 
 let echoBootstrap: Promise<void> | null = null;
 
@@ -35,7 +34,6 @@ export async function getOrganizationContext(user: { id: string; organizationId:
 export async function requireOrganizationContext(user: { id: string; organizationId: string | null; role: UserRole }) {
   const context = await getOrganizationContext(user);
   if (!context) {
-    if (user.role === UserRole.PLATFORM_ADMIN) redirect('/platform');
     redirect('/login?status=organization-unavailable');
   }
   return context;

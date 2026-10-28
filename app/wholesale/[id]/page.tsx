@@ -11,6 +11,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 import Link from 'next/link';
+import { isAdminRole } from '../../../lib/userAccess';
 import { notFound, redirect } from 'next/navigation';
 import { MenuPlacementStatus, MenuPlacementType, Prisma, UserRole, WholesaleOrderFiledSource } from '@prisma/client';
 import { buildPageMetadata } from '../../../lib/appBrand';
@@ -285,10 +286,10 @@ export default async function WholesaleActivityPage({
             currentUserId={user.id}
             users={actionUsers}
           />
-          {user.role === UserRole.PLATFORM_ADMIN ? (
+          {isAdminRole(user.role) ? (
             <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/edit`}>Edit</Link>
           ) : null}
-          {user.role === UserRole.PLATFORM_ADMIN && !account.officialAccountId ? (
+          {isAdminRole(user.role) && !account.officialAccountId ? (
             <Link className="btn compact-btn secondary" href={`/wholesale/${account.id}/merge`}>Merge account</Link>
           ) : null}
         </div>

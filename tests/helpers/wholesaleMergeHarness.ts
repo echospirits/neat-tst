@@ -24,7 +24,7 @@ export const redirectForTest = (url: string): never => { throw new Error(`redire
 export function loadMergeAuth(role: UserRole | null, isActive = true) {
   return loadMergeModule<typeof import('../../lib/auth')>('lib/auth.ts', {
     './prisma': { prisma: { userSession: { findFirst: async () =>
-      role && isActive ? { user: { id: 'authenticated-actor', role, isActive } } : null,
+      role && isActive ? { user: { id: 'authenticated-actor', role, isActive, organizationId: 'org_echo_spirits' } } : null,
     } } },
     './userActivity': { recordUserActivity: async () => { throw new Error('unexpected activity write'); } },
     'next/headers': { cookies: async () => ({ get: () => ({ value: 'test-session' }) }) },
@@ -32,7 +32,7 @@ export function loadMergeAuth(role: UserRole | null, isActive = true) {
   });
 }
 
-export function loadMergeService(db: object, role: UserRole | null = UserRole.PLATFORM_ADMIN, isActive = true) {
+export function loadMergeService(db: object, role: UserRole | null = UserRole.ADMIN, isActive = true) {
   return loadMergeModule<typeof import('../../lib/wholesaleAccountMerge')>('lib/wholesaleAccountMerge.ts', {
     './auth': loadMergeAuth(role, isActive),
     './prisma': { prisma: db },

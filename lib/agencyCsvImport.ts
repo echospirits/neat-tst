@@ -2,6 +2,8 @@ import { UserRole, type PrismaClient } from '@prisma/client';
 import Papa from 'papaparse';
 import { getGeocodeResetForAddressChange } from './location/geocode';
 import { prisma } from './prisma';
+import { isAdminRole } from './userAccess';
+import { ECHO_ORGANIZATION_ID, hasEchoAccess } from './echoAccess';
 
 export const AGENCY_CSV_MAX_BYTES = 1024 * 1024;
 export const AGENCY_CSV_MAX_ROWS = 2000;
@@ -84,12 +86,12 @@ export function parseAgencyCsv(csv: string) {
 
 export async function importAgencyCsv({ csv, user, organizationId, db = prisma }: {
   csv: string;
-  user: { id: string; role: UserRole };
+  user: { id: string; role: UserRole; organizationId: string | null };
   organizationId: string;
   db?: PrismaClient;
 }) {
   // Keep the privilege check at the write boundary as well as in the action.
-  if (user.role !== UserRole.PLATFORM_ADMIN) throw new Error('Platform administrator required.');
+  if (!isAdminRole(user.role) || !hasEchoAccess(user) || organizationId !== ECHO_ORGANIZATION_ID) throw new Error('Echo administrator required.');
   if (!user.id || !organizationId) throw new Error('Import actor and organization required.');
   const rows = parseAgencyCsv(csv);
 

@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 import Link from 'next/link';
+import { isAdminRole } from '../../../lib/userAccess';
 import { notFound } from 'next/navigation';
 import { buildPageMetadata } from '../../../lib/appBrand';
 import { getUserDisplayName, requireUser } from '../../../lib/auth';
@@ -219,7 +220,7 @@ export default async function AgencyActivityPage({
             <strong>Retail phone</strong>
             <PhoneLink phone={agency.phone} />
           </p>
-          <AgencyOperatingHoursEditor agencyId={agency.id} {...knownHours} canEdit={currentUser.role === UserRole.PLATFORM_ADMIN} researchAvailable={hoursResearchAvailable} />
+          <AgencyOperatingHoursEditor agencyId={agency.id} {...knownHours} canEdit={isAdminRole(currentUser.role)} researchAvailable={hoursResearchAvailable} />
         </div>
         <AccountTagPanel
           assignments={agency.tags}

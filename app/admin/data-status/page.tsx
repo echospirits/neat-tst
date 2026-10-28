@@ -7,7 +7,8 @@ import { OhlqReportDataSource, OhlqReportRunStatus, UserRole } from '@prisma/cli
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { buildPageMetadata } from '../../../lib/appBrand';
-import { requirePlatformAdminSession, requireUserSession } from '../../../lib/auth';
+import { requireEchoAdminSession, requireUserSession } from '../../../lib/auth';
+import { isAdminRole } from '../../../lib/userAccess';
 import { EASTERN_TIME_ZONE, formatEasternDateInputValue, formatEasternDateTime, getZonedDateTimeParts } from '../../../lib/dateTime';
 import { importOhlqBrandMasterCsv } from '../../../lib/ohlqBrandMasterImport';
 import {
@@ -175,7 +176,7 @@ const brandMasterStatusMessage = (params: {
 async function importBrandMaster(formData: FormData) {
   'use server';
 
-  await requirePlatformAdminSession();
+  await requireEchoAdminSession();
   const file = formData.get('brandMasterFile');
 
   if (!(file instanceof File) || file.size === 0) {
@@ -237,7 +238,7 @@ export default async function DataStatusPage({
   }>;
 }) {
   const session = await requireUserSession({ allowTaster: true });
-  const canRefresh = session.user.role === UserRole.PLATFORM_ADMIN;
+  const canRefresh = isAdminRole(session.user.role);
   const { organizationId } = await requireOrganizationContext(session.user);
 
   const params = (await searchParams) ?? {};

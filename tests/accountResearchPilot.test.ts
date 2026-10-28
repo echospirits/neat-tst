@@ -171,7 +171,7 @@ it('keeps manual tests Platform Admin protected and schedules a production-gated
   const service = readFileSync('lib/accountResearchPilotService.ts', 'utf8');
   assert.match(vercel, /\/api\/cron\/account-research/);
   assert.match(vercel, /"schedule": "0 12 \* \* \*"/);
-  assert.match(actions, /requirePlatformAdmin/);
+  assert.match(actions, /requireEchoAdmin/);
   assert.match(actions, /startAccountResearchPilot/);
   assert.match(service, /take = ACCOUNT_RESEARCH_SUBMISSION_WAVE_SIZE/);
   assert.match(service, /The current 25-account wave is still running/);

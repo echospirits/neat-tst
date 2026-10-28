@@ -5,7 +5,6 @@ import { requireProductionForecastContext } from '../../../../lib/productionFore
 import { getProductionProduct } from '../../../../lib/productionForecasting/service';
 import { cases } from '../../../../lib/productionForecasting/presentation';
 import { ForecastDetail } from '../ForecastDetail';
-import { ForecastOrganizationScope } from '../ForecastOrganizationScope';
 import '../forecast.css';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Production forecast detail' };
@@ -20,5 +19,5 @@ export default async function ProductionProductPage({ params, searchParams }: { 
   if (!result) notFound();
   const backQuery = new URLSearchParams(Object.fromEntries(['q', 'market', 'confidence', 'sort'].flatMap(key => typeof query[key] === 'string' ? [[key, query[key]]] : [])));
   if (context.platform) backQuery.set('organization', organizationId);
-  return <div className="pf-page"><Link href={`/analytics/production?${backQuery}`}>← Production Forecasting</Link>{context.platform ? <ForecastOrganizationScope organization={context.organization} organizations={context.organizations} allowChange={false} /> : null}{result.forecast ? <ForecastDetail forecast={result.forecast} /> : <p role="status">This product is awaiting a source import and forecast refresh.</p>}<details className="card"><summary>Saved forecasts and actual demand</summary><p>Each run is retained. Actual demand is evaluated only after the complete horizon has source coverage.</p>{result.history.map(h => <p key={h.id}>{h.start} – {h.end} · forecast {cases(h.point)} cases · actual {h.actual === null ? 'awaiting complete source history' : `${cases(h.actual)} cases`}<small>Generated {h.generatedAt.slice(0, 16).replace('T', ' ')} UTC</small></p>)}</details></div>;
+  return <div className="pf-page"><Link href={`/analytics/production?${backQuery}`}>← Production Forecasting</Link>{result.forecast ? <ForecastDetail forecast={result.forecast} /> : <p role="status">This product is awaiting a source import and forecast refresh.</p>}<details className="card"><summary>Saved forecasts and actual demand</summary><p>Each run is retained. Actual demand is evaluated only after the complete horizon has source coverage.</p>{result.history.map(h => <p key={h.id}>{h.start} – {h.end} · forecast {cases(h.point)} cases · actual {h.actual === null ? 'awaiting complete source history' : `${cases(h.actual)} cases`}<small>Generated {h.generatedAt.slice(0, 16).replace('T', ' ')} UTC</small></p>)}</details></div>;
 }

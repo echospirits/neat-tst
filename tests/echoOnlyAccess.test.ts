@@ -94,6 +94,17 @@ test('old outside sessions and direct session creation cannot bypass membership,
   await assert.rejects(inactive.auth.createUserSession(inactive.user.id), /cannot access/);
 });
 
+test('Echo maintenance requires both admin authority and current Echo membership', async () => {
+  for (const role of Object.values(UserRole)) {
+    const f = authentication(actor(ECHO_ORGANIZATION_ID, role));
+    f.cookie((await f.auth.createUserSession(f.user.id)).sessionToken);
+    if (role === UserRole.ADMIN || role === UserRole.PLATFORM_ADMIN) assert.equal((await f.auth.requireEchoAdmin()).id, f.user.id);
+    else await assert.rejects(f.auth.requireEchoAdmin(), /redirect:/);
+    f.user.organizationId = 'outside-company';
+    await assert.rejects(f.auth.requireEchoAdmin(), /redirect:/);
+  }
+});
+
 test('the real login route accepts Echo credentials and rejects outside credentials with the same generic failure', async () => {
   for (const [organizationId, active, enteredPassword, accepted] of [
     [ECHO_ORGANIZATION_ID, true, password, true],

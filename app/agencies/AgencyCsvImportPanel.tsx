@@ -1,4 +1,5 @@
 import { UserRole } from '@prisma/client';
+import { isAdminRole } from '../../lib/userAccess';
 import { AGENCY_CSV_COLUMNS, AGENCY_CSV_ERRORS } from '../../lib/agencyCsvImport';
 import { SubmitButton } from '../components/SubmitButton';
 
@@ -9,7 +10,7 @@ export function AgencyCsvImportPanel({ role, action, status, error, count }: {
   error?: string;
   count?: string;
 }) {
-  if (role !== UserRole.PLATFORM_ADMIN) return null;
+  if (!isAdminRole(role)) return null;
   const errorMessage = error && Object.hasOwn(AGENCY_CSV_ERRORS, error)
     ? AGENCY_CSV_ERRORS[error as keyof typeof AGENCY_CSV_ERRORS]
     : AGENCY_CSV_ERRORS['invalid-file'];

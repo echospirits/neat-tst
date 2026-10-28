@@ -1,6 +1,6 @@
 'use client';
 
-import { SubmitButton } from '../../../components/SubmitButton';
+import { SubmitButton } from '../../components/SubmitButton';
 import { OrganizationProductStatus } from '@prisma/client';
 import { useMemo, useState } from 'react';
 
