@@ -1,8 +1,8 @@
 # Repository Agent Instructions
 
-## Released 0.4.0: development closed
+## Current development scope: 0.5.0 UI and navigation
 
-The owner-authorized Communications retirement was released to main/production as **0.4.0** on October 28, 2026. The scoped work is complete; no new development cycle is open. Do not add unrelated features, refactors, upgrades or migrations without a new owner instruction.
+The owner authorized implementing the approved interface mockups in neat-tst, plus consistent desktop submenus and a concise account briefing. This opens **0.5.0-dev** for the scoped UI work. Follow [the plan](docs/releases/0.5.0-plan.md) and [UNRELEASED](docs/releases/UNRELEASED.md). Publish only to TST after verification; production promotion requires a separate explicit release instruction. Do not include unrelated features, upgrades or migrations.
 
 Preserve the historical 0.3.0 and 0.4.0 candidate/release refs and records. See [0.4.0 release notes](docs/releases/0.4.0.md), [checklist](docs/releases/0.4.0-checklist.md) and [validation](docs/releases/communications-retirement-validation.md). Communications runtime integrations are retired; stored records/migrations remain. This work does not authorize database deletion, provider-account changes or hosted configuration changes.
 

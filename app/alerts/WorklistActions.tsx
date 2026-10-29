@@ -1,7 +1,7 @@
 'use client';
 
 import { SubmitButton } from '../components/SubmitButton';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { ActionForm, type ActionResult } from '../components/ActionForm';
 import { useDialogFocus } from '../components/useDialogFocus';
 import {
@@ -42,6 +42,7 @@ type WorklistActionItem = {
 };
 
 export type WorklistActionsProps = {
+  evidence?: ReactNode;
   returnTo?: string;
   item: WorklistActionItem;
   actorName: string;
@@ -81,6 +82,7 @@ export function WorklistActions({
   currentUserId,
   users,
   returnTo = '/alerts',
+  evidence,
 }: WorklistActionsProps) {
   const [openAction, setOpenAction] = useState<'log-visit' | 'reschedule' | 'reassign' | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -90,14 +92,14 @@ export function WorklistActions({
 
   return (
     <div className="action-row task-actions">
-      <button className="secondary" type="button" onClick={() => setOpenAction('log-visit')}>
+      <button className="worklist-log-visit" type="button" onClick={() => setOpenAction('log-visit')}>
         Log Visit
       </button>
 
       <ActionForm action={updateStatusAction}>
         <input name="id" type="hidden" value={item.id} />
         <input name="status" type="hidden" value="COMPLETED" />
-        <SubmitButton disabled={item.status === 'COMPLETED'} pendingLabel="Completing…" type="submit">
+        <SubmitButton className="secondary" disabled={item.status === 'COMPLETED'} pendingLabel="Completing…" type="submit">
           {item.status === 'COMPLETED' ? 'Completed' : 'Complete'}
         </SubmitButton>
       </ActionForm>
@@ -107,6 +109,7 @@ export function WorklistActions({
 
       <details className="compact-details worklist-edit-details">
         <summary>Edit, reassign, or cancel</summary>
+        {evidence ? <div className="worklist-task-evidence">{evidence}</div> : null}
       <button className="secondary" type="button" onClick={() => setOpenAction('reassign')}>Reassign</button>
         <ActionForm action={updateItemAction} className="worklist-edit-form">
           <input name="id" type="hidden" value={item.id} />

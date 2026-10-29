@@ -48,7 +48,7 @@ function NavLink({
       className={isActive ? 'app-nav-link is-active' : 'app-nav-link'}
       href={item.href}
     >
-      {useSectionMatch ? <NavigationIcon name={item.key} /> : null}<span>{useSectionMatch ? item.mobileLabel ?? item.label : item.label}</span>
+      <NavigationIcon name={item.key} /><span>{useSectionMatch ? item.mobileLabel ?? item.label : item.label}</span>
     </Link>
   );
 }
@@ -64,14 +64,23 @@ function NavGroupLinks({ group, pathname }: { group: NavGroup; pathname: string 
   );
 }
 
+function SidebarDisclosure({ label, items, pathname }: { label: string; items: NavigationItem[]; pathname: string }) {
+  if (!items.length) return null;
+  const active = items.some((item) => isActivePath(pathname, item));
+  return <details className="sidebar-disclosure" open={active || undefined}>
+    <summary>{label}<NavigationIcon name="down" /></summary>
+    <div>{items.map((item) => <NavLink item={item} key={item.key} pathname={pathname} />)}</div>
+  </details>;
+}
+
 function AdministrationMenu({ enabledFeatures, hasOrganizationAdminAccess, isPlatformAdmin, pathname }: { enabledFeatures: string[]; hasOrganizationAdminAccess: boolean; isPlatformAdmin: boolean; pathname: string }) {
   const groups = getAdministrationNavigationGroups(enabledFeatures, isPlatformAdmin, hasOrganizationAdminAccess);
   const items = groups.flatMap((group) => group.items);
   const isActive = items.some((item) => isActivePath(pathname, item));
-  return <details className={`app-sidebar-administration${isActive ? ' is-active' : ''}`}>
-    <summary className="app-nav-label"><span>Administration</span><span aria-hidden="true" className="app-sidebar-administration-arrow">›</span></summary>
+  return <details className={`app-sidebar-administration sidebar-disclosure${isActive ? ' is-active' : ''}`} open={isActive || undefined}>
+    <summary><span>Administration</span><NavigationIcon name="down" /></summary>
     <div className="app-sidebar-administration-links">
-      {items.map((item) => <NavLink item={item} key={item.href} pathname={pathname} />)}
+      {groups.map((group) => <div className="sidebar-administration-group" key={group.label}><h3>{group.label}</h3>{group.items.map((item) => <NavLink item={item} key={item.href} pathname={pathname} />)}</div>)}
     </div>
   </details>;
 }
@@ -105,13 +114,14 @@ export function AppSidebarNavigation({ enabledFeatures, isAdmin, isPlatformAdmin
         className="app-nav-link app-nav-primary"
         href="/visits/new"
       >
-        <span aria-hidden="true">＋</span>
+        <NavigationIcon name="plus" />
         Log Visit
       </Link>
 
-      <NavGroupLinks group={{ label: 'My Work', items: workItems }} pathname={pathname} />
+      <NavGroupLinks group={{ label: 'My Work', items: workItems.filter((item) => !['analytics', 'production-forecasting'].includes(item.key)) }} pathname={pathname} />
       <NavGroupLinks group={{ label: 'Accounts', items: accountItems }} pathname={pathname} />
-      <IntelligenceMenu enabledFeatures={enabledFeatures} isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} pathname={pathname} />
+      <SidebarDisclosure label="Intelligence" items={getIntelligenceNavigationItems(enabledFeatures, isAdmin, isPlatformAdmin)} pathname={pathname} />
+      <SidebarDisclosure label="Insights & setup" items={workItems.filter((item) => ['analytics', 'production-forecasting'].includes(item.key))} pathname={pathname} />
       {!isAdmin && !isPlatformAdmin ? <NavLink item={{ href: '/admin/data-status', key: 'data-health', label: 'Data Status', section: 'utility' }} pathname={pathname} /> : null}
 
       {isAdmin || isPlatformAdmin ? <AdministrationMenu enabledFeatures={enabledFeatures} hasOrganizationAdminAccess={isAdmin} isPlatformAdmin={isPlatformAdmin} pathname={pathname} /> : null}
@@ -205,5 +215,7 @@ export function MobileTabbar({ enabledFeatures, isAdmin, isPlatformAdmin, isTast
 }
 
 export function FloatingVisitAction() {
-  return <Link className="fab" href="/visits/new" aria-label="Log Visit"><span aria-hidden="true">＋</span> Log visit</Link>;
+  const pathname = usePathname();
+  if (pathname === '/' || pathname.startsWith('/alerts') || pathname.startsWith('/visits/') || /^\/(agencies|wholesale)\/[^/]+$/.test(pathname)) return null;
+  return <Link className="fab" href="/visits/new" aria-label="Log Visit"><NavigationIcon name="plus" /> Log visit</Link>;
 }

@@ -53,7 +53,8 @@ test('pagination preserves filters, validates input, and search resets to the fi
 
 test('shared Intelligence navigation group appears on desktop and mobile without replacing primary tabs', () => {
   const source = readFileSync('app/components/AppNavigation.tsx', 'utf8');
-  assert.equal((source.match(/<IntelligenceMenu /g) ?? []).length, 2);
+  assert.equal((source.match(/<IntelligenceMenu /g) ?? []).length, 1);
+  assert.match(source, /<SidebarDisclosure label="Intelligence"/);
   assert.match(source, /getIntelligenceNavigationItems\(enabledFeatures, isAdmin, isPlatformAdmin\)/);
   assert.match(source, /label: 'Intelligence', items/);
   assert.match(source, /event.currentTarget.open = false/);

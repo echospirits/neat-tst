@@ -12,6 +12,7 @@ import './styles.css';
 import './crm/crm.css';
 import './redesign.css';
 import './theme.css';
+import './field-workspace.css';
 import { AppearanceSync } from './components/AppearanceSync';
 import { UsageTracker } from './components/UsageTracker';
 import { getAppEnvironment, getEnvironmentLabel } from '../lib/appEnvironment';
@@ -71,7 +72,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <strong>{tenantAppName}</strong>
                 <span>{tenantCompany}</span>
               </div>
-              {!isTaster ? <GlobalSearchForm compact /> : null}
               <AppSidebarNavigation enabledFeatures={enabledFeatures} isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} isTaster={isTaster} />
               <div className="user-card">
                 <span className="sr-only">Signed in as</span>
@@ -88,6 +88,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </div>
             </aside>
             <main id="main-content">
+              {!isTaster ? <header className="app-desktop-topbar"><GlobalSearchForm compact /><Link href="/profile">{getUserDisplayName(user)}</Link></header> : null}
               <AppBreadcrumbs isTaster={isTaster} />
               <ActionNotice />
               {children}

@@ -440,6 +440,13 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
   const feedbackIsError = Boolean(feedback) && !['Saving schedule…', 'Schedule saved.', 'Existing task scheduled.'].includes(feedback);
   const previousDate = addSchedulerDays(anchorDate, view === 'day' ? -1 : -7);
   const nextDate = addSchedulerDays(anchorDate, view === 'day' ? 1 : 7);
+  const selectedDay = getSchedulerDayItems(items, anchorDate);
+  const emptyDay = view === 'day' && selectedDay.timed.length === 0 && selectedDay.anytime.length === 0;
+  const emptyDayView = <>
+    <div className="scheduler-empty-day"><h3>No work scheduled for this day</h3><p>No timed or date-only tasks are assigned to you for {formatDay(anchorDate)}.</p><div className="action-row"><button onClick={() => openAdd(anchorDate, null)} type="button">Schedule work</button><Link className="btn secondary" href="/visits/new">Log a visit</Link></div></div>
+    <div className="scheduler-empty-tray"><div><strong>Your overdue or undated work</strong><small>Past 30 days and tasks with no date</small></div><span className="pill">{visibleTray.length}</span></div>
+    {visibleTray.map((item) => <button className="scheduler-tray-item" key={item.id} onClick={() => openEdit(item)} type="button"><strong>{item.title}</strong><span><SchedulerAccountLabel item={item} /></span></button>)}
+  </>;
 
   return <section className={`worklist-scheduler worklist-scheduler-${view}`} aria-labelledby="scheduler-title">
     <nav aria-label="Schedule view" className="view-switcher scheduler-view-tabs">
@@ -448,7 +455,6 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
     </nav>
     <header className="scheduler-header">
       <div>
-        <span className="page-eyebrow">My work</span>
         <h2 id="scheduler-title">{view === 'day' ? formatDay(anchorDate) : weekLabel}</h2>
         <p className="muted">{view === 'day' ? 'Schedule your day. Date-only work stays in Anytime.' : 'Drag work to schedule it. Tap a day on mobile to see its timeline.'}</p>
       </div>
@@ -474,7 +480,7 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
     </nav> : null}
 
     <div className="scheduler-desktop">
-      {view === 'day' ? <div className="scheduler-day-layout">
+      {emptyDay ? emptyDayView : view === 'day' ? <div className="scheduler-day-layout">
         {renderCalendar([anchorDate], 'scheduler-calendar-day')}
         <aside className="scheduler-tray" aria-labelledby="scheduler-tray-title">
           <div className="section-heading"><h3 id="scheduler-tray-title">To Do Today</h3><span className="pill">{visibleTray.length + getSchedulerDayItems(items, anchorDate).anytime.length}</span></div>
@@ -508,8 +514,8 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
     </div>
 
     <div className="scheduler-mobile">
-      {renderMobileDay(view === 'day' ? anchorDate : mobileDate)}
-      <details className="scheduler-mobile-tray">
+      {emptyDay ? emptyDayView : renderMobileDay(view === 'day' ? anchorDate : mobileDate)}
+      {!emptyDay ? <details className="scheduler-mobile-tray">
         <summary>Unscheduled / recent overdue <span className="pill">{visibleTray.length}</span></summary>
         <div>
           <p className="muted">Overdue work from the past 30 days and undated tasks assigned to you.</p>
@@ -518,7 +524,7 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
             <small>{item.dueDate ? `Overdue · ${formatDateOnlyInputValue(new Date(`${item.dueDate}T00:00:00.000Z`))}` : 'No date set'}</small>
           </button>) : <p className="muted">No overdue or undated work.</p>}
         </div>
-      </details>
+      </details> : null}
     </div>
 
     <p aria-live="polite" className={feedback ? `scheduler-feedback${feedbackIsError ? ' scheduler-feedback-error' : ''}` : 'visually-hidden'} role={feedbackIsError ? 'alert' : 'status'}>{feedback}</p>
