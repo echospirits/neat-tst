@@ -7,17 +7,10 @@ import {
   correctActivity,
   readTimeline,
 } from "../lib/crm/activity";
-import {
-  ingestMailChanges,
-  disconnectMailbox,
-  syncMailbox,
-} from "../lib/crm/mail/sync";
 import { saveSalesPlan } from "../lib/crm/pipeline";
 import { setAccountSalesStatus } from "../lib/accountSalesStatus";
 import { relateContacts } from "../lib/crm/contacts";
 import { getAccountBriefing } from "../lib/crm/briefing";
-import { MockMailAdapter } from "../lib/crm/mail/mock";
-import { beginMailboxOAuth, finishMailboxOAuth } from "../lib/crm/mail/oauth";
 if (
   process.env.CRM_REHEARSAL !== "true" ||
   process.env.DATABASE_TARGET_ID !== "crm-isolated-rehearsal" ||
@@ -63,7 +56,6 @@ async function main() {
   await db.organizationFeature.createMany({
     data: [
       "CORE_CRM",
-      "COMMUNICATIONS",
       "VISITS",
       "WORKLIST",
       "AGENCIES",
@@ -158,51 +150,6 @@ async function main() {
     }),
     1,
   );
-  const connection = await db.mailboxConnection.create({
-    data: {
-      ...actor,
-      provider: "MOCK",
-      providerAccountId: "fixture",
-      email: `${userA}@example.invalid`,
-      scope: "fixture",
-    },
-  });
-  const message = {
-    id: "one",
-    kind: "EMAIL" as const,
-    threadId: "thread",
-    subject: "Private fixture correspondence",
-    participants: ["buyer@example.invalid"],
-    at: new Date().toISOString(),
-  };
-  await db.$transaction((tx) =>
-    ingestMailChanges(tx, actor, connection, [message, message]),
-  );
-  assert.equal(
-    await db.accountActivity.count({ where: { connectionId: connection.id } }),
-    1,
-  );
-  const imported = await db.accountActivity.findFirstOrThrow({
-    where: { connectionId: connection.id },
-  });
-  assert.equal(imported.contactId, aContact.id);
-  assert.equal(imported.visibility, "PRIVATE");
-  assert.equal((await readTimeline(db, peer, account)).entries.length, 1);
-  await db.$transaction((tx) =>
-    correctActivity(tx, actor, {
-      ...account,
-      id: imported.id,
-      visibility: "TEAM",
-    }),
-  );
-  await db.$transaction((tx) =>
-    ingestMailChanges(tx, actor, connection, [message]),
-  );
-  assert.equal(
-    (await db.accountActivity.findUniqueOrThrow({ where: { id: imported.id } }))
-      .matchStatus,
-    "CORRECTED",
-  );
   await db.$transaction(tx => setAccountSalesStatus({ db: tx, organizationId: orgA, accountType: 'AGENCY', externalAccountId: agency.id, status: 'CONTACTED', source: 'USER', changedByUserId: userA }));
   await db.$transaction(tx => saveSalesPlan(tx, actor, { ...account, version: 0, estimatedRevenue: 1250, probability: 30 }));
   await assert.rejects(() => db.$transaction(tx => saveSalesPlan(tx, actor, { ...account, version: 0, estimatedRevenue: 900 })));
@@ -214,112 +161,6 @@ async function main() {
     "phone and email must not become physical visits",
   );
   assert.ok(briefing.lastContact);
-  await assert.rejects(() =>
-    syncMailbox(other, connection.id, new MockMailAdapter([message])),
-  );
-  await syncMailbox(actor, connection.id, new MockMailAdapter([message]));
-  const synced = await db.mailboxConnection.findUniqueOrThrow({
-    where: { id: connection.id },
-  });
-  assert.ok(synced.lastSyncAt);
-  assert.equal(synced.leaseId, null);
-  await disconnectMailbox(actor, connection.id, false);
-  const disconnected = await db.mailboxConnection.findUniqueOrThrow({
-    where: { id: connection.id },
-  });
-  assert.equal(disconnected.enabled, false);
-  assert.equal(disconnected.accessTokenEncrypted, null);
-  // Exercise the actual OAuth state/PKCE/token persistence lifecycle with a fixture transport.
-  // No live credentials or provider requests are used.
-  const originalFetch = globalThis.fetch;
-  const priorEnv = { ...process.env };
-  try {
-    process.env.CRM_MAIL_ENABLED = "true";
-    process.env.CRM_GOOGLE_CLIENT_ID = "fixture-client";
-    process.env.CRM_GOOGLE_CLIENT_SECRET = "fixture-secret";
-    process.env.CALENDAR_TOKEN_ENCRYPTION_KEY ||=
-      randomBytes(32).toString("hex");
-    process.env.APP_BASE_URL = "http://localhost:3102";
-    process.env.OAUTH_ENVIRONMENT = "development";
-    let hold: (() => void) | undefined;
-    let started: (() => void) | undefined;
-    let paused = false;
-    const tokenResponse = () =>
-      Response.json({
-        access_token: "fixture-access",
-        refresh_token: "fixture-refresh",
-        expires_in: 3600,
-        scope:
-          "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.events.readonly",
-      });
-    globalThis.fetch = async (input) => {
-      if (String(input).includes("oauth2.googleapis.com/token")) {
-        if (paused) {
-          started?.();
-          await new Promise<void>((resolve) => {
-            hold = resolve;
-          });
-        }
-        return tokenResponse();
-      }
-      assert.equal(
-        String(input),
-        "https://gmail.googleapis.com/gmail/v1/users/me/profile",
-      );
-      return Response.json({ emailAddress: "fixture-mailbox@example.invalid" });
-    };
-    const authorization = new URL(await beginMailboxOAuth(actor, "GOOGLE"));
-    assert.ok(authorization.searchParams.get("code_challenge"));
-    const state = authorization.searchParams.get("state")!;
-    await assert.rejects(() =>
-      finishMailboxOAuth(other, "GOOGLE", state, "fixture-code"),
-    );
-    await finishMailboxOAuth(actor, "GOOGLE", state, "fixture-code");
-    await assert.rejects(() =>
-      finishMailboxOAuth(actor, "GOOGLE", state, "fixture-code"),
-    );
-    const oauthConnection = await db.mailboxConnection.findUniqueOrThrow({
-      where: {
-        organizationId_userId_provider: { ...actor, provider: "GOOGLE" },
-      },
-    });
-    assert.ok(oauthConnection.accessTokenEncrypted);
-    assert.notEqual(oauthConnection.accessTokenEncrypted, "fixture-access");
-    const pendingState = new URL(
-      await beginMailboxOAuth(actor, "GOOGLE"),
-    ).searchParams.get("state")!;
-    paused = true;
-    const entered = new Promise<void>((resolve) => {
-      started = resolve;
-    });
-    const pending = finishMailboxOAuth(
-      actor,
-      "GOOGLE",
-      pendingState,
-      "fixture-code",
-    ).then(
-      () => false,
-      () => true,
-    );
-    await entered;
-    await disconnectMailbox(actor, oauthConnection.id, false);
-    hold!();
-    assert.equal(
-      await pending,
-      true,
-      "disconnect must cancel an in-flight OAuth callback",
-    );
-    const cancelled = await db.mailboxConnection.findUniqueOrThrow({
-      where: { id: oauthConnection.id },
-    });
-    assert.equal(cancelled.enabled, false);
-    assert.equal(cancelled.refreshTokenEncrypted, null);
-  } finally {
-    globalThis.fetch = originalFetch;
-    for (const key of Object.keys(process.env))
-      if (!(key in priorEnv)) delete process.env[key];
-    Object.assign(process.env, priorEnv);
-  }
   const duplicate = await db.locationContact.create({ data: { organizationId: orgA, agencyId: agency.id, name: 'Duplicate buyer', email: 'alias@example.invalid' } });
   const duplicateActivity = await db.$transaction(tx => logActivity(tx, actor, { ...manual, contactId: duplicate.id, submissionKey: randomUUID() }));
   await assert.rejects(() => db.$transaction(tx => relateContacts(tx, other, { id: aContact.id, otherId: duplicate.id, operation: 'MERGE' })));
@@ -353,13 +194,13 @@ async function main() {
     }),
   );
   console.log(
-    "PASS: database persistence, replay, private visibility, tenant isolation, correction audit, canonical Pipeline and account-plan concurrency, mailbox lease/checkpoint, OAuth ownership/replay/encryption/disconnect race and visit semantics.",
+    "PASS: database persistence, replay, private visibility, tenant isolation, correction audit, canonical Pipeline and account-plan concurrency and visit semantics.",
   );
 }
 main()
   .catch((error: unknown) => {
     console.error(
-      "CRM database rehearsal failed. Inspect the failing assertion locally without logging credentials or mailbox content.",
+      "CRM database rehearsal failed. Inspect the failing assertion locally without logging private fixture content.",
     );
     // Stack frames identify the failed check without printing error messages or values.
     if (error instanceof Error)

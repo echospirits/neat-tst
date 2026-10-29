@@ -1,4 +1,3 @@
-import{AiSettings}from'./AiSettings';
 import {PipelineStageSettings} from './PipelineStageSettings';
 import { AccountConfigurationSettings } from './AccountConfigurationSettings';
 import { VisitGuideSettings } from './VisitGuideSettings';
@@ -160,7 +159,6 @@ export default async function OrganizationSetupPage({ searchParams }: { searchPa
     <VisitGuideSettings organizationId={organizationId} />
     <AccountConfigurationSettings organizationId={organizationId} />
     <PipelineStageSettings organizationId={organizationId} />
-    <AiSettings organizationId={organizationId} />
     <EventbriteSettings organizationId={organizationId} />
     <article className="card product-selection-card">
       <div className="section-heading"><div><span className="page-eyebrow">Catalog configuration</span><h2>Product selection</h2><p className="muted">Choose which discovered item codes Echo includes. Echo administrators can maintain Brand Master imports.</p></div><form action={refreshProductCandidates}><SubmitButton className="compact-btn secondary" type="submit">Check for new products</SubmitButton></form></div>

@@ -4,7 +4,7 @@ import { requireCrmActor } from "../../lib/crm/auth";
 import { prisma } from "../../lib/prisma";
 import { CrmError } from "../../lib/crm/activity";
 import { relateContacts } from "../../lib/crm/contacts";
-import type { CrmActionResult } from "../crm/actions";
+import type { CrmActionResult } from "../../lib/crm/actionResult";
 export async function relateContactsAction(
   form: FormData,
 ): Promise<CrmActionResult> {

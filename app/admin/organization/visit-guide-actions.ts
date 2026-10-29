@@ -4,7 +4,7 @@ import { prisma } from "../../../lib/prisma";
 import { requireCrmActor } from "../../../lib/crm/auth";
 import { visitGuideInput } from "../../../lib/crm/visitGuides";
 import type { Prisma } from "@prisma/client";
-import type { CrmActionResult } from "../../crm/actions";
+import type { CrmActionResult } from "../../../lib/crm/actionResult";
 export async function saveVisitGuides(
   form: FormData,
 ): Promise<CrmActionResult> {

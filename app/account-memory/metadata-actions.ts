@@ -8,7 +8,7 @@ import {
   saveAccountConfiguration,
   saveAccountMetadata,
 } from "../../lib/crm/accountMetadata";
-import type { CrmActionResult } from "../crm/actions";
+import type { CrmActionResult } from "../../lib/crm/actionResult";
 export async function saveAccountConfigurationAction(
   form: FormData,
 ): Promise<CrmActionResult> {

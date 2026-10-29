@@ -5,7 +5,7 @@ import { prisma } from "../../lib/prisma";
 import { requireCrmActor } from "../../lib/crm/auth";
 import { CrmError } from "../../lib/crm/activity";
 import { saveEvent } from "../../lib/crm/events";
-import type { CrmActionResult } from "../crm/actions";
+import type { CrmActionResult } from "../../lib/crm/actionResult";
 export async function saveEventAction(
   form: FormData,
 ): Promise<CrmActionResult> {

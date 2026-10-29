@@ -20,7 +20,7 @@ test('feature packages keep Core mandatory and group every intelligence capabili
   assert.deepEqual(DEFAULT_FEATURE_KEYS, CORE_PACKAGE_FEATURE_KEYS);
   assert.deepEqual(INTELLIGENCE_PACKAGE_FEATURE_KEYS, ['AGENCY_INTELLIGENCE', 'WHOLESALE_OPPORTUNITIES', 'ADVANCED_INTELLIGENCE']);
   assert.deepEqual(getPackageFeatureKeys(false), CORE_PACKAGE_FEATURE_KEYS);
-  assert.deepEqual(getPackageFeatureKeys(true), FEATURE_KEYS.filter(key => key !== 'COMMUNICATIONS' && key !== 'PRODUCTION_FORECASTING'));
+  assert.deepEqual(getPackageFeatureKeys(true), FEATURE_KEYS.filter(key => key !== 'PRODUCTION_FORECASTING'));
   assert.equal(hasIntelligencePackage(['AGENCY_INTELLIGENCE']), true);
   assert.equal(hasIntelligencePackage(CORE_PACKAGE_FEATURE_KEYS), false);
 });
@@ -34,8 +34,8 @@ test('invalid entitlement combinations report every missing dependency', () => {
 });
 
 test('test environment enables standard features while respecting explicit pilot enrollment', () => {
-  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'test' }), FEATURE_KEYS.filter(key => key !== 'COMMUNICATIONS' && key !== 'PRODUCTION_FORECASTING'));
-  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM', 'COMMUNICATIONS'], { APP_ENV: 'test' }), FEATURE_KEYS.filter(key => key !== 'PRODUCTION_FORECASTING'));
+  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'test' }), FEATURE_KEYS.filter(key => key !== 'PRODUCTION_FORECASTING'));
+  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM', 'PRODUCTION_FORECASTING'], { APP_ENV: 'test' }), [...FEATURE_KEYS]);
   assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'production' }), ['CORE_CRM']);
   assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'development' }), ['CORE_CRM']);
 });

@@ -8,7 +8,7 @@ import {
   pipelineStagesInput,
 } from "../../../lib/crm/pipelineStages";
 import { CrmError } from "../../../lib/crm/activity";
-import type { CrmActionResult } from "../../crm/actions";
+import type { CrmActionResult } from "../../../lib/crm/actionResult";
 export async function savePipelineStages(
   form: FormData,
 ): Promise<CrmActionResult> {

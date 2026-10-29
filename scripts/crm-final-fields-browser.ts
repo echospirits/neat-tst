@@ -78,27 +78,6 @@ async function main() {
       .locator("summary")
       .filter({ hasText: "Before your next conversation" })
       .click();
-    await page
-      .locator("summary")
-      .filter({ hasText: "Reviewed communication assistant" })
-      .click();
-    await page
-      .getByLabel("Review purpose", { exact: true })
-      .selectOption("RESPONSE");
-    assert.equal(
-      await page
-        .getByRole("button", { name: "Generate reviewed brief", exact: true })
-        .isDisabled(),
-      true,
-    );
-    await page.getByLabel("I will review sources", { exact: false }).check();
-    await page
-      .getByRole("button", { name: "Generate reviewed brief", exact: true })
-      .click();
-    await page
-      .getByText("Local preview: recorded excerpts", { exact: false })
-      .waitFor();
-    await page.getByLabel("Draft for your review").fill("Human-edited draft.");
     assert.ok(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -211,7 +190,7 @@ async function main() {
     assert.match(await csv.text(), /Team interactions/);
     assert.deepEqual(errors, []);
     console.log(
-      "PASS responsive profiles/documents, reviewed mock assistant and disabled action, empty history filters, guide/draft restore, detailed Pipeline, Analytics and CSV.",
+      "PASS responsive profiles/documents, empty history filters, guide/draft restore, detailed Pipeline, Analytics and CSV.",
     );
   } catch (e) {
     await page.screenshot({

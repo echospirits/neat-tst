@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import type { CrmActionResult } from "../crm/actions";
+import type { CrmActionResult } from "../../lib/crm/actionResult";
 export function CrmForm({
   action,
   children,

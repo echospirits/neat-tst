@@ -12,7 +12,7 @@ import {
   defaultPlaybooks,
 } from "../../lib/crm/playbooks";
 import { scheduleWorklistSync } from "../../lib/calendar/scheduleWorklistSync";
-import type { CrmActionResult } from "../crm/actions";
+import type { CrmActionResult } from "../../lib/crm/actionResult";
 function refresh() {
   for (const path of [
     "/alerts",

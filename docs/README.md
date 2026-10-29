@@ -4,7 +4,7 @@ Start with [implementation progress](engineering/implementation-progress.md) and
 
 ## Current release
 
-**0.3.0 is released to production; development remains frozen.** Echo-only access and Production Forecasting are packaged together. See the [plan](releases/0.3.0-plan.md), [checklist](releases/0.3.0-checklist.md), [validation](releases/0.3.0-validation.md) and [migration runbook](releases/0.3.0-migrations.md). [Release notes](releases/0.3.0.md) | [Previous production release](releases/0.2.3.md). Development remains locked until owner instruction.
+**0.3.0 is released to production.** Owner-authorized Communications retirement is in `0.4.0` on TST. [Current plan](releases/0.4.0-plan.md), [UNRELEASED](releases/UNRELEASED.md), [validation](releases/communications-retirement-validation.md). Production promotion remains separate. [0.3.0 release notes](releases/0.3.0.md).
 
 ## architecture
 
@@ -62,11 +62,10 @@ Start with [implementation progress](engineering/implementation-progress.md) and
 
 ## CRM operator guides
 
-- [Mailbox integration setup](engineering/integration-setup.md)
+- [Integration setup and Communications retirement](engineering/integration-setup.md)
 - [CRM migration runbook](engineering/crm-migration-runbook.md)
 - [CRM security review](engineering/crm-security-review.md)
 
 - [Retail/Restaurants state access and ABC release runbook](releases/0.2.0-state-access-validation.md)
 
-- [Reviewed contact suggestions](product/contact-suggestions.md) — captured correspondence to existing tenant Contacts.
-- [Communications pilot review](product/communications-pilot-review.md) — Echo-only v0.2 enrollment and demo/live test steps.
+- Communications, business SMS, contact suggestions and the communication assistant are retired in TST; see [retirement validation](releases/communications-retirement-validation.md). Historical product/release records remain for provenance.

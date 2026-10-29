@@ -47,7 +47,6 @@ async function main() {
           `/visits/new?type=agency&agencyId=${fixture.account.accountId}`,
           "log-visit",
         ],
-        ["/settings/communications", "communications"],
       ]) {
         const response = await page.goto(base + route);
         assert.equal(response?.status(), 200);
@@ -131,23 +130,6 @@ async function main() {
     await page
       .getByText("Forecast · $2,000 weighted estimate", { exact: true })
       .waitFor();
-    await page.goto(`${base}/settings/communications`);
-    await page.getByText("Try fixture mode", { exact: true }).click();
-    await page.getByRole("button", { name: "Create demo connection" }).click();
-    await page
-      .getByRole("status")
-      .filter({ hasText: "Demo connection created" })
-      .waitFor();
-    await page.getByRole("button", { name: "Synchronize next page" }).click();
-    await page
-      .getByRole("status")
-      .filter({ hasText: "source record(s) processed" })
-      .waitFor();
-    await page
-      .getByRole("heading", {
-        name: "Demo: follow-up after product presentation",
-      })
-      .waitFor();
     assert.deepEqual(errors, [], "No uncaught browser exceptions");
     writeFileSync(
       "output/playwright/crm-acceptance.json",
@@ -155,7 +137,7 @@ async function main() {
         {
           passed: true,
           viewports: ["390x844", "1440x900"],
-          routes: 4,
+          routes: 3,
           checks: [
             "unauthenticated redirect",
             "no horizontal overflow",
@@ -164,7 +146,6 @@ async function main() {
             "legacy route redirects",
             "canonical account plan and forecast",
             "canonical Pipeline movement",
-            "mock mailbox sync",
           ],
           browserErrors: errors,
         },
@@ -173,7 +154,7 @@ async function main() {
       ),
     );
     console.log(
-      "PASS: CRM browser acceptance at 390x844 and 1440x900, integrated logging, Pipeline forecasts/status and mock synchronization.",
+      "PASS: CRM browser acceptance at 390x844 and 1440x900, integrated logging, Pipeline forecasts/status.",
     );
   } catch (error) {
     await page.screenshot({
