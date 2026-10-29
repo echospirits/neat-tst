@@ -4,7 +4,7 @@ Start with [implementation progress](engineering/implementation-progress.md) and
 
 ## Current release
 
-**0.3.0 is released to production.** Owner-authorized Communications retirement is in `0.4.0` on TST. [Current plan](releases/0.4.0-plan.md), [UNRELEASED](releases/UNRELEASED.md), [validation](releases/communications-retirement-validation.md). Production promotion remains separate. [0.3.0 release notes](releases/0.3.0.md).
+**0.4.0 is released to production.** Communications, mailbox/appointment capture, business SMS, contact suggestions and the communication assistant are retired. Existing Contacts, manual interactions, history/briefing and Worklist/calendar remain. [Release notes](releases/0.4.0.md), [completed checklist](releases/0.4.0-checklist.md), [validation](releases/communications-retirement-validation.md). No new development cycle is open.
 
 ## architecture
 
@@ -68,4 +68,4 @@ Start with [implementation progress](engineering/implementation-progress.md) and
 
 - [Retail/Restaurants state access and ABC release runbook](releases/0.2.0-state-access-validation.md)
 
-- Communications, business SMS, contact suggestions and the communication assistant are retired in TST; see [retirement validation](releases/communications-retirement-validation.md). Historical product/release records remain for provenance.
+- Communications, business SMS, contact suggestions and the communication assistant are retired in 0.4.0; see [retirement validation](releases/communications-retirement-validation.md). Historical product/release records remain for provenance.

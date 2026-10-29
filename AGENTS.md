@@ -1,10 +1,10 @@
 # Repository Agent Instructions
 
-## Release candidate: 0.4.0 Communications retirement
+## Released 0.4.0: development closed
 
-0.3.0 was released October 28, 2026. The owner subsequently authorized removal of Communications and its related functionality for Echo-only Neat, then explicitly instructed pushing this change to main. Package only this scoped change as `0.4.0`. Freeze the candidate from unrelated work; any code/dependency change requires renewed affected checks. Do not add unrelated features, refactors or dependency upgrades.
+The owner-authorized Communications retirement was released to main/production as **0.4.0** on October 28, 2026. The scoped work is complete; no new development cycle is open. Do not add unrelated features, refactors, upgrades or migrations without a new owner instruction.
 
-Preserve the historical frozen `codex/rc-0.3.0` ref and the 0.3.0 release records. Follow [the 0.4.0 plan](docs/releases/0.4.0-plan.md), [checklist](docs/releases/0.4.0-checklist.md) and [UNRELEASED](docs/releases/UNRELEASED.md). Communications retirement removes runtime integrations while retaining existing records and migration history; it does not authorize database deletion, provider-account changes or production configuration changes.
+Preserve the historical 0.3.0 and 0.4.0 candidate/release refs and records. See [0.4.0 release notes](docs/releases/0.4.0.md), [checklist](docs/releases/0.4.0-checklist.md) and [validation](docs/releases/communications-retirement-validation.md). Communications runtime integrations are retired; stored records/migrations remain. This work does not authorize database deletion, provider-account changes or hosted configuration changes.
 
 ## Release Rules
 
