@@ -443,12 +443,12 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
   const selectedDay = getSchedulerDayItems(items, anchorDate);
   const emptyDay = view === 'day' && selectedDay.timed.length === 0 && selectedDay.anytime.length === 0;
   const emptyDayView = <>
-    <div className="scheduler-empty-day"><h3>No work scheduled for this day</h3><p>No timed or date-only tasks are assigned to you for {formatDay(anchorDate)}.</p><div className="action-row"><button onClick={() => openAdd(anchorDate, null)} type="button">Schedule work</button><Link className="btn secondary" href="/visits/new">Log a visit</Link></div></div>
+    <div className="scheduler-empty-day"><h3>No work scheduled for this day</h3><p>No timed or date-only tasks are assigned to you.</p><div className="action-row"><button onClick={() => openAdd(anchorDate, null)} type="button">Schedule work</button><Link className="btn secondary" href="/visits/new">Log a visit</Link></div></div>
     <div className="scheduler-empty-tray"><div><strong>Your overdue or undated work</strong><small>Past 30 days and tasks with no date</small></div><span className="pill">{visibleTray.length}</span></div>
     {visibleTray.map((item) => <button className="scheduler-tray-item" key={item.id} onClick={() => openEdit(item)} type="button"><strong>{item.title}</strong><span><SchedulerAccountLabel item={item} /></span></button>)}
   </>;
 
-  return <section className={`worklist-scheduler worklist-scheduler-${view}`} aria-labelledby="scheduler-title">
+  return <section className={`worklist-scheduler worklist-scheduler-${view}${emptyDay ? ' worklist-scheduler-empty' : ''}`} aria-labelledby="scheduler-title">
     <nav aria-label="Schedule view" className="view-switcher scheduler-view-tabs">
       <Link aria-current={view === 'day' ? 'page' : undefined} href={scheduleHref('day', view === 'week' ? mobileDate : anchorDate)}>Day</Link>
       <Link aria-current={view === 'week' ? 'page' : undefined} href={scheduleHref('week', anchorDate)}>Week</Link>
@@ -461,10 +461,10 @@ export function WorklistScheduler({ view, anchorDate, items, currentUserId, user
       <div className="scheduler-header-actions">
         <nav className="scheduler-date-nav" aria-label={view === 'day' ? 'Choose day' : 'Choose week'}>
           <Link aria-label={view === 'day' ? 'Previous day' : 'Previous week'} href={scheduleHref(view, previousDate)}>‹</Link>
-          <Link href={scheduleHref(view, currentDate)}>Today</Link>
+          <Link className={anchorDate === currentDate ? 'scheduler-date-today-current' : undefined} href={scheduleHref(view, currentDate)}>Today</Link>
           <Link aria-label={view === 'day' ? 'Next day' : 'Next week'} href={scheduleHref(view, nextDate)}>›</Link>
         </nav>
-        <button className="btn primary" onClick={() => openAdd(addButtonDate, null)} type="button">Add work</button>
+        {!emptyDay ? <button className="btn primary" onClick={() => openAdd(addButtonDate, null)} type="button">Add work</button> : null}
       </div>
     </header>
 

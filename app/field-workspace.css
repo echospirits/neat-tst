@@ -35,23 +35,28 @@
 .account-notes-card > .nested-details:not([open]) > summary, .account-contacts-card > .contact-import-disclosure:not([open]) > summary { position: absolute; top: 0; right: 0; min-height: 44px; padding: 5px 0 5px 8px; list-style: none; }
 .account-notes-card > .nested-details:not([open]) > summary::-webkit-details-marker, .account-contacts-card > .contact-import-disclosure:not([open]) > summary::-webkit-details-marker { display: none; }
 .account-memory-grid > .card { min-height: 76px; }
+.account-notes-card > .nested-details:not([open]), .account-contacts-card > .contact-import-disclosure:not([open]) { margin: 0; padding: 0; border: 0; height: 0; }
 .account-workspace-panel .account-summary-grid { margin-top: 16px; }
 .account-workspace-panel .account-summary-grid .metric-card { background: transparent; padding: 12px 0; border: 0; }
 .account-workspace-panel .account-summary-grid .metric-value { font-size: 22px; }
 .account-workspace-panel .account-worklist { margin-bottom: 20px; padding: 18px; border-radius: 14px; }
+.account-workspace-panel .account-worklist .field-note { margin: 4px 0 8px; }
+.account-worklist-group { margin-top: 8px; }
+.account-worklist-group h3 { margin: 0 0 4px; font-size: 12px; }
+.account-worklist-item { padding: 8px 0; }
+.account-worklist-item .inline-meta { font-size: 12px; gap: 4px 8px; }
 .account-workspace-heading { margin-bottom: 16px; }
 .account-workspace-heading .account-kind { font-size: 13px; margin: 7px 0 0; color: var(--muted); }
 .account-workspace-heading .account-location { font-size: 13px; margin: 5px 0 0; }
-.account-sales-status-section .account-sales-status-bar { padding: 12px 16px; background: var(--panel-2); border: 0; border-radius: 12px; align-items: flex-start; }
+.account-sales-status-section .account-sales-status-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; padding: 12px 16px; background: var(--panel-2); border: 0; border-radius: 12px; align-items: center; }
 .account-sales-status-current { gap: 20px; }
 .account-sales-status-current .account-sales-status-meta { display: none; }
-.account-status-editor { margin-left: auto; min-width: 0; }
+.account-status-editor { margin: 0; min-width: 0; }
 .account-status-editor > summary { font-size: 13px; font-weight: 600; list-style: none; padding: 8px 10px; min-height: 44px; }
 .account-status-editor > summary::-webkit-details-marker { display: none; }
-.account-status-editor[open] { flex: 1 1 100%; margin: 0; }
+.account-status-editor[open] { grid-column: 1 / -1; margin: 0; }
 .account-status-editor[open] > summary { margin-bottom: 8px; }
 .account-status-editor .account-sales-status-form { margin-top: 12px; }
-.account-sales-status-section > .compact-details { display: none; }
 .account-workspace-heading .contextual-actions { gap: 8px; }
 .account-contextual-actions .contextual-overflow > summary { min-height: 44px; display: flex; align-items: center; padding: 8px 12px; background: var(--panel-2); border-radius: 10px; font-size: 13px; font-weight: 600; }
 .account-contextual-actions .contextual-overflow-menu { min-width: 220px; padding: 8px; }
@@ -82,10 +87,10 @@
 .worklist-search { margin-left: auto; flex: 1 1 220px; max-width: 320px; }
 .worklist-search input { width: 100%; font-size: 14px; }
 .worklist-search .live-filter-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-.worklist-layout > .filter-panel { background: transparent; border: 0; padding: 0; border-radius: 0; margin: 0 0 18px; }
-.worklist-layout > .filter-panel > summary { display: inline-flex; min-height: 44px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; font-size: 13px; }
-.worklist-layout > .filter-panel[open] { padding-bottom: 14px; border-bottom: 1px solid var(--line); }
-.worklist-layout > .filter-panel form { margin-top: 12px; }
+.worklist-filters { display: block; min-width: 0; }
+.worklist-filters > summary { display: inline-flex; min-height: 44px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; font-size: 13px; }
+.worklist-filters[open] { flex-basis: 100%; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.worklist-filters form { margin-top: 12px; }
 .worklist-table th:first-child { width: 37%; }
 .worklist-table th:last-child { width: 35%; }
 .worklist-table td { padding: 15px 12px; }
@@ -95,7 +100,11 @@
 .worklist-overdue-label { display: block; color: var(--theme-danger-ink, #873e2b); font-size: 12px; font-weight: 600; margin-bottom: 4px; }
 .worklist-table td[data-label="Due"] > .muted { font-size: 12px; }
 .task-actions > .worklist-log-visit { background: var(--action); color: white; }
-.task-actions > .worklist-edit-details > summary { min-height: 44px; font-size: 12px; font-weight: 500; color: var(--muted); }
+.task-actions > .worklist-edit-details { width: auto; flex: 0 0 auto; }
+.task-actions > .worklist-edit-details[open] { width: 100%; flex-basis: 100%; }
+.task-actions > .worklist-edit-details > summary { min-height: 44px; width: 44px; display: flex; align-items: center; justify-content: center; list-style: none; border: 1px solid var(--line); border-radius: 10px; padding: 10px; color: var(--text); }
+.task-actions > .worklist-edit-details > summary::-webkit-details-marker { display: none; }
+.task-actions > .worklist-edit-details > summary .navigation-icon { width: 18px; height: 18px; }
 .task-context > summary { min-height: 44px; font-size: 12px; }
 .task-actions { gap: 6px; }
 .worklist-section .section-heading { padding-bottom: 8px; }
@@ -107,9 +116,10 @@
 .scheduler-header .page-eyebrow, .scheduler-mobile-day > h2 { display: none; }
 .scheduler-header p { font-size: 12px; }
 .scheduler-empty-day { padding: 20px 0; border-block: 1px solid var(--line); }
-.scheduler-empty-day h3 { font-size: 18px; }
+.scheduler-empty-day h3 { font-size: 18px; margin: 0 0 8px; }
 .scheduler-empty-day p { font-size: 13px; color: var(--muted); margin: 8px 0 15px; }
-.scheduler-empty-day .action-row { gap: 8px; }
+.scheduler-empty-day .action-row { display: flex; flex-wrap: nowrap; gap: 8px; }
+.scheduler-empty-day .action-row > * { width: auto; min-height: 44px; }
 .scheduler-empty-tray { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; font-size: 13px; }
 .scheduler-empty-tray small { color: var(--muted); display: block; margin-top: 3px; }
 .schedule-team-work { background: var(--panel-2); padding: 18px; border-radius: 14px; margin: 18px 0 22px; max-width: 850px; }
@@ -143,6 +153,7 @@
   main { padding: 0 36px 60px; }
   .app-desktop-topbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 74px; margin: 0 -36px 26px; padding: 14px 36px; border-bottom: 1px solid var(--line); background: var(--panel); }
   .app-desktop-topbar .global-search { width: 360px; max-width: 55%; margin: 0; }
+  .app-desktop-topbar .global-search input, .app-desktop-topbar .global-search button { min-height: 44px; font-size: 13px; }
   .app-desktop-topbar > a { font-size: 12px; color: var(--muted); }
   .app-desktop-topbar .live-filter-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .app-breadcrumbs { margin-bottom: 14px; }
@@ -166,17 +177,19 @@
   .worklist-toolbar { gap: 10px; margin-bottom: 10px; }
   .worklist-toolbar .scope-tabs { width: 100%; gap: 1px; }
   .worklist-toolbar .scope-tabs a { font-size: 12px; padding-inline: 12px; }
-  .worklist-search { margin: 0; max-width: none; flex-basis: 100%; }
-  .worklist-layout > .filter-panel { margin: 0 0 14px; }
-  .worklist-table tr { padding: 14px 0; }
-  .worklist-table td[data-label="Item"] { order: 0; }
+  .worklist-heading + .view-switcher { margin: 0 0 12px; padding: 0; border: 0; background: transparent; min-height: 44px; }
+  .worklist-search { margin: 0; max-width: none; flex: 1; min-width: 0; }
+  .worklist-table tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0; padding: 12px 0; }
+  .worklist-table td { padding: 4px 0; min-width: 0; }
+  .worklist-table td[data-label="Item"] { order: 0; grid-column: 1 / -1; }
+  .worklist-table td[data-label="Actions"] { grid-column: 1 / -1; }
   .worklist-table .worklist-edit-details[open] .worklist-edit-form { width: 100%; }
-  .worklist-table td[data-label="Owner"] { font-size: 12px; }
+  .worklist-table td[data-label="Owner"] { font-size: 12px; max-width: 130px; text-align: right; overflow-wrap: anywhere; }
+  .worklist-table td[data-label="Owner"]::before { content: none; }
   .worklist-table td[data-label="Due"] { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }
   .worklist-account-link { font-size: 16px; }
   .worklist-table .task-actions { flex-wrap: wrap; }
   .worklist-table .task-actions > button, .worklist-table .task-actions form button { min-height: 44px; font-size: 12px; padding: 8px 12px; }
-  .task-actions > .worklist-edit-details { flex-basis: 100%; }
   .account-workspace-heading .page-heading-actions { width: auto; }
   .account-workspace-heading .account-kind, .account-workspace-heading .account-location { font-size: 12px; }
   .account-contextual-actions { position: fixed; bottom: calc(76px + env(safe-area-inset-bottom)); left: 0; right: 0; padding: 10px 18px; background: var(--bg); border-top: 1px solid var(--line); z-index: 140; display: flex; flex-wrap: nowrap; }
@@ -188,13 +201,14 @@
   body:has(.account-contextual-actions) main { padding-bottom: 180px; }
   .account-sales-status-section { margin: 4px 0 12px; }
   .account-sales-status-section .account-sales-status-bar { padding: 10px 12px; gap: 6px; }
-  .account-sales-status-current { gap: 16px; flex: 1; }
+  .account-sales-status-current { display: flex; gap: 16px; width: auto; min-width: 0; }
+  .account-sales-status-current > div { min-width: 0; }
   .account-sales-status-current small { font-size: 10px; }
   .account-sales-status-current strong { font-size: 12px; }
   .account-status-editor > summary { font-size: 11px; padding: 8px 5px; }
   .account-section-tabs { margin-bottom: 16px; gap: 0; }
   .account-section-tabs a { padding: 10px 12px; font-size: 12px; }
-  .account-workspace-panel .account-memory-grid { gap: 12px; margin-bottom: 16px; }
+  .account-workspace-panel .account-memory-grid { gap: 8px; margin-bottom: 16px; }
   .account-memory-grid h2 { font-size: 16px; }
   .account-workspace-panel .account-worklist { padding: 15px; }
   .account-workspace-panel .account-worklist h2 { font-size: 17px; }
@@ -208,8 +222,12 @@
   .scheduler-header p { display: none; }
   .scheduler-header h2 { font-size: 17px; }
   .scheduler-header-actions { gap: 8px; }
+  .worklist-scheduler-empty .scheduler-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .worklist-scheduler-empty .scheduler-header h2 { font-size: 15px; }
+  .worklist-scheduler-empty .scheduler-header-actions { width: auto; }
+  .worklist-scheduler-empty .scheduler-date-today-current { display: none; }
   .scheduler-empty-day { padding: 18px 0; }
-  .scheduler-empty-day .action-row { display: flex; }
+  .scheduler-empty-day .action-row > button { flex: 1; }
   .schedule-team-work { padding: 16px; }
   .schedule-team-work h2 { font-size: 16px; }
   .schedule-team-work > p { font-size: 12px; }

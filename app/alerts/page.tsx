@@ -306,11 +306,7 @@ export default async function Alerts({
         <Link aria-current={params.owner === 'unassigned' ? 'page' : undefined} href={ownerHref('unassigned')}>Unassigned</Link>
       </nav>
       <LiveFilterForm className="worklist-search" label="Search work" role="search"><label className="sr-only" htmlFor="worklist-search">Search work</label><input defaultValue={q} id="worklist-search" name="q" placeholder="Search work" type="search" /></LiveFilterForm>
-      </div>
-      {items.length === 300 ? <p className="field-note">Showing the first 300 matches. Narrow the filters to find more specific work.</p> : null}
-      {items.length === 0 ? <p className="empty-state">No tasks match this view. Adjust the filters or add a task below.</p> : null}
-      <div className="worklist-layout">
-        <details className="card compact-details filter-panel">
+        <details className="worklist-filters">
           <summary>Filters</summary>
           <LiveFilterForm label="Filter worklist items">
             <label htmlFor="worklist-status">Status</label>
@@ -346,6 +342,10 @@ export default async function Alerts({
 
           </LiveFilterForm>
         </details>
+      </div>
+      {items.length === 300 ? <p className="field-note">Showing the first 300 matches. Narrow the filters to find more specific work.</p> : null}
+      {items.length === 0 ? <p className="empty-state">No tasks match this view. Adjust the filters or add a task below.</p> : null}
+      <div className="worklist-layout">
 
         {groups.map((group) => (
           <section className="worklist-section" key={group.title}>

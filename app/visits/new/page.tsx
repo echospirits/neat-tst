@@ -155,7 +155,6 @@ export default async function NewVisitPage({
     <>
       <PageHeader
         description="Capture the conversation and choose the next step."
-        eyebrow="Field activity"
         title="Log Visit"
       />
       {params.status ? <p className="toast-notice page-status">{statusMessages[params.status] ?? params.status}</p> : null}

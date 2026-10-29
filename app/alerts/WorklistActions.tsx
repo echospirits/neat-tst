@@ -1,6 +1,7 @@
 'use client';
 
 import { SubmitButton } from '../components/SubmitButton';
+import { NavigationIcon } from '../components/NavigationIcon';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { ActionForm, type ActionResult } from '../components/ActionForm';
 import { useDialogFocus } from '../components/useDialogFocus';
@@ -108,7 +109,7 @@ export function WorklistActions({
 
 
       <details className="compact-details worklist-edit-details">
-        <summary>Edit, reassign, or cancel</summary>
+        <summary aria-label="More task actions"><NavigationIcon name="more" /><span className="sr-only">Edit, reassign, or cancel</span></summary>
         {evidence ? <div className="worklist-task-evidence">{evidence}</div> : null}
       <button className="secondary" type="button" onClick={() => setOpenAction('reassign')}>Reassign</button>
         <ActionForm action={updateItemAction} className="worklist-edit-form">
