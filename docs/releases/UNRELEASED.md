@@ -7,6 +7,12 @@ Opened October 28, 2026 for the owner-approved interface mockups, desktop naviga
 
 ## Changes
 
+### Navigation and account performance
+
+- Account pages start independent reads concurrently and show loading indicators for secondary panels. Identity-only reads no longer load the account directory solely to authenticate or read scalar organization settings. Nested account selections and writes retain state enforcement.
+- Validation and limitations: [performance validation](0.5.0-performance-validation.md). Production latency improvement has not yet been measured.
+- Migration, backfill, environment/configuration and feature flags: None. TST only; production promotion remains a separate owner decision.
+
 ### Field workspace, account sections and useful briefings
 
 - Description and user-visible behavior: Consistent grouped desktop navigation; named account tabs replace stacked placement/purchase/intelligence disclosures. Overview leads with Notes, Contacts, Outstanding work, and a compact briefing. Unrecorded facts are omitted, one empty state replaces repeated missing-data rows, and relationship evidence remains available. Mobile account Log Visit/Directions preserve context. Worklist leads with account identity, live search, named advanced filters and relative urgency. Empty schedules show a concise personal state and separate unassigned team work. Visit forms keep optional detail secondary and Save/Cancel reachable.

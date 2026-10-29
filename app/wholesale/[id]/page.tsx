@@ -94,11 +94,13 @@ export default async function WholesaleActivityPage({
 }) {
   const user = await requireUser();
   const { organizationId } = await requireOrganizationContext(user);
-  const enabledFeatures = await getOrganizationFeatures(organizationId);
+  const [enabledFeatures, tenantConfig] = await Promise.all([
+    getOrganizationFeatures(organizationId),
+    getOrganizationTenantConfig(organizationId),
+  ]);
   const hasWholesaleOpportunities = enabledFeatures.has('WHOLESALE_OPPORTUNITIES');
   const hasDirectWholesaleOrders = enabledFeatures.has('OHIO_DIRECT_WHOLESALE_ORDERS');
   const hasAccountSalesStatus = enabledFeatures.has('ACCOUNT_SALES_STATUS');
-  const tenantConfig = await getOrganizationTenantConfig(organizationId);
   const { id } = await params;
   const query = (await searchParams) ?? {};
 
@@ -129,9 +131,7 @@ export default async function WholesaleActivityPage({
   }
 
   const accountLicenseeIds = getWholesaleLicenseeIdValues(account);
-  const mergedAccountIds = await getMergedWholesaleAccountIds(account.id);
-
-  const [visits, tags, backingAccount, linkedAgency, users, purchases, accountOrders, overlay, accountContacts, communicationActivities] = await Promise.all([
+  const [visits, tags, backingAccount, linkedAgency, users, purchases, accountOrders, overlay, accountContacts, communicationActivities, salesStatusSummary, salesStatusHistory, targetingHistory, workAndEvents] = await Promise.all([
     prisma.loggedVisit.findMany({
       where: {
         organizationId,
@@ -167,7 +167,9 @@ export default async function WholesaleActivityPage({
       : null,
     prisma.user.findMany({ where: { organizationId }, orderBy: [{ name: 'asc' }, { email: 'asc' }] }),
     getWholesaleRecentPurchases({ account, config: tenantConfig }),
-    hasDirectWholesaleOrders ? listWholesaleOrders({ organizationId, wholesaleAccountIds: mergedAccountIds, filed: true, pageSize: 200 }) : { orders: [], totalCount: 0, page: 1, pageSize: 200 },
+    hasDirectWholesaleOrders
+      ? getMergedWholesaleAccountIds(account.id).then((mergedAccountIds) => listWholesaleOrders({ organizationId, wholesaleAccountIds: mergedAccountIds, filed: true, pageSize: 200 }))
+      : { orders: [], totalCount: 0, page: 1, pageSize: 200 },
     prisma.organizationAccountOverlay.findUnique({
       where: { organizationId_accountType_externalAccountId: { organizationId, accountType: 'WHOLESALE', externalAccountId: id } },
       select: { notes: true, isTargeting: true },
@@ -181,6 +183,10 @@ export default async function WholesaleActivityPage({
       include: { contact: { select: { name: true } }, createdByUser: { select: { email: true, name: true } } },
       orderBy: { occurredAt: 'desc' }, take: 50,
     }),
+    hasAccountSalesStatus ? getAccountSalesStatusSummary({ accountType: SalesAccountType.WHOLESALE, externalAccountId: id, organizationId }) : null,
+    hasAccountSalesStatus ? prisma.accountSalesStatusHistory.findMany({ where: { organizationId, accountType: SalesAccountType.WHOLESALE, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 }) : [],
+    prisma.accountTargetingHistory.findMany({ where: { organizationId, accountType: SalesAccountType.WHOLESALE, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 }),
+    accountWorkAndEvents({ organizationId, accountType: 'WHOLESALE', accountId: account.id, enabledFeatures }),
   ]);
   const filedOrders = accountOrders.orders.filter((order) => order.filedAt);
   const placementQ = (query.placementQ ?? '').trim();
@@ -227,7 +233,7 @@ export default async function WholesaleActivityPage({
     ];
   }
 
-  const [menuPlacements, legacyVisits] = await Promise.all([
+  const [menuPlacements, legacyVisits, contacts] = await Promise.all([
     prisma.menuPlacement.findMany({
       where: menuPlacementWhere,
       include: {
@@ -250,23 +256,15 @@ export default async function WholesaleActivityPage({
           },
         })
       : [],
+    prisma.locationContact.findMany({
+      where: { organizationId, id: { in: visits.map((visit) => visit.contactId).filter(Boolean) as string[] } },
+    }),
   ]);
-
-  const contacts = await prisma.locationContact.findMany({
-    where: { organizationId, id: { in: visits.map((visit) => visit.contactId).filter(Boolean) as string[] } },
-  });
   const contactMap = Object.fromEntries(contacts.map((contact) => [contact.id, contact.name]));
   const latestVisitAt = visits[0]?.visitAt;
   const actionUsers = users.filter((activeUser) => activeUser.isActive && activeUser.role !== UserRole.TASTER).map((activeUser) => ({ id: activeUser.id, name: getUserDisplayName(activeUser) }));
   const businessHours = readBusinessHours(account.targetPublicResearch?.identitySnapshot);
-  const [salesStatusSummary, salesStatusHistory] = hasAccountSalesStatus ? await Promise.all([
-    getAccountSalesStatusSummary({ accountType: SalesAccountType.WHOLESALE, externalAccountId: id, organizationId }),
-    prisma.accountSalesStatusHistory.findMany({ where: { organizationId, accountType: SalesAccountType.WHOLESALE, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 }),
-  ]) : [null, []];
   const userNames = new Map(users.map((entry) => [entry.id, getUserDisplayName(entry)]));
-  const targetingHistory = await prisma.accountTargetingHistory.findMany({ where: { organizationId, accountType: SalesAccountType.WHOLESALE, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 });
-
-  const workAndEvents = await accountWorkAndEvents({organizationId,accountType:"WHOLESALE",accountId:account.id,enabledFeatures});
   return (
     <>
       <header className="page-heading page-header account-workspace-heading">
@@ -307,7 +305,7 @@ export default async function WholesaleActivityPage({
       </Suspense>
 
 
-<AccountBriefing account={{ accountType: "WHOLESALE", accountId: account.id }} actor={{ organizationId, userId: user.id }} lastPurchaseAt={salesStatusSummary?.lastPurchaseAt} /></> },
+<Suspense fallback={<p aria-busy="true" role="status">Loading account briefing…</p>}><AccountBriefing account={{ accountType: "WHOLESALE", accountId: account.id }} actor={{ organizationId, userId: user.id }} lastPurchaseAt={salesStatusSummary?.lastPurchaseAt} /></Suspense></> },
 { id: 'placements', label: 'Placements', content: <>
         <MenuPlacementPanel
           accountId={backingAccount?.id ?? null}
@@ -327,7 +325,7 @@ export default async function WholesaleActivityPage({
         <WholesaleRecentPurchasesCard purchases={purchases} />
       </> },
 ...(hasWholesaleOpportunities ? [{ id: 'intelligence', label: 'Intelligence', content: <>
-        <OpportunityAccountPanel wholesaleAccountId={account.id} currentUserId={user.id} returnTo={`/wholesale/${account.id}`} users={actionUsers} />
+        <Suspense fallback={<p aria-busy="true" role="status">Loading opportunity intelligence…</p>}><OpportunityAccountPanel wholesaleAccountId={account.id} currentUserId={user.id} returnTo={`/wholesale/${account.id}`} users={actionUsers} /></Suspense>
       </> }] : []),
 { id: 'activity', label: 'Activity', content: <>      <section className="dashboard-section account-workspace-section">
         <div className="section-heading">
@@ -363,7 +361,7 @@ export default async function WholesaleActivityPage({
           title: event.isTargeting ? 'Account targeted' : 'Targeting stopped',
         }))).concat(workAndEvents)} />
       </section></> },
-{ id: 'account-details', label: 'Details', content: <><AccountProfile organizationId={organizationId} accountType="WHOLESALE" accountId={account.id} />
+{ id: 'account-details', label: 'Details', content: <><Suspense fallback={<section className="card" aria-busy="true"><p role="status">Loading account profile…</p></section>}><AccountProfile organizationId={organizationId} accountType="WHOLESALE" accountId={account.id} /></Suspense>
       <div className="grid account-summary-grid account-workspace-section">
         <div className="card metric-card">
           <h3>Logged visits</h3>

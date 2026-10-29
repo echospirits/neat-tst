@@ -3,13 +3,31 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { cookies, headers } from 'next/headers';
 import { ECHO_ORGANIZATION_ID } from './echoAccess';
-import { assertStateWrite, combineWhere, modelStateWhere, scopeReadArgs, stateWhere, type StateScope } from './accountStatePolicy';
+import { assertStateWrite, combineWhere, modelHasStatePolicy, modelStateWhere, scopeReadArgs, stateWhere, type StateScope } from './accountStatePolicy';
 
 const explicitScope = new AsyncLocalStorage<StateScope | null>();
 const requestScopes = new WeakMap<object, Promise<StateScope | null>>();
 const readOperations = new Set(['findUnique','findUniqueOrThrow','findFirst','findFirstOrThrow','findMany','count','aggregate','groupBy']);
 const whereWrites = new Set(['update','updateMany','updateManyAndReturn','delete','deleteMany','upsert']);
 const checkedRecords = new WeakMap<StateScope, Map<string, Set<string>>>();
+// These common identity/config reads contain no account relationships. Avoid
+// loading the directory solely to authenticate or read scalar configuration.
+// Any nested selection remains on the ordinary state-enforcement path.
+const identityModels = new Set(['User','UserSession','Organization','OrganizationFeature','OrganizationAuditEvent','OrganizationVendorIdentifier','OrganizationProduct']);
+function isIdentityOnlyRead(model: string, operation: string, args: Record<string, unknown>): boolean {
+  if (!readOperations.has(operation) || !identityModels.has(model) || modelHasStatePolicy(model)) return false;
+  if ('include' in args) {
+    const include = args.include;
+    return model === 'UserSession' && !('select' in args) && !!include && typeof include === 'object'
+      && Object.keys(include).length === 1 && (include as Record<string, unknown>).user === true
+      && !modelHasStatePolicy('User');
+  }
+  if (!('select' in args)) return true;
+  const select = args.select;
+  if (!select || typeof select !== 'object' || Array.isArray(select)) return false;
+  const scalarFields = new Set(Prisma.dmmf.datamodel.models.find(item => item.name === model)?.fields.filter(field => field.kind !== 'object').map(field => field.name));
+  return Object.entries(select).every(([name, value]) => scalarFields.has(name) && typeof value === 'boolean');
+}
 function remember(scope: StateScope, model: string, result: unknown) {
   const records = checkedRecords.get(scope) ?? new Map<string, Set<string>>();
   checkedRecords.set(scope, records);
@@ -130,6 +148,7 @@ export function extendWithAccountStateAccess(base: PrismaClient) {
   return base.$extends({ name:'tenant-account-states', query: { $allModels: { async $allOperations({model,operation,args,query}) {
     // Auth/configuration reads must not recurse and need no directory lookup.
     if(['User','UserSession','Organization','OrganizationFeature','OrganizationAuditEvent','OrganizationVendorIdentifier','OrganizationProduct'].includes(model) && !('include' in args) && !('select' in args))return query(args);
+    if (isIdentityOnlyRead(model, operation, args as Record<string, unknown>)) return query(args);
     const scope=await resolveRequestScope(base);
     if(!scope)return query(args);
     const values=args as Record<string,unknown>;

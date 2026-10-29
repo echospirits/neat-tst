@@ -69,6 +69,23 @@ test('concurrent request contexts keep independent states and guard reads and up
   assert.ok(JSON.stringify(fl).includes('Florida')); assert.ok(!JSON.stringify(fl).includes('Ohio'));
 });
 
+test('identity-only reads bypass directory scope while nested account selections remain restricted', async () => {
+  let operation: (value: any) => Promise<any>;
+  extendWithAccountStateAccess({ $extends: (configuration: any) => { operation = configuration.query.$allModels.$allOperations; return {}; } } as any);
+  const run = (model: string, op: string, args: Record<string, unknown>) =>
+    withAccountStateScope(ohio, () => operation({ model, operation: op, args, query: async (value: unknown) => value }));
+
+  const session = { where: { tokenHash: 'hash' }, include: { user: true } };
+  assert.strictEqual(await run('UserSession', 'findFirst', session), session);
+  const feature = { where: { organizationId: 'org' }, select: { featureKey: true } };
+  assert.strictEqual(await run('OrganizationFeature', 'findMany', feature), feature);
+
+  const nested = await run('UserSession', 'findFirst', { include: { user: { include: { createdWholesaleAccounts: true } } } });
+  assert.ok(JSON.stringify(nested.include.user.include.createdWholesaleAccounts.where).includes('Ohio'));
+  const counts = await run('User', 'findMany', { select: { _count: { select: { createdWholesaleAccounts: true } } } });
+  assert.ok(JSON.stringify(counts.select._count.select.createdWholesaleAccounts.where).includes('Ohio'));
+});
+
 function stateAction(requireEchoAdmin: () => Promise<unknown>, transaction: (work: (tx: any) => Promise<unknown>) => Promise<unknown>) {
   const source = readFileSync('app/admin/organization/data-actions.ts', 'utf8');
   const action = source.slice(source.indexOf('export async function saveEchoStates('), source.indexOf('export async function addEchoVendor('));
