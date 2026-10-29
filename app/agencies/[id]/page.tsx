@@ -67,8 +67,10 @@ export default async function AgencyActivityPage({
 }) {
   const currentUser = await requireUser();
   const { organizationId } = await requireOrganizationContext(currentUser);
-  const tenantConfig = await getOrganizationTenantConfig(organizationId);
-  const enabledFeatures = await getOrganizationFeatures(organizationId);
+  const [tenantConfig, enabledFeatures] = await Promise.all([
+    getOrganizationTenantConfig(organizationId),
+    getOrganizationFeatures(organizationId),
+  ]);
   const hasAgencyIntelligence = enabledFeatures.has('AGENCY_INTELLIGENCE');
   const hasWholesaleOpportunities = enabledFeatures.has('WHOLESALE_OPPORTUNITIES');
   const hasAccountSalesStatus = enabledFeatures.has('ACCOUNT_SALES_STATUS');
@@ -92,7 +94,7 @@ export default async function AgencyActivityPage({
     notFound();
   }
 
-  const [visits, tags, salesWindows, users, overlay, accountContacts, communicationActivities, marketProfile, marketFits] = await Promise.all([
+  const [visits, tags, salesWindows, users, overlay, accountContacts, communicationActivities, marketProfile, marketFits, salesStatusSummary, salesStatusHistory, targetingHistory, workAndEvents] = await Promise.all([
     prisma.loggedVisit.findMany({
       where: {
         agencyId: id,
@@ -130,17 +132,16 @@ export default async function AgencyActivityPage({
     }),
     hasAgencyIntelligence ? prisma.agencyMarketProfile.findUnique({ where: { organizationId_agencyId: { organizationId, agencyId: id } } }) : null,
     hasAgencyIntelligence ? getAgencyMarketFitsForDisplay({ organizationId, agencyId: id }) : [],
+    hasAccountSalesStatus ? getAccountSalesStatusSummary({ accountType: SalesAccountType.AGENCY, externalAccountId: id, organizationId }) : null,
+    hasAccountSalesStatus ? prisma.accountSalesStatusHistory.findMany({ where: { organizationId, accountType: SalesAccountType.AGENCY, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 }) : [],
+    prisma.accountTargetingHistory.findMany({ where: { organizationId, accountType: SalesAccountType.AGENCY, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 }),
+    accountWorkAndEvents({ organizationId, accountType: 'AGENCY', accountId: agency.id, enabledFeatures }),
   ]);
   const storeContext = readStoreContext(overlay?.storeContext);
   const knownHours = readOperatingHoursDetails(agency.businessHours);
   const hoursResearchAvailable = getAccountResearchPilotAvailability().available;
   const actionUsers = users.map((user) => ({ id: user.id, name: getUserDisplayName(user) }));
-  const [salesStatusSummary, salesStatusHistory] = hasAccountSalesStatus ? await Promise.all([
-    getAccountSalesStatusSummary({ accountType: SalesAccountType.AGENCY, externalAccountId: id, organizationId }),
-    prisma.accountSalesStatusHistory.findMany({ where: { organizationId, accountType: SalesAccountType.AGENCY, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 }),
-  ]) : [null, []];
   const userNames = new Map(users.map((entry) => [entry.id, getUserDisplayName(entry)]));
-  const targetingHistory = await prisma.accountTargetingHistory.findMany({ where: { organizationId, accountType: SalesAccountType.AGENCY, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 });
 
   const contacts = await prisma.locationContact.findMany({
     where: { organizationId, id: { in: visits.map((visit) => visit.contactId).filter(Boolean) as string[] } },
@@ -148,7 +149,6 @@ export default async function AgencyActivityPage({
   const contactMap = Object.fromEntries(contacts.map((contact) => [contact.id, contact.name]));
   const latestVisitAt = visits[0]?.visitAt;
 
-  const workAndEvents = await accountWorkAndEvents({organizationId,accountType:"AGENCY",accountId:agency.id,enabledFeatures});
   return (
     <>
       <header className="page-heading page-header account-workspace-heading">
@@ -184,7 +184,9 @@ export default async function AgencyActivityPage({
         ...(hasAgencyIntelligence ? [{ href: '#intelligence', label: 'Retail Intelligence' }] : hasWholesaleOpportunities ? [{ href: '#intelligence', label: 'Restaurant intelligence' }] : []),
       ]} />
 
-      <AccountProfile organizationId={organizationId} accountType="AGENCY" accountId={agency.id} />
+      <Suspense fallback={<section className="card" aria-busy="true"><p role="status">Loading account profile…</p></section>}>
+        <AccountProfile organizationId={organizationId} accountType="AGENCY" accountId={agency.id} />
+      </Suspense>
       <AccountMemoryPanel users={actionUsers} accountId={agency.id} accountType="AGENCY" contacts={accountContacts} notes={overlay?.notes ?? null} returnTo={`/agencies/${agency.id}`} />
 
       <Suspense fallback={<section id="account-worklist" className="card account-workspace-section account-worklist" aria-busy="true"><h2>Outstanding work</h2><p role="status">Loading outstanding work…</p></section>}>
@@ -233,7 +235,9 @@ export default async function AgencyActivityPage({
       </AnchoredDetails>
 
       {hasWholesaleOpportunities ? <AnchoredDetails className="account-overview-details account-workspace-section" id={hasAgencyIntelligence ? 'wholesale-intelligence' : 'intelligence'} summary="Linked restaurant opportunity intelligence">
-        <OpportunityAccountPanel agencyId={agency.agencyId} currentUserId={currentUser.id} returnTo={`/agencies/${agency.id}`} users={actionUsers} />
+        <Suspense fallback={<p aria-busy="true" role="status">Loading linked restaurant intelligence…</p>}>
+          <OpportunityAccountPanel agencyId={agency.agencyId} currentUserId={currentUser.id} returnTo={`/agencies/${agency.id}`} users={actionUsers} />
+        </Suspense>
       </AnchoredDetails> : null}
 
       <AnchoredDetails className="account-overview-details account-workspace-section" id="sales" summary="Recent item sales">
@@ -245,7 +249,9 @@ export default async function AgencyActivityPage({
           <h2>Activity</h2>
           <span className="pill">{visits.length + communicationActivities.length + salesStatusHistory.length + targetingHistory.length + workAndEvents.length}</span>
         </div>
-        <AccountBriefing account={{ accountType: "AGENCY", accountId: agency.id }} actor={{ organizationId, userId: currentUser.id }} lastPurchaseAt={salesStatusSummary?.lastPurchaseAt} />
+        <Suspense fallback={<p aria-busy="true" role="status">Loading account briefing…</p>}>
+          <AccountBriefing account={{ accountType: "AGENCY", accountId: agency.id }} actor={{ organizationId, userId: currentUser.id }} lastPurchaseAt={salesStatusSummary?.lastPurchaseAt} />
+        </Suspense>
         <VisitActivityTable contactMap={contactMap} visits={visits} supplementalEvents={communicationActivities.map((activity): SupplementalActivity => ({
           actor: getUserDisplayName(activity.createdByUser),
           at: activity.occurredAt,
@@ -272,7 +278,9 @@ export default async function AgencyActivityPage({
       {hasAgencyIntelligence ? <AnchoredDetails className="account-overview-details account-workspace-section agency-retail-intelligence" id="intelligence" initialOpen summary="Retail Intelligence">
         <div className="retail-intelligence-content">
           <p className="retail-intelligence-intro muted">Next actions, what sells here, and the store behind the numbers.</p>
-          <AgencyIntelligencePanel agencyId={agency.id} agencyName={agency.name} currentUserId={currentUser.id} organizationId={organizationId} users={actionUsers} />
+          <Suspense fallback={<p aria-busy="true" role="status">Loading retail intelligence…</p>}>
+            <AgencyIntelligencePanel agencyId={agency.id} agencyName={agency.name} currentUserId={currentUser.id} organizationId={organizationId} users={actionUsers} />
+          </Suspense>
           <AgencyRetailMarketIntelligence market={marketProfile} fits={marketFits} />
           <AgencyStoreIntelligence agencyId={agency.id} context={storeContext} />
         </div>
