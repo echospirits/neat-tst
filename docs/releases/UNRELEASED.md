@@ -1,4 +1,4 @@
-# Unreleased — 0.5.0-dev
+# Frozen release candidate — 0.5.0
 
 Opened October 28, 2026 for the owner-approved interface mockups, desktop navigation consistency, and compact account briefing. Production has since advanced through the separately authorized 0.4.1 performance hotfix and **0.4.2** forecast download hotfix ([release receipt](0.4.2-validation.md)); the owner has now explicitly authorized the completed interface/audit release to main. [Development plan](0.5.0-plan.md), [pending release checklist](0.5.0-checklist.md), [validation](field-workspace-validation.md). Promote only the exact tested 0.5.0 candidate after its release gates pass.
 
