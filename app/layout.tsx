@@ -5,7 +5,7 @@ import { APP_COMPANY, APP_DESCRIPTION, APP_NAME } from '../lib/appBrand';
 import { isAdminRole, isTasterRole } from '../lib/userAccess';
 import { getOrganizationContext, getOrganizationFeatures } from '../lib/organizations';
 import Link from 'next/link';
-import { AppBreadcrumbs, AppSidebarNavigation, FloatingVisitAction, MobileTabbar } from './components/AppNavigation';
+import { AppBreadcrumbs, AppSidebarNavigation, MobileTabbar } from './components/AppNavigation';
 import { GlobalSearchForm } from './components/GlobalSearchForm';
 import { ActionNotice } from './components/ActionNotice';
 import './styles.css';
@@ -94,7 +94,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <ActionNotice />
               {children}
             </main>
-            <FloatingVisitAction />
             <MobileTabbar enabledFeatures={enabledFeatures} isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} isTaster={isTaster} />
           </>
         ) : (

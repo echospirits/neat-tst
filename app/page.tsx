@@ -394,6 +394,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
         </div>
       </section>
 
+      <section className="schedule-supporting-sections" aria-label="Planning and insights">
       <ScheduleRoute organizationId={organizationId} userId={user.id} date={anchorDate} />
       <ScheduleEvents organizationId={organizationId} />
       <details className="dashboard-section dashboard-details">
@@ -478,6 +479,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
           </div>
         </div>
       </details>
+      </section>
     </>
   );
 }

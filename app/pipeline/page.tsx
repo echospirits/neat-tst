@@ -98,7 +98,7 @@ export default async function PipelinePage({ searchParams }: { searchParams?: Pr
 
   return <div className="pipeline-workspace">
     <PageHeader eyebrow="Accounts" title="Pipeline" description="Review relationships and choose the next account to move forward." />
-    <details className="card crm-panel"><summary>Forecast · {money(forecast.weighted)} weighted estimate</summary>
+    <details className="card crm-panel compact-details"><summary>Forecast · {money(forecast.weighted)} weighted estimate</summary>
       <p>{forecast.valued} of {forecast.accounts} open accounts have estimates; {money(forecast.unweighted)} before probability weighting.</p>
       <p className="muted">USD assumptions from account plans. Purchasing, Nurture, and Lost accounts are excluded. {forecast.missingProbability} valued accounts have no probability and contribute zero to the weighted estimate. This is not recorded revenue.</p>
     </details>

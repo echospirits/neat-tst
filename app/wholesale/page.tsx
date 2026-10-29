@@ -580,10 +580,10 @@ export default async function WholesalePage({
                   <span className="account-directory-mobile-only account-directory-location">
                     {row.locationText ? <AddressLink address={row.locationText} /> : (row.licenseeIdsText ? `Licensee ${row.licenseeIdsText}` : 'Location unavailable')}
                   </span>
-                  <span className="account-directory-mobile-only account-directory-context">
-                    {hasWholesaleOpportunities ? <CommercialOpportunityStars rating={row.commercialRating} status={row.assessmentStatus} pending={row.pending} stale={row.stale} /> : null}
-                    <span>{row.nextAction ?? (row.mostRecentVisit ? `Last visit ${formatEasternDate(row.mostRecentVisit)}` : 'Not visited yet')}</span>
-                  </span>
+                  {(hasWholesaleOpportunities && row.commercialRating !== null) || row.mostRecentVisit ? <span className="account-directory-mobile-only account-directory-context">
+                    {hasWholesaleOpportunities && row.commercialRating !== null ? <CommercialOpportunityStars rating={row.commercialRating} status={row.assessmentStatus} pending={row.pending} stale={row.stale} /> : null}
+                    {row.mostRecentVisit ? <span>Last visit {formatEasternDate(row.mostRecentVisit)}</span> : null}
+                  </span> : null}
                 </td>
                 <td className="account-directory-secondary-cell" data-label="Licensee IDs">{row.licenseeIdsText}</td>
                 <td className="account-directory-secondary-cell" data-label="Address"><AddressLink address={row.locationText}>{row.address}</AddressLink></td>

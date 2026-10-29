@@ -160,10 +160,9 @@ export default async function AgenciesPage({
                   <span className="account-directory-mobile-only account-directory-location">
                     {address ? <AddressLink address={address} /> : `Retail ${agency.agencyId}`}
                   </span>
-                  <span className="account-directory-mobile-only account-directory-context">
-                    {stats.lastVisitAt ? `Last visit ${formatEasternDate(stats.lastVisitAt)}` : 'Not visited yet'}
-                    {agency.primaryContact ? ` · ${agency.primaryContact}` : ''}
-                  </span>
+                  {stats.lastVisitAt || agency.primaryContact ? <span className="account-directory-mobile-only account-directory-context">
+                    {[stats.lastVisitAt ? `Last visit ${formatEasternDate(stats.lastVisitAt)}` : null, agency.primaryContact].filter(Boolean).join(' · ')}
+                  </span> : null}
                 </td>
                 <td className="account-directory-secondary-cell" data-label="Retail ID">{agency.agencyId}</td>
                 <td className="account-directory-secondary-cell" data-label="Address"><AddressLink address={address}>{agency.address}</AddressLink></td>

@@ -201,9 +201,10 @@ export function MobileTabbar({ enabledFeatures, isAdmin, isPlatformAdmin, isTast
       {mobileItems.map((item) => (
         <NavLink item={item} key={item.href} pathname={pathname} useSectionMatch />
       ))}
-      <details className="mobile-more" key={pathname} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) event.currentTarget.open = false; }}>
+      <details className="mobile-more" key={pathname} onClick={(event) => { if ((event.target as HTMLElement).closest("a")) event.currentTarget.open = false; }} onKeyDown={(event) => { if (event.key === 'Escape') { event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus(); } }}>
         <summary><NavigationIcon name="more" /><span>More</span></summary>
         <div className="mobile-more-menu">
+          <Link className="app-nav-link mobile-more-visit" href="/visits/new" aria-current={pathname === '/visits/new' ? 'page' : undefined}><NavigationIcon name="plus" /><span>Log visit</span></Link>
           <IntelligenceMenu enabledFeatures={enabledFeatures} isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} pathname={pathname} />
           {moreItems.map((item) => (
             <NavLink item={item} key={item.key} pathname={pathname} />
@@ -212,10 +213,4 @@ export function MobileTabbar({ enabledFeatures, isAdmin, isPlatformAdmin, isTast
       </details>
     </nav>
   );
-}
-
-export function FloatingVisitAction() {
-  const pathname = usePathname();
-  if (['/', '/search', '/agencies', '/wholesale', '/visits', '/opportunities', '/agency-focus'].includes(pathname) || pathname.startsWith('/alerts') || pathname.startsWith('/visits/') || pathname.startsWith('/wholesale-orders/') || /^\/(agencies|wholesale)\/[^/]+$/.test(pathname)) return null;
-  return <Link className="fab" href="/visits/new" aria-label="Log Visit"><NavigationIcon name="plus" /> Log visit</Link>;
 }

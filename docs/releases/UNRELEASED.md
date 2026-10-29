@@ -7,6 +7,14 @@ Opened October 28, 2026 for the owner-approved interface mockups, desktop naviga
 
 ## Changes
 
+### Compact browsing and section hierarchy
+
+- Schedule route planning, events, insights and shared optional sections use text, chevrons and dividers instead of oversized white collapsed cards. Directory and intelligence rows use the same hierarchy; meaningful form surfaces remain distinct.
+- Generic Log visit moves into mobile More, preventing floating controls from covering Pipeline, Forecast and administrative content. Mobile buttons and disclosures retain a 44px touch floor; More supports Escape and closes after navigation.
+- Retail Intelligence renders 25 recommendations per page instead of 250; restaurant opportunities render 25 instead of 50. Pagination is visible above and below results, preserves filters and action-return pages, and search resets to page one. Supporting metrics and pursuit preferences remain available through disclosures.
+- Pipeline keeps search visible and collapses optional territory/team filters. Directory summaries show known contact, visit and rating information without repeated unrecorded metadata. Forecast product search stays visible, and Sources/Import links open their target sections.
+- Validation: 898 passing tests, strict typecheck and credential-free actual-component fixtures at 390 x 844 and 1440 x 900 in light/dark themes. Fixtures cover native disclosure, missing-history evidence, mobile More, overflow and touch targets; live saves/providers are not inferred. Final deployment and release evidence is recorded separately.
+
 ### Application-wide interface and browsing performance
 
 - Owner subsequently authorized a whole-application audit and production release. Shared headers, disclosures, empty states, focus treatment and mobile touch targets follow one ivory/olive system. Redundant heading labels and duplicate floating visit actions are removed from finding/selection flows.
