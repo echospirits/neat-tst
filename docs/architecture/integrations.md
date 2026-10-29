@@ -16,8 +16,8 @@ Existing Google Calendar connects a user to Worklist events; this is not Gmail i
 
 See [implementation progress](../engineering/implementation-progress.md), [feature inventory](../product/feature-inventory.md), and [test report](../releases/v0.2-test-report.md). Existing behavior above is source-audited; it is not a claim of fresh live verification. Changes must update this document and the inventory.
 
-## Implemented mailbox adapters
+## Communications retired in 0.4.0
 
-`lib/crm/mail/types.ts` defines normalized pages/cursors/errors; google.ts, microsoft.ts and mock.ts implement it. oauth.ts manages consent/PKCE/refresh; sync.ts performs lease-protected ingestion. Provider transport is fixture-tested; live activation remains unverified. See [setup and precise limitations](../engineering/integration-setup.md).
+The earlier integration audit above is historical. Mailbox OAuth/adapters/metadata ingestion/imported appointments, business SMS adapters/callbacks, contact suggestions and reviewed communication AI have been removed, including UI, actions and cron endpoints. No configuration or old entitlement row restores them. Schema and historical records remain compatible; ordinary contacts/manual interaction capture and independent Worklist calendar sync remain.
 
-See `lib/crm/sms`, `lib/crm/eventbrite.ts`, `lib/crm/routeProvider.ts`, and `lib/crm/ai.ts`. Each live provider requires separate deployment configuration; absence of credentials does not silently authorize side effects.
+Current retained CRM provider implementations include `lib/crm/eventbrite.ts` and `lib/crm/routeProvider.ts`. Live provider setup remains separate from fixture verification. [Retirement evidence](../releases/communications-retirement-validation.md).

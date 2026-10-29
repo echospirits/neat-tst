@@ -2,11 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import {
-  extractEmails,
-  matchParticipants,
-  isInternalMessage,
-} from "../lib/crm/matching";
-import {
   manualActivityInput,
   visibleActivityWhere,
   logActivity,
@@ -45,69 +40,6 @@ test("timeline cursors retain equal-time records across source boundaries", () =
     {
       OR: [{ visitAt: { lt: before } }],
     },
-  );
-});
-test("exact contact email matching never assigns an account based on domain alone", () => {
-  const contacts = [
-    {
-      id: "one",
-      email: "Buyer@Example.com",
-      agencyId: null,
-      wholesaleAccountId: "account-a",
-    },
-  ];
-  assert.equal(
-    matchParticipants(["buyer@example.com"], contacts).wholesaleAccountId,
-    "account-a",
-  );
-  assert.equal(
-    matchParticipants(["other@example.com"], contacts).status,
-    "REVIEW",
-  );
-  assert.equal(
-    matchParticipants(
-      ["buyer@example.com"],
-      [
-        ...contacts,
-        { ...contacts[0], id: "two", wholesaleAccountId: "account-b" },
-      ],
-    ).status,
-    "REVIEW",
-  );
-});
-test("multiple exact contacts at one account preserve account association without guessing the contact", () => {
-  const result = matchParticipants(
-    ["a@x.com", "b@x.com"],
-    ["a", "b"].map((id) => ({
-      id,
-      email: `${id}@x.com`,
-      agencyId: "agency",
-      wholesaleAccountId: null,
-    })),
-  );
-  assert.equal(result.agencyId, "agency");
-  assert.equal(result.contactId, null);
-});
-test("email normalization preserves aliases; internal exclusion requires every participant to be internal", () => {
-  assert.deepEqual(
-    extractEmails("Buyer <BUYER+VIP@Example.com>, other@example.org"),
-    ["buyer+vip@example.com", "other@example.org"],
-  );
-  assert.equal(
-    isInternalMessage(
-      ["rep@example.com", "boss@example.com"],
-      ["boss@example.com"],
-      "rep@example.com",
-    ),
-    true,
-  );
-  assert.equal(
-    isInternalMessage(
-      ["buyer@example.com"],
-      ["boss@example.com"],
-      "rep@example.com",
-    ),
-    false,
   );
 });
 test("privacy predicates always include tenant and never grant admin-wide private access", () => {

@@ -1,5 +1,7 @@
 # Reviewed contact suggestions
 
+> Historical design/review record. This feature is retired in 0.4.0; the walkthrough below no longer applies to the current application. See [retirement validation](../releases/communications-retirement-validation.md).
+
 Contact suggestions extend account Contacts and Communications. They do not create a new contact directory or automatically add people.
 
 ## Where to review

@@ -1,5 +1,8 @@
 # CRM feature inventory
 
+> Current TST update: Communications and its mailbox/SMS/contact-suggestion/communication-AI functionality are retired in `0.4.0`. Existing contacts, history, manual interactions, briefing and Worklist/calendar remain. [Evidence](../releases/communications-retirement-validation.md). Earlier rollout notes below are historical.
+
+
 October 28 TST increment 4 retires Support and Recipes at the owner's request, removes their public/API/UI entry points and old setup scripts, and confines User Activity to Echo admins. Storage/history and legacy merge references remain. [Validation and recovery](../releases/echo-only-transition-validation.md#increment-4-module-retirement-and-remaining-administration).
 
 October 28 TST increment 3 confines scheduled inventory/product discovery, intelligence, research, forecasts, digest delivery and communications/calendar workers to Echo. Existing feature and environment gates remain; outside stored connections/history are retained. This is an incremental TST delivery, not a completed production teardown. [Scope and evidence](../releases/echo-only-transition-validation.md).
@@ -19,9 +22,9 @@ Updated 2026-10-11 for the integrated 0.2.3-dev TST work. Existing workflows are
 | People across accounts, duplicate merges, roles, aliases, preferences | Existing Contacts; crm/contacts; ContactRelationships | LocationContact personKey, aliases, authority, owner; inactive merged source retained | crmHealthContacts and CRM rehearsal; shared person is linked, per-account role remains local |
 | Unified interaction entry | Existing Log Visit; visits/actions and LogVisitForm | LoggedVisit for physical evidence; AccountActivity for nonphysical communication | CRM browser/rehearsal; privacy, retry and physical-visit distinctions |
 | Timeline and filters | Existing VisitActivityTable, ActivityTimelineFilter, crm/accountTimeline | Projections of visits, communication, completed Worklist, orders, Pipeline changes, events | Authorized server reads; filters operate on bounded loaded history |
-| Google / Microsoft communications | crm/mail adapters, OAuth, sync; Communications settings | Encrypted MailboxConnection; owner-private AccountActivity and correction audit | crmMailAdapters plus PostgreSQL rehearsal; live OAuth/provider acceptance required |
-| Reviewed contact suggestions | Existing Contacts and Communications; contactSuggestions, shared contact creation and tenant contact search | Ordinary LocationContact plus per-user review decisions; mail header display-name metadata | Tenant/private isolation, concurrency, alias preservation and responsive acceptance; see [guide](contact-suggestions.md) |
-| Business SMS | Existing account Contacts/Communications; crm/sms | Encrypted identity, SmsConsent/Event, SmsMessage, activity projection | crmSms tests, SMS rehearsal/browser; live Twilio number, consent, registration, signed callback required |
+| Google / Microsoft communications (retired in TST) | UI, actions, adapters and endpoints removed | Historical schema/records retained | Retirement regressions, build route audit and responsive checks |
+| Reviewed contact suggestions (retired in TST) | UI, actions, adapters and endpoints removed | Historical schema/records retained | Retirement regressions, build route audit and responsive checks |
+| Business SMS (retired in TST) | UI, actions, adapters and endpoints removed | Historical schema/records retained | Retirement regressions, build route audit and responsive checks |
 | Pipeline and account plans | Existing Pipeline/status panel; crm/pipeline and pipelineStages | Existing overlay status/history plus salesPlan/version; tenant stage configuration | Forecast/health tests, stage reopening/stale-write rehearsal; no separate Deals workflow |
 | Relationship health / briefing | AccountBriefing; crm/health and briefing | Existing facts plus tenant thresholds | Explained agency/wholesale/chain recency, contact, purchase, overdue signals; missing evidence remains unknown |
 | Next actions / recovery | Existing Wholesale Opportunities and Agency Intelligence, contextual actions, Worklist | Existing recommendation status, snooze, dismissal/feedback, conversion/event ledgers | Existing opportunity/intelligence suites; manual analytical tags preserved, no CFAO engine |
@@ -32,15 +35,15 @@ Updated 2026-10-11 for the integrated 0.2.3-dev TST work. Existing workflows are
 | Events / staffing / Eventbrite | Existing EventShift and My Schedule; /events detail; linked Log Visit | Tenant-scoped EventShift, EventbriteConnection; existing visit/photo evidence | Event tests, DB conflict/isolation/replay, browser; Eventbrite fixture or live read token |
 | Production Forecasting pilot | Analytics → Production Forecasting; productionForecasting adapters/engine/service | Tenant source imports, demand/guidance observations, immutable runs/snapshots | Native report mapping, rolling backtests, source coverage, tenant/FK/replay/actuals rehearsal; full source history required; [guide](../production-forecasting.md) |
 | Analytics and exports | Existing Analytics/OHLQ adapters, purchaseOutcomes, RelationshipReport | Existing sales coverage, visits, Worklist, overlays | Analytics + continuity tests; CSV export; dates and partial coverage disclosed |
-| Reviewed communication AI | Account briefing; crm/ai and aiEvidence | Read-only retrieval; operational audit counts only, no stored generated prose | Mock and Responses fixture tests; DB private/tenant tests; live deployment configuration and tenant opt-in required |
+| Reviewed communication AI (retired in TST) | UI, actions, adapters and endpoints removed | Historical schema/records retained | Retirement regressions, build route audit and responsive checks |
 | Tenant settings, access, branding, products, feature flags | Existing auth/organizations/featureRegistry/Organization Setup | Existing User.organizationId + role, tenant branding/products/features | Existing security/feature suites; no parallel membership/auth system |
 | Support (retired in TST) | Pages/APIs, polling/trail collection and navigation removed | Ticket/message/screenshot history retained | Retired-route/layout checks; no schema or operational deletion |
 | Imports, calendar, orders | Existing canonical implementations retained | Existing source-of-truth models | Full regression suite; Echo-only workers and existing side-effect gates |
 
 ## Deliberate limits
 
-- Imported email is metadata. Original provider links provide authorized access to bodies and attachments. The assistant cannot extract commitments from bodies it has not ingested.
-- Google primary calendar and Graph primary calendar/Inbox/Sent Items are supported. Custom folders, personal-device SMS capture and autonomous correspondence are outside the implemented integration scope.
+- Communications capture and its assistant are retired; existing imported history is retained under existing authorization.
+- Automatic mailbox/appointment capture, business SMS and autonomous correspondence are unavailable. Worklist calendar synchronization is independent and retained.
 - Shared directory schemas remain Agency and Wholesale. Custom categories, parent groups and fields extend their tenant profile; they do not create another directory or a second account identity. A user belongs to their existing organization; cross-organization identity switching was not required by the brief.
 - Geographic territories use state/county/postal matching and explicit assignment. Teams and territories are organizational/reporting attributes, not new access-control roles.
 - Daily sales support observed purchase days, bottles, retained-history repeat/lapse/continuity, and before/after comparisons. Transaction-level order averages and revenue forecast accuracy cannot be verified from bottle-only daily data. Existing direct-order records remain distinct.

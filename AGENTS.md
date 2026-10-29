@@ -1,10 +1,10 @@
 # Repository Agent Instructions
 
-## Release freeze: 0.3.0
+## Release candidate: 0.4.0 Communications retirement
 
-Owner directed a new release freeze on 2026-10-28: package the complete tested Echo-only transition and Production Forecasting work as **0.3.0** and prepare it for main. **0.3.0 has been released to production; development remains frozen.** Normal feature development is paused. Do not open another development version, add features, refactor, upgrade dependencies, or include unrelated work. Limit changes to packaging, validation evidence, and explicitly approved candidate fixes. Any code/schema/dependency change requires a replacement candidate and renewed affected checks.
+0.3.0 was released October 28, 2026. The owner subsequently authorized removal of Communications and its related functionality for Echo-only Neat, then explicitly instructed pushing this change to main. Package only this scoped change as `0.4.0`. Freeze the candidate from unrelated work; any code/dependency change requires renewed affected checks. Do not add unrelated features, refactors or dependency upgrades.
 
-Use [the release plan](docs/releases/0.3.0-plan.md), [checklist](docs/releases/0.3.0-checklist.md), and [migration runbook](docs/releases/0.3.0-migrations.md). Keep the dedicated frozen `codex/rc-0.3.0` ref. Historical 0.2.3 and earlier records are evidence; do not replay their migrations. No main push, production migration/configuration/account-role change, source initialization or stable release tag is authorized by preparation alone. Live provider activation remains a separate operator step. Lift the freeze only on owner instruction.
+Preserve the historical frozen `codex/rc-0.3.0` ref and the 0.3.0 release records. Follow [the 0.4.0 plan](docs/releases/0.4.0-plan.md), [checklist](docs/releases/0.4.0-checklist.md) and [UNRELEASED](docs/releases/UNRELEASED.md). Communications retirement removes runtime integrations while retaining existing records and migration history; it does not authorize database deletion, provider-account changes or production configuration changes.
 
 ## Release Rules
 

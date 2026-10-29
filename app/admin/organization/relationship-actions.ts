@@ -5,7 +5,7 @@ import { requireAdmin } from "../../../lib/auth";
 import { requireOrganizationContext } from "../../../lib/organizations";
 import { prisma } from "../../../lib/prisma";
 import { healthRulesInput } from "../../../lib/crm/health";
-import type { CrmActionResult } from "../../crm/actions";
+import type { CrmActionResult } from "../../../lib/crm/actionResult";
 export async function saveRelationshipSettings(
   form: FormData,
 ): Promise<CrmActionResult> {

@@ -12,8 +12,6 @@ import { refreshAgencyIntelligence } from '../lib/agencyIntelligenceService';
 import { refreshAgencyMarketIntelligence } from '../lib/agencyMarketIntelligenceService';
 import { evaluateWholesaleAssessments } from '../lib/wholesaleAssessmentService';
 import { forecastAccess } from '../lib/productionForecasting/import';
-import { communicationsPilotEnabled } from '../lib/crm/communicationsPilot';
-import { receiveSms } from '../lib/crm/sms/service';
 import { discoverOrganizationProducts, discoverProductsForOrganizations } from '../lib/organizationProductDiscovery';
 
 // Execute the delivered worker entry points with fixture databases/providers.
@@ -38,9 +36,7 @@ test('explicit foreign worker targets fail before reading credentials or writing
   await assert.rejects(refreshAgencyMarketIntelligence({ db, organizationId: 'outside', asOfDate: new Date() }), /restricted to Echo/);
   await assert.rejects(evaluateWholesaleAssessments({ db, organizationId: 'outside' }), /restricted to Echo/);
   await assert.rejects(forecastAccess(db, 'outside'), /restricted to Echo/);
-  assert.equal(await communicationsPilotEnabled(db, 'outside'), false);
-  assert.equal(await receiveSms(db, { id: 'old-sender', organizationId: 'outside', createdByUserId: 'old-owner', provider: 'TWILIO' },
-    { MessageSid: 'stop', From: '+16145550123', Body: 'STOP' }), null);
+
 });
 
 test('scheduled product discovery selects active Echo and skips retained outside organizations', async () => {
@@ -65,60 +61,6 @@ test('forecast workflow selects entitled Echo and rejects stale outside selectio
   });
   const result = await worker.productionForecastWorkflow();
   assert.equal(result.completed, 1); assert.equal(result.failed, 0); assert.deepEqual(calls, [ECHO]);
-});
-
-test('mailbox retention deletes only Echo expiry and retains outside connections and activities', async () => {
-  const writes: string[] = [];
-  const rows = [{ id: 'echo-mail', organizationId: ECHO, retentionDays: 90 }, { id: 'outside-mail', organizationId: 'outside', retentionDays: 1 }];
-  const db = {
-    mailboxConnection: {
-      findMany: async ({ where }: any) => { assert.equal(where.organizationId, ECHO); return rows; },
-      updateMany: async ({ where }: any) => { writes.push(`checkpoint:${where.organizationId}`); return { count: 1 }; },
-    },
-    accountActivity: { deleteMany: async ({ where }: any) => { writes.push(`delete:${where.organizationId}:${where.connectionId}`); return { count: 2 }; } },
-    $transaction: async (work: (tx: unknown) => unknown) => work(db),
-  };
-  const worker = load('lib/crm/mail/sync.ts', { '../../prisma': { prisma: db } });
-  assert.equal(await worker.sweepMailboxRetention(), 2);
-  assert.deepEqual(writes, [`delete:${ECHO}:echo-mail`, `checkpoint:${ECHO}`]);
-  assert.equal(rows[1].organizationId, 'outside');
-});
-
-test('communications cron keeps secret and environment gates and dispatches only Echo mailboxes', async () => {
-  const before = process.env.CRON_SECRET, mailBefore = process.env.CRM_MAIL_ENABLED;
-  process.env.CRON_SECRET = 'fixture-secret'; process.env.CRM_MAIL_ENABLED = 'true';
-  let enabled = false, reads = 0, retention = 0;
-  const calls: string[] = [];
-  try {
-    const worker = load('app/api/cron/communications/route.ts', {
-      '../../../../lib/prisma': { prisma: { mailboxConnection: { findMany: async ({ where }: any) => {
-        reads++; assert.equal(where.organizationId, ECHO); assert.equal(where.user.organizationId, ECHO);
-        assert.equal(where.organization.active, true);
-        return [{ id: 'echo', userId: 'owner', organizationId: ECHO }, { id: 'outside', userId: 'other', organizationId: 'outside' }];
-      } } }, runWithOrganizationStateAccess: async (id: string, work: () => unknown) => { assert.equal(id, ECHO); return work(); } },
-      '../../../../lib/appEnvironment': { isSideEffectEnabled: () => enabled },
-      '../../../../lib/crm/mail/sync': { sweepMailboxRetention: async () => { retention++; return 0; }, syncMailbox: async (actor: any, id: string) => { assert.equal(actor.organizationId, ECHO); calls.push(id); } },
-    });
-    const request = (auth?: string) => new Request('https://fixture.invalid/api/cron/communications', { headers: auth ? { authorization: auth } : {} });
-    assert.equal((await worker.GET(request())).status, 401);
-    assert.equal((await (await worker.GET(request('Bearer fixture-secret'))).json()).status, 'disabled');
-    assert.equal(reads, 0); assert.equal(retention, 0);
-    enabled = true;
-    const result = await (await worker.GET(request('Bearer fixture-secret'))).json();
-    assert.equal(result.processed, 1); assert.equal(result.failed, 0); assert.deepEqual(calls, ['echo']);
-  } finally {
-    if (before === undefined) delete process.env.CRON_SECRET; else process.env.CRON_SECRET = before;
-    if (mailBefore === undefined) delete process.env.CRM_MAIL_ENABLED; else process.env.CRM_MAIL_ENABLED = mailBefore;
-  }
-});
-
-test('outside SMS callbacks stop before credential decryption, signature checks or delivery/consent writes', async () => {
-  const worker = load('app/api/crm/sms/[id]/route.ts', {
-    '../../../../../lib/prisma': { prisma: { smsConnection: { findUnique: async () => ({ id: 'old', organizationId: 'outside', provider: 'TWILIO', credentialsEncrypted: 'fixture' }) } } },
-    '../../../../../lib/calendar/crypto': { decryptCalendarToken: () => assert.fail('must not decrypt outside credential') },
-  });
-  const result = await worker.POST(new Request('https://fixture.invalid/api/crm/sms/old', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'Body=STOP' }), { params: Promise.resolve({ id: 'old' }) });
-  assert.equal(result.status, 401); assert.equal(result.headers.get('set-cookie'), null);
 });
 
 test('automatic research resumes only Echo runs and creates no fallback ownership in another company', async () => {

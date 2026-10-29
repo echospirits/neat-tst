@@ -1,4 +1,3 @@
-import { AccountAssistant } from "../account-memory/AccountAssistant";
 import { prisma } from "../../lib/prisma";
 import { getAccountBriefing } from "../../lib/crm/briefing";
 import type { CrmAccount, CrmActor } from "../../lib/crm/activity";
@@ -19,15 +18,6 @@ export async function AccountBriefing({
     new Date(),
     lastPurchaseAt ?? null,
   );
-  const org = await prisma.organization.findUniqueOrThrow({
-    where: { id: actor.organizationId },
-    select: { crmPreferences: true },
-  });
-  const live =
-    (org.crmPreferences as { aiEnabled?: boolean })?.aiEnabled === true &&
-    process.env.CRM_AI_ENABLED === "true" &&
-    Boolean(process.env.OPENAI_API_KEY) &&
-    Boolean(process.env.CRM_AI_MODEL);
   return (
     <details className="compact-details">
       <summary>Before your next conversation · Account briefing</summary>
@@ -84,7 +74,6 @@ export async function AccountBriefing({
         Based on records you can see. Purchase evidence may reflect a reporting
         date. Invitations alone do not establish that a meeting happened.
       </p>
-      <AccountAssistant account={account} live={live} />
     </details>
   );
 }

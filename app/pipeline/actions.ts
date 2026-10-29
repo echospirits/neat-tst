@@ -6,7 +6,7 @@ import { requireCrmActor } from "../../lib/crm/auth";
 import { requireFeatureForUser } from "../../lib/organizations";
 import { CrmError } from "../../lib/crm/activity";
 import { saveSalesPlan } from "../../lib/crm/pipeline";
-import type { CrmActionResult } from "../crm/actions";
+import type { CrmActionResult } from "../../lib/crm/actionResult";
 export async function saveSalesPlanAction(
   form: FormData,
 ): Promise<CrmActionResult> {

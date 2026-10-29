@@ -11,11 +11,11 @@ import {
   EventbriteProvider,
   MockEventProvider,
 } from "../../../lib/crm/eventbrite";
-import type { CrmActionResult } from "../../crm/actions";
+import type { CrmActionResult } from "../../../lib/crm/actionResult";
 export async function configureEventbrite(
   form: FormData,
 ): Promise<CrmActionResult> {
-  const { actor, user } = await requireCrmActor(true);
+  const { actor, user } = await requireCrmActor();
   if (user.role !== "ADMIN")
     return {
       error: "An organization administrator must configure Eventbrite.",
@@ -81,7 +81,7 @@ export async function configureEventbrite(
   };
 }
 export async function disconnectEventbrite(): Promise<CrmActionResult> {
-  const { actor, user } = await requireCrmActor(true);
+  const { actor, user } = await requireCrmActor();
   if (user.role !== "ADMIN")
     return {
       error: "An organization administrator must disconnect Eventbrite.",
@@ -94,7 +94,7 @@ export async function disconnectEventbrite(): Promise<CrmActionResult> {
   return { success: "Eventbrite disconnected. Imported records are retained." };
 }
 export async function syncEventbrite(): Promise<CrmActionResult> {
-  const { actor, user } = await requireCrmActor(true);
+  const { actor, user } = await requireCrmActor();
   if (user.role !== "ADMIN")
     return { error: "An organization administrator must import events." };
   const connection = await prisma.eventbriteConnection.findUnique({

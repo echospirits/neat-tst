@@ -36,7 +36,6 @@ export const navigationItems: NavigationItem[] = [
   { key: 'wholesale', href: '/wholesale', label: 'Restaurants', section: 'accounts', moreOrder: 3 },
   { key: 'wholesale-orders', href: '/wholesale-orders', label: 'Wholesale Orders', section: 'accounts', moreOrder: 4, featureKey: 'OHIO_DIRECT_WHOLESALE_ORDERS' },
   { key: 'pipeline', href: '/pipeline', label: 'Pipeline', section: 'accounts', moreOrder: 5, featureKey: 'ACCOUNT_SALES_STATUS' },
-  { key: 'communications', href: '/settings/communications', label: 'Communications', section: 'work', moreOrder: 6.1, featureKey: 'COMMUNICATIONS' },
   { key: 'tags', href: '/tags', label: 'Tags', section: 'utility', moreOrder: 5 },
   { key: 'profile', href: '/profile', label: 'Profile', section: 'utility', moreOrder: 6 },
   { key: 'users', href: '/users', label: 'Users', section: 'admin', adminGroup: 'Echo', adminOnly: true, moreOrder: 7 },

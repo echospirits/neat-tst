@@ -16,7 +16,6 @@ export const FEATURE_KEYS = [
   'TASTING_WORKFLOWS',
   'ANALYTICS',
   'ACCOUNT_SALES_STATUS',
-  'COMMUNICATIONS',
   'PRODUCTION_FORECASTING',
 ] as const;
 
@@ -34,7 +33,6 @@ export type FeatureDefinition = {
 
 export const FEATURE_REGISTRY: Record<FeatureKey, FeatureDefinition> = {
   PRODUCTION_FORECASTING: { key: 'PRODUCTION_FORECASTING', label: 'Production Forecasting', description: 'Pilot: 30-day outbound case demand with backtested models and production planning targets.', category: 'Pilot', defaultEnabled: false, dependencies: ['CORE_CRM', 'ANALYTICS'], beta: true },
-  COMMUNICATIONS: { key: 'COMMUNICATIONS', label: 'Communications', description: 'Pilot: connected email, imported appointments, business SMS and reviewed contact suggestions. Provider setup required.', category: 'Pilot', defaultEnabled: false, dependencies: ['CORE_CRM'], beta: true },
   ACCOUNT_SALES_STATUS: { key: 'ACCOUNT_SALES_STATUS', label: 'Account Sales Status / Pipeline', description: 'Tenant-owned relationship stages, buying state, and lightweight pipeline visibility.', category: 'Core', defaultEnabled: true, dependencies: ['CORE_CRM'] },
   ANALYTICS: { key: 'ANALYTICS', label: 'Analytics', description: 'Tenant sales, account performance, and activity reporting with CSV exports.', category: 'Core', defaultEnabled: true, dependencies: ['CORE_CRM'] },
   CORE_CRM: { key: 'CORE_CRM', label: 'Core CRM', description: 'Users, shared accounts, private overlays, and core relationship workflows.', category: 'Core', defaultEnabled: true, dependencies: [] },
@@ -55,7 +53,7 @@ export const FEATURE_REGISTRY: Record<FeatureKey, FeatureDefinition> = {
 };
 
 export const INTELLIGENCE_PACKAGE_FEATURE_KEYS = ['AGENCY_INTELLIGENCE', 'WHOLESALE_OPPORTUNITIES', 'ADVANCED_INTELLIGENCE'] as const satisfies readonly FeatureKey[];
-export const PILOT_FEATURE_KEYS = ['COMMUNICATIONS', 'PRODUCTION_FORECASTING'] as const satisfies readonly FeatureKey[];
+export const PILOT_FEATURE_KEYS = ['PRODUCTION_FORECASTING'] as const satisfies readonly FeatureKey[];
 export const CORE_PACKAGE_FEATURE_KEYS = FEATURE_KEYS.filter((key) =>
   !INTELLIGENCE_PACKAGE_FEATURE_KEYS.includes(key as (typeof INTELLIGENCE_PACKAGE_FEATURE_KEYS)[number]) && !PILOT_FEATURE_KEYS.includes(key as (typeof PILOT_FEATURE_KEYS)[number]));
 export const DEFAULT_FEATURE_KEYS = [...CORE_PACKAGE_FEATURE_KEYS];

@@ -26,6 +26,7 @@ export async function getOrganizationFeatures(organizationId: string) {
 }
 
 export async function hasFeature(organizationId: string, featureKey: FeatureKey) {
+  if (!FEATURE_KEYS.includes(featureKey)) return false;
   if (getEnvironmentFeatureKeys([], process.env).includes(featureKey)) return true;
   return Boolean(await prisma.organizationFeature.findFirst({ where: { organizationId, featureKey, enabled: true }, select: { id: true } }));
 }

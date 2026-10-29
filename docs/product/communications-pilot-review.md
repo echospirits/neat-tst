@@ -1,5 +1,7 @@
 # Communications pilot — Echo Spirits review for v0.2
 
+> Historical design/review record. This feature is retired in 0.4.0; the walkthrough below no longer applies to the current application. See [retirement validation](../releases/communications-retirement-validation.md).
+
 Communications ships with v0.2 as an opt-in **Pilot**, initially enabled only for Echo Spirits. It is separate from Core CRM and Intelligence. Platform Administration → Organizations → Echo Spirits → Plan → Pilot shows the enrollment. Other existing and new organizations do not receive it automatically, including in TST. Wider enrollment requires a separate review decision and explicit Platform Admin change.
 
 ## Start with a demo in TST

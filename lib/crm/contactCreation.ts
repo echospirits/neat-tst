@@ -3,7 +3,7 @@ import type { CrmActor, CrmDb } from "./activity";
 export async function lockAccountContacts(db: CrmDb, organizationId: string) {
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`contact-relationships:${organizationId}`}, 0))`;
 }
-// Shared persistence for manual/imported contacts and reviewed communication suggestions.
+// Shared persistence for manually created and imported account contacts.
 export async function createAccountContactRecord(
   db: CrmDb,
   actor: CrmActor,
