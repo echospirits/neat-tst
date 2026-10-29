@@ -7,6 +7,12 @@ Opened October 28, 2026 for the owner-approved interface mockups, desktop naviga
 
 ## Changes
 
+### Production source download investigation
+
+- Add safe report-control and export-stage diagnostics plus a TST-only live download acceptance check using existing scoped credentials. It validates complete native reports without importing facts or refreshing forecasts; raw reports and screenshots remain private runner-temporary files.
+- This is the first diagnostic checkpoint for the owner-requested automated Bailment/Partner DC repair. Actual live failures and the final correction will be recorded in the download validation record. No successful automation claim is made from fixture tests.
+- No migrations, credential/configuration changes, production promotion or additional schedule. Existing OHLQ concurrency is preserved.
+
 ### Navigation and account performance
 
 - Account pages start independent reads concurrently and show loading indicators for secondary panels. Identity-only reads no longer load the account directory solely to authenticate or read scalar organization settings. Nested account selections and writes retain state enforcement.

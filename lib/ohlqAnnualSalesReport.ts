@@ -147,6 +147,7 @@ export type OhlqAnnualSalesDownloadResult = {
 };
 
 export type OhlqAnnualSalesDownloadOptions = {
+  onDiagnostic?: (diagnostic: Record<string, string | number | boolean | null>) => void;
   browserChannel?: string;
   debugDir?: string;
   downloadDir?: string;
@@ -767,6 +768,7 @@ async function waitForPowerBiReportFrame(
   report: OhlqPowerBiReportConfig,
   debugDir: string,
   restartUrl: string,
+  onDiagnostic?: OhlqAnnualSalesDownloadOptions['onDiagnostic'],
 ) {
   const startedAt = Date.now();
   let didReload = false;
@@ -803,6 +805,11 @@ async function waitForPowerBiReportFrame(
     await page.waitForTimeout(1_000);
   }
 
+  // Safe control metadata only: never report input values, account text or rows.
+  for (const [index, frame] of page.frames().entries()) {
+    const controls = await frame.locator('input[aria-label]').evaluateAll(inputs => inputs.map(input => input.getAttribute('aria-label') ?? '').filter(label => /date/i.test(label) && /^[a-z ():/-]{1,64}$/i.test(label)).slice(0, 10)).catch(() => [] as string[]);
+    onDiagnostic?.({ stage: 'parameters', frame: index, dateLabels: JSON.stringify([...new Set(controls)]), fromDateControls: await reportDateInput(frame, 'From date').count(), vendorControls: await frame.locator('span[aria-label="Open Vendor"]').count(), brandControls: await frame.locator('span[aria-label="Open Brand"]').count(), renderError: await frame.getByText(/Unable to render paginated report/i).count() > 0 });
+  }
   const screenshotPath = await saveDebugScreenshot(page, `power-bi-${report.fileSlug}-parameters-timeout`, debugDir);
   const pageSummary = await getMicrosoftPageSummary(page);
   const frameSummary = await getFrameDebugSummary(page);
@@ -906,6 +913,7 @@ async function getLaunchOptions(options: OhlqAnnualSalesDownloadOptions): Promis
 }
 
 type OhlqDownloadRuntime = {
+  onDiagnostic?: OhlqAnnualSalesDownloadOptions['onDiagnostic'];
   debugDir: string;
   downloadDir: string;
   logger: Logger;
@@ -924,6 +932,7 @@ function createDownloadRuntime(options: OhlqAnnualSalesDownloadOptions): OhlqDow
   fs.mkdirSync(downloadDir, { recursive: true });
 
   return {
+    onDiagnostic: options.onDiagnostic,
     debugDir,
     downloadDir,
     logger,
@@ -1126,9 +1135,16 @@ async function downloadOhlqPowerBiReportFromPage(
 
   logger.log(`Using report date ${reportDate.display} (${reportDate.iso}).`);
 
+  if (report.fileSlug === 'bailment-po-invoice') {
+    const reportIds = await page.locator('a[href]').evaluateAll(links => links.filter(link => /bailment.*invoice/i.test(link.textContent ?? '')).flatMap(link => {
+      try { const match = /rdlreports\/([a-f0-9-]{36})/i.exec(decodeURIComponent(link.getAttribute('href') ?? '')); return match ? [match[1]] : []; } catch { return []; }
+    }));
+    runtime.onDiagnostic?.({ stage: 'report-link', configuredReport: report.reportId, linkedReports: JSON.stringify([...new Set(reportIds)]) });
+  }
+
   await openOhlqPowerBiReportWithSessionRetry(page, report, runtime, ohlqReportRedirectUrl, runtime.partnerCredentials);
 
-  const frame = await waitForPowerBiReportFrame(page, report, debugDir, ohlqReportRedirectUrl);
+  const frame = await waitForPowerBiReportFrame(page, report, debugDir, ohlqReportRedirectUrl, runtime.onDiagnostic);
   if (report.dateRange) {
     await setDate(frame, 'From date', runtime.fromDate);
     await setDate(frame, 'To date', reportDate);
@@ -1334,28 +1350,41 @@ export function validateOhlqPartnerDcExport(csv: string, tableSummary: string) {
 export async function downloadOhlqPartnerDc(options: OhlqAnnualSalesDownloadOptions = {}) {
   const runtime = createDownloadRuntime(options);
   const { browser, context, page } = await openBrowserPage(options);
+  let stage = 'login';
   try {
     await signInToOhlqPartner(page, options.partnerCredentials);
+    stage = 'navigation';
     await gotoWithRetry(page, 'https://ops.ohlq.com/partner/DC', { waitUntil: 'domcontentloaded', timeout: 60000 });
     if (isOhlqOpsLoginUrl(page.url())) throw new Error('Partner DC session returned to login.');
     const wrapper = page.locator('#tblPartnerDC_wrapper');
+    stage = 'table';
     await wrapper.waitFor({ state: 'visible', timeout: 60000 });
     // A new isolated browser has no saved search. Clear a visible search field
     // defensively so a partial table can never become complete guidance.
     const search = wrapper.locator('input[type="search"]');
+    runtime.onDiagnostic?.({ stage, wrappers: await wrapper.count(), searchControls: await search.count(), csvButtons: await wrapper.getByRole('button', { name: /CSV/i }).count() });
+    stage = 'clear-search';
     if (await search.isVisible()) await search.fill('');
     const tableSummary = await wrapper.innerText();
+    const count = /Showing [\d,]+ to [\d,]+ of ([\d,]+) entries/i.exec(tableSummary);
+    runtime.onDiagnostic?.({ stage: 'table-count', total: count ? Number(count[1].replaceAll(',', '')) : null, filtered: /filtered from/i.test(tableSummary) });
+    stage = 'export';
     const downloadPromise = page.waitForEvent('download', { timeout: 120000 });
     await wrapper.getByRole('button', { name: /CSV/i }).click();
     const download = await downloadPromise;
+    stage = 'save';
     const filename = `ohlq-partner-dc-${runtime.runDateIso}.csv`, outputPath = path.join(runtime.downloadDir, filename);
     await saveDownloadWithTimeout(download, outputPath, 'Partner DC');
     const sizeBytes = fs.statSync(outputPath).size;
     if (!sizeBytes) throw new Error('Partner DC export is empty.');
     const buffer = fs.readFileSync(outputPath);
+    stage = 'complete-export';
+    const parsed = Papa.parse(buffer.toString('utf8'), { header: true, skipEmptyLines: 'greedy' });
+    runtime.onDiagnostic?.({ stage, exportedRows: parsed.data.length, parseErrorCodes: JSON.stringify([...new Set(parsed.errors.map((error: { code: string }) => error.code))]) });
     validateOhlqPartnerDcExport(buffer.toString('utf8'), tableSummary);
     return { csvBuffer: runtime.returnBuffer ? buffer : undefined, filename, outputPath, reportDate: runtime.runDateIso, runDate: runtime.runDateIso, sizeBytes } satisfies OhlqAnnualSalesDownloadResult;
   } catch (error) {
+    runtime.onDiagnostic?.({ stage, failed: true, strictLocator: error instanceof Error && /strict mode violation/i.test(error.message), timedOut: error instanceof Error && /timeout/i.test(error.message) });
     await saveDebugScreenshot(page, 'ohlq-partner-dc-error', runtime.debugDir);
     throw error;
   } finally { await closeBrowserPage(context, browser); }
