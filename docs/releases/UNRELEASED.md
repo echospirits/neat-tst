@@ -7,10 +7,11 @@ Opened October 28, 2026 for the owner-approved interface mockups, desktop naviga
 
 ## Changes
 
-### Production source download investigation
+### Production source download repair
 
+- Match Bailment's actual `From`/`To` date labels, retaining the existing date labels for other reports; verify the requested dates remain selected. Wait for Partner DC's positive unfiltered table count and displayed rows before capturing export completeness, so its initial zero-row loading shell cannot reject a valid full CSV.
 - Add safe report-control and export-stage diagnostics plus a TST-only live download acceptance check using existing scoped credentials. It validates complete native reports without importing facts or refreshing forecasts; raw reports and screenshots remain private runner-temporary files.
-- This is the first diagnostic checkpoint for the owner-requested automated Bailment/Partner DC repair. Actual live failures and the final correction will be recorded in the download validation record. No successful automation claim is made from fixture tests.
+- Validation and limits: [source download validation](production-source-download-validation.md). Actual hosted downloads, rather than fixture success alone, are required before claiming recovery.
 - No migrations, credential/configuration changes, production promotion or additional schedule. Existing OHLQ concurrency is preserved.
 
 ### Navigation and account performance

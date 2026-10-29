@@ -4,6 +4,7 @@ import path from 'path';
 import Papa from 'papaparse';
 import { EASTERN_TIME_ZONE, getZonedDateTimeParts } from './dateTime';
 import { getOhlqReportStorageDirectories } from './ohlqReportStorage';
+import { waitForPartnerDcTable } from './ohlqPartnerDcReady';
 import {
   chromium as playwrightChromium,
   type Browser,
@@ -77,6 +78,7 @@ const MICROSOFT_FORWARD_ACTION_SELECTORS = [
 
 type OhlqPowerBiReportConfig = {
   dateRange: boolean;
+  dateLabels?: { from: string; to: string };
   fileSlug: string;
   parameter: {
     name: 'Brand' | 'Vendor';
@@ -109,6 +111,7 @@ export const OHLQ_ANNUAL_SALES_BY_WHOLESALE_REPORT = {
 export const OHLQ_AGENCY_INVENTORY_REPORT_ID = '5079ab3f-ff48-4f50-a1b4-3264862af239';
 export const OHLQ_BAILMENT_INVOICE_REPORT = {
   dateRange: true,
+  dateLabels: { from: 'From', to: 'To' },
   fileSlug: 'bailment-po-invoice',
   parameter: { name: 'Vendor', values: 'all' },
   parameterFallback: 'Brand',
@@ -759,8 +762,8 @@ async function handleMicrosoftSignIn(page: Page, debugDir: string, restartUrl?: 
   }
 }
 
-function reportDateInput(frame: Frame, label: 'From date' | 'To date') {
-  return frame.locator(`input[aria-label="${label}" i]`).first();
+export function reportDateInput(frame: Frame, label: string) {
+  return frame.getByLabel(new RegExp(`^${escapeRegExp(label)}$`, 'i')).first();
 }
 
 async function waitForPowerBiReportFrame(
@@ -784,7 +787,7 @@ async function waitForPowerBiReportFrame(
 
     for (const frame of page.frames()) {
       const parameterControl = report.dateRange
-        ? reportDateInput(frame, 'From date')
+        ? reportDateInput(frame, report.dateLabels?.from ?? 'From date')
         : frame.locator(`span[aria-label="Open ${report.parameter.name}"]`).first();
       if (await parameterControl.isVisible({ timeout: 750 }).catch(() => false)) {
         return frame;
@@ -826,14 +829,19 @@ async function waitForPowerBiReportFrame(
   );
 }
 
-async function setDate(frame: Frame, label: 'From date' | 'To date', reportDate: ReportDate) {
+async function setDate(frame: Frame, label: string, reportDate: ReportDate) {
   const input = reportDateInput(frame, label);
   await input.waitFor({ state: 'visible', timeout: 30_000 });
   await input.click();
   await input.fill(reportDate.display).catch(() => undefined);
   await input.press('Tab').catch(() => undefined);
 
-  if ((await input.inputValue().catch(() => '')) === reportDate.display) return;
+  const selectedDateMatches = async () => {
+    const value = (await input.inputValue().catch(() => '')).trim();
+    if (!value) return false;
+    try { return parseReportDate(value).iso === reportDate.iso; } catch { return false; }
+  };
+  if (await selectedDateMatches()) return;
 
   await frame.locator(`input[aria-label="${label}" i] + span[role="button"]`).click();
   await frame
@@ -842,6 +850,7 @@ async function setDate(frame: Frame, label: 'From date' | 'To date', reportDate:
     })
     .click();
   await input.waitFor({ state: 'visible', timeout: 30_000 });
+  if (!await selectedDateMatches()) throw new Error('The report date control did not retain the requested date.');
 }
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -1145,17 +1154,21 @@ async function downloadOhlqPowerBiReportFromPage(
   await openOhlqPowerBiReportWithSessionRetry(page, report, runtime, ohlqReportRedirectUrl, runtime.partnerCredentials);
 
   const frame = await waitForPowerBiReportFrame(page, report, debugDir, ohlqReportRedirectUrl, runtime.onDiagnostic);
+  runtime.onDiagnostic?.({ stage: 'parameters-ready' });
   if (report.dateRange) {
-    await setDate(frame, 'From date', runtime.fromDate);
-    await setDate(frame, 'To date', reportDate);
+    await setDate(frame, report.dateLabels?.from ?? 'From date', runtime.fromDate);
+    await setDate(frame, report.dateLabels?.to ?? 'To date', reportDate);
+    runtime.onDiagnostic?.({ stage: 'date-range-set', from: runtime.fromDate.iso, to: reportDate.iso });
   }
 
   const primary = frame.locator(`span[aria-label="Open ${report.parameter.name}"]`);
   const parameter = report.parameterFallback && !await primary.isVisible() ? { ...report.parameter, name: report.parameterFallback } : report.parameter;
   await selectReportParameter(frame, parameter);
+  runtime.onDiagnostic?.({ stage: 'parameters-selected', parameter: parameter.name, allValues: parameter.values === 'all' });
 
   await viewReportIfReady(frame);
   const exportMenu = await waitForReportExport(frame, report);
+  runtime.onDiagnostic?.({ stage: 'export-ready' });
   await frame
     .getByText(`From: ${reportDate.display.replace(/^0/, '').replace('/0', '/')}`)
     .waitFor({
@@ -1365,7 +1378,7 @@ export async function downloadOhlqPartnerDc(options: OhlqAnnualSalesDownloadOpti
     runtime.onDiagnostic?.({ stage, wrappers: await wrapper.count(), searchControls: await search.count(), csvButtons: await wrapper.getByRole('button', { name: /CSV/i }).count() });
     stage = 'clear-search';
     if (await search.isVisible()) await search.fill('');
-    const tableSummary = await wrapper.innerText();
+    const tableSummary = await waitForPartnerDcTable(page);
     const count = /Showing [\d,]+ to [\d,]+ of ([\d,]+) entries/i.exec(tableSummary);
     runtime.onDiagnostic?.({ stage: 'table-count', total: count ? Number(count[1].replaceAll(',', '')) : null, filtered: /filtered from/i.test(tableSummary) });
     stage = 'export';

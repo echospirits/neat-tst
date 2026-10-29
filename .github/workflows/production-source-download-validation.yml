@@ -5,6 +5,8 @@ on:
     branches: [tst]
     paths:
       - lib/ohlqAnnualSalesReport.ts
+      - lib/ohlqPartnerDcReady.ts
+      - tests/ohlqPartnerDcReady.test.ts
       - lib/productionForecasting/ohio.ts
       - lib/productionForecasting/import.ts
       - scripts/verify-production-source-downloads.ts
@@ -71,6 +73,10 @@ jobs:
 
       - name: Validate both source downloads
         run: npx tsx scripts/verify-production-source-downloads.ts --environment test
+
+      - name: Verify report-control regressions
+        if: ${{ !cancelled() }}
+        run: npx tsx --test --import ./tests/setup.ts tests/ohlqPartnerDcReady.test.ts
 
       # CSVs and screenshots are confined to private RUNNER_TEMP storage,
       # discarded by the script, and never uploaded as workflow artifacts.
