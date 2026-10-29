@@ -16,6 +16,7 @@ import { splitReactivationPurchasedAgainDetail } from '../../lib/ohlqWholesaleRe
 import { prisma } from '../../lib/prisma';
 import { getOrganizationFeatures, requireOrganizationContext } from '../../lib/organizations';
 import { getAgenciesForVisitPicker, getWholesaleAccountsForVisitPicker } from '../../lib/visitPickerOptions';
+import { getWorklistSearchAlternatives } from '../../lib/worklistSearch';
 import {
   getWorklistCategoryForLocationSelection,
   getWorklistLocationFallbackLabel,
@@ -208,12 +209,7 @@ export default async function Alerts({
   }
 
   if (q) {
-    where.OR = [
-      { title: { contains: q, mode: 'insensitive' } },
-      { detail: { contains: q, mode: 'insensitive' } },
-      { assignedTo: { contains: q, mode: 'insensitive' } },
-      { createdBy: { contains: q, mode: 'insensitive' } },
-    ];
+    where.OR = await getWorklistSearchAlternatives(q, organizationId);
   }
 
   const [items, agencyOptions, wholesaleOptions, contacts, users, tags] = await Promise.all([
