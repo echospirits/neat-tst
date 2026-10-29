@@ -4,7 +4,7 @@ Start with [implementation progress](engineering/implementation-progress.md) and
 
 ## Current release
 
-**0.3.0 is frozen for release preparation; production remains 0.2.3.** Echo-only access and Production Forecasting are packaged together. See the [plan](releases/0.3.0-plan.md), [checklist](releases/0.3.0-checklist.md), [validation](releases/0.3.0-validation.md) and [migration runbook](releases/0.3.0-migrations.md). [Previous production release](releases/0.2.3.md). Development remains locked until owner instruction.
+**0.3.0 is released to production; development remains frozen.** Echo-only access and Production Forecasting are packaged together. See the [plan](releases/0.3.0-plan.md), [checklist](releases/0.3.0-checklist.md), [validation](releases/0.3.0-validation.md) and [migration runbook](releases/0.3.0-migrations.md). [Release notes](releases/0.3.0.md) | [Previous production release](releases/0.2.3.md). Development remains locked until owner instruction.
 
 ## architecture
 
