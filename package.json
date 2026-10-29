@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "test": "tsx --test --import ./tests/setup.ts tests/**/*.test.ts",
+    "test:focus": "tsx scripts/test-focus.ts",
     "typecheck": "tsc --noEmit",
     "release:check": "tsx scripts/release-check.ts",
     "start": "next start",

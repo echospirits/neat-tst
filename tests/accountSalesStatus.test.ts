@@ -14,23 +14,11 @@ import {
   setAccountSalesStatus,
   transitionEligibleSalesStatusPurchases,
 } from '../lib/accountSalesStatus';
-import { CORE_PACKAGE_FEATURE_KEYS, ECHO_FEATURE_KEYS, FEATURE_REGISTRY, getPackageFeatureKeys } from '../lib/featureRegistry';
-import { getNavigationItems } from '../app/components/navigationConfig';
 
 test('sales status definitions are centralized, stable, and user friendly', () => {
   assert.deepEqual(SALES_STATUS_OPTIONS.map((option) => option.value), Object.values(AccountSalesStatus));
   assert.equal(SALES_STATUS_LABELS.WAITING_ON_ORDER, 'Waiting on Order');
   assert.equal(BUYING_STATE_LABELS.NEVER_PURCHASED, 'Never purchased');
-});
-
-test('sales status is included in Core and independent of Intelligence', () => {
-  assert.equal(FEATURE_REGISTRY.ACCOUNT_SALES_STATUS.defaultEnabled, true);
-  assert.equal(CORE_PACKAGE_FEATURE_KEYS.includes('ACCOUNT_SALES_STATUS'), true);
-  assert.equal(getPackageFeatureKeys(false).includes('ACCOUNT_SALES_STATUS'), true);
-  assert.equal(getPackageFeatureKeys(false).includes('WHOLESALE_OPPORTUNITIES'), false);
-  assert.equal(ECHO_FEATURE_KEYS.includes('ACCOUNT_SALES_STATUS'), true);
-  assert.equal(getNavigationItems('accounts', []).some((item) => item.href === '/pipeline'), false);
-  assert.equal(getNavigationItems('accounts', ['ACCOUNT_SALES_STATUS']).some((item) => item.href === '/pipeline'), true);
 });
 
 test('tenant-scoped Agency and Wholesale updates preserve history and no-op updates are idempotent', async () => {

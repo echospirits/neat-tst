@@ -9,7 +9,7 @@ import { classificationForItem, normalizeNativeOhio, type OhioItemContext } from
 import { summaryFor } from '../lib/productionForecasting/service';
 import { ForecastTable } from '../app/analytics/production/ForecastTable';
 import { ForecastDetail } from '../app/analytics/production/ForecastDetail';
-import { FEATURE_REGISTRY, getEnvironmentFeatureKeys, getPackageFeatureKeys } from '../lib/featureRegistry';
+import { DEFAULT_FEATURE_KEYS, FEATURE_REGISTRY, getEnvironmentFeatureKeys } from '../lib/featureRegistry';
 
 const product: ForecastProduct = { id: 'product-a', market: 'OH', code: '2847B', name: 'Rum' };
 const asOf = '2026-10-26';
@@ -149,7 +149,7 @@ test('native DC mapping separates both warehouse guidance observations and prese
 });
 test('pilot is off by default and TST broad overrides cannot enroll other tenants', () => {
   assert.equal(FEATURE_REGISTRY.PRODUCTION_FORECASTING.defaultEnabled, false);
-  assert.equal(getPackageFeatureKeys(true).includes('PRODUCTION_FORECASTING'), false);
+  assert.equal(DEFAULT_FEATURE_KEYS.includes('PRODUCTION_FORECASTING'), false);
   assert.equal(getEnvironmentFeatureKeys([], { APP_ENV: 'test' }).includes('PRODUCTION_FORECASTING'), false);
   assert.equal(getEnvironmentFeatureKeys(['PRODUCTION_FORECASTING'], { APP_ENV: 'test' }).includes('PRODUCTION_FORECASTING'), true);
 });

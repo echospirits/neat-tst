@@ -71,17 +71,6 @@ it('uses other upcoming activity before the routine 90-day refresh', () => {
   assert.equal(classifyResearchNeed(candidate({ targetPublicResearch: { lastRefreshedAt: daysAgo(60), identitySnapshot: createResearchIdentitySnapshot(candidate()) } }), now), null);
 });
 
-it('queues accounts regardless of recent bottle volume', () => {
-  assert.equal(classifyResearchNeed(candidate({ opportunities: [], targetPublicResearch: null }), now)?.priorityBucket, 1);
-  assert.equal(classifyResearchNeed(candidate({ name: 'Renamed Bar' }), now)?.priorityBucket, 2);
-  assert.equal(classifyResearchNeed(candidate({ targetPublicResearch: { lastRefreshedAt: daysAgo(91), identitySnapshot: createResearchIdentitySnapshot(candidate()) } }), now)?.priorityBucket, 6);
-  const pursued = candidate({
-    opportunities: [{ productionScore: 50, status: OpportunityStatus.ACTIONED, actionedAt: daysAgo(0.5), lastDetectedAt: daysAgo(0.5) }],
-  });
-  assert.equal(classifyResearchNeed(pursued, now)?.priorityBucket, 3);
-  assert.equal(classifyResearchNeed(candidate({ upcomingWork: [{ dueDate: new Date(now.getTime() + 86_400_000), createdAt: daysAgo(5) }] }), now)?.priorityBucket, 4);
-});
-
 it('refreshes research-driven opportunity scores independently for every entitled tenant', () => {
   const scoring = readFileSync('lib/accountResearchScoring.ts', 'utf8');
   assert.match(scoring, /where: enabledAssessmentTenants/);

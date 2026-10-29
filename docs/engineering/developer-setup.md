@@ -4,6 +4,8 @@ Audit baseline: TST `5faee9df930bd76b5e56b669f58a57210527f7d5`, inspected 2026-1
 
 Use a clean worktree, npm ci, prisma generate, npm run typecheck, npm test and npm run build. Copy only environment variable names from .env.example and supply local secrets privately. Use APP_ENV=development and disable side effects by default. Never copy a production database URL into a test fixture.
 
+After setup, use `npm run test:focus -- tests/<name>.test.ts` for the editing loop. Follow the [testing strategy](testing-strategy.md) for one complete delivery check; do not repeat all setup/release checks after every small edit.
+
 ## Implementation references
 
 - `package.json`

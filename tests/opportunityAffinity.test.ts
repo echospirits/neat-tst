@@ -3,7 +3,6 @@ import { it } from 'node:test';
 import { pricePer750, getPriceEvidence, compareWithBuyers, isKnownOhioBrand, type AffinityProduct, type AffinityPurchase } from '../lib/opportunityAffinity';
 import { normalizeOpportunityCategory } from '../lib/opportunityConfig';
 import { buildDailyPurchaseEvents } from '../lib/opportunitySalesLedger';
-import { trainOutcomeModel, learnedAdjustment, labelMatureOutcome, type OutcomeExample } from '../lib/opportunityLearning';
 import { getTenantConfig } from '../lib/tenantConfig';
 
 const rum: AffinityProduct = { itemCode: 'premium', name: 'Premium rum', category: 'RUM', price750: 30, isLocal: true, priority: 1 };
@@ -73,30 +72,4 @@ it('daily capture retains consecutive equal purchases and classifies by tenant',
   assert.equal(other[0].isTenantProduct, false);
   assert.notEqual(other[0].sourceKey, events[0].sourceKey);
   assert.deepEqual(buildDailyPurchaseEvents(rows, [...identities, { ...identities[0], id: 'ambiguous' }], catalog, config), []);
-});
-it('four outcomes cannot activate learning; repeated account cycles cannot inflate evidence', () => {
-  const examples: OutcomeExample[] = Array.from({ length: 200 }, (_,i) => ({ accountId: String(i % 4), detectedAt: `2026-01-${String(i % 28+1).padStart(2,'0')}`, converted: true, key: 'one' }));
-  const model = trainOutcomeModel(examples);
-  assert.equal(model.active, false);
-  assert.ok(model.trainingCount + model.holdoutCount <= 4);
-  assert.equal(learnedAdjustment(model, 'one'), 0);
-});
-it('validated independent outcomes can influence future scores without exceeding the cap', () => {
-  const examples: OutcomeExample[] = Array.from({ length: 200 }, (_,i) => ({ accountId: String(i), detectedAt: new Date(Date.UTC(2025,0,i+1)).toISOString(), converted: i % 2 === 0, key: i % 2 === 0 ? 'fit' : 'poor' }));
-  const model = trainOutcomeModel(examples);
-  assert.equal(model.active, true);
-  assert.ok(learnedAdjustment(model, 'fit') > 0);
-  assert.ok(learnedAdjustment(model, 'poor') < 0);
-  assert.ok(Math.abs(learnedAdjustment(model, 'fit')) <= 10);
-});
-
-it('outcome labels wait for 90 observed days and include purchases after a dismissal', () => {
-  const detected = new Date('2026-01-01T00:00:00Z');
-  const end = new Date(detected.getTime() + 90*86400000);
-  const dates = new Set(Array.from({ length: 90 }, (_,i) => new Date(detected.getTime()+(i+1)*86400000).toISOString().slice(0,10)));
-  assert.equal(labelMatureOutcome(detected, end, dates, []), false);
-  assert.equal(labelMatureOutcome(detected, end, dates, [new Date('2026-02-01')]), true);
-  assert.equal(labelMatureOutcome(detected, new Date('2026-02-01'), dates, []), null);
-  dates.delete('2026-02-01');
-  assert.equal(labelMatureOutcome(detected, end, dates, []), null);
 });

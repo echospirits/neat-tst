@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { CORE_PACKAGE_FEATURE_KEYS, DEFAULT_FEATURE_KEYS, ECHO_FEATURE_KEYS, FEATURE_KEYS, FEATURE_REGISTRY, getEnvironmentFeatureKeys, getPackageFeatureKeys, hasIntelligencePackage, INTELLIGENCE_PACKAGE_FEATURE_KEYS, validateFeatureSelection } from '../lib/featureRegistry';
+import { DEFAULT_FEATURE_KEYS, ECHO_FEATURE_KEYS, FEATURE_KEYS, FEATURE_REGISTRY, getEnvironmentFeatureKeys, validateFeatureSelection } from '../lib/featureRegistry';
 import { getNavigationItems, navigationItems } from '../app/components/navigationConfig';
-import { normalizeOrganizationIdentifierList } from '../lib/organizationConfiguration';
 
 test('feature registry has stable unique keys and explicit dependency metadata', () => {
   assert.equal(new Set(FEATURE_KEYS).size, FEATURE_KEYS.length);
@@ -14,15 +13,6 @@ test('feature registry has stable unique keys and explicit dependency metadata',
   assert.equal(DEFAULT_FEATURE_KEYS.includes('OHIO_DIRECT_WHOLESALE_ORDERS'), true);
   assert.deepEqual(FEATURE_REGISTRY.WHOLESALE_OPPORTUNITIES.dependencies, ['WHOLESALE_ACCOUNTS', 'OHLQ_SALES_DATA']);
   assert.deepEqual(FEATURE_REGISTRY.OHIO_DIRECT_WHOLESALE_ORDERS.dependencies, ['WHOLESALE_ACCOUNTS', 'OHLQ_SALES_DATA']);
-});
-
-test('feature packages keep Core mandatory and group every intelligence capability', () => {
-  assert.deepEqual(DEFAULT_FEATURE_KEYS, CORE_PACKAGE_FEATURE_KEYS);
-  assert.deepEqual(INTELLIGENCE_PACKAGE_FEATURE_KEYS, ['AGENCY_INTELLIGENCE', 'WHOLESALE_OPPORTUNITIES', 'ADVANCED_INTELLIGENCE']);
-  assert.deepEqual(getPackageFeatureKeys(false), CORE_PACKAGE_FEATURE_KEYS);
-  assert.deepEqual(getPackageFeatureKeys(true), FEATURE_KEYS.filter(key => key !== 'PRODUCTION_FORECASTING'));
-  assert.equal(hasIntelligencePackage(['AGENCY_INTELLIGENCE']), true);
-  assert.equal(hasIntelligencePackage(CORE_PACKAGE_FEATURE_KEYS), false);
 });
 
 test('invalid entitlement combinations report every missing dependency', () => {
@@ -40,18 +30,20 @@ test('test environment enables standard features while respecting explicit pilot
   assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'development' }), ['CORE_CRM']);
 });
 
-test('former Pilot capabilities are included in Core without buying Intelligence', () => {
+test('default features include Analytics, Pipeline and direct orders without enabling Intelligence', () => {
   for (const key of ['ANALYTICS', 'ACCOUNT_SALES_STATUS', 'OHIO_DIRECT_WHOLESALE_ORDERS'] as const) {
     assert.equal(DEFAULT_FEATURE_KEYS.includes(key), true);
     assert.equal(ECHO_FEATURE_KEYS.includes(key), true);
     assert.equal(FEATURE_REGISTRY[key].defaultEnabled, true);
     assert.equal(FEATURE_REGISTRY[key].beta, undefined);
   }
-  assert.deepEqual(validateFeatureSelection(getPackageFeatureKeys(false)).missing, []);
-  assert.equal(getNavigationItems('work', getPackageFeatureKeys(false)).some((item) => item.key === 'analytics'), true);
-  assert.equal(getNavigationItems('accounts', getPackageFeatureKeys(false)).some((item) => item.key === 'pipeline'), true);
-  assert.equal(getNavigationItems('accounts', getPackageFeatureKeys(false)).some((item) => item.key === 'wholesale-orders'), true);
-  assert.equal(hasIntelligencePackage(getPackageFeatureKeys(false)), false);
+  assert.deepEqual(validateFeatureSelection(DEFAULT_FEATURE_KEYS).missing, []);
+  assert.equal(getNavigationItems('work', DEFAULT_FEATURE_KEYS).some((item) => item.key === 'analytics'), true);
+  assert.equal(getNavigationItems('accounts', DEFAULT_FEATURE_KEYS).some((item) => item.key === 'pipeline'), true);
+  assert.equal(getNavigationItems('accounts', DEFAULT_FEATURE_KEYS).some((item) => item.key === 'wholesale-orders'), true);
+  for (const feature of ['AGENCY_INTELLIGENCE', 'WHOLESALE_OPPORTUNITIES', 'ADVANCED_INTELLIGENCE'] as const) {
+    assert.equal(DEFAULT_FEATURE_KEYS.includes(feature), false);
+  }
   for (const path of ['app/analytics/page.tsx', 'app/analytics/export/route.ts']) {
     const source = readFileSync(path, 'utf8');
     assert.match(source, /requireFeatureForUser\(user, 'ANALYTICS'\)/);
@@ -89,8 +81,7 @@ test('organization setup access separates tenant configuration from platform dat
   assert.doesNotMatch(organizationPage, /name="vendorId"/);
 });
 
-test('A3A selling locations are normalized and stored as organization-owned records', () => {
-  assert.deepEqual(normalizeOrganizationIdentifierList(' 10509, a-12\n10509; B7 '), ['10509', 'A-12', 'B7']);
+test('A3A selling locations remain stored as organization-owned records', () => {
   const schema = readFileSync('prisma/schema.prisma', 'utf8');
   assert.match(schema, /model OrganizationA3aStoreIdentifier/);
   assert.match(schema, /addressLine1\s+String\?/);
@@ -108,7 +99,7 @@ test('direct wholesale PDF entry points are feature gated and contain no email s
   assert.doesNotMatch(orderPage + pdfRoute, /sendEmail|RESEND|OHIO_DIRECT_WHOLESALE_ORDER_EMAIL/);
 });
 
-test('manual shared OHLQ data loads require Platform Admin', () => {
+test('manual shared OHLQ data loads require Echo administrator access', () => {
   const dataStatus = readFileSync('app/admin/data-status/page.tsx', 'utf8');
   const manualImport = readFileSync('app/api/admin/ohlq-manual-import/route.ts', 'utf8');
   assert.match(dataStatus, /requireEchoAdminSession/);

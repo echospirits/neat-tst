@@ -76,6 +76,8 @@ test('state changes use authenticated Echo context, preserve feature flags and r
   assert.deepEqual(JSON.parse(JSON.stringify(update.data)), { enabledStates: ['FL','OH'] });
   const audit = f.events.find(e => e.operation === 'audit')!.input.data;
   assert.equal(audit.organizationId, ECHO_ORGANIZATION_ID);
+  assert.equal(audit.actorUserId, 'authenticated-actor');
+  assert.equal(audit.metadata.setting, 'enabledStates');
   assert.deepEqual([...audit.metadata.before], ['OH']); assert.deepEqual([...audit.metadata.after], ['FL','OH']);
   const invalid = settings(); invalid.form.delete('enabledStates');
   await assert.rejects(invalid.actions.saveEchoStates(invalid.form), /invalid-states/);

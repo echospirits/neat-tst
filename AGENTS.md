@@ -19,6 +19,14 @@ Preserve the historical 0.3.0 and 0.4.0 candidate/release refs and records. See 
 - Treat production promotion as a distinct release task. Determine the release contents by comparing actual Git/repository states and the unreleased manifest, never by relying on conversational memory.
 - Promote only the exact tested release state and follow `docs/releases/RELEASE_CHECKLIST.md`.
 
+## Efficient validation
+
+- During editing, run the affected test files with `npm run test:focus -- tests/<name>.test.ts` (multiple explicit paths are supported). Include related authorization, lifecycle and caller tests when the change crosses those boundaries.
+- Run `npm test` once against the completed change before TST delivery. Repeat the full suite only after further changes affect shared behavior, the runner/setup, dependencies or broad test coverage; otherwise rerun the affected checks. Full-suite validation remains required for a frozen release candidate.
+- Do not repeat typecheck/build after documentation-only changes. Run them for completed code/configuration changes and release candidates. Browser/database acceptance follows the affected scope, not every edit.
+- Keep active regression/security tests even when cheap cases look similar. Remove tests only with evidence that their behavior is obsolete or already covered; preserve any unique assertions in the retained test.
+- Scratch output and old worktrees under `output/`, `tmp/` and `.codex-worktrees/` are excluded from TypeScript discovery. Do not put maintained source there. See [testing strategy](docs/engineering/testing-strategy.md).
+
 ## Neat UI/UX Requirements
 
 For every implementation that changes user-facing UI:

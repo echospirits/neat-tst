@@ -25,7 +25,8 @@ export function assessmentDb(count = 3, options: { failId?: string; inactive?: b
       return {count};
     },upsert:async({create,update}:any)=>{
       active++;peak=Math.max(peak,active);
-      try{await new Promise(r=>setTimeout(r,2));if(create.wholesaleAccountId===options.failId)throw new Error('simulated account failure');
+      // Yield so overlapping writes remain observable without artificial timer latency.
+      try{await new Promise<void>(resolve=>setImmediate(resolve));if(create.wholesaleAccountId===options.failId)throw new Error('simulated account failure');
         const previous=assessments.get(create.wholesaleAccountId);assessments.set(create.wholesaleAccountId,previous?{...previous,...update}:create);return create;
       }finally{active--;}
     }},

@@ -1,9 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { runInNewContext } from 'node:vm';
-import ts from 'typescript';
-import { OrganizationAuditAction, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { parseEnabledStates } from '../lib/stateOptions';
 import { assertStateWrite, combineWhere, modelStateWhere, scopeReadArgs, stateWhere, type StateScope } from '../lib/accountStatePolicy';
 import { extendWithAccountStateAccess, withAccountStateScope } from '../lib/accountStateAccess';
@@ -84,27 +82,6 @@ test('identity-only reads bypass directory scope while nested account selections
   assert.ok(JSON.stringify(nested.include.user.include.createdWholesaleAccounts.where).includes('Ohio'));
   const counts = await run('User', 'findMany', { select: { _count: { select: { createdWholesaleAccounts: true } } } });
   assert.ok(JSON.stringify(counts.select._count.select.createdWholesaleAccounts.where).includes('Ohio'));
-});
-
-function stateAction(requireEchoAdmin: () => Promise<unknown>, transaction: (work: (tx: any) => Promise<unknown>) => Promise<unknown>) {
-  const source = readFileSync('app/admin/organization/data-actions.ts', 'utf8');
-  const action = source.slice(source.indexOf('export async function saveEchoStates('), source.indexOf('export async function addEchoVendor('));
-  const context: any = { requireEchoAdmin, requireOrganizationContext: async () => ({ organizationId: 'org_echo_spirits' }), prisma: { $transaction: transaction }, parseEnabledStates, OrganizationAuditAction, clean: (value: unknown) => String(value ?? '').trim(), revalidatePath: () => {}, redirect: (url: string) => { throw new Error(`redirect:${url}`); } };
-  runInNewContext(ts.transpileModule(`${action.replace('export ', '')}\nglobalThis.action = saveEchoStates;`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, context);
-  return context.action as (data: FormData) => Promise<void>;
-}
-test('only an Echo admin can save state access; successful changes are audited without modifying plan', async () => {
-  const form = new FormData(); form.set('organizationId', 'echo'); form.append('enabledStates', 'OH'); form.append('enabledStates', 'FL'); form.set('intelligence', 'on');
-  let writes = 0, saved: unknown, audit: any;
-  const transaction = async (work: (tx: any) => Promise<unknown>) => { writes++; return work({ organization: { findUniqueOrThrow: async () => ({ enabledStates: ['OH'] }), update: async ({ data }: any) => { saved = data; } }, organizationAuditEvent: { create: async ({ data }: any) => { audit = data; } } }); };
-  await assert.rejects(stateAction(async () => { throw new Error('Forbidden'); }, transaction)(form), /Forbidden/);
-  assert.equal(writes, 0);
-  await assert.rejects(stateAction(async () => ({ id: 'platform' }), transaction)(form), /states-saved/);
-  assert.equal(JSON.stringify(saved), JSON.stringify({ enabledStates: ['FL', 'OH'] }));
-  assert.equal(audit.actorUserId, 'platform'); assert.equal(audit.metadata.setting, 'enabledStates');
-  form.delete('enabledStates');
-  await assert.rejects(stateAction(async () => ({ id: 'platform' }), transaction)(form), /invalid-states/);
-  assert.equal(writes, 1);
 });
 
 test('large Ohio directories use only each legacy table’s referenced IDs in recursive policies', () => {
