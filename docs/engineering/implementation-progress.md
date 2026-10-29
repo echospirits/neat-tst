@@ -1,5 +1,7 @@
 # Integrated CRM implementation progress
 
+> Current work, October 28, 2026: 0.4.2 is released. The owner has authorized the 0.5.0 interface work, a whole-application UI/UX and browsing-performance audit, and promotion to main after the exact candidate passes its release gates. The [0.5.0 plan](../releases/0.5.0-plan.md) and [UNRELEASED](../releases/UNRELEASED.md) govern this work. Older release-state statements below are historical.
+
 > Current release update, October 28, 2026: after the released 0.3.0 freeze, the owner authorized retiring Communications, mailbox/imported-appointment capture, business SMS, contact suggestions and the communication assistant. These runtime features are removed in released `0.4.0`; ordinary Contacts, manual interactions, history, briefing and Worklist/calendar remain. [Current validation](../releases/communications-retirement-validation.md). Earlier delivery records below describe historical implementations.
 
 > Release update, 2026-10-28: **0.3.0 is released to production; development remains frozen.** Echo-only access and Production Forecasting are packaged together. The [0.3.0 plan](../releases/0.3.0-plan.md), [checklist](../releases/0.3.0-checklist.md) and [migration runbook](../releases/0.3.0-migrations.md) govern current readiness. Development remains locked. The linked preparation records below are historical; detailed delivery receipts are kept in the private operator package. Historical implementation/delivery evidence below is retained.

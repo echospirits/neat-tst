@@ -1,11 +1,19 @@
 # Unreleased — 0.5.0-dev
 
-Opened October 28, 2026 for the owner-approved interface mockups, desktop navigation consistency, and compact account briefing. Production has since advanced through the separately authorized 0.4.1 performance hotfix and **0.4.2** forecast download hotfix ([release receipt](0.4.2-validation.md)); the interface work remains TST-only. [Development plan](0.5.0-plan.md), [pending release checklist](0.5.0-checklist.md), [validation](field-workspace-validation.md). No interface production release is authorized by this development task.
+Opened October 28, 2026 for the owner-approved interface mockups, desktop navigation consistency, and compact account briefing. Production has since advanced through the separately authorized 0.4.1 performance hotfix and **0.4.2** forecast download hotfix ([release receipt](0.4.2-validation.md)); the owner has now explicitly authorized the completed interface/audit release to main. [Development plan](0.5.0-plan.md), [pending release checklist](0.5.0-checklist.md), [validation](field-workspace-validation.md). Promote only the exact tested 0.5.0 candidate after its release gates pass.
 
 - Opening production: `f7f5d8012751f79875e3f6d0999dc28ad02cb926` (0.4.0).
 - Opening TST: `cc8b47d217a79ab0a7bab0c679ad02f5833bbd8b` (0.4.0); opening trees match.
 
 ## Changes
+
+### Application-wide interface and browsing performance
+
+- Owner subsequently authorized a whole-application audit and production release. Shared headers, disclosures, empty states, focus treatment and mobile touch targets follow one ivory/olive system. Redundant heading labels and duplicate floating visit actions are removed from finding/selection flows.
+- Retail and ordinary restaurant browsing use 50-record server pages with stable order and filter-preserving Previous/Next links. Restaurant account creation moves below results with an Add account shortcut; search and sorting remain available. Explicit computed ranking sorts retain their bounded complete-sort path so rankings are not calculated from a single page.
+- Pipeline opens on its account list, uses compact status filters and keeps populated board stages open. Forecasting product search stays visible on mobile; source uncertainty and freshness remain visible. Older retail, restaurant, visit and tag controls receive associated labels.
+- Layout and page authentication reuse an in-flight session read only within the same request and cookie. New requests revalidate durable access; no shared identity/data cache is introduced.
+- Validation: full suite/type/build and bounded mobile/desktop confirmation recorded in the final 0.5.0 audit/release evidence. No schema, migration, hosted environment or entitlement changes are required by these improvements.
 
 ### Production source download repair — released separately as 0.4.2
 
@@ -18,7 +26,7 @@ Opened October 28, 2026 for the owner-approved interface mockups, desktop naviga
 
 - Account pages start independent reads concurrently and show loading indicators for secondary panels. Identity-only reads no longer load the account directory solely to authenticate or read scalar organization settings. Nested account selections and writes retain state enforcement.
 - Validation and limitations: [performance validation](0.5.0-performance-validation.md). Production latency improvement has not yet been measured.
-- Migration, backfill, environment/configuration and feature flags: None. The account performance changes were separately released to production as 0.4.1 at `91cd60f4`; the field-workspace presentation changes below remain TST-only.
+- Migration, backfill, environment/configuration and feature flags: None. The account performance changes were separately released to production as 0.4.1 at `91cd60f4`; the field-workspace changes below join the newly authorized 0.5.0 release.
 
 ### Field workspace, account sections and useful briefings
 
@@ -27,7 +35,7 @@ Opened October 28, 2026 for the owner-approved interface mockups, desktop naviga
 - Relevant TST commit(s): `Refine Neat field workflows and account sections` and scoped validation/documentation follow-up; final delivery commit recorded in validation.
 - Validation and known limits: Full test/type/build, responsive and keyboard/deep-link/form-preservation evidence in [validation](field-workspace-validation.md). Fixture feedback is distinct from live backend/provider acceptance. No temporary admin session is created in shared TST.
 - Migration, backfill, environment/configuration and feature flags: None. Preserve tenant scoping, existing role/feature gates, canonical server actions, historical records and Worklist/calendar effects. Communications and other retired features remain retired.
-- Release/recovery notes: TST-only. These presentation changes are additive to released 0.4.0. No database rollback is required; production remains on its separately released state.
+- Release/recovery notes: additive to released 0.4.2. No database rollback is required; promote only the tested 0.5.0 tree.
 
 ## Entry template
 

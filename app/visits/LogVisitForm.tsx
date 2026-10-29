@@ -435,7 +435,7 @@ export function LogVisitForm({
       {photoUploadError ? <p className="toast-notice page-status" role="alert">{photoUploadError}</p> : null}
 
       {(initialValues?.sourceLabel && initialValues.sourceLabel !== selectedLocation?.name) || initialValues?.productName || initialValues?.reason ? <details className="action-context-summary visit-action-context"><summary>Task &amp; recommendation context</summary>
-        <span className="page-eyebrow">Started from context</span>
+
         <strong>{initialValues.sourceLabel ?? initialValues.productName}</strong>
         {initialValues.productItemCode && initialValues.productName ? <span>{initialValues.productItemCode} - {initialValues.productName}</span> : null}
         {initialValues.reason ? <small>{initialValues.reason}</small> : null}

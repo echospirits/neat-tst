@@ -24,7 +24,7 @@ export function PipelineScopeFilter({
     return () => clearTimeout(timer);
   }, [q, params]);
   return (
-    <div className="card form-grid">
+    <div className="pipeline-filters">
       <label>
         Find tracked account
         <input

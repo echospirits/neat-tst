@@ -216,6 +216,6 @@ export function MobileTabbar({ enabledFeatures, isAdmin, isPlatformAdmin, isTast
 
 export function FloatingVisitAction() {
   const pathname = usePathname();
-  if (pathname === '/' || pathname.startsWith('/alerts') || pathname.startsWith('/visits/') || /^\/(agencies|wholesale)\/[^/]+$/.test(pathname)) return null;
+  if (['/', '/search', '/agencies', '/wholesale', '/visits', '/opportunities', '/agency-focus'].includes(pathname) || pathname.startsWith('/alerts') || pathname.startsWith('/visits/') || pathname.startsWith('/wholesale-orders/') || /^\/(agencies|wholesale)\/[^/]+$/.test(pathname)) return null;
   return <Link className="fab" href="/visits/new" aria-label="Log Visit"><NavigationIcon name="plus" /> Log visit</Link>;
 }

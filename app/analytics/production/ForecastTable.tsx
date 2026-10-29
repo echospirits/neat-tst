@@ -17,8 +17,8 @@ export function ForecastTable({ rows, initial = {}, organizationId }: { rows: Fo
   const href = (row: ForecastSummary) => `/analytics/production/${encodeURIComponent(row.product.id)}?${params}`;
   const guidance = (r: ForecastSummary) => r.guidanceThrough ? <>{cases(r.guidanceMinimum)}–{cases(r.guidanceMaximum)}<small>Min/max · through {r.guidanceThrough}</small></> : 'Not imported';
   return <>
-    <details className="pf-filter-disclosure" open={filtersOpen} onToggle={e => setFiltersOpen(e.currentTarget.open)}><summary>Find, filter and sort products</summary><div className="pf-filters" role="search" aria-label="Find production forecasts">
-      <label>Find product<input type="search" placeholder="Name or item code" value={query} onChange={e => setQuery(e.target.value)} /></label>
+    <label className="pf-product-search">Find product<input type="search" placeholder="Name or item code" value={query} onChange={e => setQuery(e.target.value)} /></label>
+    <details className="pf-filter-disclosure" open={filtersOpen} onToggle={e => setFiltersOpen(e.currentTarget.open)}><summary>Filters and sorting</summary><div className="pf-filters" role="search" aria-label="Find production forecasts">
       <label>Market<select value={market} onChange={e => setMarket(e.target.value)}><option value="all">All markets</option>{[...new Set(rows.map(r => r.product.market))].map(m => <option key={m}>{m}</option>)}</select></label>
       <label>Confidence<select value={confidence} onChange={e => setConfidence(e.target.value)}><option value="all">All confidence levels</option>{['High', 'Medium', 'Low'].map(c => <option key={c}>{c}</option>)}</select></label>
       <label>Sort by<select value={sort} onChange={e => setSort(e.target.value)}><option value="need">Planning target</option><option value="name">Product name</option><option value="change">Forecast change</option></select></label>

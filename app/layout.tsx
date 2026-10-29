@@ -13,6 +13,7 @@ import './crm/crm.css';
 import './redesign.css';
 import './theme.css';
 import './field-workspace.css';
+import './workspace-foundation.css';
 import { AppearanceSync } from './components/AppearanceSync';
 import { UsageTracker } from './components/UsageTracker';
 import { getAppEnvironment, getEnvironmentLabel } from '../lib/appEnvironment';

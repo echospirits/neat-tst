@@ -88,7 +88,7 @@ export function ContextualActions({
       <button aria-label="Close create follow-up" className="app-modal-backdrop" type="button" onClick={() => setIsOpen(false)} />
       <div ref={dialogRef} className="app-modal-panel contextual-action-sheet">
         <div className="app-modal-header">
-          <div><span className="page-eyebrow">In context</span><h2 id="create-follow-up-title">Create Follow-up</h2></div>
+          <div><h2 id="create-follow-up-title">Create Follow-up</h2></div>
           <button className="app-modal-close secondary" type="button" onClick={() => setIsOpen(false)}>Close</button>
         </div>
         <form action={submit} className="contextual-action-form">

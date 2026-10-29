@@ -99,7 +99,7 @@ export default async function AgencyFocusPage({
 
   return <div className="agency-focus-page">
     <header className="page-heading page-header agency-focus-header">
-      <div><span className="page-eyebrow">Intelligence · Retail actions</span><h1>Retail Intelligence</h1><p className="muted">Prioritized retail actions. Inventory, sales, and evidence at a glance.</p></div>
+      <div><h1>Retail Intelligence</h1><p className="muted">Prioritized retail actions. Inventory, sales, and evidence at a glance.</p></div>
       <DataFreshnessBadge sourceDate={latestSourceDate} />
     </header>
     <nav aria-label="Retail opportunity filters" className="opportunity-filters">

@@ -4,7 +4,7 @@ Start with [implementation progress](engineering/implementation-progress.md) and
 
 ## Current release
 
-**0.4.0 is released to production.** Communications runtime integrations remain retired. Owner-approved UI/navigation work is in **0.5.0-dev**, for TST only: [plan](releases/0.5.0-plan.md), [UNRELEASED](releases/UNRELEASED.md), [validation](releases/field-workspace-validation.md). [0.4.0 release notes](releases/0.4.0.md).
+**0.4.2 is released to production.** Communications runtime integrations remain retired. Owner-approved UI/navigation and application-wide audit work is in **0.5.0-dev**, with an explicitly authorized production release after candidate verification: [plan](releases/0.5.0-plan.md), [UNRELEASED](releases/UNRELEASED.md), [initial TST validation](releases/field-workspace-validation.md). [0.4.2 release notes](releases/0.4.2.md).
 
 ## architecture
 
