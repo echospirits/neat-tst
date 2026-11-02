@@ -8,6 +8,8 @@ Version **0.5.0** is released. Development is frozen; no new development version
 
 ## Changes
 
+Owner-authorized 0.5.1 hotfix, November 2, 2026: retail and wholesale address links open the address in Google Maps location search, allowing the user to review the location before choosing directions. Explicit Directions actions retain their existing behavior. Removes device-specific Apple Maps/geo redirects. No schema, migration, dependency, hosted configuration or feature-flag changes. Release evidence: [0.5.1](0.5.1.md). Development remains frozen.
+
 ### OHLQ stale-source warnings (November 2, 2026)
 
 - Valid older Account/Brand Master publications now skip importing with a GitHub warning and a persistent Warning status. Last successful data and timestamps remain intact. Missing, malformed or future dates, authentication, download, parsing and database errors still fail.
