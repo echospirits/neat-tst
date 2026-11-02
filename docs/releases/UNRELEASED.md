@@ -1,7 +1,9 @@
 # Unreleased
 
-Version **0.5.1** is released to TST and main. Development is frozen; no new development version or feature cycle is opened.
+Version **0.5.2** is released to TST and main. Development is frozen; no new development version or feature cycle is opened.
 
+- [0.5.2 release notes](0.5.2.md)
+- [0.5.2 validation](0.5.2-validation.md)
 - [0.5.1 release notes and validation](0.5.1.md)
 - [0.5.0 release notes](0.5.0.md)
 - [Completed release checklist](0.5.0-checklist.md)
@@ -9,17 +11,7 @@ Version **0.5.1** is released to TST and main. Development is frozen; no new dev
 
 ## Changes
 
-Owner-authorized 0.5.2 hotfix, November 2, 2026: Account Research failures can be edited and saved inline using the canonical restaurant account editor. Current values load on demand; Save/Cancel preserve the research-page context and errors retain drafts. No migration, dependency upgrade, provider activation, configuration or feature-flag change. Scope: [0.5.2](0.5.2.md); gates: [validation](0.5.2-validation.md). Development remains frozen.
-
-The 0.5.1 address-link hotfix is released and archived in [its notes](0.5.1.md). The TST-only changes below remain excluded from production.
-
-### OHLQ stale-source warnings (November 2, 2026)
-
-- Valid older Account/Brand Master publications now skip importing with a GitHub warning and a persistent Warning status. Last successful data and timestamps remain intact. Missing, malformed or future dates, authentication, download, parsing and database errors still fail.
-- Data Status displays both new warnings and precisely matched historical stale-master errors as Warning, retaining original audit records. Product discovery does not run after a skipped Brand Master import.
-- Additive migration `20261102140000_ohlq_warning_status` adds the WARNING enum value only. Apply before deploying the updated Prisma client or running the workflow. No data deletion, provider/hosted configuration change or dependency upgrade.
-- Version remains 0.5.0; this owner-requested reliability correction does not open a feature cycle. Production promotion remains separate under the current release rules.
-- Validation and incident evidence: [OHLQ warning correction](0.5.0-ohlq-warnings.md).
+The 0.5.2 inline-editor and 0.5.1 address-link hotfixes are released and archived. The same-version [OHLQ stale-source warning correction](0.5.0-ohlq-warnings.md) was also separately released to production. The TST-only test and tooling changes below remain excluded from production.
 
 Owner-authorized test/developer-tooling maintenance, October 29, 2026. The application feature freeze and version 0.5.0 remain; this maintenance does not open a feature cycle or authorize production promotion.
 
