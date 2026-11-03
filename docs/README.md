@@ -4,7 +4,7 @@ Start with [implementation progress](engineering/implementation-progress.md) and
 
 ## Current release
 
-**Production is 0.5.2; the 0.6.0 forecasting candidate is frozen for owner-authorized production promotion.** See [plan](releases/0.6.0-plan.md), [validation](releases/0.6.0-validation.md) and [UNRELEASED](releases/UNRELEASED.md). Unrelated TST maintenance stays excluded. Earlier freeze statements below describe the released baseline.
+**0.6.0 is released to TST and production; development remains frozen.** The cumulative 30/60/90-day Production Forecasting changes and approved exact invoice exclusion were selectively promoted from the tested candidate, tagged `v0.6.0`, and verified READY with healthy `production / ohlq-field-crm` identity. See [release notes](releases/0.6.0.md), [checklist](releases/0.6.0-checklist.md), [validation](releases/0.6.0-validation.md) and [UNRELEASED](releases/UNRELEASED.md). Retained TST test/tooling maintenance stays excluded from production. No new development cycle is opened. Earlier preparation and release-state statements below are historical.
 
 **0.5.0 is released to TST and production; development remains frozen.** The interface, navigation and browsing improvements preserve the 0.4.1 performance and 0.4.2 source-download fixes. Communications runtime integrations remain retired. See [release notes](releases/0.5.0.md), [checklist](releases/0.5.0-checklist.md), [release validation](releases/0.5.0-validation.md), [interface acceptance](releases/0.5.0-ui-validation.md) and [UNRELEASED](releases/UNRELEASED.md).
 

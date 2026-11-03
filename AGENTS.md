@@ -1,8 +1,8 @@
 # Repository Agent Instructions
 
-## Production release: 0.5.2; 0.6.0 forecasting candidate frozen
+## Current release: 0.6.0; development frozen
 
-The owner authorized production promotion of cumulative 30/60/90-day Production Forecasting and its approved exact source-line exclusion on November 3, 2026. The **0.6.0** candidate is frozen; see [plan](docs/releases/0.6.0-plan.md), [checklist](docs/releases/0.6.0-checklist.md) and [UNRELEASED](docs/releases/UNRELEASED.md). Production remains 0.5.2 until verification. Unrelated TST test/tooling maintenance is excluded from promotion. No new development cycle is opened. Earlier freeze statements describe the released baseline.
+Version **0.6.0** is released to TST and production. The authorized cumulative 30/60/90-day Production Forecasting changes and approved exact source-line exclusion were selectively promoted from the tested candidate, tagged `v0.6.0` and verified in production. See [release notes](docs/releases/0.6.0.md), [checklist](docs/releases/0.6.0-checklist.md), [validation](docs/releases/0.6.0-validation.md) and [UNRELEASED](docs/releases/UNRELEASED.md). Development remains frozen; no new development cycle is opened. Unrelated TST test/tooling maintenance remains excluded from production. Earlier preparation and release-state statements below are historical.
 
 The Account Research inline-edit hotfix is released as **0.5.2** to TST and main; see [hotfix notes](docs/releases/0.5.2.md) and [validation](docs/releases/0.5.2-validation.md). The account-address location-link hotfix is released as **0.5.1**; see [its notes](docs/releases/0.5.1.md). The authorized interface, navigation and application-wide UI/UX and performance improvements are released as **0.5.0** to TST and main. Development remains frozen; no new development cycle is opened. See [release notes](docs/releases/0.5.0.md), [checklist](docs/releases/0.5.0-checklist.md), [validation](docs/releases/0.5.0-validation.md) and [UNRELEASED](docs/releases/UNRELEASED.md). Historical candidate/release refs remain preserved. No unrelated features, dependency upgrades or migrations were included in 0.5.2.
 

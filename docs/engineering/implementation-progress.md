@@ -1,6 +1,6 @@
 # Integrated CRM implementation progress
 
-> November 3, 2026 release preparation: the owner requested production promotion of the forecasting work. Version **0.6.0** is frozen; production remains 0.5.2 until verified. Only forecasting and the exact approved invoice exclusion are promoted; retained TST maintenance is excluded. No new feature cycle is opened.
+> November 3, 2026: **0.6.0 is released to TST and production.** The authorized forecasting horizons and exact approved invoice exclusion were promoted from tested production candidate `c5dcf07b8cc775488a3be9b69766e748bad3fb6f`; stable TST candidate `d2f5c32d5badc5688c2a05ee54b50804ff3b1800` retains its separate maintenance. Production deployment is READY with healthy `production / ohlq-field-crm` identity, and tag `v0.6.0` points to the tested production candidate. See [release notes](../releases/0.6.0.md), [checklist](../releases/0.6.0-checklist.md) and [validation](../releases/0.6.0-validation.md). Development remains frozen; no new cycle is opened. Earlier preparation, authorization and release-state statements below are historical.
 
 > November 3, 2026: production remains **0.5.2**. The owner authorized **0.6.0-dev** in TST for cumulative 30/60/90-day Production Forecasting and confidence/backtesting evidence only. See [development plan](../releases/0.6.0-plan.md) and [validation](../releases/0.6.0-validation.md). No production promotion or unrelated feature cycle is authorized. Earlier release/freeze statements are historical.
 
