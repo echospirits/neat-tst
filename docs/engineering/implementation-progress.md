@@ -1,5 +1,7 @@
 # Integrated CRM implementation progress
 
+> November 3, 2026 release preparation: the owner requested production promotion of the forecasting work. Version **0.6.0** is frozen; production remains 0.5.2 until verified. Only forecasting and the exact approved invoice exclusion are promoted; retained TST maintenance is excluded. No new feature cycle is opened.
+
 > November 3, 2026: production remains **0.5.2**. The owner authorized **0.6.0-dev** in TST for cumulative 30/60/90-day Production Forecasting and confidence/backtesting evidence only. See [development plan](../releases/0.6.0-plan.md) and [validation](../releases/0.6.0-validation.md). No production promotion or unrelated feature cycle is authorized. Earlier release/freeze statements are historical.
 
 > Current release, October 29, 2026: **0.5.0 is released to TST and production; development remains frozen.** The authorized interface, navigation and whole-application audit improvements preserve the 0.4.1/0.4.2 fixes. The exact tested candidate and final deployment receipts are recorded in [release validation](../releases/0.5.0-validation.md), [release notes](../releases/0.5.0.md) and the [completed checklist](../releases/0.5.0-checklist.md). [UNRELEASED](../releases/UNRELEASED.md) is empty; no new development cycle is opened. Older release-state statements below are historical.

@@ -1,6 +1,6 @@
 # Unreleased
 
-Version **0.6.0-dev** is open in TST for the owner-authorized 30/60/90-day Production Forecasting extension only. Production remains **0.5.2**. No production promotion is authorized.
+Version **0.6.0** is frozen for the owner-authorized production release of 30/60/90-day Production Forecasting and its exact invoice exclusion. Production remains **0.5.2** until the release is verified. The retained TST test/tooling maintenance below remains excluded from production. No new development cycle is opened.
 
 - [0.6.0 development plan](0.6.0-plan.md)
 - [0.6.0 candidate checklist](0.6.0-checklist.md)

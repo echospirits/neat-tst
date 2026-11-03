@@ -4,7 +4,7 @@ Start with [implementation progress](engineering/implementation-progress.md) and
 
 ## Current release
 
-**Production is 0.5.2; TST is open as 0.6.0-dev for the owner-authorized Production Forecasting horizon extension only.** See [development plan](releases/0.6.0-plan.md), [validation](releases/0.6.0-validation.md) and [UNRELEASED](releases/UNRELEASED.md). Earlier freeze statements below describe the released baseline.
+**Production is 0.5.2; the 0.6.0 forecasting candidate is frozen for owner-authorized production promotion.** See [plan](releases/0.6.0-plan.md), [validation](releases/0.6.0-validation.md) and [UNRELEASED](releases/UNRELEASED.md). Unrelated TST maintenance stays excluded. Earlier freeze statements below describe the released baseline.
 
 **0.5.0 is released to TST and production; development remains frozen.** The interface, navigation and browsing improvements preserve the 0.4.1 performance and 0.4.2 source-download fixes. Communications runtime integrations remain retired. See [release notes](releases/0.5.0.md), [checklist](releases/0.5.0-checklist.md), [release validation](releases/0.5.0-validation.md), [interface acceptance](releases/0.5.0-ui-validation.md) and [UNRELEASED](releases/UNRELEASED.md).
 
