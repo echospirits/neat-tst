@@ -22,6 +22,7 @@ Version **0.6.0-dev** is open in TST for the owner-authorized 30/60/90-day Produ
 - Confidence remains a rating based on evidence, not a probability. Location evidence exposes historical predictions versus actuals, error metrics and confidence limits. A read-only audit supports all three horizons without creating forecasts or changing source data.
 - Baselines verified November 3, 2026: production `5f31360c02e6409ec889863340825401c588deea`; TST `a5a2b4dbc26192119460fa2b5be1ec6df4abae45`. Existing TST-only test/tooling differences below are preserved.
 - Validation: [development evidence](0.6.0-validation.md). No schema migration, dependency upgrade, feature entitlement, provider or hosted configuration change. Package/lockfile changes are version metadata only.
+- TST application commit `a159c39ffbdfe9caa946cefa64b20ab8f74dd4da` deployed READY with connected test/neon-neat-tst health. All 17 eligible products have saved 30/60/90-day forecasts; 187 older predictions and all source records were preserved. Final checks: 908 tests, strict typecheck, optimized webpack build, schema validation and mobile/desktop acceptance passed. Historical accuracy remains exploratory and confidence stays conservative; see the validation record for limitations and source freshness.
 - Recovery: revert the feature code to retain the 30-day view. Stored JSON is additive; source observations and old forecasts remain intact. A normal successful source refresh generates the new horizons.
 
 ### Retained TST maintenance
