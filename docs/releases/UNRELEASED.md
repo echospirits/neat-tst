@@ -17,6 +17,8 @@ Version **0.6.0-dev** is open in TST for the owner-authorized 30/60/90-day Produ
 
 ### Production Forecasting horizons
 
+- Owner-authorized source correction, November 3: exclude one suspected erroneous historical invoice through a tenant-specific input policy, preserving raw history and saved predictions. Remove only its proven derived empty planning grouping; future valid invoices to the same agency remain eligible. Other direct-invoice demand and confidence thresholds are unchanged. See [exclusion validation](production-invoice-exclusion-validation.md).
+
 - One compact cumulative Next 30 / 60 / 90 days selector updates the existing dashboard and product detail. Filters, selected organization and return context remain intact; longer horizons do not add parallel pages or repeated product sections.
 - Each location uses one nonnegative 90-day forecast path, with cumulative 30/60/90-day totals. Model selection pools horizon-specific historical error; ranges, prior-year comparisons, confidence, planning targets and saved actuals use the selected horizon. Existing saved predictions remain retained. Legacy runs show longer horizons as awaiting refresh.
 - Confidence remains a rating based on evidence, not a probability. Location evidence exposes historical predictions versus actuals, error metrics and confidence limits. A read-only audit supports all three horizons without creating forecasts or changing source data.

@@ -5,6 +5,7 @@ import { formatDateInputValue } from '../dateTime';
 import { forecastAccess, type SourceScope } from './import';
 import { ohioForecastExcludedItemCodes } from './ohio';
 import { demandIdentity, mergeCoverage } from './reconciliation';
+import { applyPlanningExclusions, parseDemandExclusions, type DemandExclusion, type DemandExclusionHistoryRow } from './exclusions';
 import { createForecastComputationContext, forecastProduct, forecastProductHorizons, valuesKnownAt, type ForecastComputationContext } from './engine';
 import { MODEL_VERSION, type Classification, type DemandSeries, type ForecastHorizon, type ForecastProduct, type GuidanceObservation, type ProductForecast, type StoredProductForecast, completeSum, dateOnly, days, forecastConfiguration, forecastRules, includedInDemand, shift } from './model';
 
@@ -64,7 +65,7 @@ export async function configuredProducts(db: Db, organizationId: string, markets
   return products.filter(p => p.market !== 'OH' || !excluded.has(p.externalItemCode)).map(p => ({ id: p.id, market: p.market, code: p.externalItemCode, name: p.displayName || p.externalItemCode, demandExcluded: false }));
 }
 /** Batched reads, bounded demand history, explicit tenant and product scope. */
-export async function loadForecastSources(db: Db, organizationId: string, products: ForecastProduct[], asOf: string) {
+export async function loadForecastSources(db: Db, organizationId: string, products: ForecastProduct[], asOf: string, demandExclusions: DemandExclusion[] = []) {
   const productWhere = products.map(p => ({ market: p.market, itemCode: p.code }));
   const markets = [...new Set(products.map(p => p.market))];
   const start = shift(asOf, 1 - forecastRules.maxHistoryDays);
@@ -90,7 +91,14 @@ export async function loadForecastSources(db: Db, organizationId: string, produc
   for (const row of observations) seriesMap.get(JSON.stringify([row.market, row.itemCode, row.locationCode]))?.observations.push({ date: dateOnly(row.date), availableOn: dateOnly(row.availableOn), cases: Number(row.cases), classification: row.classification as Classification, sourceLineId: demandIdentity(row.sourceLineId, dateOnly(row.date)), versionAt: row.sourceImport.importedAt.toISOString(), transactionStatus: row.transactionStatus });
   for (const series of seriesMap.values()) series.coverage = mergeCoverage(series.coverage);
   const guidance: GuidanceObservation[] = guidanceRows.map(r => ({ market: r.market, itemCode: r.itemCode, location: { code: r.locationCode, name: r.locationName }, date: dateOnly(r.observedOn), minimum: r.minimum === null ? null : Number(r.minimum), maximum: r.maximum === null ? null : Number(r.maximum), classification: r.classification as Classification }));
-  return { series: [...seriesMap.values()], guidance, imports, sourceSummary: { source: 'Bailment PO / Invoice', batches: imports.length, importedRows: imports.at(-1)?.rowCount ?? 0, excludedRows: imports.at(-1)?.excludedRows ?? 0, latestImport: imports.at(-1)?.importedAt.toISOString() ?? null } };
+  // Only approved, affected locations need this all-history provenance read.
+  // Do not restrict it to currently eligible products: the excluded source
+  // product may now be delisted while its derived zero scopes remain visible.
+  const exclusionLocations = [...new Map(demandExclusions.map(rule => [JSON.stringify([rule.market, rule.locationCode]), { market: rule.market, locationCode: rule.locationCode }])).values()];
+  const exclusionRows = exclusionLocations.length ? await db.productionDemandObservation.findMany({ where: { organizationId, OR: exclusionLocations, date: { lte: new Date(asOf) }, availableOn: { lte: new Date(asOf) }, sourceImport: { status: 'COMPLETE' } }, orderBy: { id: 'asc' }, select: { id: true, market: true, itemCode: true, locationCode: true, sourceLineId: true, date: true, availableOn: true, cases: true, classification: true, transactionStatus: true, sourceEvidence: true, sourceImport: { select: { importedAt: true } } } }) : [];
+  const history: DemandExclusionHistoryRow[] = exclusionRows.map(row => ({ ...row, date: dateOnly(row.date), availableOn: dateOnly(row.availableOn), cases: Number(row.cases), classification: row.classification as Classification, importedAt: row.sourceImport.importedAt.toISOString() }));
+  const exclusion = applyPlanningExclusions([...seriesMap.values()], demandExclusions, history, asOf);
+  return { series: exclusion.series, actualSeries: exclusion.actualSeries, guidance, imports, sourceSummary: { source: 'Bailment PO / Invoice', batches: imports.length, importedRows: imports.at(-1)?.rowCount ?? 0, excludedRows: imports.at(-1)?.excludedRows ?? 0, latestImport: imports.at(-1)?.importedAt.toISOString() ?? null, demandExclusions: exclusion.summary } };
 }
 
 export async function refreshProductionForecast(organizationId: string, db: PrismaClient = prisma, now = new Date()) {
@@ -100,21 +108,22 @@ export async function refreshProductionForecast(organizationId: string, db: Pris
     const today = formatDateInputValue(now, organization.timezone), asOf = shift(today, -1);
     const products = await configuredProducts(tx, organizationId, organization.enabledStates);
     const config = forecastConfiguration(organization.settings);
-    const sources = await loadForecastSources(tx, organizationId, products, asOf);
+    const demandExclusions = parseDemandExclusions(organization.settings);
+    const sources = await loadForecastSources(tx, organizationId, products, asOf, demandExclusions);
     const computation = createForecastComputationContext();
-    const runKey = createHash('sha256').update(JSON.stringify({ today, version: MODEL_VERSION, config, products, imports: sources.imports.map(i => i.id), guidance: sources.guidance })).digest('hex');
+    const runKey = createHash('sha256').update(JSON.stringify({ today, version: MODEL_VERSION, config, demandExclusions, products, imports: sources.imports.map(i => i.id), guidance: sources.guidance })).digest('hex');
     const existing = await tx.productionForecastRun.findUnique({ where: { organizationId_runKey: { organizationId, runKey } }, select: { id: true } });
     // Actual evaluation is independent of whether today's run already exists.
     const awaiting = await tx.productionForecastSnapshot.findMany({ where: { organizationId, horizonEnd: { lt: new Date(today) }, OR: [{ actualEvaluatedAt: null }, { AND: [{ summary: { path: ['pendingActuals'], equals: true } }, { summary: { path: ['nextActualDue'], lt: today } }] }] }, take: 200, orderBy: { horizonEnd: 'asc' }, select: { id: true, market: true, itemCode: true, horizonStart: true, horizonEnd: true, detail: true, summary: true, actualEvaluatedAt: true } });
     for (const snapshot of awaiting) {
       const detail = snapshot.detail as unknown as StoredProductForecast;
       const savedSummary = snapshot.summary as unknown as StoredForecastSummary;
-      const evaluatedSummary = evaluateHorizonActuals(detail, savedSummary, sources.series, asOf, now, computation);
+      const evaluatedSummary = evaluateHorizonActuals(detail, savedSummary, sources.actualSeries, asOf, now, computation);
       const data: Prisma.ProductionForecastSnapshotUpdateManyMutationInput = {};
       if (JSON.stringify(evaluatedSummary.actuals) !== JSON.stringify(savedSummary.actuals) || evaluatedSummary.pendingActuals !== savedSummary.pendingActuals || evaluatedSummary.nextActualDue !== savedSummary.nextActualDue) data.summary = json(evaluatedSummary);
       if (!snapshot.actualEvaluatedAt) {
         const expected = detail.locations.map(l => l.location.code);
-        const selected = sources.series.filter(s => s.market === snapshot.market && s.itemCode === snapshot.itemCode);
+        const selected = sources.actualSeries.filter(s => s.market === snapshot.market && s.itemCode === snapshot.itemCode);
         if (expected.length && expected.every(code => selected.some(s => s.location.code === code))) {
           const actual = completeSum(selected.map(s => { const values = valuesKnownAt(s, asOf, computation); return completeSum(days(dateOnly(snapshot.horizonStart), dateOnly(snapshot.horizonEnd)).map(d => values.get(d) ?? null)); }));
           if (actual !== null) { data.actualCases = actual; data.actualEvaluatedAt = now; }
@@ -134,7 +143,7 @@ export async function refreshProductionForecast(organizationId: string, db: Pris
     const results = products.map(p => forecastProductHorizons(p, sources.series, sources.guidance, asOf, previousMap.get(p.id) ?? null, config, computation));
     const forecastable = results.filter(r => r.point !== null && r.dataThrough);
     const dataThrough = forecastable.length ? forecastable.map(r => r.dataThrough!).sort()[0] : null;
-    const run = await tx.productionForecastRun.create({ data: { organizationId, runKey, generatedAt: now, horizonStart: new Date(today), horizonEnd: new Date(shift(today, 29)), dataThrough: dataThrough ? new Date(dataThrough) : null, modelVersion: MODEL_VERSION, configuration: json(config), sourceSummary: json(sources.sourceSummary) } });
+    const run = await tx.productionForecastRun.create({ data: { organizationId, runKey, generatedAt: now, horizonStart: new Date(today), horizonEnd: new Date(shift(today, 29)), dataThrough: dataThrough ? new Date(dataThrough) : null, modelVersion: MODEL_VERSION, configuration: json({ ...config, demandExclusions }), sourceSummary: json(sources.sourceSummary) } });
     if (results.length) await tx.productionForecastSnapshot.createMany({ data: results.map(result => ({ organizationId, runId: run.id, productId: result.product.id, market: result.product.market, itemCode: result.product.code, horizonStart: new Date(result.start), horizonEnd: new Date(result.end), point: result.point, lower: result.lower, upper: result.upper, target: result.target, confidence: result.confidence, method: [...new Set(result.locations.map(l => l.method).filter(Boolean))].join(',') || 'unavailable', summary: json(storedSummaryFor(result)), detail: json(result) })) });
     return { id: run.id, replay: false, products: results.length };
   }, { timeout: 120000 });

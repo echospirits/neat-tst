@@ -1,0 +1,29 @@
+# Production Forecasting source-line exclusion
+
+Owner-authorized TST correction, November 3, 2026. Part of 0.6.0-dev; no production promotion is authorized.
+
+## Diagnosis
+
+`DIRECT:<Agency>` is generated from a Bailment invoice's Agency field when the invoice has no shipment date, transfer-order number or distribution-center name. It is an invoice grouping, not a verified warehouse identity.
+
+Read-only verified TST evidence traced `DIRECT:50114` to one native invoice: item 2829B (Copper Label Brandy), October 5, 2021, five cases. The native record's canonical source identity is `v1:c5bfe68a8e1f5df98fe997491382c784a8e4544d14042e36deb56a9aae6773b6`. The owner identified a possible known source error and explicitly authorized excluding this line. Its business identity could not be matched to the CRM Agency directory.
+
+The complete-history importer established zero-coverage series for all configured products at every observed grouping. This one line therefore created 29 additional zero-only product/grouping pairs, alongside its original product. The original invoice predates the bounded three-year model window, leaving all current series at that grouping zero. The original lowest-location confidence rule lets those zero-only series contribute Low because their percentage-error and volatility metrics are undefined.
+
+Other direct groups contain real demand and remain relevant. Removing this particular grouping from the old rating calculation still leaves all 17 current products Low at all three horizons due to other active-demand error or variability. No confidence threshold change or higher-rating claim is part of this correction.
+
+## Correction design
+
+- Store an explicit, reasoned exclusion in the organization's Production Forecasting settings, matching canonical source identity, market, product, movement date and location together.
+- Apply it when reading forecast inputs, including future refreshes/imports and historical audits. Retain raw imports, original invoice evidence, revisions and saved predictions.
+- Remove an affected direct grouping from new planning only when its source support consists solely of the approved excluded line and verified generated zero-coverage records. An independent valid invoice to the same agency keeps or reestablishes the grouping; there is no permanent agency-wide ban.
+- Retain the covered zero series for settling actuals of older saved forecasts that expected the grouping. Earlier predictions stay immutable.
+- Record the policy in run identity/configuration and source diagnostics. No migration, provider change or source-import deletion.
+- Current review exclusions apply as a corrected-data policy in reconstructed audits; they do not claim to reconstruct when a historical operator knew about the error.
+
+## Validation and delivery
+
+- 35 existing forecasting/eligibility/horizon/access checks and 11 new source-exclusion tests passed. The new tests cover exact matching, corrected and future invoices, delisted original products, physical warehouse/manual-zero preservation, tenant scope, policy-sensitive replay, and old-horizon settlement with immutable predictions. Maintained fixtures are synthetic.
+- Completed full suite: **919 tests / 74 suites passed**, no failures or skips, 55.8 seconds. Strict `npm run typecheck`, optimized Next webpack build with the verified TST environment, and `git diff --check` passed. No schema, dependency, provider or UI files changed.
+- Database-enforced read-only TST preview matched the original native line exactly once. It produced 85 planning series while retaining all 102 covered series for old-forecast actual evaluation: 17 proven derived planning scopes at `DIRECT:50114` were omitted. No policy or source data was written during the preview.
+- TST deployment, policy activation and persistence receipts will be recorded below. Production remains out of scope.

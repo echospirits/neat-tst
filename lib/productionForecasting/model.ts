@@ -1,5 +1,5 @@
 // Market adapters normalize source facts before the statistical engine sees them.
-export const MODEL_VERSION = 'production-demand-v1.3';
+export const MODEL_VERSION = 'production-demand-v1.4';
 export const forecastHorizons = [30, 60, 90] as const;
 export type ForecastHorizon = typeof forecastHorizons[number];
 export function parseForecastHorizon(value: unknown): ForecastHorizon {

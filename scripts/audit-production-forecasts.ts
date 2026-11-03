@@ -71,6 +71,7 @@ async function main() {
   const { PrismaClient } = await import('@prisma/client');
   const { forecastAccess } = await import('../lib/productionForecasting/import');
   const { configuredProducts, loadForecastSources, selectForecastHorizon } = await import('../lib/productionForecasting/service');
+  const { parseDemandExclusions } = await import('../lib/productionForecasting/exclusions');
   const { forecastProductHorizons, createForecastComputationContext, valuesKnownAt, predict } = await import('../lib/productionForecasting/engine');
   const { MODEL_VERSION, forecastConfiguration, forecastHorizons, shift, validDay, days, sum, completeSum, dayCount, dateOnly } = await import('../lib/productionForecasting/model');
   const { formatDateInputValue } = await import('../lib/dateTime');
@@ -85,14 +86,15 @@ async function main() {
       const asOf = argumentsByName.get('as-of') ?? yesterday;
       if (!validDay(asOf) || asOf > yesterday) throw new Error('As-of must be a completed date, no later than yesterday in the organization timezone.');
       const products = await configuredProducts(tx, organizationId, organization.enabledStates);
-      const sources = await loadForecastSources(tx, organizationId, products, asOf);
+      const demandExclusions = parseDemandExclusions(organization.settings);
+      const sources = await loadForecastSources(tx, organizationId, products, asOf, demandExclusions);
       // Dashboard loading intentionally reads only latest guidance. Historical
       // evaluation needs the location identities established at each cutoff.
       const guidanceRows = products.length ? await tx.productionGuidanceObservation.findMany({ where: { organizationId, OR: products.map(product => ({ market: product.market, itemCode: product.code })), observedOn: { lte: new Date(shift(asOf, 1)) }, classification: { not: 'A3A_DIST' }, sourceImport: { status: 'COMPLETE' } }, orderBy: [{ observedOn: 'desc' }, { id: 'desc' }], select: { market: true, itemCode: true, locationCode: true, locationName: true, observedOn: true, minimum: true, maximum: true, classification: true } }) : [];
       const guidanceHistory: GuidanceObservation[] = guidanceRows.map(row => ({ market: row.market, itemCode: row.itemCode, location: { code: row.locationCode, name: row.locationName }, date: dateOnly(row.observedOn), minimum: row.minimum === null ? null : Number(row.minimum), maximum: row.maximum === null ? null : Number(row.maximum), classification: row.classification as Classification }));
       const savedRuns = await tx.productionForecastRun.aggregate({ where: { organizationId }, _count: true, _min: { generatedAt: true, horizonEnd: true }, _max: { generatedAt: true, horizonEnd: true } });
       const evaluatedSnapshots = await tx.productionForecastSnapshot.count({ where: { organizationId, actualEvaluatedAt: { not: null } } });
-      return { asOf, products, sources, guidanceHistory, settings: organization.settings, savedRuns, evaluatedSnapshots };
+      return { asOf, products, sources, guidanceHistory, settings: organization.settings, demandExclusions, savedRuns, evaluatedSnapshots };
     }, { isolationLevel: 'RepeatableRead', timeout: 60000 });
     const config = forecastConfiguration(input.settings);
     const guidanceAt = (origin: string) => {
@@ -207,6 +209,7 @@ async function main() {
       elapsedMilliseconds: Date.now() - startedAt,
       computedProductOriginBundles: bundles.size,
       readOnly: true, sourceSummary: input.sources.sourceSummary,
+      demandExclusions: input.demandExclusions,
       cumulativeReversals,
       savedRuns: input.savedRuns, evaluatedSavedSnapshots: input.evaluatedSnapshots,
       caveats: [
@@ -215,6 +218,7 @@ async function main() {
         'Historical pipeline holdouts refit and select using only each outer origin and compare with later actuals. Each horizon uses nonoverlapping outer windows. Baselines are compared only on common available product/origin windows.',
         'Each origin selects one coherent 90-day daily trajectory per location; 30- and 60-day predictions are prefixes. Confidence and backtest error remain specific to each horizon.',
         'Historical reconstructions use the same bounded source read as the audit, so older fits can have fewer than 1,096 training days. Historical source and portfolio knowledge cannot be fully reconstructed.',
+        'Current owner-approved exact source exclusions are applied as a retrospective correction policy; immutable historical forecast documents are not rewritten.',
         'Native availability is inferred from invoice and shipment chronology, not a reconstructed historical report-receipt timestamp. Retained corrections respect their recorded detection dates.',
         'Product confidence is the lowest location confidence. Zero-only actuals have undefined WAPE; undefined metrics do not establish high confidence.',
         'Combined-location scores sum selected location predictions on common origins. They are diagnostic product errors and do not replace the existing location confidence rules.',
