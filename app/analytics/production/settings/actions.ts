@@ -8,6 +8,7 @@ import { requireOrganizationContext } from '../../../../lib/organizations';
 import { prisma } from '../../../../lib/prisma';
 import { getOrganizationOperationalCredentials, operationalCredentialKeyStatus, requireOperationalSignalOrganization, saveOrganizationOperationalCredentials } from '../../../../lib/productionForecasting/operationalSignals/credentials';
 import { OpenDockReadClient } from '../../../../lib/productionForecasting/operationalSignals/opendock';
+import { checkManualDeliveryAvailability } from '../../../../lib/productionForecasting/operationalSignals/manualDelivery';
 import { ohioOpenDockWarehouses } from '../../../../lib/productionForecasting/operationalSignals/ohioLocations';
 
 const fields = z.object({ GPT: z.literal(ohioOpenDockWarehouses.GPT.warehouseId), GRN: z.literal(ohioOpenDockWarehouses.GRN.warehouseId) });
@@ -51,4 +52,11 @@ export async function configureOpenDock(formData: FormData) {
   revalidatePath('/analytics/production');
   revalidatePath('/analytics/production/settings');
   redirect(`/analytics/production/settings?status=${status}`);
+}
+
+export async function checkOpenDockAvailability() {
+  const result = await checkManualDeliveryAvailability();
+  revalidatePath('/analytics/production');
+  revalidatePath('/analytics/production/settings');
+  redirect(`/analytics/production/settings?status=availability-${result.status}`);
 }

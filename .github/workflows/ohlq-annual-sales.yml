@@ -35,7 +35,7 @@ on:
         type: boolean
       productionSourcesOnly:
         default: false
-        description: "Run only enrolled tenants' Bailment / Partner DC imports and forecast refresh."
+        description: "Run only enrolled tenants' production source imports, operational signals and forecast refresh."
         required: false
         type: boolean
       deploymentEnvironment:
