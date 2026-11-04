@@ -26,8 +26,8 @@ export default async function ProductionSignalSettings({ searchParams }: { searc
       <p className="muted">Records today’s first successful GPT and GRN availability checks. Existing daily observations are reused; failed checks can be retried.</p>
       {!opendock.configured || !opendock.credentials.configured ? <p className="muted">Save and verify the connection below to enable this check.</p> : null}
     </form>
-    <form action={configureOpenDock} className="pf-operational-form">
-      <fieldset><legend>Authorized OpenDock account</legend><label>Email<input name="username" type="email" autoComplete="username" /></label><label>Password<input name="password" type="password" autoComplete="current-password" /></label><p className="muted">Leave both fields blank to reuse the saved account. Passwords are encrypted on the server and never returned to this page.</p></fieldset>
+    <form action={configureOpenDock} autoComplete="off" className="pf-operational-form">
+      <fieldset><legend>Authorized OpenDock account</legend><label>Email<input name="username" type="email" autoComplete="off" /></label><label>Password<input name="password" type="password" autoComplete="new-password" /></label><p className="muted">Leave both fields blank to reuse the saved account. Passwords are encrypted on the server and never returned to this page.</p></fieldset>
       <fieldset><legend>Ohio delivery warehouses</legend>{(['GPT', 'GRN'] as const).map(code => <label key={code}>{code} · {ohioOpenDockWarehouses[code].address}<input name={code} readOnly value={ohioOpenDockWarehouses[code].warehouseId} aria-label={`${code} verified OpenDock warehouse ID`} /></label>)}<p className="muted">These facilities were checked against Echo’s OpenDock favorites. Verification must find one authorized “LTL - Pallet Load” type at each warehouse.</p></fieldset>
       <SubmitButton pendingLabel="Verifying OpenDock…" disabled={!opendock.encryption.configured}>Save and verify OpenDock</SubmitButton>
     </form>
