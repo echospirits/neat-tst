@@ -1,6 +1,10 @@
 # Unreleased
 
-Version **0.6.0** is the released baseline. The owner authorized the same-version TST-only Operational Signals extension below; no new development version, broader feature cycle, production promotion or tag is opened. The released forecasting manifest is archived in [0.6.0](0.6.0.md). Retained TST maintenance remains excluded from production.
+Version **0.7.0-dev** is open for the owner-authorized application-wide interface upgrade in **neat-tst only**. Version 0.6.0 remains the released production baseline. The upgrade is for review before release; no production promotion or tag is authorized. The earlier Operational Signals and retained maintenance entries below are preserved as historical technical manifests, not additional changes introduced by this UI work.
+
+- [0.7.0 upgrade plan](0.7.0-plan.md)
+- [0.7.0 pending release checklist](0.7.0-checklist.md)
+- [0.7.0 validation and TST receipt](0.7.0-validation.md)
 
 - [0.6.0 release notes and technical manifest](0.6.0.md)
 - [0.6.0 completed checklist](0.6.0-checklist.md)
@@ -14,6 +18,17 @@ Version **0.6.0** is the released baseline. The owner authorized the same-versio
 Production application candidate `c5dcf07b8cc775488a3be9b69766e748bad3fb6f` is tagged `v0.6.0`; stable TST application candidate is `d2f5c32d5badc5688c2a05ee54b50804ff3b1800`. Production deployment `dpl_f9R4uGyi2Q6D3BYPVZms5xCyjZt3` is READY and health verified `production / ohlq-field-crm`.
 
 ## Changes
+
+### 0.7.0-dev - Echo-informed working interface
+
+- Owner-authorized November 4, 2026: apply the approved [UI/UX Guidelines](../UI-UX-GUIDELINES.md) across the current TST application. Baseline TST is `ef41fe8fb5810dd52cadfecab09dd4d8d995a829`; production/main observed before work is `4f39e5b89703373c6730d2d590e3262da93c6648`. Preserve all current forecasting and operational behavior, including separate immediate demand and delivery availability.
+- Shared visual system: Copper/Patina accents, Chalkboard navigation/text, neutral working surfaces, readable fixed type scale, compact heading/toolbars, modest radii and aligned numerical values in light and dark themes. Existing Echo organization color data is retained; the approved Echo product palette is owned by shared CSS.
+- Browsing and visibility: compare Pipeline, intelligence and forecasts in semantic tables; expose useful directory columns, next commitments, saved account profile/plan facts, task details and actionable sync/source failures. Menus contain infrequent actions rather than important current data.
+- Correct presentation semantics: Pipeline displays the earliest open commitment, including overdue/undated work, while retaining the prior future-only attention-model inputs. Missing purchase evidence reads `No recorded purchase`. Paused calendar synchronization is a neutral state rather than a failure; actual errors remain alerts. History Clear filters resets all picker/date state consistently.
+- Daily work: show scheduled events and overdue work; lead Tags/Users with records, keep invitation/creation secondary, surface known visit context and common contact choices, and add compact global Visit History comparison while preserving account timelines.
+- Analytics/admin: compact metrics and operational summaries, visible continuity/execution/source-health data, deliberate editing areas and concise labels/local qualifiers. Remove routine introductory instructions while retaining material warnings, source limits and recovery guidance.
+- Scope and evidence: [application UI audit](../design/neat-tst-ui-audit-2026-11-04.md), [upgrade plan](0.7.0-plan.md) and [validation](0.7.0-validation.md). Production approval, stable candidate version, exact-candidate release gates and promotion remain pending.
+- No database/schema/migration, provider, credential, scheduled workflow, entitlement, dependency, or hosted environment-setting changes. Existing backend queries/actions and calculations are preserved. No production/main push or release tag.
 
 ### Production Forecasting - Operational Signals
 

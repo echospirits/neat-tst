@@ -1,6 +1,10 @@
 # Repository Agent Instructions
 
-## Current release: 0.6.0; development frozen
+## Authorized TST development: 0.7.0-dev interface upgrade
+
+On November 4, 2026, the owner approved the revised `docs/UI-UX-GUIDELINES.md` and authorized an application-wide UI/UX audit and implementation in **neat-tst only**, for a new upgrade to be reviewed before release. Version `0.7.0-dev` is the development package. Preserve the current 0.6.0 forecasting/Operational Signals behavior and all existing authorization, data and workflow semantics. No main push, production promotion, release tag, migration, dependency upgrade or provider/configuration change is authorized. See [upgrade plan](docs/releases/0.7.0-plan.md), [validation](docs/releases/0.7.0-validation.md) and [UNRELEASED](docs/releases/UNRELEASED.md). Older freeze statements below describe the released baseline; this is the bounded UI development exception.
+
+## Released baseline: 0.6.0
 
 Owner-authorized exception: Production Forecasting Operational Signals is TST-only feature work under the existing `0.6.0` version. Do not open a new development cycle, change the forecast model, promote to main or create a release tag. See `production-operational-signals-checkpoint.md` for the exact scope and source decisions. The broader development freeze and historical release records remain.
 
