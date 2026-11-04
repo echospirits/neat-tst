@@ -1,6 +1,6 @@
 # Unreleased
 
-Version **0.6.0** is released to TST and production. Development remains frozen; no new development version or feature cycle is opened. The released forecasting manifest is archived in [0.6.0](0.6.0.md); only the retained TST maintenance below remains excluded from production.
+Version **0.6.0** is the released baseline. The owner authorized the same-version TST-only Operational Signals extension below; no new development version, broader feature cycle, production promotion or tag is opened. The released forecasting manifest is archived in [0.6.0](0.6.0.md). Retained TST maintenance remains excluded from production.
 
 - [0.6.0 release notes and technical manifest](0.6.0.md)
 - [0.6.0 completed checklist](0.6.0-checklist.md)
@@ -14,6 +14,16 @@ Version **0.6.0** is released to TST and production. Development remains frozen;
 Production application candidate `c5dcf07b8cc775488a3be9b69766e748bad3fb6f` is tagged `v0.6.0`; stable TST application candidate is `d2f5c32d5badc5688c2a05ee54b50804ff3b1800`. Production deployment `dpl_f9R4uGyi2Q6D3BYPVZms5xCyjZt3` is READY and health verified `production / ohlq-field-crm`.
 
 ## Changes
+
+### Production Forecasting - Operational Signals
+
+- User-visible: **Yes**. Owner-authorized TST-only extension under existing version `0.6.0`; no new development cycle, production promotion or release tag.
+- Add separate daily OpenDock GPT/GRN LTL delivery observations, retained history, calendar-day lead times and deterministic seasonal/nearby-period/trailing comparisons. Sparse history stays insufficient; failed checks retain the last success.
+- Add OPS Item Coverage agency replenishment estimates: MIN coverage only, per-store whole cases to reach MIN, summed by Organization product and verified agency-prefix warehouse mapping. Show separately from the unchanged statistical 30/60/90-day forecasts. Overnight inventory can lag same-day shipments/receipts; this is not a committed order total or an additive production requirement.
+- Dashboard and product detail show separate forecast, demand and delivery freshness, unavailable/stale states and lightweight histories. Background ingestion extends the existing TST 7:27 AM Eastern source workflow; dashboard views query only Neat.
+- Migration: `20261104010000_production_operational_signals` adds five tenant-scoped credential/observation/check tables. No destructive SQL or historical forecast changes. No backfill or entitlement change; existing Echo/OH `PRODUCTION_FORECASTING` pilot remains required.
+- Configuration: prefer dedicated `PRODUCTION_OPERATIONAL_CREDENTIAL_ENCRYPTION_KEY` (same value in TST application and morning job); existing OHLQ key remains a compatible fallback and must not be rotated. Enter authorized OpenDock credentials through Production Forecasting -> Configure OpenDock; successful API discovery verifies the confirmed warehouses and unique LTL type before atomically saving credentials/mappings. No passwords, cookies or tokens in source.
+- Staging readiness: additive migration applied/registered only on verified TST after isolated rehearsal. Live OPS acceptance persisted16 valid estimates/17 checks, matching source calculations; the one upstream A3A Dist item remains unavailable. Existing238 forecast values remain unchanged. Live OpenDock API proof/activation still awaits encryption-key configuration and authorized login entry. Exact checks/limits: [operational signals guide](../production-operational-signals.md) and [checkpoint](../../production-operational-signals-checkpoint.md).
 
 The cumulative forecast horizons and approved invoice correction are released and archived. The TST-only maintenance below is preserved in full and remains outside the production release.
 

@@ -1,0 +1,52 @@
+# Production Forecasting - Operational Signals
+
+## Target and scope
+- Base: `staging/tst` / `5c391f0ace35c4ce20932da8a029db6297b9a4c4`; version `0.6.0` retained by owner instruction. Isolated `codex/production-operational-signals` worktree. No main push, production tag, ERP integration or forecast-engine change.
+- Existing forecast model: `production-demand-v1.4`; cumulative 30/60/90-day model and snapshots remain separate.
+
+## Verified sources and decisions
+- Existing OPS authentication, encrypted tenant credentials, Agency Inventory import, Bailment PO/Invoice and Partner DC exports audited. Partner DC Demand is explicitly NOT the requested immediate-demand signal.
+- Authenticated source verified in Echo's open browser: Products -> View Item Coverage -> `GET https://ops.ohlq.com/product/itemCoverage/{itemCode}`. Structured JSON returns `data`, `bpc`, `detailCode`, `statusCode`, `cntMin`, `cntManual`, `cntRestricted`; no receipt status or source-update timestamp.
+- Coverage row positions: agency `[2]` (also `[0]`), coverage group `[6]`, MIN bottles `[7]`, inventory bottles `[9]`. All 16 columns and declared group counts must match. Preserve minimal numeric evidence, not restriction HTML.
+- Owner confirmed: only MIN rows; per-agency `max(0, ceil((MIN - inventory bottles) / bottles per case))`, then sum. Reaching MIN is sufficient; equality creates no replenishment demand.
+- Verified worked example: 2806B / agency 30221 / MIN 14 / inventory 0 / BPC 6 -> 3 cases. This is a verification example, not a hard-coded product mapping.
+- Owner warehouse rule: agency prefixes 2/4 -> GRN; 1/3/5 -> GPT; others remain unassigned.
+- Owner timing clarification: agency inventory refreshes around 2 AM after same-day shipment/scan activity. V1 uses the morning overnight-inventory replenishment estimate; same-day movement may lag. Do not infer unreceived stock from shipment date, subtract warehouse on-hand, or claim committed/net additive production demand. Inbound quantity remains unknown rather than zero.
+- OpenDock: supported Neutron API; ephemeral JWT login, read-only load-type availability lookup. No booking actions authorized or needed. User confirmed LTL always.
+- GPT UI: DHL Supply Chain - Ohio Liquor - Groveport, OH - Nova / DSC - Retail / 3755 Hayes Road, Groveport OH 43125; warehouse `c45c3cbf-7b28-4c82-8255-260f2fec7c45`.
+- GRN UI: DHL Supply Chain - Ohio Liquor - Green, OH - Nova / DSC - Retail / 2210 International Pkwy, Green OH 44320; warehouse `db3517ad-e875-499b-883d-14ff21859355`.
+- Both expose `LTL - Pallet Load` inbound. Load-type UUIDs and authenticated API proof remain pending secure credential configuration. Facility closures are displayed separately from no available slots; never derive closed days from full calendars.
+
+## Implementation progress
+- [x] 1 Targeted audit and source/semantic confirmation.
+- [ ] 2 Authenticated OpenDock API proof: adapter/configuration/secure form implemented and tested; live API verification awaits key configuration and authorized login entry. No booking performed.
+- [x] 3 Historical delivery models and deterministic comparison implemented; source history remains empty until activation.
+- [x] 4 OPS current-demand mapping verified against live Products popup and native JSON.
+- [x] 5 Daily demand ingestion/history implemented and live TST acceptance passed.
+- [x] 6 Dashboard integration, compact desktop column and mobile disclosure.
+- [x] 7 Product drill-down: operational signals directly after forecast summary, before historical evidence.
+- [x] 8 Behavioral/security checks, migration rehearsal, live OPS source agreement and responsive rendered acceptance. OpenDock live acceptance remains a separate gate above.
+- [ ] 9 Release documentation complete; final candidate checks and TST commit/push/deployment receipt pending.
+
+## Validation and limitations
+- Final delivery gates: **981 tests passed,74 suites,0 failures/skips**; typecheck passed; production build passed. Focused sets include delivery API/discovery, tenant-authenticated encryption, daily persistence/failure retention, scheduling, native OPS mapping/publication freshness and real component rendering. The final build ran after stopping the task's temporary preview helper, which otherwise held the Windows Prisma DLL. No dependency or test-runner change was made.
+- Responsive rendered review: actual persisted TST dashboard/detail plus clearly labelled synthetic populated/error states at 390x844, 768x1024 and 1440x900. No horizontal page overflow; tablet comparison overflow stays inside its labelled table. This was a read-only component acceptance preview, not a claim of authenticated hosted browser acceptance.
+- New browser findings corrected: missing observations labelled unavailable (not stale); passed/stale appointment observations qualified; operational context placed near the product forecast; excluded OPS statuses explained; unavailable credential-key configuration disables the form with setup guidance.
+- Live OPS acceptance: 17 eligible products retrieved, 16 successful daily observations, 17 checks, 95 total estimated cases. Every saved product/warehouse total agrees with source normalization. 2806B has 62 MIN agencies, 8 below MIN, 6 bottles/case, 10 cases total (GPT10/GRN0), and agency30221 contributes3. One code (4421B) is explicitly `70 / A3A DIST` in OPS despite current catalog selection: no numeric observation or contribution to demand totals; existing statistical forecasts are not changed to resolve that catalog mismatch.
+- Actual publication metadata on fresh acceptance: November3,2026 10:01 PM Eastern; retrieval approximately11:02 PM Eastern. The older browser page showed2:01 AM. Source publication is captured as supplied; an overnight refresh is an expectation, not a hard-coded timing guarantee. `inProcess` controls portal coverage edits and is not used as an inventory-readiness signal.
+- Migration `20261104010000_production_operational_signals` rehearsed on isolated TST children with9 real constraint probes, then applied/registered atomically only on verified shared TST. SHA256 `2dfe95d1043d6d8e0a6d057f564f34479c742fb7f7ec6deb5809e34b5b0d90c9`. Prior53 migration ledger entries retain their fingerprint; ledger now54. No unrelated migration was applied.
+- Verified target: Vercel `neat-tst` / `prj_fNOruLSh6BQNVXAThXYJEjBw2HYA`; health `test / neon-neat-tst / connected`. Neon `dawn-frog-33352119` / `br-divine-forest-avwq2b3g` / `neondb`, endpoint `ep-noisy-dew-avchokwr`. Local `.vercel` links identify production and were not used for default deployment/env operations.
+- All238 existing forecast snapshots retain fingerprint `cc3e099fa1400fcc1ef07578f3eb503a323a5d30af7d69cc1b505a60dc786b41` after migration; live demand ingestion kept snapshot count238 and did not run forecast refresh. Forecast engine/model files remain unchanged.
+- OpenDock activation: TST Vercel lacks the legacy OPS encryption key. Dedicated `PRODUCTION_OPERATIONAL_CREDENTIAL_ENCRYPTION_KEY` is supported, with the same secret required in TST app and morning runner; user authorization to configure it remains pending. No replacement OPS key, OpenDock credentials or sessions have been saved. Existing OPS authentication was used only through authorized server credentials; its masked identity matched the Echo tenant record.
+- The administrator setup shows sanitized encryption-key readiness and disables Save until a valid key exists. The same readiness guard runs server-side before provider authentication. A missing key cannot be mistaken for a bad OpenDock password.
+- Existing morning workflow starts at7:27 AM Eastern; observations run in its `production_sources` step after preceding work, using actual retrieval timestamps. Missing optional OpenDock setup skips safely; configured provider failures remain independently observable. Mocked scheduling tests passed; the new hosted morning run is not yet observed.
+- Sanitized local receipts (ignored): `output/operational-migration-rehearsal.json`, `output/operational-migration-tst.json`, `output/ops-current-demand-live-acceptance.json`. No raw secrets or upstream sessions are committed. Temporary rehearsal branches remain retained.
+- Local primary checkout remains preserved at 0.5.0. Read-only remote audit established current TST 0.6.0; do not implement against the old checkout.
+
+## Material files
+- `lib/productionForecasting/operationalSignals/*`: source adapters, normalization, credentials/configuration, daily persistence, reads and background orchestration.
+- `lib/ohlqAnnualSalesReport.ts`: reuse OPS login for native Item Coverage JSON and source publication footnote.
+- `lib/productionForecasting/sourceWorkflow.ts` and `.github/workflows/ohlq-annual-sales.yml`: isolated morning integration and optional dedicated encryption-secret injection.
+- `prisma/schema.prisma` and the single additive migration above.
+- `app/analytics/production/*`: separate signals, history, product context and secure administrator setup; existing forecast calculations untouched.
+- Six focused behavioral/security/UI test files, `.env.example`, `AGENTS.md`, operational guide and `UNRELEASED.md`.
