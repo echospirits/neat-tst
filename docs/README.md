@@ -2,6 +2,10 @@
 
 Start with [implementation progress](engineering/implementation-progress.md) and [feature inventory](product/feature-inventory.md). Existing canonical release and UI standards remain authoritative.
 
+## Authorized TST work
+
+**Tasting Management Phase 1** is an owner-authorized TST-only pilot exception on November 5, 2026, retaining version 0.7.2. It adds tasting proposals, separate approval/history milestones, assigned schedules, canonical Visit/photo completion and automatic same-day Agency retail sales observations. The optional `TASTING_MANAGEMENT` entitlement is dark by default with explicit Echo enrollment. See the [operator/import guide](tasting-management.md), [validation and pending delivery receipts](releases/tasting-management-validation.md), [checkpoint](../tasting-management-checkpoint.md) and [UNRELEASED](releases/UNRELEASED.md). No broader development cycle or production promotion is opened; current released-baseline records below remain preserved.
+
 ## Current release
 
 **0.7.2 is deployed to production; development remains frozen.** The focused Wholesale Orders repair bridges supplier name/vendor-code formats, honors explicit permit aliases and preserves manual filing reservations. Production application `12c1d995114203609bb92f833449138ec22bd52c` is READY with correct database health. All six reviewed pending orders were automatically filed, with zero additional filings on replay and unchanged Sent/Paid, original snapshots/PDFs and four manual filing records. Exact-candidate CI, 1,066 tests, typecheck and build passed. Signed-in production UI acceptance remains explicitly unverified; application UI blobs are unchanged and unauthenticated route/PDF checks pass. See [notes](releases/0.7.2.md), [checklist](releases/0.7.2-checklist.md), [validation](releases/0.7.2-validation.md) and [UNRELEASED](releases/UNRELEASED.md). No migration, dependency graph, hosted configuration or feature-flag change; historical releases below remain preserved and no new development cycle is opened.

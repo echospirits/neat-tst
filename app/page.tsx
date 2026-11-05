@@ -1,5 +1,9 @@
 import { ScheduleRoute } from './my-week/ScheduleRoute';
 import { ScheduleEvents } from './events/ScheduleEvents';
+import { TastingSchedule } from './tastings/TastingSchedule';
+import { listTastings } from '../lib/tastings/queries';
+import { tastingExecutionStatus } from '../lib/tastings/model';
+import { redirect } from 'next/navigation';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -175,13 +179,35 @@ function MetricSplits({ agency, wholesale }: { agency: number; wholesale: number
 }
 
 export default async function Dashboard({ searchParams }: { searchParams?: Promise<{ date?: string; view?: string }> }) {
-  const user = await requireUser();
+  const user = await requireUser({ allowTaster: true });
   const { organizationId } = await requireOrganizationContext(user);
   const enabledFeatures = await getOrganizationFeatures(organizationId);
   const params = (await searchParams) ?? {};
   const anchorDate = isValidSchedulerDate(params.date) ? params.date : formatEasternDateInputValue();
   const view = params.view === 'week' ? 'week' : 'day';
   const weekDates = getSchedulerWeekDates(anchorDate);
+  const tastingRangeStart = view === 'week' ? weekDates[0] : anchorDate;
+  const tastingRangeEnd = addDaysToDateInputValue(view === 'week' ? weekDates[6] : anchorDate, 1);
+  const myTastings = enabledFeatures.has('TASTING_MANAGEMENT')
+    ? (await listTastings({ organizationId, userId: user.id, role: user.role }, {
+        from: new Date(`${tastingRangeStart}T00:00:00.000Z`),
+        to: new Date(`${tastingRangeEnd}T00:00:00.000Z`),
+        assignedTasterUserId: user.id,
+        limit: 100,
+      })).filter(tasting => !['CANCELLED', 'DENIED'].includes(tastingExecutionStatus(tasting)))
+    : [];
+  if (user.role === 'TASTER') {
+    if (!enabledFeatures.has('TASTING_MANAGEMENT')) redirect('/visits/new');
+    return <>
+      <header className="page-heading page-header"><h1>My Schedule</h1></header>
+      <form className="taster-schedule-controls" method="get">
+        <label>Date<input name="date" type="date" defaultValue={anchorDate} required /></label>
+        <label>View<select name="view" defaultValue={view}><option value="day">My Day</option><option value="week">My Week</option></select></label>
+        <button type="submit">Show schedule</button>
+      </form>
+      <TastingSchedule tastings={myTastings} currentUserId={user.id} returnTo={`/?view=${view}&date=${anchorDate}`} emptyLabel={view === 'week' ? 'No tastings assigned this week.' : 'No tastings assigned this day.'} />
+    </>;
+  }
   const schedulerRangeStart = addDaysToDateInputValue(view === 'week' ? weekDates[0] : anchorDate, -30);
   const schedulerRangeEnd = addDaysToDateInputValue(view === 'week' ? weekDates[6] : anchorDate, 1);
   const ranges = getDashboardRanges();
@@ -360,6 +386,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
         </div>
       </header>
 
+      {enabledFeatures.has('TASTING_MANAGEMENT') ? <TastingSchedule tastings={myTastings} currentUserId={user.id} returnTo={`/?view=${view}&date=${anchorDate}`} emptyLabel={view === 'week' ? 'No tastings assigned this week.' : 'No tastings assigned this day.'} /> : null}
       <WorklistScheduler
         anchorDate={anchorDate}
         completeAction={completeSchedulerWorklistItem}

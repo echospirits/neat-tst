@@ -13,6 +13,8 @@ import { useVisitPhotoFormAction } from './clientPhotoUpload';
 type TasterVisitFormProps = {
   action: (formData: FormData) => void | Promise<void>;
   agencies: VisitFormAgencyOption[];
+  initialAgency?: VisitFormAgencyOption | null;
+  tastingContext?: { id: string; fingerprint: string; scheduleLabel: string } | null;
 };
 
 const normalize = (value: string | null | undefined) => (value ?? '').trim().toLowerCase();
@@ -37,16 +39,18 @@ const getLastVisitLabel = (value: string | null) =>
 const getLastSaleLabel = (value: string | null) =>
   value ? `Last sold ${reportDateFormatter.format(new Date(value))}` : 'No recent sale';
 
-export function TasterVisitForm({ action, agencies }: TasterVisitFormProps) {
-  const [agencyId, setAgencyId] = useState('');
-  const [selectedAgency, setSelectedAgency] = useState<VisitFormAgencyOption>();
+export function TasterVisitForm({ action, agencies, initialAgency, tastingContext }: TasterVisitFormProps) {
+  const [agencyId, setAgencyId] = useState(initialAgency?.id ?? '');
+  const [selectedAgency, setSelectedAgency] = useState<VisitFormAgencyOption | undefined>(initialAgency ?? undefined);
+  const [submissionKey, setSubmissionKey] = useState('');
+  useEffect(() => { setSubmissionKey(crypto.randomUUID()); }, []);
   const [agencySearch, setAgencySearch] = useState('');
   const [agencySearchResults, setAgencySearchResults] = useState<VisitFormAgencyOption[]>([]);
   const [resolvedSearch, setResolvedSearch] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [nearbyAgencies, setNearbyAgencies] = useState<VisitFormAgencyOption[]>([]);
-  const [isChangingAgency, setIsChangingAgency] = useState(true);
+  const [isChangingAgency, setIsChangingAgency] = useState(!initialAgency);
   const [agencyContext, setAgencyContext] = useState<AgencyVisitContext | null>(null);
   const [isContextLoading, setIsContextLoading] = useState(false);
   const [contextError, setContextError] = useState<string | null>(null);
@@ -175,6 +179,8 @@ export function TasterVisitForm({ action, agencies }: TasterVisitFormProps) {
     <form action={formAction} className="visit-form field-visit-form taster-visit-form">
       <input name="locationType" readOnly type="hidden" value="agency" />
       <input name="agencyId" readOnly type="hidden" value={agencyId} />
+      <input name="submissionKey" readOnly type="hidden" value={submissionKey} />
+      {tastingContext ? <><input name="tastingId" readOnly type="hidden" value={tastingContext.id} /><input name="tastingFingerprint" readOnly type="hidden" value={tastingContext.fingerprint} /><p className="action-context-summary"><strong>Tasting</strong> · {tastingContext.scheduleLabel}</p></> : null}
       {photoUploadError ? <p className="toast-notice page-status" role="alert">{photoUploadError}</p> : null}
 
       <fieldset className="visit-step visit-account-step">
@@ -186,9 +192,9 @@ export function TasterVisitForm({ action, agencies }: TasterVisitFormProps) {
               <strong>{selectedAgency.name}</strong>
               <small>{getAgencyMeta(selectedAgency)}</small>
             </div>
-            <button className="secondary compact-btn" type="button" onClick={() => setIsChangingAgency(true)}>
+            {!tastingContext ? <button className="secondary compact-btn" type="button" onClick={() => setIsChangingAgency(true)}>
               Change
-            </button>
+            </button> : null}
           </div>
         ) : (
           <div className="search-select taster-agency-picker">
@@ -319,7 +325,8 @@ export function TasterVisitForm({ action, agencies }: TasterVisitFormProps) {
       </fieldset>
 
       <div className="visit-submit-bar">
-        <VisitSubmitButton disabled={!selectedAgency} label="Log retail visit" />
+        {tastingContext ? <a className="btn secondary" href={`/tastings/${tastingContext.id}`}>Cancel</a> : null}
+        <VisitSubmitButton disabled={!selectedAgency || !submissionKey} label={tastingContext ? 'Log tasting visit' : 'Log retail visit'} />
       </div>
     </form>
   );

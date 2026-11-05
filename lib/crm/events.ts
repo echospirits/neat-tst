@@ -75,6 +75,8 @@ export const eventInput = z
 export async function saveEvent(db: CrmDb, actor: CrmActor, raw: unknown) {
   const input = eventInput.parse(raw);
   if (input.accountId) await assertAccount(db, accountInput.parse(input));
+  // The same lock guards both event and tasting assignment checks.
+  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`tasting:${actor.organizationId}`},0))`;
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`events:${actor.organizationId}`},0))`;
   const old = input.id
     ? await db.eventShift.findFirst({
@@ -103,6 +105,11 @@ export async function saveEvent(db: CrmDb, actor: CrmActor, raw: unknown) {
   if (valid !== staff.length)
     throw new CrmError("Choose active staff in this organization.");
   if (staff.length && !["completed", "cancelled"].includes(input.status)) {
+    const pilot = await db.organizationFeature.findFirst({ where: { organizationId: actor.organizationId, featureKey: 'TASTING_MANAGEMENT', enabled: true }, select: { id: true } });
+    if (pilot) {
+      const tasting = await db.tastingEvent.findFirst({ where: { organizationId: actor.organizationId, assignedTasterUserId: { in: staff }, cancelledAt: null, completedAt: null, agencyApproval: { not: 'DENIED' }, stateApproval: { not: 'DENIED' }, startsAt: { lt: input.endsAt }, endsAt: { gt: input.startsAt } }, select: { id: true } });
+      if (tasting) throw new CrmError('A selected staff member already has an overlapping tasting. Adjust the staff or time.');
+    }
     const conflict = await db.eventShift.findFirst({
       where: {
         organizationId: actor.organizationId,

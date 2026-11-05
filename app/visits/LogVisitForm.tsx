@@ -71,6 +71,9 @@ export type VisitFormUserOption = {
 
 type VisitFormInitialValues = {
   eventId?: string;
+  tastingId?: string;
+  tastingFingerprint?: string;
+  tastingScheduleLabel?: string;
   locationType?: VisitLocationType;
   locationName?: string | null;
   locationLocked?: boolean;
@@ -422,6 +425,7 @@ export function LogVisitForm({
       {contactIds.map((contactId) => <input key={contactId} name="contactId" readOnly type="hidden" value={contactId} />)}
       <input name="outcomes" readOnly type="hidden" value={legacyOutcomes} />
       <input name="eventId" type="hidden" value={initialValues?.eventId??''} />
+      {initialValues?.tastingId ? <><input name="tastingId" type="hidden" value={initialValues.tastingId} /><input name="tastingFingerprint" type="hidden" value={initialValues.tastingFingerprint ?? ''} /><p className="action-context-summary"><strong>Tasting</strong> · {initialValues.tastingScheduleLabel}</p></> : null}
       <input name="submissionKey" readOnly type="hidden" value={submissionKey} />
       {worklistItemId ? <input name="worklistItemId" readOnly type="hidden" value={worklistItemId} /> : null}
       {initialValues?.opportunityId ? <input name="opportunityId" readOnly type="hidden" value={initialValues.opportunityId} /> : null}
@@ -449,7 +453,7 @@ export function LogVisitForm({
               <span>{locationType === 'agency' ? 'Retail' : 'Restaurants'}</span>
               <strong>{selectedLocation.name}</strong>
             </div>
-            <button className="secondary compact-btn" type="button" onClick={() => setIsChangingLocation(true)}>Change</button>
+            {!initialValues?.tastingId ? <button className="secondary compact-btn" type="button" onClick={() => setIsChangingLocation(true)}>Change</button> : null}
           </div>
         ) : (
           <>
@@ -529,7 +533,7 @@ export function LogVisitForm({
         )}
       </fieldset>
 
-      {mode === 'create' ? <fieldset className="visit-step"><legend>How did you connect?</legend>
+      {mode === 'create' && !initialValues?.tastingId ? <fieldset className="visit-step"><legend>How did you connect?</legend>
         <div className="visit-contact-chips interaction-channel-options" role="group" aria-label="Interaction type">
           {([['PHYSICAL_VISIT', 'In person'], ['PHONE_CALL', 'Phone'], ['EMAIL', 'Email'], ['SMS', 'Text'], ['VIRTUAL_MEETING', 'Video'], ['INTERNAL_NOTE', 'Note']] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={interactionType === value} className={interactionType === value ? 'visit-contact-chip is-selected' : 'visit-contact-chip'} onClick={() => setInteractionType(value)}>{label}</button>)}
         </div><input name="interactionType" type="hidden" value={interactionType} />
@@ -751,13 +755,13 @@ export function LogVisitForm({
             </details>
           ) : null}
 
-          {mode === 'create' && physicalVisit ? <details className="compact-details nested-details">
-            <summary>Add photo proof</summary>
-            {photoSlots.map((slot) => (
+          {mode === 'create' && physicalVisit ? <details className="compact-details nested-details" open={Boolean(initialValues?.tastingId)}>
+            <summary>{initialValues?.tastingId ? 'Tasting photo (required)' : 'Add photo proof'}</summary>
+            {(initialValues?.tastingId ? photoSlots.slice(0, 1) : photoSlots).map((slot) => (
               <div className="photo-entry streamlined-photo-entry" key={slot}>
                 <label>Photo category<select name="photoType" defaultValue="OTHER"><option value="OTHER">Other</option><option value="SHELF">Shelf</option><option value="DISPLAY">Display</option><option value="MENU">Menu</option><option value="BACK_BAR">Back bar</option><option value="COMPETITOR">Competitor</option></select></label>
                 <label htmlFor={`visit-photo-${slot}`}>{slot === 1 ? 'Photo' : `Additional photo ${slot}`}</label>
-                <input id={`visit-photo-${slot}`} name="photoFile" type="file" accept="image/*" />
+                <input id={`visit-photo-${slot}`} name="photoFile" type="file" accept="image/*" required={Boolean(initialValues?.tastingId) && slot === 1} />
                 <input name="photoUrl" readOnly type="hidden" value="" />
                 <input aria-label={`Photo ${slot} caption`} name="photoCaption" placeholder="Caption (optional)" />
               </div>

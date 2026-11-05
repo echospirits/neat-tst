@@ -20,6 +20,8 @@ import { LogVisitForm } from '../LogVisitForm';
 import { TasterVisitForm } from '../TasterVisitForm';
 import { getOrganizationFeatures, requireOrganizationContext } from '../../../lib/organizations';
 import { VISIT_SALES_STATUS_OPTIONS } from '../../../lib/accountSalesStatus';
+import { requireTastingExecutionContext, tastingScheduleFingerprint, TastingExecutionError } from '../../../lib/tastings/execution';
+import { formatEasternDateTime } from '../../../lib/dateTime';
 
 export const metadata = buildPageMetadata('Log Visit');
 
@@ -40,6 +42,8 @@ const statusMessages: Record<string, string> = {
   'invalid-assignee': 'Choose an active team member for the follow-up.',
   'invalid-context': 'The originating task or opportunity no longer matches this account. Start the action again from its source.',
   'visit-logged': 'Retail visit logged.',
+  'tasting-photo-required': 'Add a tasting picture before logging this visit.',
+  'tasting-context-changed': 'The tasting changed while you were logging. Open the tasting again to review its current schedule.',
 };
 
 export default async function NewVisitPage({
@@ -47,6 +51,7 @@ export default async function NewVisitPage({
 }: {
   searchParams?: Promise<{
     eventId?: string;
+    tastingId?: string;
     status?: string;
     type?: string;
     agencyId?: string;
@@ -63,22 +68,32 @@ export default async function NewVisitPage({
     returnTo?: string;
   }>;
 }) {
-  const [params, user] = await Promise.all([(await searchParams) ?? {}, requireUser({ allowTaster: true })]);
+  const [requestedParams, user] = await Promise.all([(await searchParams) ?? {}, requireUser({ allowTaster: true })]);
   const { organizationId, organization } = await requireOrganizationContext(user);
   const enabledFeatures = await getOrganizationFeatures(organizationId);
+  let tasting: Awaited<ReturnType<typeof requireTastingExecutionContext>> | null = null;
+  if (requestedParams.tastingId) {
+    try {
+      tasting = await requireTastingExecutionContext(prisma, { organizationId, userId: user.id }, requestedParams.tastingId);
+    } catch (error) {
+      return <><PageHeader title="Log Tasting Visit" /><p className="toast-notice page-status" role="alert">{error instanceof TastingExecutionError ? error.message : 'Tasting details could not be loaded. Try again.'}</p><a className="btn secondary" href="/tastings">Open Tastings</a></>;
+    }
+  }
+  const params = { ...requestedParams, ...(tasting ? { agencyId: tasting.agencyId, type: 'agency' } : {}) };
+  const tastingContext = tasting ? { id: tasting.id, fingerprint: tastingScheduleFingerprint(tasting), scheduleLabel: `${formatEasternDateTime(tasting.startsAt)} – ${formatEasternDateTime(tasting.endsAt, { hour: 'numeric', minute: '2-digit' })}` } : null;
 
   if (user.role === UserRole.TASTER) {
-    const agencies = await getAgenciesForVisitPicker({ take: 8, organizationId });
+    const [agencies, initialAgency] = await Promise.all([getAgenciesForVisitPicker({ take: 8, organizationId }), params.agencyId ? getAgencyVisitPickerOptionById({ id: params.agencyId, organizationId }) : null]);
 
     return (
       <>
         <PageHeader
-            title="Log Retail Visit"
+            title={tasting ? 'Log Tasting Visit' : 'Log Retail Visit'}
         />
         {params.status ? <p className="toast-notice page-status">{statusMessages[params.status] ?? params.status}</p> : null}
 
         <div className="workflow-shell"><div className="card">
-          <TasterVisitForm action={createVisit} agencies={agencies} />
+          <TasterVisitForm action={createVisit} agencies={agencies} initialAgency={initialAgency} tastingContext={tastingContext} />
         </div></div>
       </>
     );
@@ -153,7 +168,7 @@ export default async function NewVisitPage({
   return (
     <>
       <PageHeader
-        title="Log Visit"
+        title={tasting ? 'Log Tasting Visit' : 'Log Visit'}
       />
       {params.status ? <p className="toast-notice page-status">{statusMessages[params.status] ?? params.status}</p> : null}
 
@@ -168,6 +183,9 @@ export default async function NewVisitPage({
           contacts={contacts}
           initialValues={{
               eventId: params.eventId,
+            tastingId: tastingContext?.id,
+            tastingFingerprint: tastingContext?.fingerprint,
+            tastingScheduleLabel: tastingContext?.scheduleLabel,
             locationType: initialLocationType,
             agencyId: params.agencyId ?? null,
             locationLocked: Boolean(params.agencyId || params.wholesaleAccountId),
@@ -189,6 +207,7 @@ export default async function NewVisitPage({
           users={activeUsers.map((activeUser) => ({ id: activeUser.id, name: getUserDisplayName(activeUser) }))}
           wholesaleAccounts={wholesaleAccounts}
           worklistItemId={params.worklistItemId}
+          submitLabel={tasting ? 'Log tasting visit' : undefined}
         />
       </div></div>
     </>

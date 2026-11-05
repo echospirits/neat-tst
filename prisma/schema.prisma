@@ -431,6 +431,7 @@ model UserActivityDay {
 }
 
 model User {
+  assignedTastings TastingEvent[] @relation("TastingAssignedUser")
   contactSuggestionReviews ContactSuggestionReview[]
   mailboxConnections MailboxConnection[]
   mailboxOAuthStates MailboxOAuthState[]
@@ -485,11 +486,14 @@ model User {
   filedWholesaleOrders        WholesaleOrder[]       @relation("WholesaleOrderFiledBy")
 
   @@index([role])
+  @@unique([organizationId, id])
   @@index([organizationId])
   @@index([isActive])
 }
 
 model Organization {
+  tastings TastingEvent[]
+  tastingWorkflowEvents TastingWorkflowEvent[]
   contactSuggestionReviews ContactSuggestionReview[]
   eventShifts EventShift[]
   eventbriteConnection EventbriteConnection?
@@ -1353,6 +1357,110 @@ model MenuPlacement {
   @@index([assignedToUserId])
 }
 
+enum TastingTasterResponse {
+  PENDING
+  APPROVED
+  NEEDS_EDIT
+}
+
+enum TastingAgencyApproval {
+  NOT_REQUESTED
+  REQUESTED
+  APPROVED
+  DENIED
+}
+
+enum TastingStateApproval {
+  NOT_SUBMITTED
+  SUBMITTED
+  APPROVED
+  DENIED
+}
+
+model TastingEvent {
+  id String @id @default(cuid())
+  organizationId String
+  agencyId String
+  scheduledDate DateTime @db.Date
+  startsAt DateTime
+  endsAt DateTime
+  assignedTasterUserId String?
+  contactId String?
+  tasterNotes String @default("")
+  internalNotes String @default("")
+  tasterResponse TastingTasterResponse @default(PENDING)
+  tasterRespondedAt DateTime?
+  tasterRespondedByUserId String?
+  tasterResponseComment String?
+  approvedAssignment Json?
+  agencyApproval TastingAgencyApproval @default(NOT_REQUESTED)
+  agencyRequestedAt DateTime?
+  agencyRequestedByUserId String?
+  agencyDecidedAt DateTime?
+  agencyDecidedByUserId String?
+  agencyDecisionComment String?
+  stateApproval TastingStateApproval @default(NOT_SUBMITTED)
+  stateSubmittedAt DateTime?
+  stateSubmittedByUserId String?
+  stateDecidedAt DateTime?
+  stateDecidedByUserId String?
+  stateDecisionComment String?
+  stateReference String?
+  cancelledAt DateTime?
+  cancelledByUserId String?
+  cancellationReason String?
+  completedAt DateTime?
+  completedVisitId String?
+  emailsGathered Int?
+  postEventNotes String @default("")
+  tasterFeedback String @default("")
+  retailBottlesSold Float?
+  salesProductBreakdown Json?
+  salesDataSource String?
+  salesCalculatedAt DateTime?
+  salesSourceDataThrough DateTime? @db.Date
+  salesSourceRevision String?
+  importKey String?
+  importMetadata Json @default("{}")
+  importNeedsReview Boolean @default(false)
+  submissionKey String?
+  version Int @default(1)
+  createdByUserId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  assignedTaster User? @relation("TastingAssignedUser", fields: [organizationId, assignedTasterUserId], references: [organizationId, id], onDelete: Restrict)
+  contact LocationContact? @relation("TastingContact", fields: [organizationId, contactId], references: [organizationId, id], onDelete: Restrict)
+  visits LoggedVisit[] @relation("TastingVisits")
+  completedVisit LoggedVisit? @relation("TastingCompletedVisit", fields: [organizationId, completedVisitId], references: [organizationId, id], onDelete: Restrict)
+  history TastingWorkflowEvent[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, importKey])
+  @@unique([organizationId, submissionKey])
+  @@unique([organizationId, completedVisitId])
+  @@index([organizationId, scheduledDate])
+  @@index([organizationId, agencyId, scheduledDate])
+  @@index([organizationId, assignedTasterUserId, startsAt])
+}
+
+model TastingWorkflowEvent {
+  id String @id @default(cuid())
+  organizationId String
+  tastingEventId String
+  type String
+  actorUserId String?
+  oldValue Json?
+  newValue Json?
+  comment String?
+  createdAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  tasting TastingEvent @relation(fields: [organizationId, tastingEventId], references: [organizationId, id], onDelete: Restrict)
+
+  @@index([organizationId, tastingEventId, createdAt])
+}
+
 model EventShift {
   organizationId String?
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
@@ -1457,6 +1565,7 @@ model RecipeSuggestion {
 }
 
 model Agency {
+  tastings TastingEvent[]
   id                       String                        @id @default(cuid())
   agencyId                 String                        @unique
   name                     String
@@ -2008,6 +2117,7 @@ model LocationTag {
 }
 
 model LocationContact {
+  tastings TastingEvent[] @relation("TastingContact")
   phoneAliases String[] @default([])
   personKey          String?
   emailAliases       String[] @default([])
@@ -2038,12 +2148,16 @@ model LocationContact {
   activities         AccountActivity[]
 
   @@index([organizationId, agencyId, active])
+  @@unique([organizationId, id])
   @@index([organizationId, wholesaleAccountId, active])
   @@index([organizationId, source, externalSourceId])
   @@index([createdByUserId])
 }
 
 model LoggedVisit {
+  tastingEventId String?
+  tastingEvent TastingEvent? @relation("TastingVisits", fields: [organizationId, tastingEventId], references: [organizationId, id], onDelete: Restrict)
+  completedTastings TastingEvent[] @relation("TastingCompletedVisit")
   guidedAnswers Json @default("{}")
   eventShiftId String?
   eventShift EventShift? @relation(fields: [organizationId, eventShiftId], references: [organizationId, id], onDelete: Restrict)
@@ -2082,6 +2196,8 @@ model LoggedVisit {
   contacts                    LoggedVisitContact[]
 
   @@unique([organizationId, submissionKey])
+  @@unique([organizationId, id])
+  @@index([organizationId, tastingEventId])
   @@index([createdByUserId])
   @@index([followUpAssignedToUserId])
   @@index([locationType, agencyId, visitAt])

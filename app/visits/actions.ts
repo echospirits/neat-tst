@@ -24,6 +24,8 @@ import { setAccountTargeting } from '../../lib/accountTargeting';
 import { scheduleTargetedAgencyResearch } from '../../lib/scheduleTargetedAgencyResearch';
 import { createVisitDiagnostics, type VisitDiagnostics } from '../../lib/visitDiagnostics';
 import { getSelectedVoiceFollowUps } from '../../lib/voiceVisitNoteShared';
+import { completeTastingFromVisit, requireTastingExecutionContext, tastingScheduleFingerprint } from '../../lib/tastings/execution';
+import { refreshTastingSales } from '../../lib/tastings/sales';
 import {
   getOutcomeLabels,
   getRequestedWorklistCompletionIds,
@@ -104,11 +106,11 @@ const getOutcomeCodes = (formData: FormData) =>
     ),
   );
 
-const redirectVisitWithStatus = (formOrigin: FormOrigin, status: string, locationType: string): never => {
+const redirectVisitWithStatus = (formOrigin: FormOrigin, status: string, locationType: string, tastingId?: string | null): never => {
   redirect(
     formOrigin === 'worklist'
       ? `/alerts?notice=${status}`
-      : `/visits/new?status=${status}&type=${locationType === 'wholesale' ? 'wholesale' : 'agency'}`,
+      : `/visits/new?status=${status}&type=${locationType === 'wholesale' ? 'wholesale' : 'agency'}${tastingId ? `&tastingId=${encodeURIComponent(tastingId)}` : ''}`,
   );
 };
 
@@ -153,7 +155,7 @@ function collectPhotos(formData: FormData, formOrigin: FormOrigin, locationType:
       const validationError = validateVisitPhotoFile(file);
 
       if (validationError) {
-        redirectVisitWithStatus(formOrigin, validationError, locationType);
+        redirectVisitWithStatus(formOrigin, validationError, locationType, toOptional(formData.get('tastingId')));
       }
 
       photos.push({
@@ -212,7 +214,9 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
   const requestedWorklistCompletionIds = isTaster || physicalVisit
     ? []
     : getRequestedWorklistCompletionIds(formData.entries());
-  const submissionKey = isTaster ? null : toOptional(formData.get('submissionKey'));
+  const submissionKey = toOptional(formData.get('submissionKey'));
+  const tastingId = toOptional(formData.get('tastingId'));
+  const tastingFingerprint = toOptional(formData.get('tastingFingerprint'));
   const locationType = isTaster
     ? 'agency'
     : String(formData.get('locationType') ?? 'wholesale') === 'agency'
@@ -274,21 +278,28 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
   if (submissionKey) {
     const existingVisit = await prisma.loggedVisit.findUnique({
       where: { organizationId_submissionKey: { organizationId, submissionKey } },
-      select: { createdByUserId: true, id: true },
+      select: { createdByUserId: true, id: true, tastingEventId: true },
     });
     if (existingVisit?.createdByUserId === user.id) {
       diagnostics.mark('duplicate_submission', { visitId: existingVisit.id, committed: true });
+      if (tastingId && existingVisit.tastingEventId === tastingId) {
+        const completed = await prisma.tastingEvent.findFirst({ where: { id: tastingId, organizationId }, select: { completedVisitId: true } });
+        if (completed?.completedVisitId === existingVisit.id) redirect(`/tastings/${encodeURIComponent(tastingId)}?notice=visit-completed`);
+        redirectToVisitConfirmation(existingVisit.id, formOrigin, 'tasting-needs-review');
+      }
       redirectToVisitConfirmation(existingVisit.id, formOrigin);
     }
   }
 
   if (isTaster && !summary) {
-    redirectVisitWithStatus(formOrigin, 'comments-required', locationType);
+    redirectVisitWithStatus(formOrigin, 'comments-required', locationType, tastingId);
   }
 
-  if (isTaster && (collectedPhotos.length !== 1 || (!collectedPhotos[0]?.file && !collectedPhotos[0]?.storageKey))) {
-    redirectVisitWithStatus(formOrigin, 'photo-required', locationType);
+  if ((isTaster || tastingId) && (collectedPhotos.length !== 1 || (!collectedPhotos[0]?.file && !collectedPhotos[0]?.storageKey))) {
+    redirectVisitWithStatus(formOrigin, 'photo-required', locationType, tastingId);
   }
+  if (tastingId && (!physicalVisit || locationType !== 'agency' || !submissionKey || !tastingFingerprint)) throw new Error('Open the tasting again to log its assigned retail visit.');
+  const tasting = tastingId ? await requireTastingExecutionContext(prisma, { organizationId, userId: user.id }, tastingId, { agencyId, fingerprint: tastingFingerprint }) : null;
 
   let pendingPhotos = isTaster
     ? collectedPhotos.map((photo) => ({ ...photo, type: PhotoType.OTHER, caption: null }))
@@ -357,11 +368,15 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
       locationType,
       userId: user.id,
     });
-    redirectVisitWithStatus(formOrigin, 'photo-verification-failed', locationType);
+    redirectVisitWithStatus(formOrigin, 'photo-verification-failed', locationType, tastingId);
   }
 
   diagnostics.mark('transaction', { locationType });
   const visit = await prisma.$transaction(async (tx) => {
+    if (tasting) {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`tasting:${organizationId}`}, 0))`;
+      await requireTastingExecutionContext(tx, { organizationId, userId: user.id }, tasting.id, { agencyId, fingerprint: tastingScheduleFingerprint(tasting) });
+    }
     if (submissionKey) {
       // Serialize retries before creating a contact, account, interaction or follow-up.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`${organizationId}:${user.id}:${submissionKey}`}, 0))`;
@@ -514,6 +529,7 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
     const guideOrganization = physicalVisit && formData.get('guideEnabled')==='on' ? await tx.organization.findUniqueOrThrow({where:{id:organizationId},select:{crmPreferences:true}}) : null;
     const physical = physicalVisit ? await tx.loggedVisit.create({
       data: {
+        tastingEventId: tasting?.id ?? null,
         eventShiftId: eventId,
         guidedAnswers: captureVisitGuide(formData,guideOrganization?.crmPreferences,locationType==='agency'?'AGENCY':'WHOLESALE'),
         organizationId,
@@ -705,7 +721,7 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
     returnToInteraction(visit);
   }
   diagnostics.mark('photos');
-  if (isTaster) {
+  if (isTaster || tasting) {
     const photo = pendingPhotos[0]!;
     let uploadedPhoto: Awaited<ReturnType<typeof uploadVisitPhoto>> | null = null;
 
@@ -735,7 +751,7 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
         deleteStoredPhoto(uploadedPhoto?.storageKey ?? photo.storageKey),
         prisma.loggedVisit.delete({ where: { id: visit.id } }),
       ]);
-      redirectVisitWithStatus(formOrigin, 'photo-upload-failed', locationType);
+      redirectVisitWithStatus(formOrigin, 'photo-upload-failed', locationType, tastingId);
     }
   } else if (pendingPhotos.length > 0) {
     try {
@@ -798,6 +814,20 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
     }
   }
 
+  let tastingNeedsReview = false;
+  if (tasting) {
+    try {
+      await prisma.$transaction(tx => completeTastingFromVisit(tx, { organizationId, userId: user.id }, { tastingId: tasting.id, visitId: visit.id, fingerprint: tastingScheduleFingerprint(tasting) }));
+    } catch (error) {
+      diagnostics.failure(error);
+      // A coordinator may have rescheduled/cancelled while the photo uploaded.
+      // Keep the actual Visit evidence without claiming the new proposal occurred.
+      tastingNeedsReview = true;
+    }
+    await diagnostics.bestEffort('tasting_sales', () => refreshTastingSales(prisma, organizationId, tasting.id));
+    for (const path of ['/tastings', `/tastings/${tasting.id}`, `/agencies/${tasting.agencyId}`]) revalidatePath(path);
+  }
+
   await diagnostics.bestEffort('calendar_sync', async () => {
     const calendarItems = await prisma.worklistItem.findMany({
       where: {
@@ -838,6 +868,8 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
     revalidatePath(`/wholesale/${visit.wholesaleAccountId}`);
   }
   diagnostics.mark('confirmation');
+  if (tasting && tastingNeedsReview) redirectToVisitConfirmation(visit.id, formOrigin, 'tasting-needs-review');
+  if (tasting) redirect(`/tastings/${tasting.id}?notice=visit-completed`);
   redirectToVisitConfirmation(visit.id, formOrigin);
 }
 
@@ -880,6 +912,7 @@ async function updateVisitWithDiagnostics(visitId: string, formData: FormData, d
       ? await prisma.agency.findUnique({ where: { id: agencyId! }, select: { id: true } })
       : await prisma.wholesaleAccount.findUnique({ where: { id: wholesaleAccountId! }, select: { id: true } });
   if (!locationExists) redirect('/visits?status=invalid-location');
+  if (existingVisit.tastingEventId && (locationType !== existingVisit.locationType || agencyId !== existingVisit.agencyId || wholesaleAccountId !== existingVisit.wholesaleAccountId)) throw new Error('A tasting-linked visit must retain its original retail account.');
 
   const contactIds = Array.from(new Set(formData.getAll('contactId').map(toOptional).filter(Boolean) as string[]));
   for (const contactId of contactIds) {

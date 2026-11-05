@@ -11,7 +11,7 @@ import {
 test('desktop navigation keeps work and account areas intentionally grouped', () => {
   assert.deepEqual(
     getNavigationItems('work').map((item) => item.key),
-    ['home', 'worklist', 'visits', 'analytics', 'production-forecasting'],
+    ['home', 'worklist', 'tastings', 'visits', 'analytics', 'production-forecasting'],
   );
   assert.deepEqual(
     getNavigationItems('work').find((item) => item.key === 'home'),
@@ -26,6 +26,13 @@ test('desktop navigation keeps work and account areas intentionally grouped', ()
 test('pipeline navigation is feature gated', () => {
   assert.equal(getNavigationItems('accounts', []).some((item) => item.key === 'pipeline'), false);
   assert.equal(getNavigationItems('accounts', ['ACCOUNT_SALES_STATUS']).some((item) => item.key === 'pipeline'), true);
+});
+
+test('the tasting pilot stays out of work and More navigation until enabled', () => {
+  assert.equal(getNavigationItems('work', []).some(item => item.key === 'tastings'), false);
+  assert.equal(getMoreNavigationItems(false, []).some(item => item.key === 'tastings'), false);
+  assert.equal(getNavigationItems('work', ['TASTING_MANAGEMENT']).some(item => item.href === '/tastings'), true);
+  assert.equal(getMoreNavigationItems(false, ['TASTING_MANAGEMENT']).some(item => item.href === '/tastings'), true);
 });
 
 test('wholesale orders navigation is feature gated', () => {

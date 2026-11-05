@@ -18,6 +18,9 @@ function accountPage(kind: 'agencies' | 'wholesale', options: {
   visits?: Promise<unknown[]>;
   missing?: boolean;
   mergedIntoId?: string;
+  role?: 'ADMIN' | 'TASTER';
+  tastingsEnabled?: boolean;
+  assignedTastings?: unknown[];
 } = {}) {
   const calls: string[] = [];
   const organizationId = 'org_echo_spirits';
@@ -47,12 +50,20 @@ function accountPage(kind: 'agencies' | 'wholesale', options: {
   };
   const dependencies: Record<string, unknown> = {
     prisma,
-    requireUser: async () => ({ id: 'user-1', organizationId, role: 'ADMIN' }),
+    requireUser: async () => ({ id: 'user-1', organizationId, role: options.role ?? 'ADMIN' }),
     requireOrganizationContext: async () => ({ organizationId }),
     getOrganizationTenantConfig: async () => { calls.push('config'); return options.config ?? {}; },
     getOrganizationFeatures: async () => {
       calls.push('features');
-      return new Set(['ACCOUNT_SALES_STATUS', 'OHIO_DIRECT_WHOLESALE_ORDERS', 'AGENCY_INTELLIGENCE', 'WHOLESALE_OPPORTUNITIES']);
+      return new Set(['ACCOUNT_SALES_STATUS', 'OHIO_DIRECT_WHOLESALE_ORDERS', 'AGENCY_INTELLIGENCE', 'WHOLESALE_OPPORTUNITIES', ...(options.tastingsEnabled ? ['TASTING_MANAGEMENT'] : [])]);
+    },
+    formatEasternDateInputValue: () => '2026-11-05',
+    listTastings: async (actor: { organizationId: string; userId: string }, filter: { agencyId: string; assignedTasterUserId?: string }) => {
+      calls.push('tastings');
+      assert.equal(actor.organizationId, organizationId);
+      assert.equal(filter.agencyId, account.id);
+      if (options.role === 'TASTER') assert.equal(filter.assignedTasterUserId, actor.userId);
+      return options.assignedTastings ?? [];
     },
     getAgencyRecentItemSales: query('sales', []),
     getWholesaleRecentPurchases: query('sales', {}),
@@ -111,4 +122,29 @@ test('merged restaurant accounts redirect before private detail reads', async ()
   const { calls, run } = accountPage('wholesale', { mergedIntoId: 'account-canonical' });
   await assert.rejects(run(), /redirect:\/wholesale\/account-canonical/);
   assert.deepEqual(calls.filter((name) => !['config', 'features', 'account'].includes(name)), []);
+});
+
+test('a taster can open shared Agency information only through their assigned tasting scope', async () => {
+  const { calls, run } = accountPage('agencies', { role: 'TASTER', tastingsEnabled: true, assignedTastings: [{ agency: { id: 'account-1', agencyId: '1001', name: 'Assigned Agency' } }] });
+  assert.ok(await run());
+  assert.deepEqual(calls.filter(name => !['config', 'features', 'tastings'].includes(name)), []);
+  assert.equal(calls.filter(name => name === 'tastings').length, 2);
+});
+
+test('an unassigned taster cannot open an Agency or trigger its private account reads', async () => {
+  const { calls, run } = accountPage('agencies', { role: 'TASTER', tastingsEnabled: true });
+  await assert.rejects(run(), /not-found/);
+  assert.deepEqual(calls.filter(name => !['config', 'features', 'tastings'].includes(name)), []);
+});
+
+test('disabled Tasting Management cannot grant taster access to an Agency', async () => {
+  const { calls, run } = accountPage('agencies', { role: 'TASTER' });
+  await assert.rejects(run(), /not-found/);
+  assert.deepEqual(calls.filter(name => !['config', 'features'].includes(name)), []);
+});
+
+test('missing Agencies stop before tasting reads even with the pilot enabled', async () => {
+  const { calls, run } = accountPage('agencies', { missing: true, tastingsEnabled: true });
+  await assert.rejects(run(), /not-found/);
+  assert.deepEqual(calls.filter(name => !['config', 'features', 'account'].includes(name)), []);
 });

@@ -1,0 +1,61 @@
+.tastings-page { min-width: 0; display: grid; gap: 20px; }
+.tasting-tabs, .tasting-inline-actions, .tasting-toolbar, .tasting-calendar-heading { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.tasting-tabs { border-bottom: 1px solid var(--line); gap: 4px; }
+.tasting-tabs a { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 12px; color: var(--text); text-decoration: none; border-bottom: 2px solid transparent; }
+.tasting-tabs a[aria-current] { border-color: var(--accent-2); font-weight: 700; background: var(--panel-2); }
+.tasting-toolbar { align-items: end; }
+.tasting-toolbar label, .tasting-form-grid label { display: grid; gap: 6px; }
+.tasting-toolbar input, .tasting-toolbar select { min-height: 44px; }
+.tasting-toolbar .live-filter-status { flex-basis: 100%; }
+.tasting-calendar-heading { justify-content: space-between; }
+.tasting-calendar-heading h2 { margin: 0; }
+.tasting-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.tasting-calendar-weekday, .tasting-calendar-day, .tasting-calendar-blank { min-width: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 8px; }
+.tasting-calendar-weekday { color: var(--muted); font-weight: 600; }
+.tasting-calendar-day { min-height: 120px; background: var(--panel); }
+.tasting-calendar-day h3 { font-size: .8rem; font-weight: 600; margin: 0 0 8px; }
+.tasting-calendar-day.is-today h3 { color: var(--accent-2); font-weight: 800; }
+.tasting-calendar-event { display: grid; gap: 4px; padding: 8px 0; border-top: 1px solid var(--line); color: var(--text); text-decoration: none; overflow-wrap: anywhere; font-size: .85rem; }
+.tasting-calendar-event:hover strong { text-decoration: underline; }
+.tasting-calendar-event .chip { width: fit-content; white-space: normal; }
+.tasting-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; padding-block: 16px; border-block: 1px solid var(--line); }
+.tasting-facts > div { display: grid; gap: 4px; align-content: start; overflow-wrap: anywhere; }
+.tasting-editor { max-width: 840px; }
+.tasting-form-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
+.tasting-support { border-top: 1px solid var(--line); padding-block: 12px; }
+.tasting-support summary { min-height: 44px; display: list-item; cursor: pointer; align-content: center; font-weight: 600; }
+.tasting-support[open] summary { margin-bottom: 8px; }
+.tasting-next { padding: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+.tasting-next h2, .tasting-sales h2, .tasting-notes h2, .tasting-milestones h2, .tasting-history h2 { font-size: 1.15rem; margin: 0 0 12px; }
+.tasting-next .crm-form { max-width: 640px; }
+.tasting-notes p { white-space: pre-wrap; overflow-wrap: anywhere; margin-block: 8px; }
+.tasting-milestones dl { display: grid; gap: 0; margin: 0; }
+.tasting-milestones dl > div { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 12px; border-bottom: 1px solid var(--line); padding-block: 10px; }
+.tasting-milestones dd { margin: 0; overflow-wrap: anywhere; }
+.tasting-sales-value { font-size: 1.25rem; font-weight: 700; margin: 8px 0; font-variant-numeric: tabular-nums; }
+.tasting-notice { padding: 12px; border: 1px solid var(--line-strong); background: var(--panel-2); border-radius: 4px; margin: 0; }
+.tasting-history ol { padding: 0; list-style: none; }
+.tasting-history li { display: grid; gap: 4px; padding-block: 12px; border-bottom: 1px solid var(--line); }
+.tasting-history li > span { color: var(--muted); }
+.tasting-history li p { margin: 4px 0; white-space: pre-wrap; }
+.tasting-history pre { max-width: 100%; overflow: auto; font-size: .85rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tasting-back { width: fit-content; min-height: 44px; display: inline-flex; align-items: center; }
+.tasting-import-rows { padding-left: 24px; }
+.tasting-import-rows li { padding-block: 12px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.tasting-import-rows li > strong, .tasting-import-rows li > span { display: block; }
+@media (max-width: 720px) {
+  .tastings-page { gap: 16px; }
+  .tasting-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; }
+  .tasting-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tasting-form-grid > label:first-child { grid-column: 1 / -1; }
+  .tasting-calendar { display: block; border-left: 0; }
+  .tasting-calendar-weekday, .tasting-calendar-blank, .tasting-calendar-day.is-empty { display: none; }
+  .tasting-calendar-day { border-right: 0; min-height: 0; padding: 12px 0; background: transparent; }
+  .tasting-calendar-day h3 { font-size: 1rem; }
+  .tasting-calendar-event { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; font-size: 1rem; }
+  .tasting-calendar-event strong, .tasting-calendar-event .chip { grid-column: 1 / -1; }
+  .tasting-toolbar label { flex: 1 1 140px; min-width: 0; }
+  .tasting-toolbar input, .tasting-toolbar select { width: 100%; min-width: 0; }
+  .tasting-tabs a { padding-inline: 8px; }
+  .tasting-next { padding: 12px; }
+}

@@ -24,6 +24,8 @@ import {
 import { getTenantConfig } from './tenantConfig';
 import { reconcileAccountSalesStatusAfterImport } from './accountSalesStatus';
 import { markWholesaleAssessmentSourceFailure } from './wholesaleAssessmentService';
+import { refreshTastingSalesForDate } from './tastings/sales';
+import { prisma } from './prisma';
 
 type Logger = Pick<Console, 'error' | 'log'>;
 
@@ -116,6 +118,13 @@ export async function runOhlqAnnualSalesWorkflow(options: OhlqAnnualSalesWorkflo
       source: OhlqReportDataSource.ANNUAL_SALES_SUMMARY,
     });
     completedSources.add(OhlqReportDataSource.ANNUAL_SALES_SUMMARY);
+    try {
+      const tastingOutcomes = await refreshTastingSalesForDate(prisma, toOhlqDateOnlyUtc(annualSalesDownload.reportDate));
+      logger.log(`Updated same-day retail sales observations for ${tastingOutcomes.updated} tasting(s).`);
+    } catch (error) {
+      // Detail reads retry calculation; independent sales sources must continue.
+      logger.error('Unable to refresh tasting sales observations after the retail import.', error);
+    }
 
     if (!wholesaleDownload.csvBuffer) {
       throw new Error(

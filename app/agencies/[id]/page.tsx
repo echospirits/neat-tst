@@ -1,4 +1,7 @@
 import { accountWorkAndEvents } from '../../../lib/crm/accountTimeline';
+import { TastingSchedule } from '../../tastings/TastingSchedule';
+import { listTastings } from '../../../lib/tastings/queries';
+import { tastingExecutionStatus } from '../../../lib/tastings/model';
 import { AccountProfile } from '../../components/AccountProfile';
 import { AccountSalesPlan } from '../../components/AccountSalesPlan';
 import { AccountBriefing } from '../../components/AccountBriefing';
@@ -14,7 +17,7 @@ import { isAdminRole } from '../../../lib/userAccess';
 import { notFound } from 'next/navigation';
 import { buildPageMetadata } from '../../../lib/appBrand';
 import { getUserDisplayName, requireUser } from '../../../lib/auth';
-import { formatEasternDate } from '../../../lib/dateTime';
+import { formatEasternDate, formatEasternDateInputValue } from '../../../lib/dateTime';
 import { getAgencyRecentItemSales } from '../../../lib/ohlqSalesData';
 import { prisma } from '../../../lib/prisma';
 import { getOrganizationFeatures, requireOrganizationContext } from '../../../lib/organizations';
@@ -67,7 +70,7 @@ export default async function AgencyActivityPage({
   params: Promise<{ id: string }>;
   searchParams?: Promise<{ status?: string; tagStatus?: string; memoryStatus?: string; targetStatus?: string }>;
 }) {
-  const currentUser = await requireUser();
+  const currentUser = await requireUser({ allowTaster: true });
   const { organizationId } = await requireOrganizationContext(currentUser);
   const [tenantConfig, enabledFeatures] = await Promise.all([
     getOrganizationTenantConfig(organizationId),
@@ -78,6 +81,27 @@ export default async function AgencyActivityPage({
   const hasAccountSalesStatus = enabledFeatures.has('ACCOUNT_SALES_STATUS');
   const { id } = await params;
   const query = (await searchParams) ?? {};
+
+  if (currentUser.role === UserRole.TASTER) {
+    if (!enabledFeatures.has('TASTING_MANAGEMENT')) notFound();
+    const today = new Date(`${formatEasternDateInputValue()}T00:00:00.000Z`);
+    const actor = { organizationId, userId: currentUser.id, role: currentUser.role };
+    const [upcoming, recent] = await Promise.all([
+      listTastings(actor, { agencyId: id, assignedTasterUserId: currentUser.id, view: 'upcoming', from: today, limit: 10 }),
+      listTastings(actor, { agencyId: id, assignedTasterUserId: currentUser.id, view: 'history', today, limit: 5 }),
+    ]);
+    const assignedTastings = [...upcoming, ...recent];
+    if (!assignedTastings.length) notFound();
+    const account = assignedTastings[0].agency;
+    return <>
+      <header className="page-heading page-header"><div><h1>{account.name}</h1><p>Agency {account.agencyId}</p></div><Link className="taster-agency-back" href="/tastings">My tastings</Link></header>
+      <section aria-label="Agency contact information" className="taster-agency-address">
+        <AddressLink address={[account.address, account.city, account.state, account.zip].filter(Boolean).join(', ')} />
+        <PhoneLink phone={account.phone} />
+      </section>
+      <TastingSchedule tastings={assignedTastings} heading="Your tastings at this Agency" currentUserId={currentUser.id} showAgency={false} showAgencyAction={false} returnTo={`/agencies/${id}`} />
+    </>;
+  }
 
   const agency = await prisma.agency.findUnique({
     where: { id },
@@ -96,7 +120,9 @@ export default async function AgencyActivityPage({
     notFound();
   }
 
-  const [visits, tags, salesWindows, users, overlay, accountContacts, communicationActivities, marketProfile, marketFits, salesStatusSummary, salesStatusHistory, targetingHistory, workAndEvents] = await Promise.all([
+  const tastingActor = { organizationId, userId: currentUser.id, role: currentUser.role };
+  const tastingToday = new Date(`${formatEasternDateInputValue()}T00:00:00.000Z`);
+  const [visits, tags, salesWindows, users, overlay, accountContacts, communicationActivities, marketProfile, marketFits, salesStatusSummary, salesStatusHistory, targetingHistory, workAndEvents, upcomingTastings, recentTastings] = await Promise.all([
     prisma.loggedVisit.findMany({
       where: {
         agencyId: id,
@@ -138,6 +164,8 @@ export default async function AgencyActivityPage({
     hasAccountSalesStatus ? prisma.accountSalesStatusHistory.findMany({ where: { organizationId, accountType: SalesAccountType.AGENCY, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 }) : [],
     prisma.accountTargetingHistory.findMany({ where: { organizationId, accountType: SalesAccountType.AGENCY, externalAccountId: id }, orderBy: { changedAt: 'desc' }, take: 50 }),
     accountWorkAndEvents({ organizationId, accountType: 'AGENCY', accountId: agency.id, enabledFeatures }),
+    enabledFeatures.has('TASTING_MANAGEMENT') ? listTastings(tastingActor, { agencyId: id, from: tastingToday, view: 'upcoming', limit: 10 }) : [],
+    enabledFeatures.has('TASTING_MANAGEMENT') ? listTastings(tastingActor, { agencyId: id, view: 'history', today: tastingToday, order: 'desc', limit: 5 }) : [],
   ]);
   const storeContext = readStoreContext(overlay?.storeContext);
   const knownHours = readOperatingHoursDetails(agency.businessHours);
@@ -177,6 +205,10 @@ export default async function AgencyActivityPage({
       {query.memoryStatus ? <p className="toast-notice" role="status">{query.memoryStatus === 'notes-saved' ? 'Account notes saved.' : query.memoryStatus === 'contact-saved' ? 'Contact saved.' : 'Unable to save that account information.'}</p> : null}
       <AccountWorkspace key={agency.id} panels={[
 { id: 'overview', label: 'Overview', content: <>
+      {enabledFeatures.has('TASTING_MANAGEMENT') ? <>
+        <TastingSchedule tastings={upcomingTastings.filter(tasting => !['CANCELLED', 'DENIED', 'COMPLETED'].includes(tastingExecutionStatus(tasting)))} heading="Upcoming Tastings" currentUserId={currentUser.id} showAgency={false} showAgencyAction={false} returnTo={`/agencies/${id}`} emptyLabel="No upcoming tastings at this Agency." />
+        <TastingSchedule tastings={recentTastings} heading="Recent Tastings" currentUserId={currentUser.id} showAgency={false} showAgencyAction={false} showOutcome returnTo={`/agencies/${id}`} emptyLabel="No past tastings at this Agency." />
+      </> : null}
       {agency.state === 'OH' ? <Suspense fallback={<section className="workspace-section" aria-busy="true"><h2>Current Inventory</h2><p role="status">Loading current inventory…</p></section>}><AgencyCurrentInventory agencyNumber={agency.agencyId} config={tenantConfig} organizationId={organizationId} /></Suspense> : null}
       <AccountMemoryPanel users={actionUsers} accountId={agency.id} accountType="AGENCY" contacts={accountContacts} notes={overlay?.notes ?? null} returnTo={`/agencies/${agency.id}`} />
 

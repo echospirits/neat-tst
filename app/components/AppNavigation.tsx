@@ -99,6 +99,10 @@ export function AppSidebarNavigation({ enabledFeatures, isAdmin, isPlatformAdmin
   if (isTaster) {
     return (
       <nav aria-label="Primary navigation" className="app-sidebar-nav">
+        {enabledFeatures.includes('TASTING_MANAGEMENT') ? <>
+          <NavLink item={{ href: '/', key: 'home', label: 'My Schedule', section: 'work' }} pathname={pathname} />
+          <NavLink item={{ href: '/tastings', key: 'tastings', label: 'Tastings', section: 'work' }} pathname={pathname} />
+        </> : null}
         <Link aria-current={pathname === '/visits/new' ? 'page' : undefined} className="app-nav-link app-nav-primary" href="/visits/new">
           Log Visit
         </Link>
@@ -141,6 +145,8 @@ const getBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
     { prefix: '/visits/confirmed', crumbs: [{ href: '/visits', label: 'Visits' }, { href: pathname, label: 'Confirmed' }] },
     { prefix: '/visits', crumbs: [{ href: '/visits', label: 'Visit History' }] },
     { prefix: '/alerts', crumbs: [{ href: '/alerts', label: 'Worklist' }] },
+    { prefix: '/tastings/', crumbs: [{ href: '/tastings', label: 'Tastings' }, { href: pathname, label: 'Tasting' }] },
+    { prefix: '/tastings', crumbs: [{ href: '/tastings', label: 'Tastings' }] },
     { prefix: '/opportunities', crumbs: [{ href: '/opportunities', label: 'Restaurant Opportunities' }] },
     { prefix: '/agency-focus', crumbs: [{ href: '/agency-focus', label: 'Retail Intelligence' }] },
     { prefix: '/my-week', crumbs: [{ href: '/alerts', label: 'My Work' }, { href: '/?view=week', label: 'My Schedule' }] },
@@ -191,7 +197,11 @@ export function MobileTabbar({ enabledFeatures, isAdmin, isPlatformAdmin, isTast
   const pathname = usePathname();
   const moreItems = getMoreNavigationItems(isAdmin, enabledFeatures, isPlatformAdmin);
 
-  if (isTaster) return <nav className="mobile-tabbar mobile-tabbar-taster" aria-label="Quick field actions">
+  if (isTaster) return <nav className="mobile-tabbar mobile-tabbar-taster" aria-label="Quick field actions" style={enabledFeatures.includes('TASTING_MANAGEMENT') ? { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' } : undefined}>
+    {enabledFeatures.includes('TASTING_MANAGEMENT') ? <>
+      <NavLink item={{ href: '/', key: 'home', label: 'Schedule', section: 'work' }} pathname={pathname} />
+      <NavLink item={{ href: '/tastings', key: 'tastings', label: 'Tastings', section: 'work' }} pathname={pathname} />
+    </> : null}
     <NavLink item={{ href: '/visits/new', key: 'visits', label: 'Log Visit', section: 'work' }} pathname={pathname} />
     <NavLink item={{ href: '/profile', key: 'profile', label: 'Profile', section: 'utility' }} pathname={pathname} />
   </nav>;

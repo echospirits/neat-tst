@@ -2,9 +2,11 @@
 import { useEffect, useId, useState } from "react";
 type AccountOption = { id: string; name: string; city: string | null };
 export function CrmAccountPicker({
-  initial, fieldPrefix = "",
+  initial, fieldPrefix = "", agencyOnly = false, onAccountChange,
 }: {
   fieldPrefix?: string;
+  agencyOnly?: boolean;
+  onAccountChange?: (id: string) => void;
   initial?: {
     accountType: "AGENCY" | "WHOLESALE";
     accountId: string;
@@ -12,7 +14,7 @@ export function CrmAccountPicker({
   };
 }) {
   const id = useId(),
-    [type, setType] = useState(initial?.accountType ?? "WHOLESALE"),
+    [type, setType] = useState(initial?.accountType ?? (agencyOnly ? "AGENCY" : "WHOLESALE")),
     [query, setQuery] = useState(""),
     [selected, setSelected] = useState(
       initial
@@ -67,14 +69,14 @@ export function CrmAccountPicker({
           <button
             type="button"
             className="btn secondary"
-            onClick={() => setSelected(null)}
+            onClick={() => { setSelected(null); onAccountChange?.(''); }}
           >
             Change account
           </button>
         </p>
       ) : (
         <>
-          <label htmlFor={`${id}-type`}>Account type</label>
+          {!agencyOnly ? <><label htmlFor={`${id}-type`}>Account type</label>
           <select
             id={`${id}-type`}
             value={type}
@@ -82,7 +84,7 @@ export function CrmAccountPicker({
           >
             <option value="WHOLESALE">Restaurants</option>
             <option value="AGENCY">Retail</option>
-          </select>
+          </select></> : null}
           <label htmlFor={`${id}-search`}>Find an account</label>
           <input
             id={`${id}-search`}
@@ -98,7 +100,7 @@ export function CrmAccountPicker({
           <ul className="crm-picker-results">
             {options.map((option) => (
               <li key={option.id}>
-                <button type="button" onClick={() => setSelected(option)}>
+                <button type="button" onClick={() => { setSelected(option); onAccountChange?.(option.id); }}>
                   {option.name}
                   {option.city ? ` · ${option.city}` : ""}
                 </button>

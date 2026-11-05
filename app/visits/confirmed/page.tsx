@@ -46,6 +46,8 @@ export default async function VisitConfirmedPage({
       wholesaleAccountId: true,
       actionReturnTo: true,
       originatingWorklistItemId: true,
+      tastingEventId: true,
+      tastingEvent: { select: { assignedTasterUserId: true } },
     },
   });
 
@@ -60,12 +62,15 @@ export default async function VisitConfirmedPage({
     visit,
   });
   const photoUploadFailed = params.status === 'photo-upload-failed';
+  const tastingNeedsReview = Boolean(visit.tastingEventId) && params.status === 'tasting-needs-review';
   const relatedWork = user.role === UserRole.TASTER ? [] : await prisma.worklistItem.findMany({
     where: getVisitRelatedWorkWhere(organizationId, user.id, visit),
     orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
     select: { id: true, title: true, detail: true, dueDate: true, assignedTo: true },
   });
-  const returnTarget = visit.actionReturnTo ? { href: visit.actionReturnTo, label: 'Return to where you started' } : continueTarget;
+  const returnTarget = tastingNeedsReview && user.role === UserRole.TASTER && visit.tastingEvent?.assignedTasterUserId !== user.id
+    ? { href: '/tastings', label: 'View my tastings' }
+    : visit.actionReturnTo ? { href: visit.actionReturnTo, label: 'Return to where you started' } : continueTarget;
 
   return (
     <section aria-live="polite" className="card visit-confirmation" role="status">
@@ -80,6 +85,7 @@ export default async function VisitConfirmedPage({
             ? 'Your retail visit, comments, and picture were saved.'
             : `Your ${visit.locationType === 'wholesale' ? 'wholesale' : 'agency'} visit was saved.`}
       </p>
+      {tastingNeedsReview ? <p className="toast-notice" role="alert">Your visit and photo were saved. The tasting could not be marked complete because its assignment or schedule changed, or verification could not finish. The coordinator needs to review the linked visit.</p> : null}
       {relatedWork.length > 0 ? <RelatedWorkPrompt
         visitId={visit.id}
         initialItems={relatedWork.map((item) => ({ ...item, dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null }))}

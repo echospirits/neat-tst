@@ -1,0 +1,25 @@
+.tasting-schedule { min-width: 0; margin-block: 20px; }
+.tasting-schedule .section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.tasting-schedule .section-heading h2 { margin: 0; }
+.tasting-summary-list { list-style: none; margin: 0; padding: 0; }
+.tasting-summary-list > li { display: grid; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--line); min-width: 0; }
+.tasting-summary-identity, .tasting-summary-state { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.tasting-summary-link { font-weight: 650; overflow-wrap: anywhere; }
+.tasting-summary-identity > span, .tasting-summary-state > span { font-size: .9rem; }
+.tasting-summary-state .pill { white-space: normal; }
+.tasting-summary-actions { display: flex; flex-wrap: wrap; gap: 8px; align-content: start; }
+.tasting-summary-actions .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
+.tasting-summary-outcome { font-variant-numeric: tabular-nums; }
+.tasting-summary-outcome small { display: block; }
+.tasting-missing-visit { color: var(--text); font-size: .9rem; }
+.taster-schedule-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-block: 12px; }
+.taster-schedule-controls label { margin: 0; min-width: 0; }
+.taster-schedule-controls input, .taster-schedule-controls select, .taster-schedule-controls button { min-height: 44px; }
+.taster-agency-address { display: grid; gap: 8px; overflow-wrap: anywhere; }
+@media (max-width: 759px) {
+  .tasting-summary-link, .tasting-schedule .section-heading > a, .taster-agency-back { display: inline-flex; align-items: center; min-height: 44px; }
+}
+@media (min-width: 760px) {
+  .tasting-summary-list > li { grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 1fr) minmax(180px, .9fr); align-items: start; }
+  .tasting-summary-actions { justify-content: flex-end; }
+}

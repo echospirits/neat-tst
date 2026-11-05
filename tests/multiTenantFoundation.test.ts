@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { DEFAULT_FEATURE_KEYS, ECHO_FEATURE_KEYS, FEATURE_KEYS, FEATURE_REGISTRY, getEnvironmentFeatureKeys, validateFeatureSelection } from '../lib/featureRegistry';
+import { DEFAULT_FEATURE_KEYS, ECHO_FEATURE_KEYS, FEATURE_KEYS, FEATURE_REGISTRY, PILOT_FEATURE_KEYS, getEnvironmentFeatureKeys, validateFeatureSelection } from '../lib/featureRegistry';
 import { getNavigationItems, navigationItems } from '../app/components/navigationConfig';
 
 test('feature registry has stable unique keys and explicit dependency metadata', () => {
@@ -24,8 +24,11 @@ test('invalid entitlement combinations report every missing dependency', () => {
 });
 
 test('test environment enables standard features while respecting explicit pilot enrollment', () => {
-  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'test' }), FEATURE_KEYS.filter(key => key !== 'PRODUCTION_FORECASTING'));
-  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM', 'PRODUCTION_FORECASTING'], { APP_ENV: 'test' }), [...FEATURE_KEYS]);
+  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'test' }), FEATURE_KEYS.filter(key => !PILOT_FEATURE_KEYS.includes(key as typeof PILOT_FEATURE_KEYS[number])));
+  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM', 'PRODUCTION_FORECASTING'], { APP_ENV: 'test' }), FEATURE_KEYS.filter(key => key !== 'TASTING_MANAGEMENT'));
+  assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM', ...PILOT_FEATURE_KEYS], { APP_ENV: 'test' }), [...FEATURE_KEYS]);
+  assert.equal(DEFAULT_FEATURE_KEYS.includes('TASTING_MANAGEMENT'), false);
+  assert.equal(FEATURE_REGISTRY.TASTING_MANAGEMENT.defaultEnabled, false);
   assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'production' }), ['CORE_CRM']);
   assert.deepEqual(getEnvironmentFeatureKeys(['CORE_CRM'], { APP_ENV: 'development' }), ['CORE_CRM']);
 });
