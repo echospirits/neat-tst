@@ -13,7 +13,7 @@ Owner-authorized TST-only exception, November 5, 2026. Base `64267a3a` (`neat-ts
 7. Tenant-product Agency/date retail outcome, retained coverage, provenance, correction/replay and detail retry.
 8. Admin CSV preview/add-only import, observed-status mapping, unmatched identity review and current source aliases/metadata.
 9. Focused behavior/tenant tests, schema/typecheck/build, final full suite, scripted browser acceptance, isolated database rehearsal and shared-TST migration/readback pass. Independent visual review's sole mobile touch-target fix is resolved; final three browser rechecks pass and documenter confirms the inherited design system.
-10. Operator guide, release manifest and validation record drafted; root must update final receipts after delivery.
+10. Operator guide, release manifest and validation record updated with published application and READY TST deployment receipts.
 
 ## Key decisions and mappings
 
@@ -40,5 +40,7 @@ Owner-authorized TST-only exception, November 5, 2026. Base `64267a3a` (`neat-ts
 - Shared-TST migration **applied** to `neon-neat-tst`, verified host `ep-noisy-dew-avchokwr-pooler.c-11.us-east-1.aws.neon.tech`; exact finished ledger checksum `219f048ef043e4828a8f033070837634e141272136edbd7eb5a284a28e316090` independently confirmed. Echo enabled true; other enabled tenants 0; real tasting records 0.
 - Design detector ran once: new 1.3rem corrected to 1.25rem; preexisting Visit form `#7c9cff` preserved. No second detector.
 - Final visual fix: mobile tasting record/navigation targets measured at least 44px; 23 affected checks and final build pass. Independent reviewer scored the fix resolved (`ship`), with no regressions. Design documentation check complete; existing sidecar drift remains unchanged.
-- **Pending:** commit/push and hosted deployment/version/environment/database health receipt. TST remote still base `64267a3a`; main remote `0f027ae7d90b5eb8444ad5cfbdc93ca7c90648e9` verified unchanged.
+- Application published to `neat-tst/tst`: `c01d9ba90318a7c6bba32c79881537418bb7d4f0`. Exact tree `322a5157428a9c62e520e6b4d087a313b45d4f02` equals tested local `4f3906f1`; connected GitHub delivery followed the failed local credential path. Main remote `0f027ae7d90b5eb8444ad5cfbdc93ca7c90648e9` remains unchanged; no tag.
+- TST deployment `dpl_A5pd42M76258USv6QoMyVZVsqU1b` is **READY** for `c01d9ba9`, canonical `neat-tst.vercel.app` assigned, deployment/canonical health HTTP 200 with `test / neon-neat-tst / connected`. Source version 0.7.2 retained. Existing GitHub Actions filters triggered no run; none is claimed.
+- Final documentation-only receipts accompany delivery. Signed-in shared-TST UI/live Blob upload and reviewed real-sheet import remain explicit acceptance/operator limits.
 - Current-sheet row identity normalization/import and live photo-provider acceptance remain explicit manual/provider follow-up. Root owns final receipt updates and delivery status; do not replace pending gates with inferred success.

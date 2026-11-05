@@ -22,8 +22,8 @@ The implementation covers the [operator guide](../tasting-management.md): tenant
 | Live object-storage upload | **Not verified**; local browser/rehearsal provider uploads are disabled |
 | Current spreadsheet import | Structure/sample review only; real rows **not imported** |
 | Shared-TST migration and entitlement readback | **Applied and independently verified**; exact checksum/target below; Echo enabled, other enabled tenants zero, real tastings zero |
-| Tested commit/push to `neat-tst/tst` | **Pending SHA and remote readback** |
-| TST deployment/version/environment/database health | **Pending deployment receipt** |
+| Tested commit/push to `neat-tst/tst` | **Published and remotely verified** as `c01d9ba90318a7c6bba32c79881537418bb7d4f0`; exact tested tree below |
+| TST deployment/environment/database health | **READY** application `c01d9ba9`, deployment `dpl_A5pd42M76258USv6QoMyVZVsqU1b`; deployment/canonical health HTTP 200, `test / neon-neat-tst / connected`; source version 0.7.2 retained |
 | Production/main/tag changes | Excluded; main remote `0f027ae7d90b5eb8444ad5cfbdc93ca7c90648e9` verified unchanged by this task |
 
 ## Isolated database rehearsal
@@ -64,7 +64,7 @@ The mechanical design detector ran once. Its two advisories were addressed or sc
 - Explicit target: **`neon-neat-tst`**; verified host `ep-noisy-dew-avchokwr-pooler.c-11.us-east-1.aws.neon.tech`.
 - Independent owning-source Neon readback confirms the same finished migration ledger checksum, Echo `TASTING_MANAGEMENT` enabled **true**, other enabled tenants **0**, and real tasting records **0**.
 - No real spreadsheet schedule was imported. Synthetic browser/rehearsal records remain on the separate isolated rehearsal branch.
-- At this receipt update, `neat-tst/tst` remains at base `64267a3a`; commit/push and hosted deployment verification are still pending. Main remote `0f027ae7d90b5eb8444ad5cfbdc93ca7c90648e9` is unchanged by this task.
+- TST application `c01d9ba90318a7c6bba32c79881537418bb7d4f0` is remotely verified. Main remote `0f027ae7d90b5eb8444ad5cfbdc93ca7c90648e9` is unchanged by this task.
 
 ## Spreadsheet source and remaining mapping
 
@@ -72,12 +72,17 @@ The [Current Tastings sheet](https://docs.google.com/spreadsheets/d/1cPo7iHZX4l1
 
 ## Final TST receipts
 
-- Final tested source commit/tree: **Pending**.
+- Published application: `c01d9ba90318a7c6bba32c79881537418bb7d4f0`; exact tree `322a5157428a9c62e520e6b4d087a313b45d4f02`.
+- Local tested source: `4f3906f1e7449c359ffec2f93bbe24f65af40141`, with that identical tree. Local Git Credential Manager could not authenticate and the noninteractive retry failed promptly. The connected GitHub tools published the unchanged tree with parent `64267a3a`, then updated only `neat-tst/tst` using an expected-head lease. Git fetch and tree comparison independently verified exact content equality; no force update or main/tag change was made.
 - Final full-suite result: **1,105 tests / 76 suites, all passed**, zero failures/skips, 37,924 ms.
 - Final strict typecheck/optimized build: **Passed**; affected response-placement checks: **21 passed**, final account/navigation/mobile-target checks: **23 passed**.
 - Browser scripted receipt: **15 passed / zero browser errors**, `output/playwright/tastings/acceptance.json`; final mobile target recheck **3 passed**. Independent screenshot review's sole fix is resolved; `disposition: ship` covers the scored fix. Design documentation check complete.
 - Reviewed migration checksum/verified target/entitlement readback: **Applied and independently verified**, as recorded above.
 - Recovery: the migration is additive and transactional; previous application code remains compatible. No database restore or destructive rollback was performed or is part of this task.
-- Pushed `neat-tst/tst` SHA and remote identity: **Pending**.
-- Deployment ID/URL/READY status, displayed 0.7.2 and test database health: **Pending**.
-- Remaining manual decisions: reviewed current-sheet identity/row-key normalization and live photo-provider acceptance; update after actual delivery checks.
+- Published `neat-tst/tst` application SHA and remote identity: **Verified**, as above.
+- Application deployment **`dpl_A5pd42M76258USv6QoMyVZVsqU1b`** is **READY** with Git metadata `echospirits/neat-tst`, branch `tst`, exact SHA `c01d9ba90318a7c6bba32c79881537418bb7d4f0`. Vercel's Production target here is the dedicated **neat-tst project**, not Neat's production project.
+- [TST](https://neat-tst.vercel.app) and [deployment](https://neat-es803r140-joe-1533s-projects.vercel.app) health each returned HTTP 200, `ok=true`, `environment=test`, `databaseTarget=neon-neat-tst`, `database=connected`, at approximately **5:31 PM Eastern on November 5**. The canonical TST alias is assigned to this deployment. Source version remains 0.7.2; a rendered signed-in hosted version label was not observed.
+- Hosted Vercel logs record a successful build and deployment. The public GitHub Actions query for this exact SHA returned zero runs: existing push path/branch filters exclude this change. No GitHub Actions pass is claimed and no workflows were changed or manually triggered.
+- Canonical `/login` returned HTTP 200 with sign-in content; unauthenticated `/tastings` returned Next.js's HTTP-200 streamed redirect to `/login`. This verifies the observed login boundary, not a signed-in hosted workflow. No rendered version label was visible on the public login page.
+- Signed-in **shared-TST** UI and live object-storage upload remain unverified. Authenticated taster/coordinator browser acceptance above uses legitimate synthetic sessions solely on the isolated rehearsal branch. No shared-TST session or real tasting record was manufactured.
+- Remaining operator work: reviewed current-sheet identity/date/time/row-key normalization and import, plus live photo-provider acceptance. No production promotion is included.
