@@ -19,6 +19,8 @@ November 6, 2026. Owner-requested TST-only refinement on base `de75c36e3483a8d2d
 - Real-browser acceptance: **five persisted-flow groups passed, zero browser errors**, using isolated synthetic fixtures. Assigned-taster approval, required Needs Edit comment, failed-save recovery, Agency/State progression with exact history counts, and calendar cancellation/terminal behavior all passed. URL and filters remain in place.
 - Mobile **390 × 844** and desktop **1440 × 900**, light/dark, 44px controls and no horizontal overflow verified. Calendar controls are outside record links. Evidence: `output/playwright/tasting-inline/acceptance.json` and seven screenshots in that directory.
 - Independent scoped source and screenshot review passed. Final recaptures resolved the confirmation readability issue with no observed regression. One design scan retained only the existing unchanged 1.25rem advisory.
-- Commit and TST deployment receipts: pending.
+- Application commit on `neat-tst/tst`: **`e794d970312ce46f93b9b492def67bff5299d016`**. Published tree `24a479bc8f6596a73f794f11b7e8413f8dd74f0d` exactly matches tested local commit `589c79d3`. Connected GitHub delivery used a non-forced ref update leased to the verified base.
+- Vercel deployment **`dpl_9aC4uzwLhnfgttqf9x1Vb5WGHjRE` READY**, exact application SHA, canonical `https://neat-tst.vercel.app` assigned. Canonical `/api/health` returned **HTTP 200**, `ok: true`, `database: connected`, `databaseTarget: neon-neat-tst`, `environment: test`. GitHub's Vercel status is successful.
+- Production/main remains `0f027ae7d90b5eb8444ad5cfbdc93ca7c90648e9`; no production push/merge, tag, migration or hosted configuration change. Documentation-only delivery receipts follow the tested application commit.
 
-Browser acceptance uses isolated synthetic fixtures; it does not change real tasting data or claim live provider upload acceptance.
+Browser acceptance uses isolated synthetic fixtures; it does not change real tasting data or claim signed-in shared-TST browser or live provider upload acceptance. The local acceptance server was stopped after review. Existing scratch/review files remain unstaged.
