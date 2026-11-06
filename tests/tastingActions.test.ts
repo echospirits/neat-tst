@@ -6,7 +6,7 @@ import { runInNewContext } from 'node:vm';
 import test from 'node:test';
 import ts from 'typescript';
 
-function fixture({ denied = false, role = 'ADMIN' }: { denied?: boolean; role?: 'ADMIN' | 'TASTER' } = {}) {
+function fixture({ denied = false, role = 'ADMIN' }: { denied?: boolean; role?: 'ADMIN' | 'USER' | 'TASTER' } = {}) {
   class TastingError extends Error {}
   const calls: Array<{ kind: string; actor?: any; raw?: any; path?: string }> = [];
   const actor = { organizationId: 'trusted-org', userId: 'trusted-user', role };
@@ -26,6 +26,12 @@ function fixture({ denied = false, role = 'ADMIN' }: { denied?: boolean; role?: 
       calls.push({ kind: 'transition', actor: user, raw });
       return { id: 'updated-tasting' };
     },
+    reassignTasting: async (db: unknown, user: typeof actor, raw: any) => {
+      assert.equal(db, transaction);
+      calls.push({ kind: 'reassign', actor: user, raw });
+      if (user.role === 'TASTER') throw new TastingError('Administrator or Sales access is required.');
+      return { id: 'reassigned-tasting' };
+    },
     revalidatePath: (path: string) => { calls.push({ kind: 'revalidate', path }); },
   };
   const filename = resolve('app/tastings/actions.ts');
@@ -35,7 +41,7 @@ function fixture({ denied = false, role = 'ADMIN' }: { denied?: boolean; role?: 
     exports, Error,
     require: (name: string) => name === 'zod' ? nativeRequire(name) : dependencies,
   });
-  return { saveTastingAction: exports.saveTastingAction, transitionTastingAction: exports.transitionTastingAction, calls, actor };
+  return { saveTastingAction: exports.saveTastingAction, transitionTastingAction: exports.transitionTastingAction, reassignTastingAction: exports.reassignTastingAction, calls, actor };
 }
 const form = (values: Record<string, string>) => { const data = new FormData(); Object.entries(values).forEach(([key, value]) => data.set(key, value)); return data; };
 
@@ -58,6 +64,7 @@ test('disabled pilot authorization stops tasting caller mutations before startin
   const f = fixture({ denied: true });
   await assert.rejects(f.saveTastingAction(form({ accountId: 'agency-a' })), /disabled/);
   await assert.rejects(f.transitionTastingAction(form({ id: 'tasting-a', action: 'CANCEL', version: '1' })), /disabled/);
+  await assert.rejects(f.reassignTastingAction(form({ id: 'tasting-a', version: '1', assignedTasterUserId: 'taster-b' })), /disabled/);
   assert.equal(f.calls.length, 0);
 });
 
@@ -91,4 +98,35 @@ test('arbitrary status caller forwards the selected status with the trusted acto
   assert.equal(call.raw.status, 'STATE_APPROVED');
   assert.equal(result.success, 'Tasting updated.');
   assert.equal(f.calls.filter(value => value.kind === 'transaction').length, 1);
+});
+
+test('Sales reassignment caller whitelists the narrow payload and uses the authenticated actor inside one transaction', async () => {
+  const f = fixture({ role: 'USER' });
+  const result = await f.reassignTastingAction(form({
+    id: 'tasting-a', version: '9', assignedTasterUserId: 'taster-b',
+    organizationId: 'foreign-org', userId: 'forged-user', role: 'ADMIN',
+    agencyId: 'other-agency', date: '2030-01-01', internalNotes: 'Replace private notes', workflowStatusOverride: 'COMPLETED',
+  }));
+  const call = f.calls.find(value => value.kind === 'reassign')!;
+  assert.equal(call.actor, f.actor);
+  assert.equal(call.actor.role, 'USER');
+  assert.equal(call.actor.organizationId, 'trusted-org');
+  assert.deepEqual(JSON.parse(JSON.stringify(call.raw)), { id: 'tasting-a', version: 9, assignedTasterUserId: 'taster-b' });
+  assert.equal(f.calls.filter(value => value.kind === 'transaction').length, 1);
+  assert.equal(result.success, 'Assigned taster updated.');
+  for (const path of ['/tastings', '/tastings/reassigned-tasting', '/', '/agencies/[id]']) {
+    assert.ok(f.calls.some(value => value.kind === 'revalidate' && value.path === path));
+  }
+  assert.ok(!f.calls.some(value => value.kind === 'save' || value.kind === 'transition'));
+});
+
+test('forged reassignment authority cannot replace a Taster actor or refresh a rejected domain write', async () => {
+  const f = fixture({ role: 'TASTER' });
+  const result = await f.reassignTastingAction(form({ id: 'tasting-a', version: '2', assignedTasterUserId: 'taster-b', role: 'ADMIN', userId: 'admin-a', organizationId: 'org-b' }));
+  const call = f.calls.find(value => value.kind === 'reassign')!;
+  assert.equal(call.actor, f.actor);
+  assert.equal(call.actor.role, 'TASTER');
+  assert.match(result.error, /Administrator or Sales/);
+  assert.equal(result.success, undefined);
+  assert.ok(!f.calls.some(value => value.kind === 'revalidate'));
 });

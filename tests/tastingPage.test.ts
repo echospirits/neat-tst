@@ -8,6 +8,7 @@ import { isValidElement, type ReactElement, type ReactNode } from 'react';
 import ts from 'typescript';
 import { addDaysToDateInputValue, formatDateOnly, formatEasternDateTime } from '../lib/dateTime';
 import { deriveTastingStatus, TASTING_STATUS_LABELS } from '../lib/tastings/model';
+import { canAssignTasting } from '../lib/tastings/assignment';
 
 type Node = ReactElement<Record<string, unknown>>;
 type QueryOptions = Record<string, unknown> & { from?: Date; to?: Date; today?: Date };
@@ -17,6 +18,7 @@ const PageHeader = () => null;
 const LiveFilterForm = () => null;
 const TastingBrowse = () => null;
 const TastingStatusSelect = () => null;
+const TastingAssigneeSelect = () => null;
 
 function loadModule(path: string, dependencies: Record<string, unknown>) {
   const filename = resolve(path);
@@ -56,7 +58,7 @@ function link(root: ReactNode, label: string) {
 
 function fixture(index = 0) {
   return {
-    id: `tasting-${index}`, agencyId: 'agency-a', assignedTasterUserId: 'taster-a',
+    id: `tasting-${index}`, version: 7, agencyId: 'agency-a', assignedTasterUserId: 'taster-a',
     agency: { id: 'agency-a', agencyId: '107', name: 'Market #7', city: 'Columbus' },
     assignedTaster: { id: 'taster-a', name: 'Taster A' },
     scheduledDate: new Date(`${TODAY}T00:00:00Z`),
@@ -66,21 +68,24 @@ function fixture(index = 0) {
   };
 }
 
-function pageHarness(records: ReturnType<typeof fixture>[] = [], coordinator = true) {
-  const actor = { organizationId: 'org-a', userId: 'taster-a', role: coordinator ? 'ADMIN' : 'TASTER' };
+function pageHarness(records: ReturnType<typeof fixture>[] = [], coordinator = true, role: 'ADMIN' | 'USER' | 'TASTER' = coordinator ? 'ADMIN' : 'TASTER') {
+  const actor = { organizationId: 'org-a', userId: 'taster-a', role };
   const calls: { actor: unknown; options: QueryOptions }[] = [];
+  const assigneeCalls: unknown[] = [];
+  const assigneeOptions = [{ id: 'taster-a', name: 'Taster A', email: 'taster-a@example.invalid' }, { id: 'taster-b', name: 'Taster B', email: 'taster-b@example.invalid' }];
   const navigation = loadModule('lib/tastings/navigation.ts', {});
   const page = loadModule('app/tastings/page.tsx', {
-    ...navigation, PageHeader, LiveFilterForm, TastingBrowse, TastingStatusSelect,
+    ...navigation, PageHeader, LiveFilterForm, TastingBrowse, TastingStatusSelect, TastingAssigneeSelect, canAssignTasting,
     requireTastingActor: async () => ({ actor, user: { id: actor.userId }, coordinator }),
     listTastings: async (passedActor: unknown, options: QueryOptions) => { calls.push({ actor: passedActor, options }); return records; },
+    tastingAssigneeOptions: async (passedActor: unknown) => { assigneeCalls.push(passedActor); return assigneeOptions; },
     formatEasternDateInputValue: () => TODAY,
     addDaysToDateInputValue, formatDateOnly, formatEasternDateTime, deriveTastingStatus, TASTING_STATUS_LABELS,
     getUserDisplayName: (user: { name: string }) => user.name,
     tastingStatusControlData: (tasting: ReturnType<typeof fixture>) => ({ id: tasting.id, status: deriveTastingStatus(tasting) }),
   });
   return {
-    actor, calls,
+    actor, calls, assigneeCalls, assigneeOptions,
     render: (params: Record<string, string> = {}) => page.default({ searchParams: Promise.resolve(params) }) as Promise<ReactNode>,
   };
 }
@@ -223,4 +228,59 @@ test('Calendar month navigation retains the Agency search and communicates its b
   assert.match(text(tree), /250\s+tastings shown/i);
   assert.match(text(tree), /week|narrow/i);
   assert.doesNotMatch(text(tree), /250\s+tastings (?:in total|total)/i);
+});
+
+test('Admin and Sales receive inline assignment choices without broadening Sales coordinator actions', async () => {
+  for (const role of ['ADMIN', 'USER'] as const) {
+    const coordinator = role === 'ADMIN';
+    for (const view of ['upcoming', 'history', 'calendar']) {
+      const page = pageHarness([fixture()], coordinator, role);
+      const tree = await page.render({ view, q: 'Market #7', order: 'desc' });
+      assert.deepEqual(page.assigneeCalls, [page.actor]);
+      const assignment = allNodes(tree).find(node => node.type === (view === 'calendar' ? TastingAssigneeSelect : TastingBrowse));
+      assert.ok(assignment, `${role} should receive assignment on ${view}.`);
+      assert.equal(assignment.props.canAssign, true);
+      const choices = assignment.props[view === 'calendar' ? 'options' : 'assigneeOptions'];
+      assert.deepEqual(JSON.parse(JSON.stringify(choices)), [{ value: 'taster-a', label: 'Taster A' }, { value: 'taster-b', label: 'Taster B' }]);
+      const header = allNodes(tree).find(node => node.type === PageHeader);
+      assert.ok(header);
+      assert.equal(Boolean(header.props.actions), coordinator);
+      if (!coordinator) {
+        assert.equal(assignment.props.coordinator, view === 'calendar' ? undefined : false);
+        assert.ok(!allNodes(tree).some(node => node.type === Link && /\/tastings\/(?:new|settings|import)/.test(String(node.props.href))));
+      }
+    }
+  }
+});
+
+test('Taster pages never read or serialize eligible assignment choices, including forged Admin query parameters', async () => {
+  for (const view of ['upcoming', 'history', 'calendar']) {
+    const page = pageHarness([fixture()], false, 'TASTER');
+    const tree = await page.render({ view, role: 'ADMIN', canAssign: 'true', assignedTasterUserId: 'taster-b' });
+    assert.equal(page.assigneeCalls.length, 0);
+    const assignment = allNodes(tree).find(node => node.type === (view === 'calendar' ? TastingAssigneeSelect : TastingBrowse));
+    if (view === 'calendar') {
+      assert.equal(assignment, undefined);
+      assert.match(text(tree), /Taster A/);
+    } else {
+      assert.ok(assignment);
+      assert.equal(assignment.props.canAssign, false);
+      const choices = assignment.props.assigneeOptions;
+      assert.ok(Array.isArray(choices));
+      assert.equal(choices.length, 0);
+    }
+    assert.ok(!JSON.stringify(tree).includes('taster-b'), 'The unassigned team roster must not enter the Taster page payload.');
+    assert.equal(page.calls[0].actor, page.actor);
+    assert.equal(page.calls[0].options.assignedTasterUserId, undefined);
+  }
+});
+
+test('empty tasting results do not fetch an unused team roster for any role', async () => {
+  for (const role of ['ADMIN', 'USER', 'TASTER'] as const) {
+    const page = pageHarness([], role === 'ADMIN', role);
+    const tree = await page.render({ q: 'No matching Agency' });
+    assert.equal(page.assigneeCalls.length, 0);
+    assert.equal(allNodes(tree).some(node => node.type === TastingBrowse), false);
+    assert.match(text(tree), /No upcoming tastings.*match this search/i);
+  }
 });

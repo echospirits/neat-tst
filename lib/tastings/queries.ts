@@ -4,6 +4,7 @@ import { isAdminRole } from '../userAccess';
 import type { TastingActor } from './service';
 import { activeTastingWhere, terminalTastingWhere } from './statusWhere';
 import { isTastingStatus, type TastingStatus } from './model';
+import { canAssignTasting } from './assignment';
 
 const include = { agency: true, assignedTaster: { select: { id: true, name: true, firstName: true, lastName: true, email: true } }, contact: true } satisfies Prisma.TastingEventInclude;
 
@@ -50,4 +51,10 @@ export async function getTasting(actor: TastingActor, id: string) {
 export async function tastingEditorOptions(actor: TastingActor) {
   if (!isAdminRole(actor.role)) throw new Error('Administrator access required.');
   return prisma.user.findMany({ where: { organizationId: actor.organizationId, isActive: true }, select: { id: true, name: true, firstName: true, lastName: true, email: true }, orderBy: { name: 'asc' } });
+}
+
+export async function tastingAssigneeOptions(actor: TastingActor) {
+  if (!canAssignTasting(actor.role)) throw new Error('Administrator or Sales access is required.');
+  if (!(await prisma.organizationFeature.findFirst({ where: { organizationId: actor.organizationId, featureKey: 'TASTING_MANAGEMENT', enabled: true } }))) return [];
+  return prisma.user.findMany({ where: { organizationId: actor.organizationId, isActive: true, role: { not: 'PLATFORM_ADMIN' } }, select: { id: true, name: true, firstName: true, lastName: true, email: true }, orderBy: [{ name: 'asc' }, { id: 'asc' }] });
 }

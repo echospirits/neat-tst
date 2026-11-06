@@ -87,6 +87,15 @@
 .tasting-browse-when { font-variant-numeric: tabular-nums; }
 .tasting-browse-link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 650; }
 .tasting-browse-taster { color: var(--text); }
+.tasting-assignee-control { min-width: 0; text-align: start; }
+.tasting-assignee-control .record-picker > span { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.tasting-assignee-control .record-picker > details > summary { min-height: 44px; padding: 8px; border-radius: 6px; font-size: 1rem; overflow-wrap: anywhere; cursor: pointer; }
+.tasting-assignee-control .record-picker-results { min-width: 0; }
+.tasting-assignee-control .record-picker-results input, .tasting-assignee-control .record-picker-results button { min-width: 0; width: 100%; min-height: 44px; }
+.tasting-assignee-control .record-picker-results button { white-space: normal; overflow-wrap: anywhere; }
+.tasting-assignee-control [aria-disabled="true"] { cursor: not-allowed; }
+.tasting-assignee-control[aria-busy="true"] [aria-disabled="true"] { cursor: wait; }
+.tasting-assignee-unavailable { display: block; margin-top: 4px; color: var(--muted); font-size: .8125rem; }
 .tasting-browse-status > :is(strong, span) { display: block; margin-top: 4px; font-size: .8125rem; }
 .tasting-browse-outcome { text-align: right; font-variant-numeric: tabular-nums; }
 .tasting-browse-outcome > strong { font-size: 1rem; }

@@ -2,11 +2,12 @@ import Link from 'next/link';
 import { getUserDisplayName } from '../../lib/auth';
 import { getDirectionsHref } from '../../lib/crmActionContext';
 import { formatDateOnly, formatDateOnlyInputValue, formatEasternDateInputValue, formatEasternDateTime } from '../../lib/dateTime';
-import { deriveTastingStatus, TASTING_STATUS_LABELS, tastingExecutionStatus, type TastingStatus } from '../../lib/tastings/model';
+import { deriveTastingStatus, isTerminalTasting, TASTING_STATUS_LABELS, tastingExecutionStatus, type TastingStatus } from '../../lib/tastings/model';
 import { tastingStatusControlData } from '../../lib/tastings/statusActions';
 import type { TastingScheduleRecord } from './TastingSchedule';
 import { TastingStatusSelect } from './TastingStatusSelect';
 import { TastingMenu } from './TastingMenu';
+import { TastingAssigneeSelect, type TastingAssigneeOption } from './TastingAssigneeSelect';
 
 type TastingBrowseProps = {
   tastings: TastingScheduleRecord[];
@@ -14,12 +15,14 @@ type TastingBrowseProps = {
   currentUserId: string;
   returnTo: string;
   coordinator: boolean;
+  canAssign?: boolean;
+  assigneeOptions?: TastingAssigneeOption[];
   showOutcome?: boolean;
   groupByStatus?: boolean;
 };
 
 /** The full tasting browse surface keeps comparison facts aligned and status editing inline. */
-export function TastingBrowse({ tastings, heading, currentUserId, returnTo, coordinator, showOutcome = false, groupByStatus = false }: TastingBrowseProps) {
+export function TastingBrowse({ tastings, heading, currentUserId, returnTo, coordinator, canAssign = false, assigneeOptions = [], showOutcome = false, groupByStatus = false }: TastingBrowseProps) {
   const today = formatEasternDateInputValue();
   const columnCount = showOutcome ? 6 : 5;
   const groups = new Map<TastingStatus, TastingScheduleRecord[]>();
@@ -49,7 +52,7 @@ export function TastingBrowse({ tastings, heading, currentUserId, returnTo, coor
         <Link className="tasting-browse-link" href={`/tastings/${tasting.id}?returnTo=${encodeURIComponent(returnTo)}`}>{tasting.agency.name}</Link>
         <span className="tasting-browse-record-id">Agency {tasting.agency.agencyId}</span>
       </td>
-      <td className="tasting-browse-taster" data-label="Taster">{tasting.assignedTaster ? getUserDisplayName(tasting.assignedTaster) : 'Needs identity mapping'}</td>
+      <td className="tasting-browse-taster" data-label="Taster"><TastingAssigneeSelect key={`${tasting.id}:${tasting.version}`} id={tasting.id} version={tasting.version} assignedTasterUserId={tasting.assignedTasterUserId} currentTasterName={tasting.assignedTaster ? getUserDisplayName(tasting.assignedTaster) : 'Needs identity mapping'} label={`${tasting.agency.name} on ${dateLabel}`} canAssign={canAssign} options={assigneeOptions} unavailableReason={tasting.completedAt ? 'Visit logged · assignment locked' : isTerminalTasting(tasting) ? coordinator || tasting.assignedTasterUserId === currentUserId ? 'Reopen status to reassign' : 'Ask an administrator to reopen status' : undefined} /></td>
       <td className="tasting-browse-status" data-label="Status">
         <TastingStatusSelect tasting={tastingStatusControlData(tasting)} currentUserId={currentUserId} coordinator={coordinator} label={`${tasting.agency.name} on ${dateLabel}`} showStatusLabel={!groupByStatus} />
         {execution === 'MANUALLY_COMPLETED' ? <strong className="tasting-missing-visit">Completed manually · Visit not logged</strong> : null}

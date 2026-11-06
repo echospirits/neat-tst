@@ -4,6 +4,7 @@ import { isAdminRole } from '../userAccess';
 import { deriveTastingStatus, isTerminalTasting, tastingConflicts, tastingMinimumDays, TASTING_WORKFLOW_STATUSES } from './model';
 import { activeTastingWhere } from './statusWhere';
 import { parseTastingSchedule, tastingScheduleLabel } from './time';
+import { canAssignTasting } from './assignment';
 
 export type TastingDb = Prisma.TransactionClient;
 export type TastingActor = { organizationId: string; userId: string; role: UserRole };
@@ -16,6 +17,10 @@ export const tastingInput = z.object({
   date: z.string(), startTime: z.string(), endTime: z.string(),
   tasterNotes: z.string().trim().max(6000).default(''), internalNotes: z.string().trim().max(6000).default(''),
   spacingOverrideReason: z.string().trim().max(2000).default(''),
+});
+export const tastingReassignmentInput = z.object({
+  id: z.string().min(1).max(100), version: z.coerce.number().int().positive(),
+  assignedTasterUserId: z.string().trim().min(1).max(100),
 });
 export const TASTING_ACTIONS = ['SET_STATUS', 'TASTER_APPROVE', 'TASTER_NEEDS_EDIT', 'REQUEST_AGENCY_APPROVAL', 'AGENCY_APPROVE', 'AGENCY_DENY', 'SUBMIT_TO_STATE', 'STATE_APPROVE', 'STATE_DENY', 'CANCEL', 'SAVE_FEEDBACK'] as const;
 export type TastingAction = typeof TASTING_ACTIONS[number];
@@ -84,6 +89,26 @@ export async function saveTasting(db: TastingDb, actor: TastingActor, raw: unkno
   try { schedule = parseTastingSchedule(input.date, input.startTime, input.endTime); } catch (error) { throw new TastingError(error instanceof Error ? error.message : 'Invalid schedule.'); }
   await lockTastings(db, actor.organizationId);
   const old = input.id ? await db.tastingEvent.findFirst({ where: { id: input.id, organizationId: actor.organizationId } }) : input.submissionKey ? await db.tastingEvent.findUnique({ where: { organizationId_submissionKey: { organizationId: actor.organizationId, submissionKey: input.submissionKey } } }) : null;
+  return persistTastingProposal(db, actor, input, schedule, old, organization.settings, now);
+}
+
+export async function reassignTasting(db: TastingDb, actor: TastingActor, raw: unknown, now = new Date()) {
+  const { organization } = await assertTastingActor(db, actor);
+  if (!canAssignTasting(actor.role)) throw new TastingError('Administrator or Sales access is required to change the assigned taster.');
+  const input = tastingReassignmentInput.parse(raw);
+  await lockTastings(db, actor.organizationId);
+  const old = await db.tastingEvent.findFirst({ where: { id: input.id, organizationId: actor.organizationId } });
+  if (!old) throw new TastingError('This tasting changed or is unavailable. Reload before saving.');
+  // Reuse schedule editing's validation, resets and history without accepting other editable fields.
+  return persistTastingProposal(db, actor, {
+    ...input, agencyId: old.agencyId, contactId: old.contactId,
+    tasterNotes: old.tasterNotes, internalNotes: old.internalNotes, spacingOverrideReason: '',
+  }, { scheduledDate: old.scheduledDate, startsAt: old.startsAt, endsAt: old.endsAt }, old, organization.settings, now);
+}
+
+async function persistTastingProposal(db: TastingDb, actor: TastingActor,
+  input: Omit<z.output<typeof tastingInput>, 'date' | 'startTime' | 'endTime'>,
+  schedule: ReturnType<typeof parseTastingSchedule>, old: TastingEvent | null, settings: unknown, now: Date) {
   if (!input.id && old) return old;
   if (input.id && (!old || old.version !== input.version)) throw new TastingError('This tasting changed. Reload before saving.');
   if (old && (isTerminalTasting(old) || old.completedAt)) throw new TastingError('This tasting is historical. Create a new proposal instead of changing its schedule.');
@@ -97,7 +122,7 @@ export async function saveTasting(db: TastingDb, actor: TastingActor, raw: unkno
   const assignmentChanged = !old || old.assignedTasterUserId !== data.assignedTasterUserId;
   const timeChanged = !old || old.startsAt.getTime() !== data.startsAt.getTime() || old.endsAt.getTime() !== data.endsAt.getTime();
   const agencyChanged = !old || old.agencyId !== data.agencyId;
-  const spacing = assignmentChanged || timeChanged || agencyChanged ? await assertTastingSchedule(db, actor, { ...data, id: old?.id }, tastingMinimumDays(organization.settings), input.spacingOverrideReason) : [];
+  const spacing = assignmentChanged || timeChanged || agencyChanged ? await assertTastingSchedule(db, actor, { ...data, id: old?.id }, tastingMinimumDays(settings), input.spacingOverrideReason) : [];
   const reset: Prisma.TastingEventUncheckedUpdateInput = {};
   if (old && (assignmentChanged || timeChanged || agencyChanged)) {
     // Keep historical cancellation/denial evidence from making a reopened, revised proposal terminal again.
@@ -117,7 +142,7 @@ export async function saveTasting(db: TastingDb, actor: TastingActor, raw: unkno
     if ((assignmentChanged || timeChanged || agencyChanged) && (old.tasterResponse !== event.tasterResponse || old.agencyApproval !== event.agencyApproval || old.stateApproval !== event.stateApproval || old.approvedAssignment !== null && event.approvedAssignment === null)) await writeTastingHistory(db, actor, event.id, 'APPROVALS_RESET', { tasterResponse: old.tasterResponse, agencyApproval: old.agencyApproval, stateApproval: old.stateApproval }, { tasterResponse: event.tasterResponse, agencyApproval: event.agencyApproval, stateApproval: event.stateApproval }, 'Assignment changed; previous approval evidence remains in history.', now);
     if (!assignmentChanged && !timeChanged && !agencyChanged) await writeTastingHistory(db, actor, event.id, 'DETAILS_UPDATED', { contactId: old.contactId, tasterNotes: old.tasterNotes, internalNotes: old.internalNotes }, { contactId: event.contactId, tasterNotes: event.tasterNotes, internalNotes: event.internalNotes }, undefined, now);
   }
-  if (spacing.length) await writeTastingHistory(db, actor, event.id, 'SPACING_OVERRIDE', null, { conflictingTastingIds: spacing.map(value => value.id), minimumDays: tastingMinimumDays(organization.settings) }, input.spacingOverrideReason, now);
+  if (spacing.length) await writeTastingHistory(db, actor, event.id, 'SPACING_OVERRIDE', null, { conflictingTastingIds: spacing.map(value => value.id), minimumDays: tastingMinimumDays(settings) }, input.spacingOverrideReason, now);
   return event;
 }
 

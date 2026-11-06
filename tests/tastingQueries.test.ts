@@ -8,9 +8,11 @@ import { UserRole } from '@prisma/client';
 import ts from 'typescript';
 import { deriveTastingStatus, isTastingStatus, isTerminalTasting, TASTING_WORKFLOW_STATUSES } from '../lib/tastings/model';
 import { activeTastingWhere, terminalTastingWhere } from '../lib/tastings/statusWhere';
+import { canAssignTasting } from '../lib/tastings/assignment';
 
 const admin = { organizationId: 'org-a', userId: 'admin-a', role: UserRole.ADMIN };
 const taster = { organizationId: 'org-a', userId: 'taster-a', role: UserRole.TASTER };
+const sales = { organizationId: 'org-a', userId: 'sales-a', role: UserRole.USER };
 const history = [
   { id: 'h-admin', type: 'DETAILS_UPDATED', oldValue: { internalNotes: 'PRIVATE BEFORE' }, newValue: { internalNotes: 'PRIVATE AFTER' }, comment: 'PRIVATE COMMENT' },
   { id: 'h-edit', type: 'TASTER_NEEDS_EDIT', oldValue: { agencyApproval: 'APPROVED' }, newValue: { tasterResponse: 'NEEDS_EDIT' }, comment: 'I can work after 5.' },
@@ -49,7 +51,7 @@ function fixture(entitled = true, rows: any[] = [row('mine', 'org-a', 'taster-a'
   const calls: Array<{ table: string; query: any }> = [];
   const scopedRows = (query: any) => rows.filter(record => matchesWhere(record, query.where));
   const dependencies = {
-    activeTastingWhere, terminalTastingWhere, isTastingStatus,
+    activeTastingWhere, terminalTastingWhere, isTastingStatus, canAssignTasting,
     prisma: {
       organizationFeature: { findFirst: async (query: any) => {
         calls.push({ table: 'feature', query });
@@ -62,7 +64,16 @@ function fixture(entitled = true, rows: any[] = [row('mine', 'org-a', 'taster-a'
         findMany: async (query: any) => { calls.push({ table: 'list', query }); return scopedRows(query); },
         findFirst: async (query: any) => { calls.push({ table: 'detail', query }); return scopedRows(query).find(record => record.id === query.where.id) ?? null; },
       },
-      user: { findMany: async (query: any) => { calls.push({ table: 'users', query }); return [{ id: 'taster-a' }]; } },
+      user: { findMany: async (query: any) => {
+        calls.push({ table: 'users', query });
+        return [
+          { id: 'taster-a', organizationId: 'org-a', role: 'TASTER', isActive: true, name: 'Taster', email: 'taster@example.test', internalNotes: 'PRIVATE' },
+          { id: 'sales-a', organizationId: 'org-a', role: 'USER', isActive: true, name: 'Sales', email: 'sales@example.test' },
+          { id: 'other', organizationId: 'org-b', role: 'TASTER', isActive: true, name: 'Other tenant' },
+          { id: 'inactive', organizationId: 'org-a', role: 'TASTER', isActive: false, name: 'Inactive' },
+          { id: 'platform', organizationId: 'org-a', role: 'PLATFORM_ADMIN', isActive: true, name: 'Platform' },
+        ].filter(record => matchesWhere(record, query.where)).map(record => Object.fromEntries(Object.keys(query.select).map(key => [key, record[key as keyof typeof record]])));
+      } },
     },
     isAdminRole: (role: UserRole) => role === UserRole.ADMIN || role === UserRole.PLATFORM_ADMIN,
   };
@@ -73,7 +84,7 @@ function fixture(entitled = true, rows: any[] = [row('mine', 'org-a', 'taster-a'
     exports,
     require: (name: string) => name === '@prisma/client' ? nativeRequire(name) : dependencies,
   });
-  return { listTastings: exports.listTastings, getTasting: exports.getTasting, tastingEditorOptions: exports.tastingEditorOptions, calls };
+  return { listTastings: exports.listTastings, getTasting: exports.getTasting, tastingEditorOptions: exports.tastingEditorOptions, tastingAssigneeOptions: exports.tastingAssigneeOptions, calls };
 }
 
 test('tasting list tenant scope cannot be widened by an assignee filter, and taster payloads omit admin evidence', async () => {
@@ -194,4 +205,30 @@ test('tasting editor assignments are admin-only and limited to active tenant use
   const { query } = f.calls[0];
   assert.equal(query.where.organizationId, 'org-a');
   assert.equal(query.where.isActive, true);
+});
+
+test('inline assignee options permit Admin and Sales without exposing ineligible users or private user fields', async () => {
+  for (const actor of [admin, sales]) {
+    const f = fixture();
+    const options = await f.tastingAssigneeOptions(actor);
+    assert.deepEqual(Array.from(options, (value: any) => value.id), ['taster-a', 'sales-a']);
+    assert.ok(!JSON.stringify(options).includes('PRIVATE'));
+    const { query } = f.calls.find(call => call.table === 'users')!;
+    assert.equal(query.where.organizationId, actor.organizationId);
+    assert.equal(query.where.isActive, true);
+    assert.equal(query.where.role.not, 'PLATFORM_ADMIN');
+    assert.deepEqual(Object.keys(query.select).sort(), ['email', 'firstName', 'id', 'lastName', 'name']);
+  }
+  const salesEditor = fixture();
+  await assert.rejects(salesEditor.tastingEditorOptions(sales), /Administrator/);
+  assert.equal(salesEditor.calls.length, 0);
+});
+
+test('Tasters and a dark pilot cannot retrieve inline assignment choices', async () => {
+  const denied = fixture();
+  await assert.rejects(denied.tastingAssigneeOptions(taster), /Sales access/);
+  assert.equal(denied.calls.length, 0);
+  const dark = fixture(false);
+  assert.equal((await dark.tastingAssigneeOptions(admin)).length, 0);
+  assert.deepEqual(dark.calls.map(call => call.table), ['feature']);
 });

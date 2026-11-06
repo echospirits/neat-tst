@@ -1,6 +1,6 @@
 # Tasting Management Phase 1
 
-Owner-authorized TST pilot, November 5, 2026, with unrestricted workflow status selection authorized November 6. Application version **0.7.2** is retained. This feature has no production promotion or release tag. See [initial validation and delivery receipts](releases/tasting-management-validation.md) and [current status-selection validation](releases/tasting-unrestricted-status-validation.md) for completed checks and remaining delivery gates. The current guidance below supersedes the earlier prerequisite-based dropdown policy; earlier validation receipts remain historical evidence.
+Owner-authorized TST pilot, November 5, 2026, with unrestricted workflow status selection and narrow inline assignment authorized November 6. Application version **0.7.2** is retained. This feature has no production promotion or release tag. See [initial validation and delivery receipts](releases/tasting-management-validation.md), [status-selection validation](releases/tasting-unrestricted-status-validation.md) and [current inline-assignment evidence](design/tasting-inline-assignment-2026-11-06.md) for completed checks and remaining delivery gates. The current guidance below supersedes earlier status/assignment restrictions; earlier validation receipts remain historical evidence.
 
 Phase 1 covers tasting proposals, taster responses, Agency and State decisions, assignment, cancellation, Visit evidence and automatic same-day retail sales observations. Inventory readiness, risk scoring, predictive scheduling, route planning, availability calendars and State application generation/submission are outside this phase.
 
@@ -10,7 +10,7 @@ Phase 1 covers tasting proposals, taster responses, Agency and State decisions, 
 
 - **Coordinators:** organization administrators create and edit proposals, assign an active tenant user, choose an existing Agency/contact, record milestone evidence, select any workflow status for a tenant tasting, import a reviewed schedule and change spacing settings.
 - **Assigned tasters:** open their Tastings and My Schedule, select any workflow status for their own assignment, read taster notes, open shared Agency information, get directions and log their tasting Visit on its scheduled date. Status selection does not grant scheduling or coordinator authority.
-- **Other organization users:** can read the enabled tenant schedule. They cannot coordinate proposals or respond for another taster.
+- **Sales users:** can read the enabled tenant schedule and change the assigned taster through the narrow main-page control. Sales is the existing `USER` role. This does not grant full proposal editing/settings, administrator approval authority or another taster's status/response authority. The `TASTER` role cannot reassign its own or another tasting.
 
 The server resolves the signed-in user and organization. Tasters see only their assignments. Their Agency view exposes shared store information and their own tastings, without the general account's private overlays or full timeline. Internal coordinator notes, import metadata and private history snapshots are redacted for non-administrators. Another organization cannot read or mutate these records.
 
@@ -21,6 +21,14 @@ Change status from each tasting's dropdown on Calendar, Workflow / Upcoming, His
 The selected workflow label is separate from recorded approvals and Visit execution. Selecting State Approved does not invent earlier approvals; selecting Completed does not create a Visit, photo, completion timestamp or completion link. A manually Completed tasting without qualifying Visit evidence shows **Visit not logged**. Real Visit/photo evidence remains preserved even if its visible workflow label changes. **Import Needs Review** is a factual import flag, not a selectable workflow value; changing the label does not resolve import identity/provenance issues.
 
 Agency Overview shows upcoming/recent tastings and available outcomes; Activity includes meaningful tasting history. My Day/My Week show the user's assignments from `TastingEvent` directly. No duplicate Worklist task is created. Worklist remains the follow-up source of truth.
+
+## Change the assigned taster inline
+
+Administrators and Sales users can change the taster directly in Workflow / Upcoming and History's Taster column, or in Calendar. Open the searchable picker and select an eligible active user from the current tenant; the new choice saves immediately. Platform-admin accounts are excluded as assignment targets. TASTER sees only the saved name and is not sent the option list. The picker shows saving/error feedback and retains the saved assignment on rejection; it does not offer a blank/unassigned choice.
+
+Terminal workflow labels explain **Reopen status to reassign** for an administrator or assigned actor with existing status permission. A nonassigned Sales user sees **Ask an administrator to reopen status**. A qualifying completed Visit shows **Visit logged · assignment locked** and remains immutable even if the visible workflow label changes. Inline reassignment does not grant date/time, Agency, contact, notes, import or settings edits. The searchable controls use readable touch targets; mobile may show fewer complete records in the first viewport, with the remaining facts available by scrolling.
+
+The server accepts only the tasting ID/version and selected user ID, then reloads the stored proposal. It rechecks tenant/feature/active-user and target eligibility, optimistic version, scheduling lock, overlap/spacing and canonical reset/history rules. Reassignment resets the taster response for review and preserves applicable Agency/State evidence and historical records. The inline action has no spacing-override field; resolve conflicts through the existing authorized administrator workflow. Browser acceptance and delivery of this refinement remain tracked in [assignment evidence](design/tasting-inline-assignment-2026-11-06.md).
 
 ## Stored model and workflow
 
@@ -65,7 +73,7 @@ Reassignment alone retains Agency/State evidence for the unchanged store/time. M
 
 The default minimum is **10 calendar days** between non-terminal tastings at the same Agency. A proposal 9 days away conflicts; exactly 10 days is allowed. Cancelled, denied and Completed workflow labels do not block the active-proposal rule. Reopened labels become active unless a real completed Visit already makes the record historical. Changing a workflow label does not reschedule the tasting or fabricate scheduling evidence.
 
-Creation/rescheduling shows the conflicting date/time and taster. Administrators must provide a reason to override same-store spacing; the history stores the reason and conflicting tasting IDs. Ordinary users have no scheduling/override authority. An overlapping active assignment for the same taster is a hard block, including overlapping open/confirmed generic events. There is no overlap override or travel-time calculation.
+Creation/rescheduling shows the conflicting date/time and taster. Administrators must provide a reason to override same-store spacing; the history stores the reason and conflicting tasting IDs. Sales' narrow inline assignment permission does not grant date/time editing or spacing-override authority. An overlapping active assignment for the same taster is a hard block, including overlapping open/confirmed generic events. There is no overlap override or travel-time calculation.
 
 Administrators use `/tastings/settings` to adjust `Organization.settings.tastingMinimumDays` from 0–365 days. The default is centralized; updates preserve unrelated JSON settings, reject stale forms and create an organization audit record. Existing proposals are not automatically rescheduled.
 

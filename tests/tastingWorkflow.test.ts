@@ -3,11 +3,12 @@ import { test } from 'node:test';
 import { Prisma, UserRole, type TastingEvent } from '@prisma/client';
 import { deriveTastingStatus, isTerminalTasting, tastingConflicts, tastingExecutionStatus, tastingMinimumDays, TASTING_WORKFLOW_STATUSES } from '../lib/tastings/model';
 import { parseTastingSchedule, tastingDateKey, tastingLocalTimestamp } from '../lib/tastings/time';
-import { saveTasting, transitionTasting, type TastingActor, type TastingDb } from '../lib/tastings/service';
+import { reassignTasting, saveTasting, transitionTasting, type TastingActor, type TastingDb } from '../lib/tastings/service';
 import { importTastings, mapTastingImportStatus, previewTastingImport, TASTING_IMPORT_STATUSES } from '../lib/tastings/import';
 
 const admin: TastingActor = { organizationId: 'org-a', userId: 'admin', role: UserRole.ADMIN };
 const taster: TastingActor = { organizationId: 'org-a', userId: 'taster', role: UserRole.TASTER };
+const sales: TastingActor = { organizationId: 'org-a', userId: 'rep', role: UserRole.USER };
 const now = new Date('2026-11-05T16:00:00.000Z');
 const schedule = parseTastingSchedule('2026-11-20', '16:00', '18:00');
 function base(overrides: Partial<TastingEvent> = {}): TastingEvent {
@@ -24,13 +25,14 @@ function fixture(initial: TastingEvent[] = []) {
     { id: 'taster-2', organizationId: 'org-a', isActive: true, role: UserRole.TASTER, name: 'Other Taster', email: 'other@example.test' },
     { id: 'rep', organizationId: 'org-a', isActive: true, role: UserRole.USER, name: 'Other User', email: 'rep@example.test' },
     { id: 'b-user', organizationId: 'org-b', isActive: true, role: UserRole.ADMIN, name: 'Other Tenant', email: 'b@example.test' },
+    { id: 'platform', organizationId: 'org-a', isActive: true, role: UserRole.PLATFORM_ADMIN, name: 'Platform', email: 'platform@example.test' },
   ];
   let featureEnabled = true;
   let existingEvent: { id: string; title: string } | null = null;
   const fake = {
     $executeRaw: async () => 1,
     user: {
-      findFirst: async ({ where }: Prisma.UserFindFirstArgs) => users.find(value => value.id === where?.id && value.organizationId === where?.organizationId && (typeof where?.isActive !== 'boolean' || value.isActive === where.isActive)) ?? null,
+      findFirst: async ({ where }: Prisma.UserFindFirstArgs) => users.find(value => value.id === where?.id && value.organizationId === where?.organizationId && (typeof where?.isActive !== 'boolean' || value.isActive === where.isActive) && (typeof where?.role !== 'object' || !where.role || !('not' in where.role) || value.role !== where.role.not)) ?? null,
       findMany: async ({ where }: Prisma.UserFindManyArgs) => users.filter(value => value.organizationId === where?.organizationId && where.OR?.some(condition => condition.id === value.id || typeof condition.email === 'object' && 'equals' in condition.email && typeof condition.email.equals === 'string' && condition.email.equals.toLowerCase() === value.email.toLowerCase())),
     },
     organizationFeature: { findFirst: async () => featureEnabled ? { id: 'feature' } : null },
@@ -141,6 +143,93 @@ test('rescheduling resets affected approvals and clears previous-date sales; rea
   await saveTasting(f.db, admin, createInput({ id: f.rows[0].id, version: f.rows[0].version, date: '2026-11-21' }));
   assert.equal(f.rows[0].agencyApproval, 'NOT_REQUESTED'); assert.equal(f.rows[0].stateApproval, 'NOT_SUBMITTED'); assert.equal(f.rows[0].retailBottlesSold, null);
   assert.ok(f.history.some(value => value.type === 'DATE_TIME_CHANGED'));
+});
+
+test('inline reassignment permits Admin and Sales, reuses approval resets, and ignores unrelated payload fields', async () => {
+  for (const actor of [admin, sales]) {
+    const original = base({ workflowStatusOverride: 'STATE_APPROVED', tasterResponse: 'APPROVED', tasterRespondedAt: now, tasterRespondedByUserId: 'taster', tasterResponseComment: 'Ready', approvedAssignment: { userId: 'taster' }, agencyApproval: 'APPROVED', stateApproval: 'APPROVED', retailBottlesSold: 9, salesDataSource: 'DAILY_V3', tasterNotes: 'Keep this', internalNotes: 'PRIVATE', contactId: 'contact-a' });
+    const f = fixture([original]);
+    const updated = await reassignTasting(f.db, actor, { id: original.id, version: 1, assignedTasterUserId: 'taster-2', agencyId: 'agency-b', date: '2027-01-01', internalNotes: 'forged', tasterNotes: 'forged', workflowStatusOverride: 'COMPLETED' }, now);
+    assert.equal(updated.assignedTasterUserId, 'taster-2');
+    assert.equal(updated.version, 2);
+    assert.equal(updated.tasterResponse, 'PENDING');
+    assert.equal(updated.tasterRespondedAt, null); assert.equal(updated.tasterRespondedByUserId, null);
+    assert.equal(updated.tasterResponseComment, null); assert.equal(updated.approvedAssignment, null);
+    assert.equal(updated.workflowStatusOverride, null);
+    assert.equal(updated.agencyApproval, 'APPROVED'); assert.equal(updated.stateApproval, 'APPROVED');
+    assert.equal(updated.retailBottlesSold, 9); assert.equal(updated.salesDataSource, 'DAILY_V3');
+    assert.equal(updated.agencyId, original.agencyId); assert.equal(updated.contactId, original.contactId);
+    assert.equal(updated.tasterNotes, 'Keep this'); assert.equal(updated.internalNotes, 'PRIVATE');
+    assert.equal(updated.startsAt.getTime(), original.startsAt.getTime()); assert.equal(updated.endsAt.getTime(), original.endsAt.getTime());
+    assert.deepEqual(f.history.map(value => value.type), ['WORKFLOW_STATUS_RESET', 'TASTER_REASSIGNED', 'APPROVALS_RESET']);
+    assert.ok(f.history.every(value => value.actorUserId === actor.userId && value.organizationId === actor.organizationId));
+    assert.deepEqual(f.history.find(value => value.type === 'TASTER_REASSIGNED')?.oldValue, { userId: 'taster' });
+    assert.deepEqual(f.history.find(value => value.type === 'TASTER_REASSIGNED')?.newValue, { userId: 'taster-2' });
+    await assert.rejects(saveTasting(f.db, sales, createInput({ id: original.id, version: 2 })), /Administrator/);
+  }
+});
+
+test('inline reassignment rejects Tasters, forged roles, inactive actors and a dark pilot before writes', async () => {
+  for (const actor of [taster, { ...taster, role: UserRole.ADMIN }]) {
+    const f = fixture([base()]);
+    await assert.rejects(reassignTasting(f.db, actor, { id: 'tasting-1', version: 1, assignedTasterUserId: 'taster-2', role: 'ADMIN' }), /Sales access|unavailable/);
+    assert.equal(f.lookups.length, 0); assert.equal(f.updates.length, 0); assert.equal(f.history.length, 0);
+  }
+  const inactive = fixture([base()]); inactive.deactivateUser(sales.userId);
+  await assert.rejects(reassignTasting(inactive.db, sales, { id: 'tasting-1', version: 1, assignedTasterUserId: 'taster-2' }), /unavailable/);
+  const dark = fixture([base()]); dark.disableFeature();
+  await assert.rejects(reassignTasting(dark.db, admin, { id: 'tasting-1', version: 1, assignedTasterUserId: 'taster-2' }), /unavailable/);
+  assert.equal(inactive.updates.length, 0); assert.equal(dark.updates.length, 0);
+});
+
+test('inline reassignment enforces tenant, current version and active eligible assignee boundaries', async () => {
+  for (const assignedTasterUserId of ['b-user', 'missing', 'platform', 'taster-2']) {
+    const f = fixture([base()]);
+    if (assignedTasterUserId === 'taster-2') f.deactivateUser(assignedTasterUserId);
+    await assert.rejects(reassignTasting(f.db, sales, { id: 'tasting-1', version: 1, assignedTasterUserId }), /active taster/);
+    assert.equal(f.updates.length, 0); assert.equal(f.history.length, 0);
+  }
+  const foreign = fixture([base({ organizationId: 'org-b' })]);
+  await assert.rejects(reassignTasting(foreign.db, sales, { id: 'tasting-1', version: 1, assignedTasterUserId: 'taster-2' }), /unavailable/);
+  assert.ok(foreign.lookups.every(value => value.organizationId === 'org-a'));
+  const stale = fixture([base({ version: 2 })]);
+  await assert.rejects(reassignTasting(stale.db, sales, { id: 'tasting-1', version: 1, assignedTasterUserId: 'taster-2' }), /changed/);
+  assert.equal(stale.updates.length, 0); assert.equal(foreign.updates.length, 0);
+});
+
+test('inline reassignment keeps overlap and spacing restrictions without accepting forged overrides', async () => {
+  for (const actor of [admin, sales]) {
+    const overlap = fixture([base()]); overlap.overlapEvent();
+    await assert.rejects(reassignTasting(overlap.db, actor, { id: 'tasting-1', version: 1, assignedTasterUserId: 'taster-2' }), /overlapping event/);
+    const spacing = fixture([base(), base({ id: 'nearby', assignedTasterUserId: 'rep', ...parseTastingSchedule('2026-11-25', '16:00', '18:00') })]);
+    await assert.rejects(reassignTasting(spacing.db, actor, { id: 'tasting-1', version: 1, assignedTasterUserId: 'taster-2', spacingOverrideReason: 'Forged override' }), /administrator override/);
+    assert.equal(overlap.updates.length, 0); assert.equal(spacing.updates.length, 0);
+  }
+});
+
+test('inline reassignment preserves historical locks, reopened evidence and no-op idempotency', async () => {
+  for (const historical of [base({ completedAt: now, completedVisitId: 'real-visit', workflowStatusOverride: 'DRAFT' }), ...(['CANCELLED', 'AGENCY_DENIED', 'STATE_DENIED', 'COMPLETED'] as const).map(workflowStatusOverride => base({ workflowStatusOverride }))]) {
+    const f = fixture([historical]);
+    await assert.rejects(reassignTasting(f.db, admin, { id: historical.id, version: 1, assignedTasterUserId: 'taster-2' }), /historical/);
+    assert.equal(f.updates.length, 0); assert.equal(f.history.length, 0);
+  }
+  const reopened = fixture([base({ workflowStatusOverride: 'DRAFT', cancelledAt: now, cancellationReason: 'Prior cancellation', agencyApproval: 'DENIED', stateApproval: 'DENIED' })]);
+  await reassignTasting(reopened.db, sales, { id: 'tasting-1', version: 1, assignedTasterUserId: 'taster-2' });
+  assert.equal(deriveTastingStatus(reopened.rows[0]), 'NEEDS_TASTER_RESPONSE');
+  assert.equal(reopened.rows[0].cancellationReason, 'Prior cancellation'); assert.equal(reopened.rows[0].agencyApproval, 'DENIED'); assert.equal(reopened.rows[0].stateApproval, 'DENIED');
+  const noOp = fixture([base({ workflowStatusOverride: 'STATE_APPROVED' })]);
+  await reassignTasting(noOp.db, sales, { id: 'tasting-1', version: 1, assignedTasterUserId: 'taster' });
+  assert.equal(noOp.rows[0].version, 1); assert.equal(noOp.rows[0].workflowStatusOverride, 'STATE_APPROVED');
+  assert.equal(noOp.updates.length, 0); assert.equal(noOp.history.length, 0);
+});
+
+test('reassignment revokes old taster mutation authority and stale writes cannot replace a newer assignment', async () => {
+  const f = fixture([base()]);
+  await reassignTasting(f.db, sales, { id: 'tasting-1', version: 1, assignedTasterUserId: 'taster-2' });
+  await assert.rejects(reassignTasting(f.db, admin, { id: 'tasting-1', version: 1, assignedTasterUserId: 'rep' }), /changed/);
+  await assert.rejects(act(f, 'SET_STATUS', taster, { status: 'STATE_APPROVED' }), /assigned taster/);
+  await act(f, 'SET_STATUS', { ...taster, userId: 'taster-2' }, { status: 'STATE_APPROVED' });
+  assert.equal(f.rows[0].assignedTasterUserId, 'taster-2'); assert.equal(deriveTastingStatus(f.rows[0]), 'STATE_APPROVED');
 });
 test('changing Agency resets all approvals; notes-only save preserves approvals and no-op has no history', async () => {
   const f = fixture([base({ tasterResponse: 'APPROVED', agencyApproval: 'APPROVED', stateApproval: 'APPROVED' })]);

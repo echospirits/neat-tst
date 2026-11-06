@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { prisma } from '../../lib/prisma';
 import { requireTastingActor } from '../../lib/tastings/auth';
-import { saveTasting, transitionTasting, TastingError } from '../../lib/tastings/service';
+import { saveTasting, transitionTasting, reassignTasting, TastingError } from '../../lib/tastings/service';
 import type { CrmActionResult } from '../../lib/crm/actionResult';
 
 function report(error: unknown): CrmActionResult {
@@ -31,5 +31,15 @@ export async function transitionTastingAction(form: FormData): Promise<CrmAction
     const event = await prisma.$transaction(db => transitionTasting(db, actor, { ...Object.fromEntries(form), version: Number(form.get('version')) }), { timeout: 15000 });
     refresh(event.id);
     return { success: 'Tasting updated.' };
+  } catch (error) { return report(error); }
+}
+export async function reassignTastingAction(form: FormData): Promise<CrmActionResult> {
+  const { actor } = await requireTastingActor();
+  try {
+    const event = await prisma.$transaction(db => reassignTasting(db, actor, {
+      id: form.get('id'), version: Number(form.get('version')), assignedTasterUserId: form.get('assignedTasterUserId'),
+    }), { timeout: 15000 });
+    refresh(event.id);
+    return { success: 'Assigned taster updated.' };
   } catch (error) { return report(error); }
 }
