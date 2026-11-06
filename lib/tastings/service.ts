@@ -1,7 +1,8 @@
 import { Prisma, type TastingEvent, type UserRole } from '@prisma/client';
 import { z } from 'zod';
 import { isAdminRole } from '../userAccess';
-import { isTerminalTasting, tastingConflicts, tastingMinimumDays } from './model';
+import { deriveTastingStatus, isTerminalTasting, tastingConflicts, tastingMinimumDays, TASTING_WORKFLOW_STATUSES } from './model';
+import { activeTastingWhere } from './statusWhere';
 import { parseTastingSchedule, tastingScheduleLabel } from './time';
 
 export type TastingDb = Prisma.TransactionClient;
@@ -16,10 +17,11 @@ export const tastingInput = z.object({
   tasterNotes: z.string().trim().max(6000).default(''), internalNotes: z.string().trim().max(6000).default(''),
   spacingOverrideReason: z.string().trim().max(2000).default(''),
 });
-export const TASTING_ACTIONS = ['TASTER_APPROVE', 'TASTER_NEEDS_EDIT', 'REQUEST_AGENCY_APPROVAL', 'AGENCY_APPROVE', 'AGENCY_DENY', 'SUBMIT_TO_STATE', 'STATE_APPROVE', 'STATE_DENY', 'CANCEL', 'SAVE_FEEDBACK'] as const;
+export const TASTING_ACTIONS = ['SET_STATUS', 'TASTER_APPROVE', 'TASTER_NEEDS_EDIT', 'REQUEST_AGENCY_APPROVAL', 'AGENCY_APPROVE', 'AGENCY_DENY', 'SUBMIT_TO_STATE', 'STATE_APPROVE', 'STATE_DENY', 'CANCEL', 'SAVE_FEEDBACK'] as const;
 export type TastingAction = typeof TASTING_ACTIONS[number];
 export const tastingTransitionInput = z.object({
   id: z.string().min(1).max(100), version: z.coerce.number().int().positive(), action: z.enum(TASTING_ACTIONS),
+  status: z.enum(TASTING_WORKFLOW_STATUSES).optional(),
   comment: z.string().trim().max(6000).default(''), contactId: optionalId,
   stateReference: z.string().trim().max(200).optional(),
   emailsGathered: z.preprocess(value => value === '' || value === null ? null : Number(value), z.number().int().min(0).max(100000).nullable()).optional(),
@@ -61,7 +63,7 @@ export async function assertTastingReferences(db: TastingDb, actor: TastingActor
 }
 
 export async function assertTastingSchedule(db: TastingDb, actor: TastingActor, proposal: Pick<TastingEvent, 'agencyId' | 'assignedTasterUserId' | 'scheduledDate' | 'startsAt' | 'endsAt'> & { id?: string }, minimumDays: number, overrideReason = '') {
-  const candidates = await db.tastingEvent.findMany({ where: { organizationId: actor.organizationId, id: proposal.id ? { not: proposal.id } : undefined, cancelledAt: null, completedAt: null, agencyApproval: { not: 'DENIED' }, stateApproval: { not: 'DENIED' }, OR: [{ agencyId: proposal.agencyId, scheduledDate: { gt: new Date(proposal.scheduledDate.getTime() - minimumDays * 86_400_000), lt: new Date(proposal.scheduledDate.getTime() + minimumDays * 86_400_000) } }, ...(proposal.assignedTasterUserId ? [{ assignedTasterUserId: proposal.assignedTasterUserId, startsAt: { lt: proposal.endsAt }, endsAt: { gt: proposal.startsAt } }] : [])] }, include: { assignedTaster: { select: { name: true, email: true } } } });
+  const candidates = await db.tastingEvent.findMany({ where: { organizationId: actor.organizationId, id: proposal.id ? { not: proposal.id } : undefined, AND: [activeTastingWhere], OR: [{ agencyId: proposal.agencyId, scheduledDate: { gt: new Date(proposal.scheduledDate.getTime() - minimumDays * 86_400_000), lt: new Date(proposal.scheduledDate.getTime() + minimumDays * 86_400_000) } }, ...(proposal.assignedTasterUserId ? [{ assignedTasterUserId: proposal.assignedTasterUserId, startsAt: { lt: proposal.endsAt }, endsAt: { gt: proposal.startsAt } }] : [])] }, include: { assignedTaster: { select: { name: true, email: true } } } });
   const conflicts = tastingConflicts(proposal, candidates, minimumDays);
   const overlappingEvent = proposal.assignedTasterUserId ? await db.eventShift.findFirst({ where: { organizationId: actor.organizationId, status: { in: ['open', 'confirmed'] }, OR: [{ staffUserIds: { has: proposal.assignedTasterUserId } }, { assignedUserId: proposal.assignedTasterUserId }], startsAt: { lt: proposal.endsAt }, endsAt: { gt: proposal.startsAt } }, select: { id: true, title: true } }) : null;
   if (conflicts.overlap.length || overlappingEvent) {
@@ -84,7 +86,7 @@ export async function saveTasting(db: TastingDb, actor: TastingActor, raw: unkno
   const old = input.id ? await db.tastingEvent.findFirst({ where: { id: input.id, organizationId: actor.organizationId } }) : input.submissionKey ? await db.tastingEvent.findUnique({ where: { organizationId_submissionKey: { organizationId: actor.organizationId, submissionKey: input.submissionKey } } }) : null;
   if (!input.id && old) return old;
   if (input.id && (!old || old.version !== input.version)) throw new TastingError('This tasting changed. Reload before saving.');
-  if (old && isTerminalTasting(old)) throw new TastingError('This tasting is historical. Create a new proposal instead of changing its schedule.');
+  if (old && (isTerminalTasting(old) || old.completedAt)) throw new TastingError('This tasting is historical. Create a new proposal instead of changing its schedule.');
   await assertTastingReferences(db, actor, input.agencyId, input.assignedTasterUserId, input.contactId);
   const data = { agencyId: input.agencyId, assignedTasterUserId: input.assignedTasterUserId, contactId: input.contactId, ...schedule, tasterNotes: input.tasterNotes, internalNotes: input.internalNotes };
   const changed = old ? Object.entries(data).some(([key, value]) => {
@@ -97,12 +99,18 @@ export async function saveTasting(db: TastingDb, actor: TastingActor, raw: unkno
   const agencyChanged = !old || old.agencyId !== data.agencyId;
   const spacing = assignmentChanged || timeChanged || agencyChanged ? await assertTastingSchedule(db, actor, { ...data, id: old?.id }, tastingMinimumDays(organization.settings), input.spacingOverrideReason) : [];
   const reset: Prisma.TastingEventUncheckedUpdateInput = {};
+  if (old && (assignmentChanged || timeChanged || agencyChanged)) {
+    // Keep historical cancellation/denial evidence from making a reopened, revised proposal terminal again.
+    const retainedTerminalEvidence = old.cancelledAt || (!timeChanged && !agencyChanged && (old.agencyApproval === 'DENIED' || old.stateApproval === 'DENIED'));
+    reset.workflowStatusOverride = retainedTerminalEvidence ? 'NEEDS_TASTER_RESPONSE' : null;
+  }
   if (old && (assignmentChanged || timeChanged || agencyChanged)) Object.assign(reset, { tasterResponse: 'PENDING', tasterRespondedAt: null, tasterRespondedByUserId: null, tasterResponseComment: null, approvedAssignment: Prisma.DbNull });
   if (old && (timeChanged || agencyChanged)) Object.assign(reset, { agencyApproval: 'NOT_REQUESTED', agencyRequestedAt: null, agencyRequestedByUserId: null, agencyDecidedAt: null, agencyDecidedByUserId: null, agencyDecisionComment: null, stateApproval: 'NOT_SUBMITTED', stateSubmittedAt: null, stateSubmittedByUserId: null, stateDecidedAt: null, stateDecidedByUserId: null, stateDecisionComment: null, stateReference: null });
   if (old && (agencyChanged || old.scheduledDate.getTime() !== schedule.scheduledDate.getTime())) Object.assign(reset, { retailBottlesSold: null, salesProductBreakdown: Prisma.DbNull, salesDataSource: null, salesCalculatedAt: null, salesSourceDataThrough: null, salesSourceRevision: null });
   const event = old ? await db.tastingEvent.update({ where: { organizationId_id: { organizationId: actor.organizationId, id: old.id } }, data: { ...data, ...reset, importNeedsReview: false, version: { increment: 1 } } }) : await db.tastingEvent.create({ data: { ...data, organizationId: actor.organizationId, createdByUserId: actor.userId, submissionKey: input.submissionKey, createdAt: now } });
   if (!old) await writeTastingHistory(db, actor, event.id, 'DRAFT_CREATED', null, tastingAssignment(event), undefined, now);
   else {
+    if (old.workflowStatusOverride && (assignmentChanged || timeChanged || agencyChanged)) await writeTastingHistory(db, actor, event.id, 'WORKFLOW_STATUS_RESET', { status: deriveTastingStatus(old), workflowStatusOverride: old.workflowStatusOverride }, { status: deriveTastingStatus(event), workflowStatusOverride: event.workflowStatusOverride }, 'Assignment changed; the manual status was reset for the revised proposal.', now);
     if (timeChanged) await writeTastingHistory(db, actor, event.id, 'DATE_TIME_CHANGED', tastingAssignment(old), tastingAssignment(event), undefined, now);
     if (agencyChanged) await writeTastingHistory(db, actor, event.id, 'AGENCY_CHANGED', { agencyId: old.agencyId }, { agencyId: event.agencyId }, undefined, now);
     if (assignmentChanged) await writeTastingHistory(db, actor, event.id, 'TASTER_REASSIGNED', { userId: old.assignedTasterUserId }, { userId: event.assignedTasterUserId }, undefined, now);
@@ -119,13 +127,26 @@ export async function transitionTasting(db: TastingDb, actor: TastingActor, raw:
   await lockTastings(db, actor.organizationId);
   const event = await db.tastingEvent.findFirst({ where: { id: input.id, organizationId: actor.organizationId } });
   if (!event || event.version !== input.version) throw new TastingError('This tasting changed or is unavailable. Reload before saving.');
+  if (input.action === 'SET_STATUS') {
+    // Pilot policy: administrators and the assigned taster may choose any workflow status.
+    // Keep this authorization in one place so taster restrictions can be tightened later.
+    if (!isAdminRole(actor.role) && event.assignedTasterUserId !== actor.userId) throw new TastingError('Only the assigned taster or an administrator can change this status.');
+    if (!input.status) throw new TastingError('Choose a tasting status.');
+    if (input.status === 'TASTER_NEEDS_EDIT' && !input.comment) throw new TastingError('What needs to change? Add an explanation.');
+    if (input.status === 'CANCELLED' && !input.comment) throw new TastingError('Add a cancellation reason.');
+    if (deriveTastingStatus(event) === input.status) return event;
+    const updated = await db.tastingEvent.update({ where: { organizationId_id: { organizationId: actor.organizationId, id: event.id } }, data: { workflowStatusOverride: input.status, version: { increment: 1 } } });
+    const snapshot = (value: TastingEvent) => ({ status: deriveTastingStatus(value), workflowStatusOverride: value.workflowStatusOverride, tasterResponse: value.tasterResponse, agencyApproval: value.agencyApproval, stateApproval: value.stateApproval, cancelledAt: value.cancelledAt?.toISOString() ?? null, completedAt: value.completedAt?.toISOString() ?? null, completedVisitId: value.completedVisitId });
+    await writeTastingHistory(db, actor, event.id, 'WORKFLOW_STATUS_CHANGED', snapshot(event), snapshot(updated), input.comment, now);
+    return updated;
+  }
   const tasterAction = input.action === 'TASTER_APPROVE' || input.action === 'TASTER_NEEDS_EDIT';
   const assigned = event.assignedTasterUserId === actor.userId;
   if (tasterAction && !assigned) throw new TastingError('Only the assigned taster can respond to this proposal.');
   if (!tasterAction && input.action !== 'SAVE_FEEDBACK' && !isAdminRole(actor.role)) throw new TastingError('Administrator access is required.');
   if (input.action === 'SAVE_FEEDBACK' && !assigned && !isAdminRole(actor.role)) throw new TastingError('Only the assigned taster or an administrator can record feedback.');
   if (input.action !== 'SAVE_FEEDBACK' && isTerminalTasting(event)) throw new TastingError('This tasting is historical. Its workflow cannot be changed.');
-  const data: Prisma.TastingEventUncheckedUpdateInput = {};
+  const data: Prisma.TastingEventUncheckedUpdateInput = input.action === 'SAVE_FEEDBACK' ? {} : { workflowStatusOverride: null };
   let type: string = input.action;
   if (tasterAction) {
     if (input.action === 'TASTER_NEEDS_EDIT' && !input.comment) throw new TastingError('What needs to change? Add an explanation.');
@@ -170,7 +191,7 @@ export async function transitionTasting(db: TastingDb, actor: TastingActor, raw:
     data.contactId = input.contactId;
   }
   const updated = await db.tastingEvent.update({ where: { organizationId_id: { organizationId: actor.organizationId, id: event.id } }, data: { ...data, version: { increment: 1 } } });
-  const snapshot = (value: TastingEvent) => ({ tasterResponse: value.tasterResponse, agencyApproval: value.agencyApproval, stateApproval: value.stateApproval, cancelledAt: value.cancelledAt?.toISOString() ?? null, assignedTasterUserId: value.assignedTasterUserId, assignment: tastingAssignment(value), contactId: value.contactId, ...(input.action === 'SAVE_FEEDBACK' ? { emailsGathered: value.emailsGathered, postEventNotes: value.postEventNotes, tasterFeedback: value.tasterFeedback } : {}) });
+  const snapshot = (value: TastingEvent) => ({ status: deriveTastingStatus(value), workflowStatusOverride: value.workflowStatusOverride, tasterResponse: value.tasterResponse, agencyApproval: value.agencyApproval, stateApproval: value.stateApproval, cancelledAt: value.cancelledAt?.toISOString() ?? null, assignedTasterUserId: value.assignedTasterUserId, assignment: tastingAssignment(value), contactId: value.contactId, ...(input.action === 'SAVE_FEEDBACK' ? { emailsGathered: value.emailsGathered, postEventNotes: value.postEventNotes, tasterFeedback: value.tasterFeedback } : {}) });
   await writeTastingHistory(db, actor, event.id, type, snapshot(event), snapshot(updated), input.comment, now);
   if (input.action === 'TASTER_NEEDS_EDIT' && (event.agencyApproval !== 'NOT_REQUESTED' || event.stateApproval !== 'NOT_SUBMITTED')) await writeTastingHistory(db, actor, event.id, 'APPROVALS_RESET', { agencyApproval: event.agencyApproval, stateApproval: event.stateApproval }, { agencyApproval: updated.agencyApproval, stateApproval: updated.stateApproval }, 'Taster requested changes; renewed Agency and state review is required.', now);
   return updated;

@@ -6,6 +6,8 @@ import { runInNewContext } from 'node:vm';
 import test from 'node:test';
 import { UserRole } from '@prisma/client';
 import ts from 'typescript';
+import { deriveTastingStatus, isTastingStatus, isTerminalTasting, TASTING_WORKFLOW_STATUSES } from '../lib/tastings/model';
+import { activeTastingWhere, terminalTastingWhere } from '../lib/tastings/statusWhere';
 
 const admin = { organizationId: 'org-a', userId: 'admin-a', role: UserRole.ADMIN };
 const taster = { organizationId: 'org-a', userId: 'taster-a', role: UserRole.TASTER };
@@ -13,19 +15,41 @@ const history = [
   { id: 'h-admin', type: 'DETAILS_UPDATED', oldValue: { internalNotes: 'PRIVATE BEFORE' }, newValue: { internalNotes: 'PRIVATE AFTER' }, comment: 'PRIVATE COMMENT' },
   { id: 'h-edit', type: 'TASTER_NEEDS_EDIT', oldValue: { agencyApproval: 'APPROVED' }, newValue: { tasterResponse: 'NEEDS_EDIT' }, comment: 'I can work after 5.' },
   { id: 'h-cancel', type: 'CANCELLED', oldValue: {}, newValue: { cancelledBy: 'admin-a' }, comment: 'Store closed.' },
+  { id: 'h-status-edit', type: 'WORKFLOW_STATUS_CHANGED', oldValue: { status: 'STATE_APPROVED', internalNotes: 'PRIVATE HISTORY' }, newValue: { status: 'TASTER_NEEDS_EDIT', approvedAssignment: 'PRIVATE ASSIGNMENT' }, comment: 'I need a different time.' },
+  { id: 'h-status-denial', type: 'WORKFLOW_STATUS_CHANGED', oldValue: { status: 'IMPORT_REVIEW' }, newValue: { status: 'STATE_DENIED' }, comment: 'PRIVATE DENIAL COMMENT' },
+  { id: 'h-status-invalid', type: 'WORKFLOW_STATUS_CHANGED', oldValue: { status: '<script>PRIVATE</script>' }, newValue: { status: '__proto__' }, comment: 'PRIVATE INVALID COMMENT' },
 ];
 const row = (id: string, organizationId: string, assignedTasterUserId: string) => ({
   id, organizationId, assignedTasterUserId, agencyId: 'agency-a',
   internalNotes: `PRIVATE ${organizationId}`, importMetadata: { originalTaster: 'PRIVATE IMPORT NAME' },
   tasterNotes: 'Check in with Taylor.', history,
+  scheduledDate: new Date('2026-11-20T00:00:00Z'), startsAt: new Date('2026-11-20T20:00:00Z'), endsAt: new Date('2026-11-20T22:00:00Z'),
+  tasterResponse: 'PENDING', agencyApproval: 'NOT_REQUESTED', stateApproval: 'NOT_SUBMITTED', cancelledAt: null, completedAt: null, workflowStatusOverride: null,
   agency: { id: 'agency-a', name: 'Agency A' }, assignedTaster: { id: assignedTasterUserId, name: 'Taster' },
 });
 
-function fixture(entitled = true) {
+function matchesWhere(record: any, where: any): boolean {
+  return Object.entries(where).every(([key, expected]: [string, any]) => {
+    if (key === 'AND') return (Array.isArray(expected) ? expected : [expected]).every(clause => matchesWhere(record, clause));
+    if (key === 'OR') return expected.some((clause: any) => matchesWhere(record, clause));
+    const value = record[key];
+    if (expected === null || typeof expected !== 'object' || expected instanceof Date) return value === expected;
+    if ('in' in expected) return expected.in.includes(value);
+    if ('notIn' in expected) return value != null && !expected.notIn.includes(value);
+    if ('not' in expected) return value !== expected.not;
+    if ('gte' in expected && !(value >= expected.gte)) return false;
+    if ('lt' in expected && !(value < expected.lt)) return false;
+    if ('contains' in expected) return String(value ?? '').toLowerCase().includes(String(expected.contains).toLowerCase());
+    if ('gte' in expected || 'lt' in expected) return true;
+    return value != null && matchesWhere(value, expected);
+  });
+}
+
+function fixture(entitled = true, rows: any[] = [row('mine', 'org-a', 'taster-a'), row('team', 'org-a', 'taster-b'), row('foreign', 'org-b', 'taster-a')]) {
   const calls: Array<{ table: string; query: any }> = [];
-  const rows = [row('mine', 'org-a', 'taster-a'), row('team', 'org-a', 'taster-b'), row('foreign', 'org-b', 'taster-a')];
-  const scopedRows = (query: any) => rows.filter(record => record.organizationId === query.where.organizationId && (!query.where.assignedTasterUserId || record.assignedTasterUserId === query.where.assignedTasterUserId));
+  const scopedRows = (query: any) => rows.filter(record => matchesWhere(record, query.where));
   const dependencies = {
+    activeTastingWhere, terminalTastingWhere, isTastingStatus,
     prisma: {
       organizationFeature: { findFirst: async (query: any) => {
         calls.push({ table: 'feature', query });
@@ -90,6 +114,16 @@ test('detail reads reject both another tenant and another assigned taster', asyn
   assert.equal(mine.history[0].newValue, null);
   assert.equal(mine.history[1].comment, 'I can work after 5.');
   assert.equal(mine.history[2].comment, 'Store closed.');
+  assert.equal(mine.history[3].statusChange.previous, 'STATE_APPROVED');
+  assert.equal(mine.history[3].statusChange.current, 'TASTER_NEEDS_EDIT');
+  assert.equal(mine.history[3].comment, 'I need a different time.');
+  assert.equal(mine.history[3].oldValue, null);
+  assert.equal(mine.history[3].newValue, null);
+  assert.equal(mine.history[4].statusChange.previous, 'IMPORT_REVIEW');
+  assert.equal(mine.history[4].statusChange.current, 'STATE_DENIED');
+  assert.equal(mine.history[4].comment, null);
+  assert.equal(mine.history[5].statusChange, null);
+  assert.equal(mine.history[5].comment, null);
   assert.ok(!JSON.stringify(mine).includes('PRIVATE'));
   const detailCalls = f.calls.filter(call => call.table === 'detail');
   assert.ok(detailCalls.every(call => call.query.where.organizationId === 'org-a'));
@@ -107,19 +141,49 @@ test('coordinators retain complete milestone history while a dark pilot reads no
   assert.deepEqual(dark.calls.map(call => call.table), ['feature', 'feature']);
 });
 
-test('history scope includes unresolved past events, denied/cancelled events and evidence-based completion', async () => {
+test('history scope includes unresolved past events and effective terminal states without losing search or ordering', async () => {
   const f = fixture();
   const today = new Date('2026-11-05T00:00:00.000Z');
   await f.listTastings(admin, { view: 'history', today, search: 'x'.repeat(200), limit: 25 });
   const { query } = f.calls.find(call => call.table === 'list')!;
   const alternatives = query.where.AND[0].OR;
-  assert.ok(alternatives.some((value: any) => value.completedAt?.not === null));
-  assert.ok(alternatives.some((value: any) => value.cancelledAt?.not === null));
-  assert.ok(alternatives.some((value: any) => value.agencyApproval === 'DENIED'));
-  assert.ok(alternatives.some((value: any) => value.stateApproval === 'DENIED'));
+  assert.equal(alternatives[0], terminalTastingWhere);
   assert.equal(alternatives.find((value: any) => value.scheduledDate)?.scheduledDate.lt, today);
   assert.equal(query.orderBy[0].scheduledDate, 'desc');
   assert.equal(query.where.OR[0].agency.name.contains.length, 120);
+});
+
+test('upcoming and history follow reopened workflow states while real completion remains historical', async () => {
+  const completedAt = new Date('2026-11-05T20:00:00Z');
+  const rows = [
+    { ...row('reopened-cancelled', 'org-a', 'taster-a'), cancelledAt: completedAt, workflowStatusOverride: 'DRAFT' },
+    { ...row('reopened-denied', 'org-a', 'taster-a'), agencyApproval: 'DENIED', stateApproval: 'DENIED', workflowStatusOverride: 'STATE_APPROVED' },
+    { ...row('manually-completed', 'org-a', 'taster-a'), workflowStatusOverride: 'COMPLETED' },
+    { ...row('evidence-completed', 'org-a', 'taster-a'), completedAt, workflowStatusOverride: 'DRAFT' },
+    { ...row('legacy-cancelled', 'org-a', 'taster-a'), cancelledAt: completedAt },
+    { ...row('legacy-denied', 'org-a', 'taster-a'), agencyApproval: 'DENIED' },
+    { ...row('past-unresolved', 'org-a', 'taster-a'), scheduledDate: new Date('2026-11-01T00:00:00Z') },
+    { ...row('foreign-reopened', 'org-b', 'taster-a'), workflowStatusOverride: 'DRAFT' },
+    { ...row('other-assignee-reopened', 'org-a', 'taster-b'), workflowStatusOverride: 'DRAFT' },
+  ];
+  const f = fixture(true, rows);
+  const today = new Date('2026-11-06T00:00:00Z');
+  assert.deepEqual(Array.from(await f.listTastings(taster, { view: 'upcoming', today }), (record: any) => record.id), ['reopened-cancelled', 'reopened-denied']);
+  assert.deepEqual(Array.from(await f.listTastings(taster, { view: 'history', today }), (record: any) => record.id), ['manually-completed', 'evidence-completed', 'legacy-cancelled', 'legacy-denied', 'past-unresolved']);
+});
+
+test('database active and terminal predicates agree with effective status and preserve real Visit evidence for every status', () => {
+  const baseline = row('status', 'org-a', 'taster-a');
+  for (const workflowStatusOverride of [null, 'INVALID', ...TASTING_WORKFLOW_STATUSES]) {
+    for (const historical of [{}, { cancelledAt: new Date() }, { agencyApproval: 'DENIED' }, { stateApproval: 'DENIED' }, { completedAt: new Date() }]) {
+      const record = { ...baseline, ...historical, workflowStatusOverride };
+      const terminal = isTerminalTasting(record);
+      const label = `${workflowStatusOverride}: ${JSON.stringify(historical)}`;
+      assert.equal(matchesWhere(record, activeTastingWhere), !terminal, label);
+      assert.equal(matchesWhere(record, terminalTastingWhere), terminal, label);
+      if (workflowStatusOverride && workflowStatusOverride !== 'INVALID') assert.equal(deriveTastingStatus(record), workflowStatusOverride);
+    }
+  }
 });
 
 test('tasting editor assignments are admin-only and limited to active tenant users', async () => {

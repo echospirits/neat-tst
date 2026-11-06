@@ -1,6 +1,6 @@
 # Tasting Management Phase 1
 
-Owner-authorized TST pilot, November 5, 2026. Application version **0.7.2** is retained. This feature has no production promotion or release tag. See [validation and delivery receipts](releases/tasting-management-validation.md) for the checks completed and the remaining activation gates.
+Owner-authorized TST pilot, November 5, 2026, with unrestricted workflow status selection authorized November 6. Application version **0.7.2** is retained. This feature has no production promotion or release tag. See [initial validation and delivery receipts](releases/tasting-management-validation.md) and [current status-selection validation](releases/tasting-unrestricted-status-validation.md) for completed checks and remaining delivery gates. The current guidance below supersedes the earlier prerequisite-based dropdown policy; earlier validation receipts remain historical evidence.
 
 Phase 1 covers tasting proposals, taster responses, Agency and State decisions, assignment, cancellation, Visit evidence and automatic same-day retail sales observations. Inventory readiness, risk scoring, predictive scheduling, route planning, availability calendars and State application generation/submission are outside this phase.
 
@@ -8,25 +8,29 @@ Phase 1 covers tasting proposals, taster responses, Agency and State decisions, 
 
 `TASTING_MANAGEMENT` is an optional entitlement, disabled by default. The additive migration explicitly enables the pilot for stable organization ID `org_echo_spirits`; runtime access never matches an organization name. The feature depends on the existing Visits, Agencies and tasting-visit capabilities. Other tenants remain dark unless explicitly enrolled.
 
-- **Coordinators:** organization administrators create and edit proposals, assign an active tenant user, choose an existing Agency/contact, record approvals, cancel proposals, import a reviewed schedule and change spacing settings.
-- **Assigned tasters:** open their Tastings and My Schedule, approve their assignment or explain what needs editing, read taster notes, open shared Agency information, get directions and log their tasting Visit on its scheduled date.
+- **Coordinators:** organization administrators create and edit proposals, assign an active tenant user, choose an existing Agency/contact, record milestone evidence, select any workflow status for a tenant tasting, import a reviewed schedule and change spacing settings.
+- **Assigned tasters:** open their Tastings and My Schedule, select any workflow status for their own assignment, read taster notes, open shared Agency information, get directions and log their tasting Visit on its scheduled date. Status selection does not grant scheduling or coordinator authority.
 - **Other organization users:** can read the enabled tenant schedule. They cannot coordinate proposals or respond for another taster.
 
 The server resolves the signed-in user and organization. Tasters see only their assignments. Their Agency view exposes shared store information and their own tastings, without the general account's private overlays or full timeline. Internal coordinator notes, import metadata and private history snapshots are redacted for non-administrators. Another organization cannot read or mutate these records.
 
 `/tastings` offers **Workflow / Upcoming**, **Calendar** and **History**. Calendar supports a month or week; phones use a responsive list treatment. Workflow groups the current proposals by derived status. History includes completed, cancelled, denied and unresolved past proposals. Search uses Agency name/number. Large result sets are bounded and have continuation controls.
 
-Change status directly from the main page using each tasting's dropdown. Normal transitions save on selection; Needs Edit and cancellation require an inline explanation, and denial offers an optional reason before saving. Available choices follow the current milestones and your permissions. Success stays visible when a tasting moves groups, failures retain the prior saved status, and filters/URL stay in place. Completed, cancelled and denied records are read-only; completion still requires Visit/photo evidence.
+Change status from each tasting's dropdown on Calendar, Workflow / Upcoming, History or tasting detail. Administrators and the assigned taster may choose any of the twelve workflow values at any time, forward or backward, including reopening a Cancelled, denied or Completed label. The choices are **Draft**, **Needs Taster Response**, **Taster Approved**, **Taster Needs Edit**, **Awaiting Agency Approval**, **Agency Approved**, **Agency Denied**, **Submitted to State**, **State Approved**, **State Denied**, **Cancelled** and **Completed**. Choosing Draft retains the assignment. Ordinary choices save on selection; Taster Needs Edit and Cancelled require an inline explanation, and denial offers an optional reason before saving. Success stays visible when a tasting moves groups, failures retain the prior saved status and entered reasons, and filters/URL stay in place. Other users cannot change another taster's status.
+
+The selected workflow label is separate from recorded approvals and Visit execution. Selecting State Approved does not invent earlier approvals; selecting Completed does not create a Visit, photo, completion timestamp or completion link. A manually Completed tasting without qualifying Visit evidence shows **Visit not logged**. Real Visit/photo evidence remains preserved even if its visible workflow label changes. **Import Needs Review** is a factual import flag, not a selectable workflow value; changing the label does not resolve import identity/provenance issues.
 
 Agency Overview shows upcoming/recent tastings and available outcomes; Activity includes meaningful tasting history. My Day/My Week show the user's assignments from `TastingEvent` directly. No duplicate Worklist task is created. Worklist remains the follow-up source of truth.
 
 ## Stored model and workflow
 
-`TastingEvent` belongs to one organization and references real Agency, user and optional tenant Contact IDs. It holds the Eastern business date, UTC start/end instants, taster/internal notes, creator, timestamps, optimistic version, milestone evidence, cancellation, lightweight feedback, Visit completion and sales provenance. Imported unmatched tasters may temporarily have no user ID and must be reviewed. Store names/addresses remain sourced from Agency records.
+`TastingEvent` belongs to one organization and references real Agency, user and optional tenant Contact IDs. It holds the Eastern business date, UTC start/end instants, taster/internal notes, creator, timestamps, optimistic version, milestone evidence, cancellation, lightweight feedback, Visit completion and sales provenance. Nullable `workflowStatusOverride` stores an explicit workflow label without replacing these facts. Imported unmatched tasters may temporarily have no user ID and must be reviewed. Store names/addresses remain sourced from Agency records.
 
 `TastingWorkflowEvent` stores organization, tasting, event type, actor, timestamp, previous/new values and relevant reason. Previous evidence survives resets, cancellation and denial. No-op saves/replays avoid duplicate history. Completed/cancelled/denied proposals remain in these same tables; there is no separate Past Tastings store.
 
-| Visible spreadsheet/workflow value | Current milestone |
+The existing milestone/source mapping remains available independently of manual status selection:
+
+| Observed spreadsheet/milestone value | Recorded evidence |
 | --- | --- |
 | DRAFT | Taster `PENDING`, Agency `NOT_REQUESTED`, State `NOT_SUBMITTED`; an assigned draft appears as **Needs Taster Response** |
 | Taster Approved | Taster `APPROVED`, with responding user/time and exact approved Agency/date/time/assignee snapshot for a Neat response |
@@ -36,28 +40,30 @@ Agency Overview shows upcoming/recent tastings and available outcomes; Activity 
 | Submitted to State | State `SUBMITTED`, submission actor/time |
 | State Approved / State Denied | State `APPROVED` / `DENIED`, decision actor/time, optional reason/reference |
 | Cancelled | Independent cancellation actor/time and required reason; prior approvals remain |
-| Completed | Derived from a qualifying linked Visit and persisted photo; never a manual workflow choice |
+| Completed | A qualifying linked Visit and persisted photo establish actual execution completion; selecting the same workflow label manually does not establish this evidence |
 
-The display derives from the discrete milestones, with cancellation, completion and denial taking precedence, followed by import review, edit response and the latest recorded approval stage. Approval and execution remain separate: a past State Approved proposal without qualifying Visit evidence shows **Visit Not Logged / Needs Review**.
+An explicit workflow selection takes precedence for the visible label. Without one, the display derives from the discrete milestones, with cancellation, completion and denial taking precedence, followed by import review, edit response and the latest recorded approval stage. Execution remains independent: a past proposal without qualifying Visit evidence shows **Visit Not Logged**, and manual Completed explicitly shows **Visit not logged** until evidence exists.
 
-Normal actions follow their prerequisites: taster approval precedes an Agency request; an Agency decision follows its request; taster and Agency approval precede State submission; a State decision follows submission. Denied, cancelled and completed proposals cannot have their schedule rewritten. Create a new proposal instead. The assigned taster/coordinator can retain lightweight emails-gathered, post-event notes and taster feedback.
+The `SET_STATUS` action accepts all twelve workflow values without milestone prerequisites. Its centralized server authorization permits an administrator in the tasting's organization or its currently assigned taster; future taster-policy restrictions belong in that branch. Tenant/feature checks, active-user checks, optimistic versions and history remain authoritative. Status history records the prior/new label and relevant reason without fabricating milestone actors or timestamps. Existing explicit milestone actions retain their evidence requirements and history; they clear a manual override when recording a new milestone.
+
+Cancelled and denied workflow labels can be reopened through status selection before an administrator edits their schedule. A real Visit-backed completion remains immutable for schedule editing even when its visible label changes; create a new proposal for a different schedule. The assigned taster/coordinator can retain lightweight emails-gathered, post-event notes and taster feedback.
 
 ## Changes and approval invalidation
 
 | Change | Result |
 | --- | --- |
-| Assigned taster changes | Reset taster response, actor/time/comment and approved-assignment snapshot; request a fresh response |
-| Date/start/end changes | Reset taster evidence, Agency approval/request and State submission/approval evidence |
-| Agency changes | Reset taster, Agency and State evidence; validate the selected contact against the new Agency |
+| Assigned taster changes | Reset the manual status for the revised proposal with history; reset taster response, actor/time/comment and approved-assignment snapshot; request a fresh response |
+| Date/start/end changes | Reset the manual status for the revised proposal with history; reset taster evidence, Agency approval/request and State submission/approval evidence |
+| Agency changes | Reset the manual status for the revised proposal with history; reset taster, Agency and State evidence; validate the selected contact against the new Agency |
 | Notes-only/contact edit | Retain unchanged schedule approvals; record meaningful detail changes |
 | Date or Agency changes | Clear the current sales calculation for the old date/store |
 | Taster submits Needs Edit after an approval | Retain response/comment/history and reset downstream Agency/State current milestones for coordinator review |
 
-Reassignment alone retains Agency/State evidence for the unchanged store/time. Historical snapshots are never deleted when current approval fields reset. Transactions, an organization scheduling lock and optimistic versions prevent an outdated form from approving a different assignment.
+Reassignment alone retains Agency/State evidence for the unchanged store/time. Material edits normally clear the manual override; if preserved cancellation evidence or a reassignment-only retained denial would make a reopened proposal terminal again, the revised proposal instead gets **Needs Taster Response**, with history and the old evidence preserved. Historical snapshots are never deleted when current approval fields reset. Transactions, an organization scheduling lock and optimistic versions prevent an outdated form from approving a different assignment.
 
 ## Spacing and double-booking
 
-The default minimum is **10 calendar days** between non-terminal tastings at the same Agency. A proposal 9 days away conflicts; exactly 10 days is allowed. Cancelled, denied and completed records do not block the active-proposal rule.
+The default minimum is **10 calendar days** between non-terminal tastings at the same Agency. A proposal 9 days away conflicts; exactly 10 days is allowed. Cancelled, denied and Completed workflow labels do not block the active-proposal rule. Reopened labels become active unless a real completed Visit already makes the record historical. Changing a workflow label does not reschedule the tasting or fabricate scheduling evidence.
 
 Creation/rescheduling shows the conflicting date/time and taster. Administrators must provide a reason to override same-store spacing; the history stores the reason and conflicting tasting IDs. Ordinary users have no scheduling/override authority. An overlapping active assignment for the same taster is a hard block, including overlapping open/confirmed generic events. There is no overlap override or travel-time calculation.
 
@@ -67,9 +73,9 @@ Administrators use `/tastings/settings` to adjust `Organization.settings.tasting
 
 On the tasting's Eastern date, **Log Tasting Visit** opens the existing Log Visit flow with the Agency, tasting ID, assigned taster, schedule and return context. Both the existing taster form and full Visit form preserve that context and enforce the required picture. The linked Visit uses the existing Tasting activity semantics; a second Visit system is not introduced.
 
-Completion requires a persisted same-day Agency Visit by the assigned taster, the direct `LoggedVisit.tastingEventId` relationship and a qualifying persisted image record with storage metadata. The service rechecks the current assignment fingerprint under the same scheduling lock. Only then are `completedAt` and `completedVisitId` set and completion history recorded. Replaying the same linked Visit does not complete twice. Ordinary Visits and unlinked photos do not silently complete a tasting.
+Actual completion requires a persisted same-day Agency Visit by the assigned taster, the direct `LoggedVisit.tastingEventId` relationship and a qualifying persisted image record with storage metadata. The service rechecks the current assignment fingerprint under the same scheduling lock. Only then are `completedAt` and `completedVisitId` set and completion history recorded. This canonical completion clears a manual workflow override and records its previous value in completion history. Replaying the same linked Visit does not complete twice. Ordinary Visits, unlinked photos and selecting Completed do not silently create execution evidence.
 
-Cancelled/denied assignments, another taster's assignment and another tenant's IDs are rejected. Logging is available on the scheduled date. If a schedule changes while a photo uploads, the saved Visit can remain linked for coordinator review without claiming completion. An unresolved past tasting remains visible in History. Live object-storage upload acceptance is tracked separately in the validation record; synthetic photo metadata is not proof of a live upload.
+Currently Cancelled/denied workflow labels, another taster's assignment and another tenant's IDs are rejected. Reopen the workflow label before logging a cancelled or denied assignment. Manual Completed without Visit evidence remains eligible for the canonical Visit flow on the scheduled date. A genuine completed Visit remains linked and cannot be replaced by another completion. If a schedule changes while a photo uploads, the saved Visit can remain linked for coordinator review without claiming completion. An unresolved past tasting remains visible in History. Live object-storage upload acceptance is tracked separately in the validation record; synthetic photo metadata is not proof of a live upload.
 
 ## Automatic retail sales outcome
 
@@ -110,8 +116,8 @@ Importing a later visible stage records only that observed milestone. It does no
 
 ## Migration, operation and recovery
 
-The additive migration is `prisma/migrations/20261105020000_tasting_management/migration.sql`: milestone enums, `TastingEvent`, `TastingWorkflowEvent`, nullable Visit link, indexes, composite tenant foreign keys, schedule/completion/cancellation constraints and explicit Echo pilot enrollment. Existing Visit/event data is preserved. No dependency upgrade, new secret or new provider account is required. Photo uploads continue using the existing object-storage configuration.
+The original additive migration is `prisma/migrations/20261105020000_tasting_management/migration.sql`: milestone enums, `TastingEvent`, `TastingWorkflowEvent`, nullable Visit link, indexes, composite tenant foreign keys, schedule/completion/cancellation constraints and explicit Echo pilot enrollment. The November 6 migration `20261106030000_tasting_status_override` adds nullable `workflowStatusOverride` with a database CHECK limited to the twelve workflow values. It does not backfill labels, rewrite milestones or delete existing Visit/event data. No dependency upgrade, new secret or new provider account is required. Photo uploads continue using the existing object-storage configuration.
 
 `scripts/tasting-management.ts` requires an explicit environment file, expected host and target, then a reviewed migration checksum for apply. It rejects production, verifies its own migration receipt and refuses unexplained existing tasting tables; it does not reconcile unrelated migration drift. Rehearse on an isolated branch before applying to verified `neon-neat-tst`. Do not paste credential-bearing URLs into logs or documentation.
 
-For recovery, disable the tenant entitlement to hide the pilot while retaining all records and historical evidence. Do not delete tables, Visits or provider data as a rollback shortcut. Shared-TST migration and explicit Echo enrollment have been applied and independently verified; real tasting records remain zero. Independent final screenshot review, commit/push, hosted deployment health and live photo-provider acceptance are separately tracked in the [validation record](releases/tasting-management-validation.md).
+For recovery, disable the tenant entitlement to hide the pilot while retaining all records and historical evidence. Do not delete tables, Visits, overrides or provider data as a rollback shortcut. The original shared-TST migration and explicit Echo enrollment are recorded in the [initial validation](releases/tasting-management-validation.md); its row counts are point-in-time receipts. The status-override migration passed isolated rehearsal with 19 existing tastings preserved, then applied to verified shared `neon-neat-tst` with both existing tastings preserved and zero overrides backfilled. Independent readback confirmed the checksum and validated CHECK. The completed 1,133-test suite, strict typecheck, optimized build and schema validation pass; current browser review and delivery remain separately tracked in [status-selection validation](releases/tasting-unrestricted-status-validation.md).

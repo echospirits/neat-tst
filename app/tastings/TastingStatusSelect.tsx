@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { TASTING_STATUS_LABELS } from '../../lib/tastings/model';
 import { getTastingStatusActions, type TastingStatusAction, type TastingStatusControlData } from '../../lib/tastings/statusActions';
 import { transitionTastingAction } from './actions';
+import './tasting-schedule.css';
 
 export function TastingStatusSelect({ tasting, currentUserId, coordinator, label, showStatusLabel = false }: {
   tasting: TastingStatusControlData; currentUserId: string; coordinator: boolean; label: string; showStatusLabel?: boolean;
@@ -18,15 +19,15 @@ export function TastingStatusSelect({ tasting, currentUserId, coordinator, label
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const actions = getTastingStatusActions(tasting, { userId: currentUserId, coordinator });
-  const choice = actions.find(option => option.action === selected);
+  const choice = actions.find(option => option.status === selected);
   const statusLabel = TASTING_STATUS_LABELS[tasting.status];
 
   async function save(option: TastingStatusAction) {
     if (inFlight.current) return;
-    if (!actions.some(action => action.action === option.action)) { setError('This tasting changed. Choose an available status.'); return; }
+    if (!actions.some(action => action.status === option.status)) { setError('This tasting changed. Choose an available status.'); return; }
     if (option.comment === 'required' && !comment.trim()) { setError(option.commentLabel === 'What needs to change?' ? 'Explain what needs to change.' : 'Add a cancellation reason.'); commentInput.current?.focus(); return; }
     const form = new FormData();
-    form.set('id', tasting.id); form.set('version', String(tasting.version)); form.set('action', option.action);
+    form.set('id', tasting.id); form.set('version', String(tasting.version)); form.set('action', 'SET_STATUS'); form.set('status', option.status);
     if (option.comment !== 'none') form.set('comment', comment.trim());
     inFlight.current = true; setBusy(true); setError('');
     try {
@@ -47,15 +48,14 @@ export function TastingStatusSelect({ tasting, currentUserId, coordinator, label
     <select aria-label={`Status for ${label}`} value={selected} disabled={busy} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : busy ? `${id}-saving` : undefined} onChange={event => {
       const value = event.target.value;
       setSelected(value); setComment(''); setError('');
-      const option = actions.find(action => action.action === value);
+      const option = actions.find(action => action.status === value);
       if (option?.comment === 'none') void save(option);
     }}>
       <option value="" disabled>{showStatusLabel ? 'Change status…' : statusLabel}</option>
-      {actions.map(option => <option key={option.action} value={option.action}>{option.label}</option>)}
+      {actions.map(option => <option key={option.status} value={option.status}>{option.label}</option>)}
     </select>
     {choice && choice.comment !== 'none' ? <form className="tasting-status-comment" onSubmit={event => { event.preventDefault(); void save(choice); }}>
       <label htmlFor={`${id}-comment`}>{choice.commentLabel}</label>
-      {choice.action === 'TASTER_NEEDS_EDIT' && (tasting.agencyApproval !== 'NOT_REQUESTED' || tasting.stateApproval !== 'NOT_SUBMITTED') ? <p className="field-note">Agency and State approvals will need review.</p> : null}
       <textarea ref={commentInput} id={`${id}-comment`} required={choice.comment === 'required'} maxLength={2000} rows={2} value={comment} disabled={busy} onChange={event => setComment(event.target.value)} />
       <div className="tasting-status-buttons"><button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save status'}</button><button type="button" className="secondary" disabled={busy} onClick={() => { setSelected(''); setComment(''); setError(''); }}>Cancel</button></div>
     </form> : null}

@@ -1,6 +1,6 @@
 # Tasting Management Phase 1 checkpoint
 
-Owner-authorized TST-only exception, November 5, 2026. Base `64267a3a` (`neat-tst/tst`); version **0.7.2 retained**. Isolated worktree preserves unrelated local edits. No main push or release tag.
+Owner-authorized TST-only exception, November 5, 2026, extended November 6 for unrestricted workflow status selection. Current refinement base `f6a6b3b2` (`neat-tst/tst`); original pilot base `64267a3a`. Version **0.7.2 retained**. Isolated worktree preserves unrelated local edits. No main push or release tag. Earlier validation/delivery sections below are historical receipts; [current status-selection validation](docs/releases/tasting-unrestricted-status-validation.md) tracks the new refinement.
 
 ## Implemented checkpoints
 
@@ -18,8 +18,9 @@ Owner-authorized TST-only exception, November 5, 2026. Base `64267a3a` (`neat-ts
 ## Key decisions and mappings
 
 - `TastingEvent` is schedule truth; no Past Tastings table, duplicate Visit system or synthetic Worklist tasks.
-- Taster `PENDING/APPROVED/NEEDS_EDIT`; Agency `NOT_REQUESTED/REQUESTED/APPROVED/DENIED`; State `NOT_SUBMITTED/SUBMITTED/APPROVED/DENIED`; independent cancellation and Visit-backed completion. Derive visible status; assigned draft appears Needs Taster Response.
-- Reassign resets taster evidence; date/time or Agency changes reset affected taster/Agency/State evidence. History survives. Date/Agency changes clear prior-store/date sales; Needs Edit resets downstream current approval evidence.
+- Taster `PENDING/APPROVED/NEEDS_EDIT`; Agency `NOT_REQUESTED/REQUESTED/APPROVED/DENIED`; State `NOT_SUBMITTED/SUBMITTED/APPROVED/DENIED`; independent cancellation and Visit-backed completion remain factual evidence. A nullable manual workflow override now controls the visible label independently; without an override, an assigned draft derives as Needs Taster Response.
+- Administrators in the tenant and the assigned taster may select any of the twelve workflow values, forward/backward and across terminal labels. Draft retains assignment. Needs Edit/Cancelled require reasons; denial is optional. `SET_STATUS` centralizes this policy without inventing milestone evidence, altering import provenance or manufacturing completion. Manual Completed shows Visit not logged without proof; real completed Visit/photo evidence remains immutable.
+- Reassign resets taster evidence; date/time or Agency changes reset affected taster/Agency/State evidence. These material edits reset manual status for the revised proposal with history, normally clearing the override; preserved cancellation or reassignment-only denial that would re-terminalize a reopened proposal instead yields Needs Taster Response. History survives. Date/Agency changes clear prior-store/date sales; explicit Needs Edit milestone actions reset downstream current approval evidence. Canonical Visit completion clears a manual override with completion history.
 - Same-store spacing defaults to 10 calendar days, exactly day 10 allowed; cancelled/denied/completed records excluded. Admin spacing override needs history reason; same-taster overlap is a hard block, including generic events. `/tastings/settings` audits changes to only the relevant organization JSON key.
 - Business timezone `America/New_York`, UTC instants; ambiguous/nonexistent DST wall times rejected. No availability engine, inventory readiness, risk, predictive scheduler, route or State PDF/submission.
 - Current Tastings sheet reviewed read-only; its Los Angeles timezone is ignored. Real rows not imported. Normalize ISO dates/HH:mm, remove month rows, map user ID/email, add a unique stable Row Key. Original Event_Key/approver/unmatched name/nonnumeric sales remain metadata; no fabricated historical actor/time.
@@ -32,6 +33,8 @@ Owner-authorized TST-only exception, November 5, 2026. Base `64267a3a` (`neat-ts
 - Focused tasting/query/action/CSV/Visit/sales/settings/integration and existing regression tests; [operator guide](docs/tasting-management.md), [UNRELEASED](docs/releases/UNRELEASED.md), [validation](docs/releases/tasting-management-validation.md).
 
 ## Validation and remaining work
+
+This section and the earlier inline-status section record completed prior deliveries. They do not validate the unrestricted-status refinement; see its current section below.
 
 - Schema valid; strict typecheck and optimized build pass. Bundler required the permitted sandbox escape; no hosted deployment is implied.
 - Initial full run exposed one obsolete automatic-package expectation, corrected with 19 focused tests. **Final full suite: 1,105 tests / 76 suites, zero failures/skips, 37,924 ms**. Final strict typecheck/optimized build pass; mobile response-placement refinement passed 21 affected checks.
@@ -50,3 +53,11 @@ Owner-authorized TST-only exception, November 5, 2026. Base `64267a3a` (`neat-ts
 - Implemented inline dropdowns on Calendar, Workflow / Upcoming and History using existing guarded transitions. Required comments stay inline; terminal records and Visit-backed completion are preserved.
 - 37 focused checks, completed full suite of 1,113 tests / 76 suites, strict typecheck and final optimized build pass. Five persisted browser-flow groups pass with zero browser errors at mobile/desktop sizes. Independent scoped source/screenshot review cleared the final confirmation fix. TST delivery is tracked in [inline status validation](docs/releases/tasting-inline-status-validation.md).
 - Published application `e794d970312ce46f93b9b492def67bff5299d016`; exact tested tree verified. Deployment `dpl_9aC4uzwLhnfgttqf9x1Vb5WGHjRE` READY; canonical TST health HTTP 200, `test / neon-neat-tst / connected`. Main unchanged at `0f027ae7`; version 0.7.2 retained, no tag/migration/configuration change. Documentation-only receipts follow.
+
+## November 6: unrestricted workflow status selection
+
+- Supersedes the earlier prerequisite-based dropdown policy. All twelve workflow values are available to tenant administrators and the assigned taster on main views/detail, including Draft, manual Completed and reopening cancelled/denied/completed labels. Other users cannot change another assignment.
+- The selected label is stored separately from approvals, cancellation and Visit evidence. No fabricated approval actor/time, earlier milestone, Visit or `completedAt`. Import Needs Review remains factual and nonselectable; provenance is retained. Real Visit/photo completion stays immutable. Canonical Visit completion clears the override; material revisions reset manual status with history, using Needs Taster Response when retained cancellation/reassignment-only denial would otherwise re-terminalize the reopened proposal.
+- Additive migration `20261106030000_tasting_status_override`, nullable text with twelve-value CHECK; isolated rehearsal preserved all 19 existing tastings. Shared-TST application preserved both existing tastings and backfilled zero overrides; independent Neon readback confirmed the validated CHECK and checksum `7c68b05a9705a9e8a12515daa27556fa8250e017850aa4bb15841ac7e69ad2d8`. Target identity is recorded in current validation.
+- Focused groups passed: 22 initial checks, 35 workflow checks and 26 query/integration/event/execution checks; scopes overlap and are not summed. Completed full suite: **1,133 tests / 76 suites**, zero failures/skips (52,885 ms). Standalone strict typecheck, final optimized build and Prisma schema validation pass. Seven persisted browser groups passed at mobile/desktop sizes with zero final browser/wire errors. The direct-detail stylesheet fix passed a final rebuild and 19 affected checks. Independent final source/visual review cleared TST; commit/push and hosted verification remain pending. [Current validation](docs/releases/tasting-unrestricted-status-validation.md) separates this work from the completed earlier deliveries.
+- Existing Neat world and shared status controls are retained. No DESIGN.md/sidecar refresh, new raster, dependency, hosted configuration, version, main or tag change.

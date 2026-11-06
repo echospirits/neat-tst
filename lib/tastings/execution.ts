@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient, type TastingEvent } from '@prisma/client';
 import { EASTERN_TIME_ZONE, formatDateInputValue } from '../dateTime';
+import { deriveTastingStatus } from './model';
 
 type TastingDb = PrismaClient | Prisma.TransactionClient;
 export type TastingExecutionActor = { organizationId: string; userId: string };
@@ -18,7 +19,8 @@ export async function requireTastingExecutionContext(db: TastingDb, actor: Tasti
     db.tastingEvent.findFirst({ where: { id: tastingId, organizationId: actor.organizationId } }),
   ]);
   if (!feature || !user || !organization || !event || event.assignedTasterUserId !== actor.userId) throw new TastingExecutionError('This tasting is unavailable or is assigned to another taster.');
-  if (event.cancelledAt || event.agencyApproval === 'DENIED' || event.stateApproval === 'DENIED') throw new TastingExecutionError('A cancelled or denied tasting cannot be logged.');
+  const status = deriveTastingStatus(event);
+  if (!event.completedAt && (status === 'CANCELLED' || status === 'AGENCY_DENIED' || status === 'STATE_DENIED')) throw new TastingExecutionError('A cancelled or denied tasting cannot be logged.');
   if (event.completedAt && !options.allowCompleted) throw new TastingExecutionError('This tasting already has a completed visit.');
   if (!(event.completedAt && options.allowCompleted) && event.scheduledDate.toISOString().slice(0, 10) !== formatDateInputValue(options.now ?? new Date(), EASTERN_TIME_ZONE)) throw new TastingExecutionError('Log this tasting visit on its scheduled date.');
   if (options.agencyId !== undefined && options.agencyId !== event.agencyId) throw new TastingExecutionError('The tasting and visit must use the same retail account.');
@@ -40,7 +42,8 @@ export async function completeTastingFromVisit(db: Prisma.TransactionClient, act
   });
   if (!visit || !visit.photos.length || formatDateInputValue(visit.visitAt, EASTERN_TIME_ZONE) !== event.scheduledDate.toISOString().slice(0, 10)) throw new Error('A same-day tasting visit with a verified photo is required.');
   const completedAt = input.now ?? new Date();
-  const completed = await db.tastingEvent.update({ where: { organizationId_id: { organizationId: actor.organizationId, id: event.id } }, data: { completedAt, completedVisitId: visit.id, version: { increment: 1 } } });
-  await db.tastingWorkflowEvent.create({ data: { organizationId: actor.organizationId, tastingEventId: event.id, type: 'TASTING_COMPLETED', actorUserId: actor.userId, newValue: { visitId: visit.id, completedAt: completedAt.toISOString() } } });
+  const oldWorkflow = event.workflowStatusOverride == null ? null : { workflowStatusOverride: event.workflowStatusOverride, status: deriveTastingStatus(event) };
+  const completed = await db.tastingEvent.update({ where: { organizationId_id: { organizationId: actor.organizationId, id: event.id } }, data: { completedAt, completedVisitId: visit.id, workflowStatusOverride: null, version: { increment: 1 } } });
+  await db.tastingWorkflowEvent.create({ data: { organizationId: actor.organizationId, tastingEventId: event.id, type: 'TASTING_COMPLETED', actorUserId: actor.userId, ...(oldWorkflow ? { oldValue: oldWorkflow } : {}), newValue: { visitId: visit.id, completedAt: completedAt.toISOString(), ...(oldWorkflow ? { workflowStatusOverride: null, status: 'COMPLETED' } : {}) } } });
   return completed;
 }

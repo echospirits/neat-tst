@@ -4,7 +4,7 @@ import { runInNewContext } from 'node:vm';
 import test from 'node:test';
 import ts from 'typescript';
 import { getTastingStatusActions, tastingStatusControlData } from '../lib/tastings/statusActions';
-import { TASTING_STATUS_LABELS, type TastingState } from '../lib/tastings/model';
+import { TASTING_STATUS_LABELS, TASTING_WORKFLOW_STATUSES, type TastingState } from '../lib/tastings/model';
 
 const rawTasting = (overrides: Partial<TastingState> = {}) => ({
   id: 'tasting-a', version: 7, assignedTasterUserId: 'taster-a',
@@ -16,7 +16,7 @@ const control = (overrides: Partial<TastingState> = {}) => tastingStatusControlD
 type ControlData = ReturnType<typeof tastingStatusControlData>;
 const coordinator = { userId: 'coordinator-a', coordinator: true };
 const taster = { userId: 'taster-a', coordinator: false };
-const actions = (value: ControlData, actor = coordinator) => getTastingStatusActions(value, actor).map(option => option.action);
+const actions = (value: ControlData, actor = coordinator) => getTastingStatusActions(value, actor).map(option => option.status);
 
 test('inline status payload contains only serializable identity, version and workflow facts', () => {
   const data = tastingStatusControlData({ ...rawTasting(), internalNotes: 'Private coordinator text', importMetadata: { originalTaster: 'Original name' } } as ReturnType<typeof rawTasting>);
@@ -30,54 +30,25 @@ test('inline status payload contains only serializable identity, version and wor
   assert.deepEqual(JSON.parse(JSON.stringify(data)), data);
 });
 
-test('inline response choices belong only to the assigned taster, including administrators assigned as taster', () => {
-  assert.deepEqual(actions(control(), taster), ['TASTER_APPROVE', 'TASTER_NEEDS_EDIT']);
-  assert.deepEqual(actions(control(), { userId: 'another-taster', coordinator: false }), []);
-  assert.deepEqual(actions(control()), ['CANCEL']);
-  const assignedAdmin = actions(control(), { userId: 'taster-a', coordinator: true });
-  assert.ok(assignedAdmin.includes('TASTER_APPROVE'));
-  assert.ok(assignedAdmin.includes('TASTER_NEEDS_EDIT'));
-  assert.ok(assignedAdmin.includes('CANCEL'));
-  const approved = actions(control({ tasterResponse: 'APPROVED', agencyApproval: 'APPROVED', stateApproval: 'APPROVED' }), taster);
-  assert.ok(approved.includes('TASTER_NEEDS_EDIT'));
-  assert.equal(approved.includes('TASTER_APPROVE'), false);
+test('admins and assigned tasters receive every other workflow status regardless of milestones or terminal state', () => {
+  for (const status of TASTING_WORKFLOW_STATUSES) {
+    const data = control({ workflowStatusOverride: status, cancelledAt: new Date(), completedAt: new Date(), agencyApproval: 'DENIED', stateApproval: 'DENIED' });
+    const expected = TASTING_WORKFLOW_STATUSES.filter(value => value !== status);
+    assert.deepEqual(actions(data), expected);
+    assert.deepEqual(actions(data, taster), expected);
+    assert.deepEqual(actions(data, { userId: 'taster-a', coordinator: true }), expected);
+    assert.deepEqual(actions(data, { userId: 'unassigned-user', coordinator: false }), []);
+    assert.equal(actions(data).includes('IMPORT_REVIEW' as never), false);
+  }
 });
 
-test('coordinator dropdown choices follow the current approval milestones and cannot skip prerequisites', () => {
-  const tasterApproved = control({ tasterResponse: 'APPROVED' });
-  assert.ok(actions(tasterApproved).includes('REQUEST_AGENCY_APPROVAL'));
-  assert.equal(actions(tasterApproved).includes('AGENCY_APPROVE'), false);
-  assert.equal(actions(tasterApproved).includes('SUBMIT_TO_STATE'), false);
-  const requested = control({ tasterResponse: 'APPROVED', agencyApproval: 'REQUESTED' });
-  assert.ok(actions(requested).includes('AGENCY_APPROVE'));
-  assert.ok(actions(requested).includes('AGENCY_DENY'));
-  assert.equal(actions(requested).includes('SUBMIT_TO_STATE'), false);
-  const agencyApproved = control({ tasterResponse: 'APPROVED', agencyApproval: 'APPROVED' });
-  assert.ok(actions(agencyApproved).includes('SUBMIT_TO_STATE'));
-  assert.equal(actions(agencyApproved).includes('STATE_APPROVE'), false);
-  assert.equal(actions(control({ agencyApproval: 'APPROVED' })).includes('SUBMIT_TO_STATE'), false);
-  const submitted = control({ tasterResponse: 'APPROVED', agencyApproval: 'APPROVED', stateApproval: 'SUBMITTED' });
-  assert.ok(actions(submitted).includes('STATE_APPROVE'));
-  assert.ok(actions(submitted).includes('STATE_DENY'));
-  assert.equal(actions(submitted, taster).includes('STATE_APPROVE'), false);
-});
-
-test('comment requirements remain explicit and terminal/completed rows cannot be manually rewritten', () => {
-  const response = getTastingStatusActions(control(), taster);
-  assert.equal(response.find(option => option.action === 'TASTER_NEEDS_EDIT')?.comment, 'required');
-  assert.equal(getTastingStatusActions(control(), coordinator).find(option => option.action === 'CANCEL')?.comment, 'required');
-  const agencyRequested = control({ tasterResponse: 'APPROVED', agencyApproval: 'REQUESTED' });
-  assert.equal(getTastingStatusActions(agencyRequested, coordinator).find(option => option.action === 'AGENCY_DENY')?.comment, 'optional');
-  const submitted = control({ tasterResponse: 'APPROVED', agencyApproval: 'APPROVED', stateApproval: 'SUBMITTED' });
-  assert.equal(getTastingStatusActions(submitted, coordinator).find(option => option.action === 'STATE_DENY')?.comment, 'optional');
-  for (const terminal of [{ cancelledAt: new Date() }, { completedAt: new Date() }, { agencyApproval: 'DENIED' }, { stateApproval: 'DENIED' }]) {
-    assert.deepEqual(actions(control(terminal)), []);
-    assert.deepEqual(actions(control(terminal), taster), []);
-  }
-  const forbidden = new Set(['COMPLETED', 'DRAFT', 'SAVE_FEEDBACK']);
-  for (const state of [control(), control({ tasterResponse: 'APPROVED' }), agencyRequested, submitted]) {
-    assert.ok(actions(state).every(action => !forbidden.has(action)));
-  }
+test('required and optional inline reasons remain explicit across unrestricted choices', () => {
+  const choices = getTastingStatusActions(control(), taster);
+  assert.equal(choices.find(option => option.status === 'TASTER_NEEDS_EDIT')?.comment, 'required');
+  assert.equal(choices.find(option => option.status === 'CANCELLED')?.comment, 'required');
+  assert.equal(choices.find(option => option.status === 'AGENCY_DENIED')?.comment, 'optional');
+  assert.equal(choices.find(option => option.status === 'STATE_DENIED')?.comment, 'optional');
+  assert.equal(choices.find(option => option.status === 'COMPLETED')?.comment, 'none');
 });
 
 type Element = { type: any; props: Record<string, any> };
@@ -152,12 +123,13 @@ function loadStatusSelect(initial: ControlData, action: (data: FormData) => Prom
 test('simple inline status saves the exact record/version/action, refreshes in place and emits a persistent success notice', async () => {
   const calls: FormData[] = [];
   const h = loadStatusSelect(control({ tasterResponse: 'APPROVED' }), async data => { calls.push(data); return { success: 'Tasting updated.' }; });
-  h.change('REQUEST_AGENCY_APPROVAL');
+  h.change('STATE_APPROVED');
   await new Promise(setImmediate);
   assert.equal(calls.length, 1);
   assert.equal(calls[0].get('id'), 'tasting-a');
   assert.equal(calls[0].get('version'), '7');
-  assert.equal(calls[0].get('action'), 'REQUEST_AGENCY_APPROVAL');
+  assert.equal(calls[0].get('action'), 'SET_STATUS');
+  assert.equal(calls[0].get('status'), 'STATE_APPROVED');
   assert.equal(h.refreshes(), 1);
   assert.ok(h.notices.some(event => event.type === 'neat-action-success' && typeof event.detail === 'string' && event.detail.length > 0));
 });
@@ -179,13 +151,13 @@ test('Needs Edit requires an inline comment before the existing transition actio
   await h.submit(tree);
   await new Promise(setImmediate);
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].get('action'), 'TASTER_NEEDS_EDIT');
+  assert.equal(calls[0].get('status'), 'TASTER_NEEDS_EDIT');
   assert.equal(calls[0].get('comment'), 'I can work after five.');
 });
 
 test('rejected inline changes retain the current workflow status and entered reason without navigation or success notice', async () => {
   const h = loadStatusSelect(control(), async () => ({ error: 'This tasting changed. Reload before saving.' }));
-  h.change('CANCEL');
+  h.change('CANCELLED');
   const field = h.comment();
   assert.ok(field);
   field.props.onChange({ target: { value: 'Store cancelled the tasting.' }, currentTarget: { value: 'Store cancelled the tasting.' } });
@@ -199,15 +171,16 @@ test('rejected inline changes retain the current workflow status and entered rea
   assert.equal(h.notices.length, 0);
 });
 
-test('in-flight inline status saves cannot be submitted a second time and terminal rows expose no editable select', async () => {
+test('in-flight inline status saves cannot be submitted twice and completed rows remain editable', async () => {
   let calls = 0, resolve: (result: ActionResult) => void = () => {};
   const h = loadStatusSelect(control({ tasterResponse: 'APPROVED' }), async () => { calls++; return new Promise<ActionResult>(done => { resolve = done; }); });
-  h.change('REQUEST_AGENCY_APPROVAL');
-  h.change('REQUEST_AGENCY_APPROVAL');
+  h.change('STATE_APPROVED');
+  h.change('STATE_APPROVED');
   assert.equal(calls, 1);
   assert.equal(h.select().props.disabled, true);
   resolve({ success: 'Tasting updated.' });
   await new Promise(setImmediate);
-  const terminal = loadStatusSelect(control({ completedAt: new Date() }), async () => { throw Error('Completed tasting cannot be changed'); });
-  assert.equal(terminal.elements(terminal.render()).filter(node => node.type === 'select').length, 0);
+  const terminal = loadStatusSelect(control({ completedAt: new Date() }), async () => { return { success: 'Status changed.' };; });
+  assert.equal(terminal.elements(terminal.render()).filter(node => node.type === 'select').length, 1);
+  assert.ok(terminal.elements(terminal.render()).some(node => node.type === 'option' && node.props.value === 'DRAFT'));
 });

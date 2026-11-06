@@ -1,5 +1,6 @@
 import { retainedDays } from "../analytics/ohio";
 import { formatDateInputValue } from "../dateTime";
+import { activeTastingWhere } from "../tastings/statusWhere";
 import { z } from "zod";
 import {
   accountInput,
@@ -107,7 +108,7 @@ export async function saveEvent(db: CrmDb, actor: CrmActor, raw: unknown) {
   if (staff.length && !["completed", "cancelled"].includes(input.status)) {
     const pilot = await db.organizationFeature.findFirst({ where: { organizationId: actor.organizationId, featureKey: 'TASTING_MANAGEMENT', enabled: true }, select: { id: true } });
     if (pilot) {
-      const tasting = await db.tastingEvent.findFirst({ where: { organizationId: actor.organizationId, assignedTasterUserId: { in: staff }, cancelledAt: null, completedAt: null, agencyApproval: { not: 'DENIED' }, stateApproval: { not: 'DENIED' }, startsAt: { lt: input.endsAt }, endsAt: { gt: input.startsAt } }, select: { id: true } });
+      const tasting = await db.tastingEvent.findFirst({ where: { organizationId: actor.organizationId, assignedTasterUserId: { in: staff }, AND: [activeTastingWhere], startsAt: { lt: input.endsAt }, endsAt: { gt: input.startsAt } }, select: { id: true } });
       if (tasting) throw new CrmError('A selected staff member already has an overlapping tasting. Adjust the staff or time.');
     }
     const conflict = await db.eventShift.findFirst({

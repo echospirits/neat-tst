@@ -4,6 +4,7 @@ export type TastingState = {
   tasterResponse: string;
   agencyApproval: string;
   stateApproval: string;
+  workflowStatusOverride?: string | null;
   cancelledAt?: Date | null;
   completedAt?: Date | null;
   endsAt: Date;
@@ -17,10 +18,27 @@ export const TASTING_STATUS_LABELS = {
   COMPLETED: 'Completed', IMPORT_REVIEW: 'Import Needs Review',
 } as const;
 export type TastingStatus = keyof typeof TASTING_STATUS_LABELS;
-export function isTerminalTasting(value: Pick<TastingState, 'cancelledAt' | 'completedAt' | 'agencyApproval' | 'stateApproval'>) {
-  return Boolean(value.cancelledAt || value.completedAt || value.agencyApproval === 'DENIED' || value.stateApproval === 'DENIED');
+export function isTastingStatus(value: unknown): value is TastingStatus {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(TASTING_STATUS_LABELS, value);
+}
+export const TASTING_WORKFLOW_STATUSES = [
+  'DRAFT', 'NEEDS_TASTER_RESPONSE', 'TASTER_APPROVED', 'TASTER_NEEDS_EDIT',
+  'REQUESTED_AGENCY_APPROVAL', 'AGENCY_APPROVED', 'AGENCY_DENIED', 'SUBMITTED_TO_STATE',
+  'STATE_APPROVED', 'STATE_DENIED', 'CANCELLED', 'COMPLETED',
+] as const;
+export type TastingWorkflowStatus = typeof TASTING_WORKFLOW_STATUSES[number];
+export function isTastingWorkflowStatus(value: unknown): value is TastingWorkflowStatus {
+  return typeof value === 'string' && TASTING_WORKFLOW_STATUSES.some(status => status === value);
+}
+export const TERMINAL_TASTING_WORKFLOW_STATUSES = ['AGENCY_DENIED', 'STATE_DENIED', 'CANCELLED', 'COMPLETED'] as const;
+export function isTerminalTasting(value: Pick<TastingState, 'cancelledAt' | 'completedAt' | 'agencyApproval' | 'stateApproval' | 'workflowStatusOverride'>) {
+  // A real Visit remains historical even when its workflow label is subsequently changed.
+  if (value.completedAt) return true;
+  if (isTastingWorkflowStatus(value.workflowStatusOverride)) return TERMINAL_TASTING_WORKFLOW_STATUSES.some(status => status === value.workflowStatusOverride);
+  return Boolean(value.cancelledAt || value.agencyApproval === 'DENIED' || value.stateApproval === 'DENIED');
 }
 export function deriveTastingStatus(value: TastingState): TastingStatus {
+  if (isTastingWorkflowStatus(value.workflowStatusOverride)) return value.workflowStatusOverride;
   if (value.cancelledAt) return 'CANCELLED';
   if (value.completedAt) return 'COMPLETED';
   if (value.stateApproval === 'DENIED') return 'STATE_DENIED';
@@ -35,9 +53,11 @@ export function deriveTastingStatus(value: TastingState): TastingStatus {
   return value.assignedTasterUserId ? 'NEEDS_TASTER_RESPONSE' : 'DRAFT';
 }
 export function tastingExecutionStatus(value: TastingState, now = new Date()) {
-  if (value.cancelledAt) return 'CANCELLED';
-  if (value.stateApproval === 'DENIED' || value.agencyApproval === 'DENIED') return 'DENIED';
   if (value.completedAt) return 'COMPLETED';
+  const status = deriveTastingStatus(value);
+  if (status === 'CANCELLED') return 'CANCELLED';
+  if (status === 'STATE_DENIED' || status === 'AGENCY_DENIED') return 'DENIED';
+  if (status === 'COMPLETED') return 'MANUALLY_COMPLETED';
   return value.endsAt < now ? 'VISIT_NOT_LOGGED' : 'SCHEDULED';
 }
 export function tastingMinimumDays(settings: unknown): number {

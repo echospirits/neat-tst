@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { eventWindows, saveEvent } from "../lib/crm/events";
 import type { CrmDb } from "../lib/crm/activity";
 import { EventbriteProvider, MockEventProvider } from "../lib/crm/eventbrite";
+import { isTerminalTasting } from "../lib/tastings/model";
+import { activeTastingWhere } from "../lib/tastings/statusWhere";
 test("event comparison windows exclude event day and use equal spans", () => {
   const w = eventWindows(
     new Date("2026-10-11T12:00:00Z"),
@@ -58,7 +60,7 @@ test("Eventbrite maps paginated responses without importing attendee PII", async
 
 function eventScheduleFixture({ enabled = true, tasting = null, eventConflict = false, existing = null }: {
   enabled?: boolean;
-  tasting?: { id: string; organizationId: string; assignedTasterUserId: string; startsAt: Date; endsAt: Date; cancelledAt?: Date | null; completedAt?: Date | null; agencyApproval?: string; stateApproval?: string } | null;
+  tasting?: { id: string; organizationId: string; assignedTasterUserId: string; startsAt: Date; endsAt: Date; cancelledAt?: Date | null; completedAt?: Date | null; agencyApproval?: string; stateApproval?: string; workflowStatusOverride?: string | null } | null;
   eventConflict?: boolean;
   existing?: { id: string; version: number } | null;
 } = {}) {
@@ -78,8 +80,9 @@ function eventScheduleFixture({ enabled = true, tasting = null, eventConflict = 
     tastingEvent: { findFirst: async (query: any) => {
       lookups.push({ kind: 'tasting', query });
       const where = query.where;
+      assert.deepEqual(where.AND, [activeTastingWhere]);
       return tasting && tasting.organizationId === where.organizationId && where.assignedTasterUserId.in.includes(tasting.assignedTasterUserId)
-        && !tasting.cancelledAt && !tasting.completedAt && tasting.agencyApproval !== 'DENIED' && tasting.stateApproval !== 'DENIED'
+        && !isTerminalTasting({ ...tasting, agencyApproval: tasting.agencyApproval ?? 'NOT_REQUESTED', stateApproval: tasting.stateApproval ?? 'NOT_SUBMITTED' })
         && tasting.startsAt < where.startsAt.lt && tasting.endsAt > where.endsAt.gt ? { id: tasting.id } : null;
     } },
     eventShift: {
@@ -111,16 +114,20 @@ test('generic event scheduling rejects overlapping active tasting assignments un
   assert.equal(f.audit.length, 0);
   const where = f.lookups.find(call => call.kind === 'tasting')!.query.where;
   assert.equal(where.organizationId, 'org-a');
-  assert.equal(where.cancelledAt, null);
-  assert.equal(where.completedAt, null);
-  assert.equal(where.agencyApproval.not, 'DENIED');
-  assert.equal(where.stateApproval.not, 'DENIED');
+  assert.equal(where.AND[0].completedAt, null);
+  const legacyActive = where.AND[0].OR[1].AND[1];
+  assert.equal(legacyActive.cancelledAt, null);
+  assert.equal(legacyActive.agencyApproval.not, 'DENIED');
+  assert.equal(legacyActive.stateApproval.not, 'DENIED');
 });
 
 test('generic events ignore foreign, terminal and adjacent tasting assignments and keep their ordinary event checks', async () => {
   for (const changes of [
     { organizationId: 'org-b' }, { cancelledAt: new Date() }, { completedAt: new Date() },
     { agencyApproval: 'DENIED' }, { stateApproval: 'DENIED' },
+    { workflowStatusOverride: 'COMPLETED' }, { workflowStatusOverride: 'CANCELLED' },
+    { workflowStatusOverride: 'AGENCY_DENIED' }, { workflowStatusOverride: 'STATE_DENIED' },
+    { completedAt: new Date(), workflowStatusOverride: 'DRAFT' },
     { endsAt: new Date('2026-11-20T21:00:00.000Z') },
   ]) {
     const f = eventScheduleFixture({ tasting: { ...tastingConflict, ...changes } });
@@ -130,6 +137,19 @@ test('generic events ignore foreign, terminal and adjacent tasting assignments a
   }
   const ordinary = eventScheduleFixture({ eventConflict: true });
   await assert.rejects(saveEvent(ordinary.db, eventActor, ordinary.input), /overlapping event/);
+});
+
+test('generic events cannot overlap a reopened tasting even when its earlier cancelled or denied milestones remain', async () => {
+  for (const changes of [
+    { cancelledAt: new Date(), workflowStatusOverride: 'DRAFT' },
+    { agencyApproval: 'DENIED', workflowStatusOverride: 'TASTER_APPROVED' },
+    { stateApproval: 'DENIED', workflowStatusOverride: 'STATE_APPROVED' },
+  ]) {
+    const f = eventScheduleFixture({ tasting: { ...tastingConflict, ...changes } });
+    await assert.rejects(saveEvent(f.db, eventActor, f.input), /overlapping tasting/);
+    assert.equal(f.created.length, 0);
+    assert.equal(f.audit.length, 0);
+  }
 });
 
 test('a dark tasting pilot never queries tasting assignments while generic event creation remains available', async () => {

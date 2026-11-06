@@ -79,3 +79,16 @@ test('taster response caller carries the server actor, explicit version and requ
   assert.equal(result.success, 'Tasting updated.');
   assert.ok(f.calls.some(call => call.path === '/tastings/updated-tasting'));
 });
+
+test('arbitrary status caller forwards the selected status with the trusted actor and current version', async () => {
+  const f = fixture({ role: 'TASTER' });
+  const result = await f.transitionTastingAction(form({ id: 'tasting-a', version: '9', action: 'SET_STATUS', status: 'STATE_APPROVED', role: 'ADMIN', organizationId: 'foreign-org', userId: 'forged-user' }));
+  const call = f.calls.find(value => value.kind === 'transition')!;
+  assert.equal(call.actor, f.actor);
+  assert.equal(call.actor.role, 'TASTER');
+  assert.equal(call.raw.version, 9);
+  assert.equal(call.raw.action, 'SET_STATUS');
+  assert.equal(call.raw.status, 'STATE_APPROVED');
+  assert.equal(result.success, 'Tasting updated.');
+  assert.equal(f.calls.filter(value => value.kind === 'transaction').length, 1);
+});

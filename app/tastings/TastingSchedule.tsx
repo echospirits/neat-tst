@@ -43,6 +43,7 @@ export function TastingSchedule({ tastings, heading = 'My tastings', currentUser
         <div className="tasting-summary-state">
           <span>{tasting.assignedTaster ? getUserDisplayName(tasting.assignedTaster) : 'Taster needs mapping'}</span>
           {inlineStatus ? <TastingStatusSelect tasting={tastingStatusControlData(tasting)} currentUserId={currentUserId} coordinator={inlineStatus.coordinator} label={`${tasting.agency.name} on ${formatDateOnly(tasting.scheduledDate)}`} /> : <span className="pill">{TASTING_STATUS_LABELS[deriveTastingStatus(tasting)]}</span>}
+          {execution === 'MANUALLY_COMPLETED' ? <strong className="tasting-missing-visit">Completed manually · Visit not logged</strong> : null}
           {execution === 'VISIT_NOT_LOGGED' ? <strong className="tasting-missing-visit">Visit Not Logged</strong> : null}
           {execution === 'COMPLETED' ? <span>Visit logged with photo</span> : null}
           {showOutcome ? <span className="tasting-summary-outcome">Retail bottles sold on tasting date: <strong>{tasting.retailBottlesSold === null ? 'Not available' : tasting.retailBottlesSold.toLocaleString('en-US')}</strong>{tasting.salesSourceDataThrough ? <small>Data through {formatDateOnly(tasting.salesSourceDataThrough)}</small> : null}</span> : null}

@@ -1388,6 +1388,7 @@ model TastingEvent {
   contactId String?
   tasterNotes String @default("")
   internalNotes String @default("")
+  workflowStatusOverride String?
   tasterResponse TastingTasterResponse @default(PENDING)
   tasterRespondedAt DateTime?
   tasterRespondedByUserId String?

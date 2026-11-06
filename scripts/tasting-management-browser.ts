@@ -57,16 +57,20 @@ async function main() {
         assert.equal(await page.getByRole('heading', { name: 'Internal notes', exact: true }).count(), 0);
         assert.equal((await page.content()).includes('Synthetic coordinator notes; should be hidden'), false);
         await check('assigned taster detail hides internal notes'); await page.screenshot({ path: `${folder}/taster-detail-mobile.png`, fullPage: true }); copyFileSync(`${folder}/taster-detail-mobile.png`, '.impeccable/review/mobile.png');
-        if (await page.getByRole('button', { name: 'Approve', exact: true }).count()) { const approval = page.getByRole('button', { name: 'Approve', exact: true }); const box = await approval.boundingBox(); assert.ok(box && box.y + box.height < 778, 'Assigned approval must be visible above mobile navigation'); await approval.click(); await page.getByText('Your assignment is approved.', { exact: false }).waitFor(); }
-        checks.push('taster approval persisted through server action');
+        const statusSelect = page.getByRole('combobox', { name: /^Status for / });
+        if (await statusSelect.locator('option[value="TASTER_APPROVED"]').count()) {
+          await statusSelect.selectOption('TASTER_APPROVED');
+          await page.getByText('Taster Approved saved.', { exact: true }).waitFor();
+        }
+        checks.push('taster status saved through main status server action');
         await page.getByRole('link', { name: 'Log Tasting Visit', exact: true }).click();
         await page.getByRole('heading', { name: /Log Visit|Log Tasting|Log Retail/ }).waitFor();
         assert.equal(await page.locator('input[name="tastingId"]').inputValue(), fixture.tastingId);
         assert.equal(await page.locator('input[name="agencyId"]').inputValue(), fixture.agencyId);
         assert.equal(await page.locator('input[type=file]').count(), 1);
         await check('Log Tasting Visit prefilled account and tasting with single photo input'); await page.screenshot({ path: `${folder}/log-tasting-visit-mobile.png`, fullPage: true });
-        await page.goto(`${base}/tastings/${fixture.futureTastingId}`); await page.locator('summary').filter({ hasText: /^Needs Edit$/ }).click();
-        const comment = page.getByLabel('What needs to change?', { exact: true }); await comment.fill('Synthetic QA: I can work after five.'); await page.getByRole('button', { name: 'Send edit request', exact: true }).click(); await page.getByRole('heading', { name: 'Taster response' }).waitFor();
+        await page.goto(`${base}/tastings/${fixture.futureTastingId}`); await page.getByRole('combobox', { name: /^Status for / }).selectOption('TASTER_NEEDS_EDIT');
+        const comment = page.getByLabel('What needs to change?', { exact: true }); await comment.fill('Synthetic QA: I can work after five.'); await page.getByRole('button', { name: 'Save status', exact: true }).click(); await page.getByText('Taster Needs Edit saved.', { exact: true }).waitFor();
         assert.ok(await page.getByText('Synthetic QA: I can work after five.', { exact: true }).count()); checks.push('needs-edit comment saved and visible'); await page.screenshot({ path: `${folder}/taster-needs-edit-mobile.png`, fullPage: true });
         await page.goto(`${base}/agencies/${fixture.agencyId}`); await check('restricted taster Agency shows shared identity without private workspace'); assert.ok(await page.locator('.tasting-summary-link, .tasting-schedule .section-heading > a, .taster-agency-back').evaluateAll(links => links.every(link => link.getBoundingClientRect().height >= 44))); await page.screenshot({ path: `${folder}/taster-agency-mobile.png`, fullPage: true });
         await page.goto(`${base}/tastings?view=calendar`); await check('mobile calendar reflows to date agenda'); await page.screenshot({ path: `${folder}/taster-calendar-mobile.png`, fullPage: true });

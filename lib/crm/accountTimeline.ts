@@ -5,6 +5,7 @@ import { formatEasternDateTime } from "../dateTime";
 import type { SupplementalActivity } from "../../app/visits/VisitActivityTable";
 
 const tastingHistoryLabels: Record<string, string> = {
+  WORKFLOW_STATUS_CHANGED: 'Tasting workflow status changed', WORKFLOW_STATUS_RESET: 'Tasting status reset for revised proposal',
   DRAFT_CREATED: 'Tasting proposed', TASTER_APPROVED: 'Taster approved', TASTER_NEEDS_EDIT: 'Taster requested changes',
   AGENCY_APPROVAL_REQUESTED: 'Agency approval requested', AGENCY_APPROVED: 'Agency approved', AGENCY_DENIED: 'Agency denied',
   SUBMITTED_TO_STATE: 'Tasting submitted to state', STATE_APPROVED: 'State approved', STATE_DENIED: 'State denied',
