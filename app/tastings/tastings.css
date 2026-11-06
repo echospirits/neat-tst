@@ -6,7 +6,7 @@
 .tasting-toolbar { align-items: end; }
 .tasting-toolbar label, .tasting-form-grid label { display: grid; gap: 6px; }
 .tasting-toolbar input, .tasting-toolbar select { min-height: 44px; }
-.tasting-toolbar .live-filter-status { flex-basis: 100%; }
+.tasting-toolbar .live-filter-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .tasting-calendar-heading { justify-content: space-between; }
 .tasting-calendar-heading h2 { margin: 0; }
 .tasting-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
@@ -44,6 +44,82 @@
 .tasting-import-rows { padding-left: 24px; }
 .tasting-import-rows li { padding-block: 12px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .tasting-import-rows li > strong, .tasting-import-rows li > span { display: block; }
+.tasting-browse-page { gap: 12px; }
+.tasting-browse-page > .page-header { margin: 0; }
+.tasting-browse-page .tasting-toolbar { gap: 8px 12px; margin: 0; }
+.tasting-browse-page .tasting-toolbar label { min-width: 0; margin: 0; font-size: .8125rem; }
+.tasting-browse-page .tasting-toolbar label:first-of-type { flex: 2 1 200px; max-width: 420px; }
+.tasting-browse-page .tasting-toolbar .tasting-order-field { flex: 1 1 10rem; min-width: min(100%, calc(18ch + 3rem)); max-width: 14rem; }
+.tasting-browse-page .tasting-toolbar input, .tasting-browse-page .tasting-toolbar select { width: 100%; min-width: 0; }
+.tasting-result-scope { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
+.tasting-results { margin: 0; color: var(--muted); font-size: .8125rem; }
+.tasting-clear-search { display: inline-flex; align-items: center; min-height: 44px; font-size: .875rem; }
+.tasting-manage, .tasting-row-menu { position: relative; }
+.tasting-manage > summary, .tasting-row-menu > summary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--panel); color: var(--text); font-size: .875rem; font-weight: 600; cursor: pointer; list-style: none; white-space: nowrap; }
+.tasting-manage > summary::-webkit-details-marker, .tasting-row-menu > summary::-webkit-details-marker { display: none; }
+.tasting-manage > summary::after, .tasting-row-menu > summary::after { content: ''; width: 6px; height: 6px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg) translateY(-2px); }
+.tasting-manage[open] > summary, .tasting-row-menu[open] > summary { background: var(--panel-2); }
+.tasting-manage-panel, .tasting-row-menu-panel { position: absolute; z-index: 30; top: calc(100% + 4px); width: 190px; max-width: calc(100vw - 32px); padding: 4px; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 6px; }
+.tasting-manage-panel { inset-inline-start: 0; }
+.tasting-row-menu-panel { inset-inline-end: 0; }
+.tasting-row-menu[data-opens-above="true"] > .tasting-row-menu-panel { top: auto; bottom: calc(100% + 4px); }
+.tasting-manage-panel a, .tasting-row-menu-panel a { display: flex; align-items: center; min-height: 44px; padding: 8px; border-radius: 4px; font-size: .875rem; text-decoration: none; }
+.tasting-manage-panel a:hover, .tasting-row-menu-panel a:hover { background: var(--panel-2); text-decoration: underline; }
+.tasting-empty { padding-block: 12px; }
+.tasting-empty h2 { margin: 0 0 8px; }
+.tasting-empty > a { display: inline-flex; align-items: center; min-height: 44px; }
+.tasting-browse { min-width: 0; }
+.tasting-browse-table { table-layout: fixed; width: 100%; overflow: visible; border: 0; border-radius: 0; background: transparent; }
+.tasting-browse-table :is(th, td) { padding: 8px 12px; vertical-align: top; overflow-wrap: anywhere; }
+.tasting-browse-table thead th { color: var(--muted-2); background: var(--panel-2); font-size: .8125rem; }
+.tasting-browse-table thead th:first-child { width: 150px; }
+.tasting-browse-table thead th:nth-child(3) { width: 14%; }
+.tasting-browse-table thead th:nth-child(4) { width: 230px; }
+.tasting-browse-table thead th:last-child { width: 104px; }
+.tasting-browse-table:has(.has-visit) thead th:last-child { width: 160px; }
+.tasting-browse-table thead th:nth-child(5):not(:last-child) { width: 112px; text-align: right; }
+.tasting-browse-table thead small { display: block; font-weight: 400; }
+.tasting-browse-group th { padding: 10px 12px 6px; background: transparent; color: var(--text); font-size: .875rem; font-weight: 650; }
+.tasting-browse-group .result-count { margin-inline-start: 4px; }
+.tasting-browse-row > td { border-bottom: 1px solid var(--line); }
+.tasting-browse-row:hover > td { background: var(--panel-2); }
+.tasting-browse-when > span, .tasting-browse-record-id { display: block; color: var(--muted); font-size: .8125rem; }
+.tasting-browse-when { font-variant-numeric: tabular-nums; }
+.tasting-browse-link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 650; }
+.tasting-browse-taster { color: var(--text); }
+.tasting-browse-status > :is(strong, span) { display: block; margin-top: 4px; font-size: .8125rem; }
+.tasting-browse-outcome { text-align: right; font-variant-numeric: tabular-nums; }
+.tasting-browse-outcome > strong { font-size: 1rem; }
+.tasting-browse-outcome > small { display: block; color: var(--muted); font-size: .8125rem; }
+.tasting-browse-actions .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; margin-bottom: 4px; }
+.tasting-browse-actions .tasting-row-menu { width: fit-content; }
+@media (max-width: 1099px) {
+  .tasting-browse-table, .tasting-browse-table tbody { display: block; }
+  .tasting-browse-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .tasting-browse-group { display: block; padding-top: 4px; }
+  .tasting-browse-group > th { display: block; padding: 8px 0 4px; border-bottom: 1px solid var(--line); }
+  .tasting-browse-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 8px 0 12px; border-bottom: 1px solid var(--line); }
+  .tasting-browse-row > td { display: block; min-width: 0; padding: 0; border: 0; font-size: .875rem; }
+  .tasting-browse-row .tasting-browse-agency { grid-column: 1 / -1; grid-row: 1; }
+  .tasting-browse-link { min-height: 44px; }
+  .tasting-browse-record-id { display: inline; margin-inline-start: 8px; white-space: nowrap; }
+  .tasting-browse-row .tasting-browse-when { grid-column: 1 / -1; grid-row: 2; width: 55%; }
+  .tasting-browse-row .tasting-browse-taster { grid-column: 1 / -1; grid-row: 2; max-width: 45%; padding-inline-start: 8px; justify-self: end; text-align: right; }
+  .tasting-browse-row .tasting-browse-status { grid-column: 1; grid-row: 3; margin-top: 4px; }
+  .tasting-browse-row .tasting-browse-actions { grid-column: 2; grid-row: 3; margin-top: 4px; justify-self: end; }
+  .tasting-browse-row .tasting-browse-outcome { grid-column: 1 / -1; grid-row: 4; text-align: left; padding-top: 4px; }
+  .tasting-browse-outcome::before { content: 'Retail bottles on tasting date: '; color: var(--muted); font-size: .8125rem; }
+  .tasting-browse-outcome > strong, .tasting-browse-outcome > small { display: inline; }
+  .tasting-browse-outcome > small { margin-inline-start: 8px; }
+  .tasting-browse-row.has-visit .tasting-browse-status { grid-column: 1 / -1; }
+  .tasting-browse-row.has-visit .tasting-browse-actions { grid-column: 1 / -1; grid-row: 4; display: flex; align-items: start; justify-self: start; flex-wrap: wrap; gap: 8px; }
+  .tasting-browse-row.has-visit .tasting-browse-outcome { grid-row: 5; }
+}
+@media (max-width: 359px) {
+  .tasting-browse-row .tasting-browse-status { grid-column: 1 / -1; }
+  .tasting-browse-row .tasting-browse-actions { grid-column: 1 / -1; grid-row: 4; justify-self: start; }
+  .tasting-browse-row .tasting-browse-outcome { grid-row: 5; }
+}
 @media (max-width: 720px) {
   .tastings-page { gap: 16px; }
   .tasting-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; }
@@ -55,7 +131,8 @@
   .tasting-calendar-day h3 { font-size: 1rem; }
   .tasting-calendar-event { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; font-size: 1rem; }
   .tasting-calendar-event strong, .tasting-calendar-event .chip { grid-column: 1 / -1; }
-  .tasting-toolbar label { flex: 1 1 140px; min-width: 0; }
+  .tasting-browse-page .tasting-toolbar label { flex: 1 1 120px; }
+  .tasting-browse-page .tasting-toolbar label:first-of-type { flex: 2 1 144px; }
   .tasting-toolbar input, .tasting-toolbar select { width: 100%; min-width: 0; }
   .tasting-tabs a { padding-inline: 8px; }
   .tasting-next { padding: 12px; }

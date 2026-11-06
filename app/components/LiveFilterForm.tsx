@@ -10,16 +10,19 @@ type LiveFilterFormProps = {
   debounceMs?: number;
   label?: string;
   role?: 'search';
+  urlValues?: Record<string, string>;
 };
 
 const shouldDebounce = (target: EventTarget | null) =>
   target instanceof HTMLInputElement && ['search', 'text'].includes(target.type);
 
-export function LiveFilterForm({ action, children, className, debounceMs = 250, label, role }: LiveFilterFormProps) {
+export function LiveFilterForm({ action, children, className, debounceMs = 250, label, role, urlValues }: LiveFilterFormProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const timeoutRef = useRef<number | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const previousUrlValues = useRef<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => () => {
@@ -27,6 +30,20 @@ export function LiveFilterForm({ action, children, className, debounceMs = 250, 
       window.clearTimeout(timeoutRef.current);
     }
   }, []);
+
+  // Opt-in URL reconciliation for clear/back/view navigation without resetting active typing.
+  useEffect(() => {
+    if (!urlValues || !formRef.current) return;
+    for (const [name, value] of Object.entries(urlValues)) {
+      if (previousUrlValues.current[name] === value) continue;
+      const field = formRef.current.elements.namedItem(name);
+      if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement)) continue;
+      const editingNewerText = field instanceof HTMLInputElement && ['text', 'search'].includes(field.type)
+        && document.activeElement === field && field.value !== previousUrlValues.current[name];
+      if (!editingNewerText) field.value = value;
+    }
+    previousUrlValues.current = { ...urlValues };
+  }, [urlValues]);
 
   const syncFilters = (form: HTMLFormElement) => {
     const destinationPathname = action ?? pathname;
@@ -78,6 +95,7 @@ export function LiveFilterForm({ action, children, className, debounceMs = 250, 
 
   return (
     <form
+      ref={formRef}
       action={action}
       aria-label={label}
       aria-busy={isPending}
