@@ -34,8 +34,8 @@ November 6, 2026. Owner-authorized TST-only refinement on base `f6a6b3b2`. Versi
 | Persisted browser flows; 390 × 844 mobile and 1440 × 900 desktop | Seven groups passed across the persisted initial run and bounded continuation; zero final browser/wire errors |
 | Final scoped source/visual review | Clear for TST; independent review scored the direct-detail control fix resolved across the final 12 captures, with no remaining material finding |
 | Shared-TST migration and independent readback | Applied; 2 existing tastings preserved, 0 overrides backfilled; checksum and validated CHECK confirmed |
-| Tested application commit/tree and TST push | Pending |
-| READY deployment and canonical test/database health | Pending |
+| Tested application commit/tree and TST push | Published `1be94b2bfacd175a417cb3f6677852d11ae9c5c8` on `neat-tst/tst`; tree `8e85d82db1e2e55fdfafb0e8e09ebe698ec61fd8` exactly equals tested local `1fe364df957193574569fd8ff675f0b55963ceda` |
+| READY deployment and canonical test/database health | `dpl_HevgKHg9Eq6dHaNcUUPWZoXr5UTG` READY for the exact application SHA; canonical health HTTP 200, `test / neon-neat-tst / connected`; GitHub Vercel status success |
 
 Focused groups overlap and are not summed; the completed full suite consolidates the scope. Completed browser acceptance includes all forward/backward workflow choices for an administrator and assigned taster, terminal-label reopening, assignment retention on Draft, required/optional reasons, stale/rejected-save recovery, unauthorized assignment/tenant protection, retained milestone/import/Visit facts, manual Completed without proof, canonical Visit clearing an override and revised-proposal status resets. Tests from the prior inline-status delivery are not evidence that these changed semantics pass.
 
@@ -44,3 +44,5 @@ Browser evidence: `output/playwright/tasting-unrestricted/acceptance.json` recor
 The extension preserves the established Neat world and shared typography, tokens and components. Existing DESIGN.md and the pre-existing sidecar remain unchanged; no new shipping raster is introduced. Independent bounded source and final visual review cleared this refinement for TST; the known direct-detail control fix is resolved.
 
 No dependency, hosted configuration, provider, credential, entitlement or version change is included. Do not infer signed-in shared-TST or live object-storage upload acceptance from isolated synthetic browser/photo evidence. Preserve historical receipts and unrelated work. For recovery, hide the pilot through its existing entitlement while preserving tasting, override, history and Visit data; no destructive rollback is authorized.
+
+Delivery used the connected GitHub API with an exact tree comparison and a non-forced branch update leased to base `f6a6b3b2`. Canonical alias: https://neat-tst.vercel.app. Production/main remains `0f027ae7d90b5eb8444ad5cfbdc93ca7c90648e9`; no production push/merge or release tag. Documentation-only receipts follow the tested application commit. The local acceptance server was stopped after the final captures; scratch/review files remain unstaged.
