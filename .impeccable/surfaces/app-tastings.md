@@ -17,6 +17,8 @@ OWN-WORLD: Inherit Neat's Chalkboard text/sidebar, Copper actions, Patina focus,
 
 STORY: Coordinators propose and track approvals. Assigned tasters review the precise assignment, respond and log a same-day photo-backed Visit. Sales stay source-qualified observations.
 
+November 6 refinement: status dropdowns on the main calendar/workflow/history views save permitted changes in place. Required reasons remain inline; filters, scroll context, role boundaries, milestone history and Visit-backed completion stay intact.
+
 FIRST VIEWPORT: Compact heading, workflow/calendar/history navigation and filters precede useful records. Detail begins with Agency, time, taster, execution and primary Visit action. Mobile uses a date agenda; desktop supports a seven-column month or week.
 
 FORM: Existing Neat operational lists, monthly grid and shared field controls. User-pinned established world; no concept roll or generated comp is applicable. Signature interaction: assigned response and canonical Log Tasting Visit keep the Agency and tasting context.

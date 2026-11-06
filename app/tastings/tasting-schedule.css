@@ -16,6 +16,16 @@
 .taster-schedule-controls label { margin: 0; min-width: 0; }
 .taster-schedule-controls input, .taster-schedule-controls select, .taster-schedule-controls button { min-height: 44px; }
 .taster-agency-address { display: grid; gap: 8px; overflow-wrap: anywhere; }
+.tasting-status-control { display: grid; gap: 4px; width: 100%; min-width: 0; max-width: 360px; }
+.tasting-status-control > .pill { width: fit-content; white-space: normal; }
+.tasting-status-control > select { width: 100%; min-width: 0; min-height: 44px; font-size: 1rem; cursor: pointer; }
+.tasting-status-control > select:disabled { cursor: wait; }
+.tasting-status-comment { display: grid; gap: 8px; margin-top: 8px; }
+.tasting-status-comment label { margin: 0; font-size: .9rem; }
+.tasting-status-comment textarea { width: 100%; min-width: 0; font-size: 1rem; }
+.tasting-status-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.tasting-status-buttons button { min-height: 44px; }
+.tasting-status-control > p { margin-block: 8px 0; }
 @media (max-width: 759px) {
   .tasting-summary-link, .tasting-schedule .section-heading > a, .taster-agency-back { display: inline-flex; align-items: center; min-height: 44px; }
 }

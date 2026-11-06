@@ -44,3 +44,8 @@ Owner-authorized TST-only exception, November 5, 2026. Base `64267a3a` (`neat-ts
 - TST deployment `dpl_A5pd42M76258USv6QoMyVZVsqU1b` is **READY** for `c01d9ba9`, canonical `neat-tst.vercel.app` assigned, deployment/canonical health HTTP 200 with `test / neon-neat-tst / connected`. Source version 0.7.2 retained. Existing GitHub Actions filters triggered no run; none is claimed.
 - Final documentation-only receipts accompany delivery. Signed-in shared-TST UI/live Blob upload and reviewed real-sheet import remain explicit acceptance/operator limits.
 - Current-sheet row identity normalization/import and live photo-provider acceptance remain explicit manual/provider follow-up. Root owns final receipt updates and delivery status; do not replace pending gates with inferred success.
+
+## November 6: main-page status editing
+
+- Implemented inline dropdowns on Calendar, Workflow / Upcoming and History using existing guarded transitions. Required comments stay inline; terminal records and Visit-backed completion are preserved.
+- 37 focused checks, completed full suite of 1,113 tests / 76 suites, strict typecheck and final optimized build pass. Five persisted browser-flow groups pass with zero browser errors at mobile/desktop sizes. Independent scoped source/screenshot review cleared the final confirmation fix. TST delivery is tracked in [inline status validation](docs/releases/tasting-inline-status-validation.md).

@@ -4,11 +4,13 @@ import { formatDateOnly, formatDateOnlyInputValue, formatEasternDateInputValue, 
 import { getDirectionsHref } from '../../lib/crmActionContext';
 import { deriveTastingStatus, TASTING_STATUS_LABELS, tastingExecutionStatus } from '../../lib/tastings/model';
 import type { listTastings } from '../../lib/tastings/queries';
+import { tastingStatusControlData } from '../../lib/tastings/statusActions';
+import { TastingStatusSelect } from './TastingStatusSelect';
 import './tasting-schedule.css';
 
 export type TastingScheduleRecord = Awaited<ReturnType<typeof listTastings>>[number];
 
-export function TastingSchedule({ tastings, heading = 'My tastings', currentUserId, returnTo = '/tastings', showOutcome = false, emptyLabel = 'No tastings scheduled.', showAgency = true, showAgencyAction = true }: {
+export function TastingSchedule({ tastings, heading = 'My tastings', currentUserId, returnTo = '/tastings', showOutcome = false, emptyLabel = 'No tastings scheduled.', showAgency = true, showAgencyAction = true, inlineStatus }: {
   tastings: TastingScheduleRecord[];
   heading?: string;
   currentUserId: string;
@@ -17,6 +19,7 @@ export function TastingSchedule({ tastings, heading = 'My tastings', currentUser
   emptyLabel?: string;
   showAgency?: boolean;
   showAgencyAction?: boolean;
+  inlineStatus?: { coordinator: boolean };
 }) {
   const today = formatEasternDateInputValue();
   return <section className="tasting-schedule" aria-label={heading}>
@@ -39,7 +42,7 @@ export function TastingSchedule({ tastings, heading = 'My tastings', currentUser
         </div>
         <div className="tasting-summary-state">
           <span>{tasting.assignedTaster ? getUserDisplayName(tasting.assignedTaster) : 'Taster needs mapping'}</span>
-          <span className="pill">{TASTING_STATUS_LABELS[deriveTastingStatus(tasting)]}</span>
+          {inlineStatus ? <TastingStatusSelect tasting={tastingStatusControlData(tasting)} currentUserId={currentUserId} coordinator={inlineStatus.coordinator} label={`${tasting.agency.name} on ${formatDateOnly(tasting.scheduledDate)}`} /> : <span className="pill">{TASTING_STATUS_LABELS[deriveTastingStatus(tasting)]}</span>}
           {execution === 'VISIT_NOT_LOGGED' ? <strong className="tasting-missing-visit">Visit Not Logged</strong> : null}
           {execution === 'COMPLETED' ? <span>Visit logged with photo</span> : null}
           {showOutcome ? <span className="tasting-summary-outcome">Retail bottles sold on tasting date: <strong>{tasting.retailBottlesSold === null ? 'Not available' : tasting.retailBottlesSold.toLocaleString('en-US')}</strong>{tasting.salesSourceDataThrough ? <small>Data through {formatDateOnly(tasting.salesSourceDataThrough)}</small> : null}</span> : null}

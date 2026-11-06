@@ -9,6 +9,13 @@ The owner authorized **Tasting Management Phase 1** as a scoped TST-only excepti
 
 ## Changes
 
+### Tasting status dropdowns — November 6, 2026
+
+- **User-visible:** change permitted workflow statuses from Calendar, Workflow / Upcoming and unresolved History records without opening tasting detail. Ordinary transitions save immediately; required edit/cancellation comments and optional denial reasons appear inline. Persistent confirmation survives regrouping; errors retain saved state and entered reasons.
+- **Guards:** existing server action, tenant/feature/role checks, optimistic versions, prerequisites and milestone history remain authoritative. Assigned-taster responses cannot be recorded by another user; completed/cancelled/denied records remain read-only and no manual Completed choice is offered. Other shared schedule summaries retain their existing presentation.
+- No migration, dependency, version, entitlement, environment or provider change. Version 0.7.2 retained; TST only.
+- Validation and delivery: [inline status validation](tasting-inline-status-validation.md).
+
 ### Tasting Management Phase 1 — TST pilot, November 5, 2026
 
 - **User-visible:** yes. Dedicated Calendar (month/week), Workflow / Upcoming and History; searchable Agency identity, taster approval/required-comment Needs Edit, Agency request/decision and State submission/decision, independent cancellation and retained history. Coordinator notes remain administrator-only; tasters read/respond only to their assignments.

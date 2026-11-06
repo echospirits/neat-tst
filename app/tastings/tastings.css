@@ -18,6 +18,7 @@
 .tasting-calendar-event { display: grid; gap: 4px; padding: 8px 0; border-top: 1px solid var(--line); color: var(--text); text-decoration: none; overflow-wrap: anywhere; font-size: .85rem; }
 .tasting-calendar-event:hover strong { text-decoration: underline; }
 .tasting-calendar-event .chip { width: fit-content; white-space: normal; }
+.tasting-calendar-entry { min-width: 0; padding-bottom: 8px; }
 .tasting-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; padding-block: 16px; border-block: 1px solid var(--line); }
 .tasting-facts > div { display: grid; gap: 4px; align-content: start; overflow-wrap: anywhere; }
 .tasting-editor { max-width: 840px; }

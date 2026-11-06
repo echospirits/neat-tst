@@ -16,6 +16,8 @@ The server resolves the signed-in user and organization. Tasters see only their 
 
 `/tastings` offers **Workflow / Upcoming**, **Calendar** and **History**. Calendar supports a month or week; phones use a responsive list treatment. Workflow groups the current proposals by derived status. History includes completed, cancelled, denied and unresolved past proposals. Search uses Agency name/number. Large result sets are bounded and have continuation controls.
 
+Change status directly from the main page using each tasting's dropdown. Normal transitions save on selection; Needs Edit and cancellation require an inline explanation, and denial offers an optional reason before saving. Available choices follow the current milestones and your permissions. Success stays visible when a tasting moves groups, failures retain the prior saved status, and filters/URL stay in place. Completed, cancelled and denied records are read-only; completion still requires Visit/photo evidence.
+
 Agency Overview shows upcoming/recent tastings and available outcomes; Activity includes meaningful tasting history. My Day/My Week show the user's assignments from `TastingEvent` directly. No duplicate Worklist task is created. Worklist remains the follow-up source of truth.
 
 ## Stored model and workflow
