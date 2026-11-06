@@ -56,7 +56,7 @@ Counts below are control activations; text entry is separate. Browser checks con
 | Open Agency or Directions for other days | 1 direct activation | More + destination: 2 | Open Agency's extra menu opening/destination was observed; identity, time, taster and editable status remain visible. |
 | Import schedule or Tasting settings | 1 direct activation | Manage + destination: 2 | Explicit +1 menu opening for infrequent administrator work. |
 
-## Validation and remaining work
+## Validation and delivery
 
 | Check | Current receipt |
 | --- | --- |
@@ -68,7 +68,10 @@ Counts below are control activations; text entry is separate. Browser checks con
 | Captures and bounded final confirmation | Seven fresh confirmation views, including both repaired text methods; three retained first-inspection views explicitly labelled |
 | Functional browser acceptance | All seven groups passed across actual initial/continuation runs; original fixture states restored |
 | Independent final source/visual review | CLEAR; three finishing corrections resolved, no further changes |
-| Exact tested commit/tree, TST delivery and deployment health | Pending |
+| Exact tested commit/tree and TST delivery | Published application `f4831a92ca0f672fbf3a42eff06bd20ad9f53c08` on `neat-tst/tst`; verified tree `44396e58b67b242c01e2d34facd9add51c1c98b6` matches tested local `e39db4acef0f8602ee8b74cf4470354412769f06` |
+| Deployment and canonical test health | `dpl_4tfoaADVNT2KParUrEotqnxifTTM` READY; Vercel status successful, canonical alias verified, health HTTP 200 with `ok: true`, `database: connected`, `databaseTarget: neon-neat-tst`, `environment: test` |
+
+Application delivery used the connected GitHub exact-tree path after the local credential helper could not authenticate. Private QA, environment and output files were excluded from the commit. The verified canonical alias is [neat-tst.vercel.app](https://neat-tst.vercel.app), with the observed health response at [/api/health](https://neat-tst.vercel.app/api/health). Production/main was independently checked unchanged at `0f027ae7d90b5eb8444ad5cfbdc93ca7c90648e9`; version 0.7.2 is retained and no tag was created. A documentation-only receipt commit follows the published application; it does not change the tested application behavior.
 
 The single design-detector pass reported the existing `tastings.css` 1.25rem metric tier, already described in DESIGN.md prose. It is not a new defect or token; no rescan or system-document refresh is needed. Existing shared theme, typography and components remain the visual authority. DESIGN.md and its known pre-existing sidecar drift are preserved. No shipping raster is added.
 
