@@ -9,6 +9,12 @@ The owner authorized **Tasting Management Phase 1** as a scoped TST-only excepti
 
 ## Changes
 
+### OpenDock lookup recovery — November 9, 2026
+
+- Owner-authorized TST and main reliability correction, retaining version 0.7.2. Temporary OpenDock lookup failures produce visible warnings after safe persistence, preserve prior observations and permit independent imports to complete. Authentication, malformed-response and persistence failures remain errors.
+- Bounded retries honor Retry-After; CI retains safe diagnostic codes for recurring interruptions. No schema, dependency, hosted/provider configuration or UI change. Unrelated TST work remains excluded from production.
+- [Scope, validation and delivery](0.7.2-opendock-reliability.md).
+
 ### Inline assigned taster — November 6, 2026
 
 - **User-visible:** administrators and Sales users can search/select the assigned taster directly in main Workflow / Upcoming, History and Calendar; selection saves in place. TASTER keeps a read-only name and receives no eligible-user list. Sales uses the existing `USER` role; full proposal/settings authority and the twelve-status policy are unchanged.
