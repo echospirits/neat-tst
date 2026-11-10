@@ -1,19 +1,19 @@
 # Unreleased
 
-The owner authorized **Tasting Management Phase 1** as a scoped TST-only exception on November 5, 2026. Version **0.7.2** is retained; no broader development cycle, main promotion or release tag is opened. The released Wholesale Orders baseline below remains preserved.
+Version **0.7.3** is released to TST and production for the owner-authorized Production Forecasting correction. Development remains frozen outside the scoped TST-only **Tasting Management Phase 1** exception authorized November 5, 2026; no broader development cycle or promotion of that unrelated work is opened.
 
-- Production application: `12c1d995114203609bb92f833449138ec22bd52c`.
-- [0.7.2 release notes](0.7.2.md), [checklist](0.7.2-checklist.md) and [validation](0.7.2-validation.md) record the exact CI, source, deployment and live six-order reconciliation evidence.
-- Historical release refs and records remain preserved; unrelated TST maintenance remains excluded from production.
-- The released 0.7.2 hotfix had no schema, migration, dependency, hosted configuration or feature-flag change. Its owner-confirmed non-primary Antiques reporting alias and unchanged Sent/Paid are recorded in the release evidence. The separately authorized pilot migration/configuration is listed below.
+- Production application: `f7188859837c9ae93fcef47547e7eb657cb40456`.
+- [0.7.3 release notes](0.7.3.md), [checklist](0.7.3-checklist.md) and [validation](0.7.3-validation.md) record exact-candidate validation, deployments and live forecasting/sales-exclusion acceptance.
+- Historical [0.7.2 release notes](0.7.2.md), [checklist](0.7.2-checklist.md), [validation](0.7.2-validation.md) and [OpenDock recovery receipt](0.7.2-opendock-reliability.md) remain preserved.
+- Unrelated TST tasting features, migrations and maintenance below remain unreleased and excluded from main. Their earlier version and delivery statements are retained as historical evidence.
 
 ## Changes
 
-### Production Forecasting vendor bailment scope — November 9, 2026
+### Production Forecasting vendor bailment scope — November 9, 2026 (released)
 
-- Owner authorized this scoped 0.7.3 correction for TST and main: use all active organization-vendor A3A BAIL items in Ohio Forecasting, including sales-excluded3150B, without changing sales-product decisions or shared inventory/sales filters.
+- Released to both `neat-tst/tst` and production/main as **0.7.3**: use all active organization-vendor A3A BAIL items in Ohio Forecasting, including sales-excluded 3150B, without changing sales-product decisions or shared inventory/sales filters.
 - Source imports, immutable forecasts, detail and Current Demand share the scope. Missing identities remain EXCLUDED/inactive; no existing identity is promoted. No schema/migration, dependency, entitlement, provider or hosted-configuration change.
-- [Release notes](0.7.3.md), [validation](0.7.3-validation.md), [checklist](0.7.3-checklist.md). All unrelated TST-only entries below remain unreleased and excluded from main.
+- [Release notes](0.7.3.md), [validation](0.7.3-validation.md), [checklist](0.7.3-checklist.md). Live TST and production readback confirms 3150B remains EXCLUDED with zero shared inventory rows. All unrelated TST-only entries below remain unreleased and excluded from main.
 
 ### OpenDock lookup recovery — November 9, 2026
 
