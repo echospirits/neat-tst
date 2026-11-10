@@ -1,8 +1,8 @@
 # Repository Agent Instructions
 
-## Owner-authorized TST development: Production Forecasting warehouse balance
+## Current release: 0.8.0; scoped TST exceptions preserved
 
-On November 10, 2026, the owner authorized GPT/GRN immediate demand, DC inventory (Quantity + Picked, excluding GPTR/GRNR), warehouse balances, and all current shortfalls on My Schedule for Admins and Sales. Deliver to **TST first for review**. This scoped cycle uses **0.8.0-dev**; main remains released 0.7.3. No production promotion/tag or unrelated feature work is authorized. Preserve the existing TST-only tasting work and all historical records. See [plan](docs/releases/0.8.0-plan.md), [validation](docs/releases/0.8.0-validation.md) and [UNRELEASED](docs/releases/UNRELEASED.md). Earlier version/freeze statements below are historical.
+The owner accepted the Production Forecasting warehouse comparison on TST and authorized its selective production release on November 10, 2026. **0.8.0** is released to both TST and production; production application `3a21899c523c52c226b8ee3d905abbbe057504d5` is READY with verified production/database health. Exact-candidate CI, 1,125 tests/77 suites, typecheck/build, additive migration and live provider/Admin mobile/desktop acceptance pass. Stable **0.8.0** metadata is retained for TST closeout; no 0.9 development cycle is opened. TST-only Tasting Management features, migrations and unrelated maintenance remain unreleased and excluded from production. Preserve their scoped exception below and all historical records. See [release notes](docs/releases/0.8.0.md), [checklist](docs/releases/0.8.0-checklist.md), [validation](docs/releases/0.8.0-validation.md) and [UNRELEASED](docs/releases/UNRELEASED.md). Verified release [v0.8.0](https://github.com/echospirits/ohlq-field-crm/releases/tag/v0.8.0) points to the exact production application; documentation-only TST closeout delivery follows. Earlier version/freeze statements remain historical.
 
 ## Owner-authorized TST exception: Tasting Management Phase 1
 

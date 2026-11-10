@@ -1,24 +1,24 @@
 # Unreleased
 
-Version **0.8.0-dev** is open only for the owner-authorized Production Forecasting warehouse-balance changes, delivered **TST first for review**. Production remains **0.7.3**. Existing TST-only Tasting Management work is preserved and remains unreleased. No production promotion or tag is authorized.
+**0.8.0** Production Forecasting warehouse balances are owner accepted and released to both TST and production. Exact production application `3a21899c523c52c226b8ee3d905abbbe057504d5` is READY with verified production/database health. [Release notes](0.8.0.md), [completed checklist](0.8.0-checklist.md) and [validation](0.8.0-validation.md) record the selective scope and completed gates; verified release [v0.8.0](https://github.com/echospirits/ohlq-field-crm/releases/tag/v0.8.0) points to the exact production application; documentation-only TST closeout delivery follows. Stable **0.8.0** is retained and no new development cycle is opened. Existing TST-only Tasting Management features, migrations and unrelated maintenance below remain unreleased and excluded from production.
 
 - Verified starting TST: `9b30b2bdee2d2175fbf5b4235729c8297907ffb9`; production: `a1156b57ac7c902117fe2aa82717e63760234793` (application `f7188859837c9ae93fcef47547e7eb657cb40456`, tag `v0.7.3`). Actual comparison contains 115 pre-existing TST-only file differences, preserved rather than proposed for production.
-- [0.8.0 plan](0.8.0-plan.md), [pending release checklist](0.8.0-checklist.md), [validation](0.8.0-validation.md).
+- [0.8.0 plan](0.8.0-plan.md), [completed release checklist](0.8.0-checklist.md), [validation](0.8.0-validation.md).
 
-- Production application: `f7188859837c9ae93fcef47547e7eb657cb40456`.
+- Prior production 0.7.3 application: `f7188859837c9ae93fcef47547e7eb657cb40456`.
 - [0.7.3 release notes](0.7.3.md), [checklist](0.7.3-checklist.md) and [validation](0.7.3-validation.md) record exact-candidate validation, deployments and live forecasting/sales-exclusion acceptance.
 - Historical [0.7.2 release notes](0.7.2.md), [checklist](0.7.2-checklist.md), [validation](0.7.2-validation.md) and [OpenDock recovery receipt](0.7.2-opendock-reliability.md) remain preserved.
 - Unrelated TST tasting features, migrations and maintenance below remain unreleased and excluded from main. Their earlier version and delivery statements are retained as historical evidence.
 
 ## Changes
 
-### Production Forecasting warehouse balance — November 10, 2026
+### Production Forecasting warehouse balance — November 10, 2026 (released to TST and production)
 
 - Immediate demand is split **GPT | GRN** using existing agency allocation (1/3/5 → GPT; 2/4 → GRN). New DC inventory and inventory-minus-demand columns use the same pair order. Positive excess includes a plus sign; negative shortfalls remain signed and red. Statistical forecasts/planning targets are unchanged.
 - Daily inventory comes from the dated Power BI **Inventory Management / DC Inventory** native export. Each warehouse includes **Quantity + Picked**; GPTR/GRNR are excluded. Actual source date, retrieval time, provenance and independent warehouse failures are retained. Missing/stale data is unknown, never zero or an actionable shortfall.
 - My Schedule shows every current product/warehouse shortfall for Echo Admins and Sales under the existing forecasting entitlement. Product links preserve schedule day/week return context. No transfer is created or recommended automatically. TASTER and other tenants cannot read the widget.
 - Additive migration `20261110010000_production_warehouse_inventory` introduces tenant-scoped daily inventory observations/checks. No sales-product selection, sales/shared inventory data, dependency, provider credential, hosted configuration or entitlement change. 3150B remains sales-excluded.
-- TST application **`4575e40950881e8882e176abe748df442ba9700e`**, tree `c6ebc59ade4e4c525c777e38b2944e75db2139c4`, is READY and healthy at test/neon-neat-tst. Full suite 1,218/76 plus final affected checks, strict typecheck/build, migration rehearsal/readback, Node22/npm10 clean-install CI and signed-in 390px/1440px affected-flow acceptance pass. Live scoped provider acceptance verifies 18 products/36 current warehouse balances and five GPT shortfalls, zero GRN. 3150B remains sales-excluded with no shared inventory rows. [Validation and limits](0.8.0-validation.md). Human TST review and all production release gates remain pending; main is unchanged.
+- TST application **`4575e40950881e8882e176abe748df442ba9700e`**, tree `c6ebc59ade4e4c525c777e38b2944e75db2139c4`, is READY and healthy at test/neon-neat-tst. Full suite 1,218/76 plus final affected checks, strict typecheck/build, migration rehearsal/readback, Node22/npm10 clean-install CI and signed-in 390px/1440px affected-flow acceptance pass. Live scoped provider acceptance verifies 18 products/36 current warehouse balances and five GPT shortfalls, zero GRN. 3150B remains sales-excluded with no shared inventory rows. [Validation and limits](0.8.0-validation.md). The owner accepted TST review and authorized selective production release. Production application `3a21899c523c52c226b8ee3d905abbbe057504d5` is READY with correct production/database health; exact-candidate CI, 1,125 tests/77 suites, typecheck/build, additive migration and live provider/Admin mobile/desktop acceptance pass. This feature is released as stable 0.8.0 to both environments. Verified release [v0.8.0](https://github.com/echospirits/ohlq-field-crm/releases/tag/v0.8.0) points to the exact production application; documentation-only TST closeout delivery follows. TST-only tasting work and unrelated maintenance remain excluded.
 
 ### Production Forecasting vendor bailment scope — November 9, 2026 (released)
 
