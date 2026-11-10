@@ -1,6 +1,9 @@
 # Unreleased
 
-Version **0.7.3** is released to TST and production for the owner-authorized Production Forecasting correction. Development remains frozen outside the scoped TST-only **Tasting Management Phase 1** exception authorized November 5, 2026; no broader development cycle or promotion of that unrelated work is opened.
+Version **0.8.0-dev** is open only for the owner-authorized Production Forecasting warehouse-balance changes, delivered **TST first for review**. Production remains **0.7.3**. Existing TST-only Tasting Management work is preserved and remains unreleased. No production promotion or tag is authorized.
+
+- Verified starting TST: `9b30b2bdee2d2175fbf5b4235729c8297907ffb9`; production: `a1156b57ac7c902117fe2aa82717e63760234793` (application `f7188859837c9ae93fcef47547e7eb657cb40456`, tag `v0.7.3`). Actual comparison contains 115 pre-existing TST-only file differences, preserved rather than proposed for production.
+- [0.8.0 plan](0.8.0-plan.md), [pending release checklist](0.8.0-checklist.md), [validation](0.8.0-validation.md).
 
 - Production application: `f7188859837c9ae93fcef47547e7eb657cb40456`.
 - [0.7.3 release notes](0.7.3.md), [checklist](0.7.3-checklist.md) and [validation](0.7.3-validation.md) record exact-candidate validation, deployments and live forecasting/sales-exclusion acceptance.
@@ -8,6 +11,14 @@ Version **0.7.3** is released to TST and production for the owner-authorized Pro
 - Unrelated TST tasting features, migrations and maintenance below remain unreleased and excluded from main. Their earlier version and delivery statements are retained as historical evidence.
 
 ## Changes
+
+### Production Forecasting warehouse balance — November 10, 2026
+
+- Immediate demand is split **GPT | GRN** using existing agency allocation (1/3/5 → GPT; 2/4 → GRN). New DC inventory and inventory-minus-demand columns use the same pair order. Positive excess includes a plus sign; negative shortfalls remain signed and red. Statistical forecasts/planning targets are unchanged.
+- Daily inventory comes from the dated Power BI **Inventory Management / DC Inventory** native export. Each warehouse includes **Quantity + Picked**; GPTR/GRNR are excluded. Actual source date, retrieval time, provenance and independent warehouse failures are retained. Missing/stale data is unknown, never zero or an actionable shortfall.
+- My Schedule shows every current product/warehouse shortfall for Echo Admins and Sales under the existing forecasting entitlement. Product links preserve schedule day/week return context. No transfer is created or recommended automatically. TASTER and other tenants cannot read the widget.
+- Additive migration `20261110010000_production_warehouse_inventory` introduces tenant-scoped daily inventory observations/checks. No sales-product selection, sales/shared inventory data, dependency, provider credential, hosted configuration or entitlement change. 3150B remains sales-excluded.
+- Validation and TST delivery receipts: [0.8.0 validation](0.8.0-validation.md). Production release gates remain pending.
 
 ### Production Forecasting vendor bailment scope — November 9, 2026 (released)
 

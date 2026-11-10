@@ -1,5 +1,9 @@
 # Repository Agent Instructions
 
+## Owner-authorized TST development: Production Forecasting warehouse balance
+
+On November 10, 2026, the owner authorized GPT/GRN immediate demand, DC inventory (Quantity + Picked, excluding GPTR/GRNR), warehouse balances, and all current shortfalls on My Schedule for Admins and Sales. Deliver to **TST first for review**. This scoped cycle uses **0.8.0-dev**; main remains released 0.7.3. No production promotion/tag or unrelated feature work is authorized. Preserve the existing TST-only tasting work and all historical records. See [plan](docs/releases/0.8.0-plan.md), [validation](docs/releases/0.8.0-validation.md) and [UNRELEASED](docs/releases/UNRELEASED.md). Earlier version/freeze statements below are historical.
+
 ## Owner-authorized TST exception: Tasting Management Phase 1
 
 On November 5, 2026, the owner explicitly authorized this scoped pilot in `neat-tst`, retaining the current **0.7.2** package version. Implement the tasting schedule, separate approval milestones/history, assignment, Visit/photo-backed execution, same-day retail sales outcome, spacing/conflicts and reviewed spreadsheet import described in [the guide](docs/tasting-management.md). `TASTING_MANAGEMENT` is disabled by default and explicitly enrolled for Echo by stable organization ID. [UNRELEASED](docs/releases/UNRELEASED.md), the [checkpoint](tasting-management-checkpoint.md) and [validation](docs/releases/tasting-management-validation.md) govern its current delivery status. This authorization overrides the freeze only for this work; it opens no broader development cycle. Test and deliver only to `neat-tst/tst`; do not push/merge main or create a release tag. Preserve all historical release records and unrelated work. Earlier released-baseline statements below remain historical.

@@ -1,0 +1,47 @@
+name: Verify Production Forecasting warehouse inventory in TST
+on:
+  push:
+    branches: [tst]
+    paths:
+      - lib/productionForecasting/operationalSignals/dcInventory.ts
+      - lib/productionForecasting/operationalSignals/dcInventoryIngestion.ts
+      - scripts/verify-production-warehouse-inventory.ts
+      - .github/workflows/production-warehouse-inventory.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ohlq-annual-sales-sync-test
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.repository == 'echospirits/neat-tst' && github.ref == 'refs/heads/tst'
+    environment: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      APP_ENV: test
+      DATABASE_ENVIRONMENT: test
+      DATABASE_TARGET_ID: ${{ vars.DATABASE_TARGET_ID }}
+      EXPECTED_DATABASE_HOST: ${{ vars.EXPECTED_DATABASE_HOST }}
+      PRODUCTION_BASE_URL: ${{ vars.PRODUCTION_BASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      OHLQ_TENANT_CREDENTIAL_ENCRYPTION_KEY: ${{ secrets.OHLQ_TENANT_CREDENTIAL_ENCRYPTION_KEY }}
+      OHLQ_MICROSOFT_USERNAME: ${{ secrets.OHLQ_MICROSOFT_USERNAME }}
+      OHLQ_MICROSOFT_PASSWORD: ${{ secrets.OHLQ_MICROSOFT_PASSWORD }}
+      OHLQ_BROWSER_CHANNEL: ""
+      OHLQ_HEADLESS: "1"
+      OHLQ_USE_PERSISTENT_BROWSER_CONTEXT: "1"
+      OHLQ_USE_SERVERLESS_CHROMIUM: "0"
+      OHLQ_IMPORT_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Verify forecasting DC inventory and current demand
+        run: npx tsx scripts/verify-production-warehouse-inventory.ts
+      # Native exports/screenshots remain private RUNNER_TEMP and are discarded.

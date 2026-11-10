@@ -22,6 +22,9 @@ import { getSchedulerWeekDates, isValidSchedulerDate } from '../lib/myDayWeekSch
 import { createSchedulerWorklistItem, completeSchedulerWorklistItem, updateSchedulerWorklistItem } from './my-week/actions';
 import { WorklistScheduler } from './my-week/WorklistScheduler';
 import { getWorklistOverdueLabel } from '../lib/worklistPresentation';
+import { Suspense } from 'react';
+import { canViewScheduleProductionShortfalls, ScheduleProductionShortfalls, ScheduleProductionShortfallsLoading } from './components/ScheduleProductionShortfalls';
+import './components/schedule-production-shortfalls.css';
 
 export const metadata = buildPageMetadata('My Schedule');
 
@@ -208,6 +211,8 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
       <TastingSchedule tastings={myTastings} currentUserId={user.id} returnTo={`/?view=${view}&date=${anchorDate}`} emptyLabel={view === 'week' ? 'No tastings assigned this week.' : 'No tastings assigned this day.'} />
     </>;
   }
+  const productionShortfallContext = { organizationId, role: user.role, enabled: enabledFeatures.has('PRODUCTION_FORECASTING') };
+  const showProductionShortfalls = canViewScheduleProductionShortfalls(productionShortfallContext);
   const schedulerRangeStart = addDaysToDateInputValue(view === 'week' ? weekDates[0] : anchorDate, -30);
   const schedulerRangeEnd = addDaysToDateInputValue(view === 'week' ? weekDates[6] : anchorDate, 1);
   const ranges = getDashboardRanges();
@@ -386,6 +391,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
         </div>
       </header>
 
+      {showProductionShortfalls ? <Suspense fallback={<ScheduleProductionShortfallsLoading />}><ScheduleProductionShortfalls {...productionShortfallContext} returnTo={`/?view=${view}&date=${anchorDate}`} /></Suspense> : null}
       {enabledFeatures.has('TASTING_MANAGEMENT') ? <TastingSchedule tastings={myTastings} currentUserId={user.id} returnTo={`/?view=${view}&date=${anchorDate}`} emptyLabel={view === 'week' ? 'No tastings assigned this week.' : 'No tastings assigned this day.'} /> : null}
       <WorklistScheduler
         anchorDate={anchorDate}
