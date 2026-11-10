@@ -1,6 +1,6 @@
 # Production Forecasting - Operational Signals
 
-This TST-only extension retains version 0.6.0 and the existing `production-demand-v1.4` statistical model. Forecast, immediate agency replenishment and delivery availability remain independently stored and displayed. Nothing adds the operational estimate to a forecast or planning target.
+The initial Operational Signals extension shipped with version 0.6.0. The owner-authorized warehouse comparison is now in **0.8.0-dev, TST first for review**; production remains 0.7.3. The existing statistical model is unchanged. Forecast, immediate agency replenishment, warehouse stock and delivery availability remain independently stored. Nothing adds the operational estimate to a forecast or planning target.
 
 ## Sources and meaning
 
@@ -11,6 +11,20 @@ The native JSON contains product `bpc` (bottles per case), `statusCode`, `detail
 For each agency, cases to reach MIN are `max(0, ceil((MIN bottles - inventory bottles) / bottles per case))`. Round per agency, then sum by product. Owner-confirmed example: 2806B, agency 30221, MIN14, inventory0, six bottles per case -> three cases. Equality creates no gap. Missing/negative quantities or conflicting duplicates make the product unavailable; identical duplicate rows are deduplicated without doubling demand.
 
 Agency prefixes 2/4 map to GRN; 1/3/5 map to GPT (owner confirmed). Other prefixes remain unassigned. Product summaries include an unassigned amount rather than guessing a warehouse.
+
+### Warehouse inventory and shortfalls
+
+The forecast table/detail display GPT | GRN demand, warehouse inventory and signed balance in cases. Stock comes from A3A Reports → Inventory Management → **DC Inventory**, report `6b07a165-c515-4f63-bef4-471ef64e3e96`, using the existing OPS/Microsoft browser flow. From and To both select the current organization business date, Historical items is explicitly False, and all brands are selected. The importer independently requires the native row's actual `As_of_Date` to match; requested dates and render/retrieval time cannot make an older snapshot current.
+
+Owner-confirmed stock is **GPT Quantity + GPT Picked**, and **GRN Quantity + GRN Picked**. GPTR/GRNR are excluded. Source quantities already represent cases; case pack is evidence rather than a divisor. Up to four source decimal places are preserved. The report supplies a business date but no verified publication clock; `sourceUpdatedAt` stays null.
+
+Balance is **inventory − immediate demand** per warehouse. Positive means excess, negative means shortfall and appears red with an accessible shortfall label. Current balance requires known, complete same-day demand with a current source publication and a valid same-day warehouse snapshot. Missing/stale values remain unavailable, not zero; a valid GPT can remain useful when GRN is unavailable. Unassigned demand is not allocated or used to invent alerts. This does not change statistical forecasts or planning targets.
+
+My Schedule shows all current negative product/warehouse pairs to entitled Echo Admins and Sales (including existing platform-admin semantics), with inventory, demand and signed balance. TASTER/other tenants do not receive the widget. Product links preserve schedule day/week/date through forecast horizon changes. No transfer is made automatically. Missing coverage is disclosed so an empty widget is not mistaken for proof that all warehouses are covered.
+
+The existing morning workflow imports one native DC report independently of demand and delivery completion, retaining immutable daily per-product/warehouse observations and attempt checks. Failed attempts retain prior evidence without making it current. New reads use only compact persisted latest observations; page views never poll providers. Migration `20261110010000_production_warehouse_inventory` is additive. Existing OPS/Microsoft credentials, feature entitlement and sales-product selection are reused unchanged.
+
+For TST-only operator work, `scripts/production-warehouse-inventory.ts` requires explicit env-file, expected-host, expected-target=neon-neat-tst, and reviewed checksum for mutations. Migrate/check/CSV-ingest modes affect only the two new tables; rehearsal constraint forgeries roll back. The scoped TST acceptance workflow refreshes forecasting stock and pending current demand only, shares the existing provider concurrency lock, and discards private exports. See [validation](releases/0.8.0-validation.md) for checksum, target identities and delivery receipts. A code rollback retains the additive tables; do not delete observations.
 
 This is an **overnight agency replenishment estimate**, not an outstanding/allocated purchase order. The owner described same-day shipment and agency scans with an approximately 2 AM inventory load. V1 samples in the morning and clearly discloses same-day timing lag. The retained Bailment report has shipment dates but no receipt/scan status; do not infer unreceived quantities or subtract them a second time. `inboundCases` remains null, not zero.
 
