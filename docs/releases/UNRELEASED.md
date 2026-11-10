@@ -1,5 +1,7 @@
 # Unreleased
 
+The owner authorized automatic Production Forecasting refresh for both TST and main. The corrected **0.9.0** candidate is frozen for final validation and live acceptance. No broader development cycle is opened. [Plan](0.9.0-plan.md), [validation](0.9.0-validation.md) and [checklist](0.9.0-checklist.md) record this scope; unrelated TST entries below remain preserved and excluded from production. The following 0.8.0 closeout statements are historical.
+
 **0.8.0** Production Forecasting warehouse balances are owner accepted and released to both TST and production. Exact production application `3a21899c523c52c226b8ee3d905abbbe057504d5` is READY with verified production/database health. [Release notes](0.8.0.md), [completed checklist](0.8.0-checklist.md) and [validation](0.8.0-validation.md) record the selective scope and completed gates; verified release [v0.8.0](https://github.com/echospirits/ohlq-field-crm/releases/tag/v0.8.0) points to the exact production application; documentation-only TST closeout delivery follows. Stable **0.8.0** is retained and no new development cycle is opened. Existing TST-only Tasting Management features, migrations and unrelated maintenance below remain unreleased and excluded from production.
 
 - Verified starting TST: `9b30b2bdee2d2175fbf5b4235729c8297907ffb9`; production: `a1156b57ac7c902117fe2aa82717e63760234793` (application `f7188859837c9ae93fcef47547e7eb657cb40456`, tag `v0.7.3`). Actual comparison contains 115 pre-existing TST-only file differences, preserved rather than proposed for production.
