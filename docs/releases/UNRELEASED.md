@@ -1,6 +1,6 @@
 # Unreleased
 
-The owner authorized automatic Production Forecasting refresh for both TST and main. The corrected **0.9.0** candidate is frozen for final validation and live acceptance. No broader development cycle is opened. [Plan](0.9.0-plan.md), [validation](0.9.0-validation.md) and [checklist](0.9.0-checklist.md) record this scope; unrelated TST entries below remain preserved and excluded from production. The following 0.8.0 closeout statements are historical.
+The owner-authorized automatic Production Forecasting refresh is released to production as stable **0.9.0**, application `13110b06c942ae57faf24fdc8da1b2383f1cacfd` / [v0.9.0](https://github.com/echospirits/ohlq-field-crm/releases/tag/v0.9.0). Stable TST `fead667b928b664d90691ef47eec4bccd3b507ad` is deployed and healthy, but its button remains disabled pending owner-assisted runner-credential setup; TST live-provider acceptance is not claimed. [Plan](0.9.0-plan.md), [validation](0.9.0-validation.md) and [checklist](0.9.0-checklist.md) record this scope. No broader development cycle is opened. Unrelated TST entries below remain preserved and excluded from production. The following 0.8.0 closeout statements are historical.
 
 **0.8.0** Production Forecasting warehouse balances are owner accepted and released to both TST and production. Exact production application `3a21899c523c52c226b8ee3d905abbbe057504d5` is READY with verified production/database health. [Release notes](0.8.0.md), [completed checklist](0.8.0-checklist.md) and [validation](0.8.0-validation.md) record the selective scope and completed gates; verified release [v0.8.0](https://github.com/echospirits/ohlq-field-crm/releases/tag/v0.8.0) points to the exact production application; documentation-only TST closeout delivery follows. Stable **0.8.0** is retained and no new development cycle is opened. Existing TST-only Tasting Management features, migrations and unrelated maintenance below remain unreleased and excluded from production.
 
@@ -14,7 +14,7 @@ The owner authorized automatic Production Forecasting refresh for both TST and m
 
 ## Changes
 
-### Automatic Production Forecasting refresh — November 10, 2026
+### Automatic Production Forecasting refresh — November 10, 2026 (released main; TST code delivered)
 
 - Replace the normal source-upload section with an Admin refresh button that downloads forecast reports and saves new forecasts in the background. Search/horizon stay in place; queued/running/complete/partial/error/timeout and retry states are explicit. Sales remains read-only.
 - Dedicated forecast-only dispatch reuses existing credentials and provider serialization. It coalesces requests and preserves tenant scope, requester authority, daily operational snapshot dates, statistical model and 3150B sales exclusion. No annual sales/shared-inventory workflow runs.

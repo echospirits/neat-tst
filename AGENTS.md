@@ -1,5 +1,9 @@
 # Repository Agent Instructions
 
+## Current release: 0.9.0; TST runner setup pending
+
+The scoped automatic Production Forecasting refresh is released to production as `13110b06c942ae57faf24fdc8da1b2383f1cacfd` / [v0.9.0](https://github.com/echospirits/ohlq-field-crm/releases/tag/v0.9.0). The live production button and dedicated source job succeed. Stable TST code `fead667b928b664d90691ef47eec4bccd3b507ad` is deployed and healthy, but its refresh control remains disabled because the deployed app receives no dispatch credential; owner-assisted GitHub verification/credential setup is pending. Do not claim TST live-provider acceptance. No broader development cycle is opened; unrelated TST Tastings and maintenance remain excluded from main. Earlier release statements below are historical. See [validation](docs/releases/0.9.0-validation.md).
+
 ## Owner-authorized forecasting refresh release: 0.9.0
 
 On November 10, 2026, the owner requested a one-click automatic Production Forecasting refresh instead of the normal manual-upload section, with delivery to both neat-tst and main. Develop the scoped change as 0.9.0-dev on TST, then freeze/selectively promote a validated stable 0.9.0 candidate under this explicit production authorization. Reuse existing credentials and forecast imports, preserve source dates and daily snapshot semantics, and do not run unrelated sales/shared-inventory imports or promote TST Tasting Management. Add only the request-tracking migration and required tenant identity index. No broader development cycle is opened. See [plan](docs/releases/0.9.0-plan.md), [validation](docs/releases/0.9.0-validation.md), [checklist](docs/releases/0.9.0-checklist.md) and [UNRELEASED](docs/releases/UNRELEASED.md). Earlier release statements below are historical.

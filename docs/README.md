@@ -1,5 +1,7 @@
 # Neat engineering and product documentation
 
+Current scoped release: **0.9.0 automatic Production Forecasting refresh** is verified in production, including its one-click source job. Stable TST code is deployed and healthy; its runner credential still requires owner-assisted setup before live button acceptance. Development remains frozen and unrelated TST work stays excluded from main. See [0.9.0 validation](releases/0.9.0-validation.md); earlier release statements below are historical.
+
 Start with [implementation progress](engineering/implementation-progress.md) and [feature inventory](product/feature-inventory.md). Existing canonical release and UI standards remain authoritative.
 
 ## Authorized TST work
