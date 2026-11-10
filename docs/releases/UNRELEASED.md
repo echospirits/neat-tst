@@ -12,6 +12,12 @@
 
 ## Changes
 
+### Automatic Production Forecasting refresh — November 10, 2026
+
+- Replace the normal source-upload section with an Admin refresh button that downloads forecast reports and saves new forecasts in the background. Search/horizon stay in place; queued/running/complete/partial/error/timeout and retry states are explicit. Sales remains read-only.
+- Dedicated forecast-only dispatch reuses existing credentials and provider serialization. It coalesces requests and preserves tenant scope, requester authority, daily operational snapshot dates, statistical model and 3150B sales exclusion. No annual sales/shared-inventory workflow runs.
+- Additive request-tracking migration and compatible User tenant identity index; no unrelated schema, dependency, entitlement or provider-account change. See [plan](0.9.0-plan.md), [validation](0.9.0-validation.md) and [checklist](0.9.0-checklist.md).
+
 ### Production Forecasting warehouse balance — November 10, 2026 (released to TST and production)
 
 - Immediate demand is split **GPT | GRN** using existing agency allocation (1/3/5 → GPT; 2/4 → GRN). New DC inventory and inventory-minus-demand columns use the same pair order. Positive excess includes a plus sign; negative shortfalls remain signed and red. Statistical forecasts/planning targets are unchanged.
