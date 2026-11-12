@@ -1,4 +1,5 @@
 export const FEATURE_KEYS = [
+  'SOCIAL_PUBLISHING',
   'CORE_CRM',
   'VISITS',
   'WORKLIST',
@@ -34,6 +35,7 @@ export type FeatureDefinition = {
 };
 
 export const FEATURE_REGISTRY: Record<FeatureKey, FeatureDefinition> = {
+  SOCIAL_PUBLISHING: { key: 'SOCIAL_PUBLISHING', label: 'Social Publishing', description: 'Pilot: reviewed, scheduled publishing to explicitly connected brand destinations.', category: 'Pilot', defaultEnabled: false, dependencies: ['CORE_CRM'], beta: true },
   PRODUCTION_SUPPLIES: { key: 'PRODUCTION_SUPPLIES', label: 'Production Supplies', description: 'Shared supply needs, incoming orders, shipment tracking and receipt.', category: 'Pilot', defaultEnabled: false, dependencies: ['CORE_CRM'], beta: true },
   TASTING_MANAGEMENT: { key: 'TASTING_MANAGEMENT', label: 'Tasting Management', description: 'Pilot: tasting proposals, approvals, assignments and visit-backed outcomes.', category: 'Pilot', defaultEnabled: false, dependencies: ['TASTING_WORKFLOWS', 'VISITS', 'AGENCIES'], beta: true },
   PRODUCTION_FORECASTING: { key: 'PRODUCTION_FORECASTING', label: 'Production Forecasting', description: 'Pilot: 30-day outbound case demand with backtested models and production planning targets.', category: 'Pilot', defaultEnabled: false, dependencies: ['CORE_CRM', 'ANALYTICS'], beta: true },
@@ -57,7 +59,7 @@ export const FEATURE_REGISTRY: Record<FeatureKey, FeatureDefinition> = {
 };
 
 export const INTELLIGENCE_PACKAGE_FEATURE_KEYS = ['AGENCY_INTELLIGENCE', 'WHOLESALE_OPPORTUNITIES', 'ADVANCED_INTELLIGENCE'] as const satisfies readonly FeatureKey[];
-export const PILOT_FEATURE_KEYS = ['PRODUCTION_FORECASTING', 'TASTING_MANAGEMENT', 'PRODUCTION_SUPPLIES'] as const satisfies readonly FeatureKey[];
+export const PILOT_FEATURE_KEYS = ['PRODUCTION_FORECASTING', 'TASTING_MANAGEMENT', 'PRODUCTION_SUPPLIES', 'SOCIAL_PUBLISHING'] as const satisfies readonly FeatureKey[];
 export const CORE_PACKAGE_FEATURE_KEYS = FEATURE_KEYS.filter((key) =>
   !INTELLIGENCE_PACKAGE_FEATURE_KEYS.includes(key as (typeof INTELLIGENCE_PACKAGE_FEATURE_KEYS)[number]) && !PILOT_FEATURE_KEYS.includes(key as (typeof PILOT_FEATURE_KEYS)[number]));
 export const DEFAULT_FEATURE_KEYS = [...CORE_PACKAGE_FEATURE_KEYS];

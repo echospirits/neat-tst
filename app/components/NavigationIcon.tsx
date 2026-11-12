@@ -4,6 +4,7 @@ const paths: Record<string, string> = {
   accounts: 'M5 21V3h14v18M3 21h18M9 7h1m4 0h1M9 11h1m4 0h1M10 21v-6h4v6',
   visits: 'M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM7 3v4m10-4v4M3 11h18',
   tastings: 'M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM7 3v4m10-4v4M3 11h18m-11 4 3 3 5-5',
+  social: 'M8 12h8M4 5h16v11H9l-5 4ZM16 3v4M8 3v4',
   more: 'M4 12h.01M12 12h.01M20 12h.01',
   search: 'M10 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14Zm5 12 6 6',
   plus: 'M12 4v16M4 12h16',

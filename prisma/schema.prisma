@@ -431,6 +431,7 @@ model UserActivityDay {
 }
 
 model User {
+  socialGroupMemberships SocialGroupMember[]
   assignedTastings TastingEvent[] @relation("TastingAssignedUser")
   contactSuggestionReviews ContactSuggestionReview[]
   mailboxConnections MailboxConnection[]
@@ -493,6 +494,9 @@ model User {
 }
 
 model Organization {
+  socialGroups SocialGroup[]
+  socialCredentials SocialCredential[]
+  socialOAuthStates SocialOAuthState[]
   supplyCatalog SupplyCatalogItem[]
   supplyOrders SupplyOrder[]
   supplyNeeds SupplyNeed[]
@@ -3866,4 +3870,188 @@ model SupplyNotification {
   shipment SupplyShipment @relation(fields: [organizationId, shipmentId], references: [organizationId, id], onDelete: Cascade)
   @@unique([organizationId, fingerprint])
   @@index([organizationId, createdAt])
+}
+
+// Social pilot: editorial revisions and destination deliveries are independent.
+model SocialGroup {
+  id String @id @default(cuid())
+  organizationId String
+  key String
+  label String
+  createdAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  members SocialGroupMember[]
+  destinations SocialDestination[]
+  posts SocialPost[]
+  media SocialMedia[]
+  @@unique([organizationId, key])
+  @@unique([organizationId, id])
+}
+model SocialGroupMember {
+  organizationId String
+  groupId String
+  userId String
+  group SocialGroup @relation(fields: [organizationId, groupId], references: [organizationId, id], onDelete: Cascade)
+  user User @relation(fields: [organizationId, userId], references: [organizationId, id], onDelete: Cascade)
+  @@id([organizationId, groupId, userId])
+}
+model SocialCredential {
+  id String @id @default(cuid())
+  organizationId String
+  provider String
+  authorizationOwnerId String
+  credentialsEncrypted String
+  scopes String[]
+  expiresAt DateTime?
+  health String @default("CONNECTED_UNVERIFIED")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  destinations SocialDestination[]
+  @@unique([organizationId, id])
+}
+model SocialOAuthState {
+  id String @id
+  organizationId String
+  userId String
+  sessionHash String
+  provider String
+  verifierEncrypted String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([expiresAt])
+}
+model SocialDestination {
+  id String @id @default(cuid())
+  organizationId String
+  credentialId String
+  groupId String?
+  provider String
+  externalId String
+  displayName String
+  handle String?
+  profileImageUrl String?
+  metadata Json @default("{}")
+  health String @default("CONNECTED_UNVERIFIED")
+  enabled Boolean @default(true)
+  verifiedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  credential SocialCredential @relation(fields: [organizationId, credentialId], references: [organizationId, id], onDelete: Restrict)
+  group SocialGroup? @relation(fields: [organizationId, groupId], references: [organizationId, id], onDelete: Restrict)
+  deliveries SocialDelivery[]
+  @@unique([organizationId, provider, externalId])
+  @@unique([organizationId, id])
+}
+model SocialMedia {
+  id String @id @default(cuid())
+  organizationId String
+  groupId String
+  createdByUserId String
+  storageKey String
+  fileName String
+  mimeType String
+  bytes Int
+  width Int
+  height Int
+  durationSeconds Float?
+  sha256 String
+  createdAt DateTime @default(now())
+  group SocialGroup @relation(fields: [organizationId, groupId], references: [organizationId, id], onDelete: Restrict)
+  @@unique([organizationId, id])
+  @@unique([organizationId, storageKey])
+  @@index([organizationId, groupId, createdAt])
+}
+model SocialPost {
+  id String @id @default(cuid())
+  organizationId String
+  groupId String
+  createdByUserId String
+  title String
+  status String @default("DRAFT")
+  version Int @default(1)
+  currentRevision Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  group SocialGroup @relation(fields: [organizationId, groupId], references: [organizationId, id], onDelete: Restrict)
+  revisions SocialRevision[]
+  deliveries SocialDelivery[]
+  audits SocialAudit[]
+  @@unique([organizationId, id])
+  @@index([organizationId, updatedAt])
+}
+model SocialRevision {
+  id String @id @default(cuid())
+  organizationId String
+  postId String
+  number Int
+  payload Json
+  contentHash String
+  proposedAt DateTime?
+  submittedAt DateTime?
+  approvedAt DateTime?
+  approvedByUserId String?
+  invalidatedAt DateTime?
+  createdAt DateTime @default(now())
+  post SocialPost @relation(fields: [organizationId, postId], references: [organizationId, id], onDelete: Restrict)
+  deliveries SocialDelivery[]
+  @@unique([organizationId, postId, number])
+  @@unique([organizationId, postId, id])
+  @@unique([organizationId, id])
+}
+model SocialDelivery {
+  id String @id @default(cuid())
+  organizationId String
+  postId String
+  revisionId String
+  destinationId String
+  provider String
+  externalId String
+  status String @default("QUEUED")
+  mode String
+  scheduledAt DateTime
+  nextAttemptAt DateTime
+  attempts Int @default(0)
+  leaseToken String?
+  leaseUntil DateTime?
+  startedAt DateTime?
+  externalIds Json @default("{}")
+  postUrl String?
+  detail String?
+  confirmedAt DateTime?
+  worklistItemId String?
+  workflowRunId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  post SocialPost @relation(fields: [organizationId, postId], references: [organizationId, id], onDelete: Restrict)
+  revision SocialRevision @relation(fields: [organizationId, postId, revisionId], references: [organizationId, postId, id], onDelete: Restrict)
+  destination SocialDestination @relation(fields: [organizationId, destinationId], references: [organizationId, id], onDelete: Restrict)
+  attemptsLog SocialAttempt[]
+  @@unique([organizationId, revisionId, destinationId])
+  @@index([status, nextAttemptAt, leaseUntil])
+  @@index([organizationId, postId])
+}
+model SocialAttempt {
+  id String @id @default(cuid())
+  deliveryId String
+  mode String
+  number Int
+  outcome String
+  detail String?
+  externalIds Json @default("{}")
+  createdAt DateTime @default(now())
+  delivery SocialDelivery @relation(fields: [deliveryId], references: [id], onDelete: Restrict)
+  @@unique([deliveryId, number])
+}
+model SocialAudit {
+  id String @id @default(cuid())
+  organizationId String
+  postId String
+  actorUserId String?
+  type String
+  detail String
+  createdAt DateTime @default(now())
+  post SocialPost @relation(fields: [organizationId, postId], references: [organizationId, id], onDelete: Restrict)
+  @@index([organizationId, postId, createdAt])
 }

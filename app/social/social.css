@@ -1,0 +1,93 @@
+.social-page { min-width: 0; }
+.social-page :is(input, textarea, select, fieldset) { min-width: 0; max-width: 100%; }
+.social-page :is(input, textarea, select) { width: 100%; }
+.social-page textarea { resize: vertical; }
+.social-page :is(input[type="checkbox"], input[type="radio"]) { width: 18px; height: 18px; flex: 0 0 18px; }
+.social-page :is(button, .btn, summary) { min-height: 44px; }
+.social-page summary { cursor: pointer; padding-block: 10px; }
+.social-page .social-tabs { display: flex; gap: 4px 20px; flex-wrap: wrap; border-bottom: 1px solid var(--line); margin: 0 0 20px; }
+.social-tabs a { padding: 12px 0; text-decoration: none; color: var(--muted); }
+.social-tabs a[aria-current="page"] { color: var(--text); box-shadow: 0 2px 0 var(--accent-2); font-weight: 700; }
+.social-mode { margin: 0 0 18px; padding: 12px 14px; background: var(--info-surface); color: var(--info-ink); border-radius: 8px; }
+.social-mode.is-live { background: var(--warning-surface); color: var(--warning-ink); }
+.social-form-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.social-composer { display: grid; gap: 22px; max-width: 1080px; }
+.social-composer label, .social-inline-form label, .social-review-form label { display: grid; gap: 7px; font-weight: 600; }
+.social-composer fieldset { margin: 0; border: 0; padding: 0; }
+.social-composer legend { font-size: 1.125rem; font-weight: 700; padding: 0; margin: 0 0 12px; }
+.social-page label.social-check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 400; }
+.social-check .field-note { display: block; }
+.social-destination-picker { display: grid; gap: 8px; }
+.social-destination-identity { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.social-destination-identity img { border-radius: 50%; flex: 0 0 32px; }
+.social-destination-identity > span { display: grid; gap: 2px; min-width: 0; }
+.social-destination-identity > span > span { color: var(--muted); font-size: .9375rem; }
+.social-media-library, .social-platform-composer { border-top: 1px solid var(--line) !important; padding-top: 20px !important; }
+.social-platform-composer { display: grid; gap: 16px; }
+.social-platform-composer legend { padding-top: 18px !important; }
+.social-media-library h2 { font-size: 1.125rem; margin: 0 0 12px; }
+.social-upload-field input { padding: 10px; background: var(--panel); }
+.social-media-options { max-height: 320px; overflow-y: auto; display: grid; gap: 6px; }
+.social-media-order { padding-left: 24px; margin-block: 0; }
+.social-media-order li { padding-block: 8px; }
+.social-media-order li > span { overflow-wrap: anywhere; }
+.social-inline-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.social-inline-actions > :is(button, a) { flex-shrink: 0; }
+.social-preview { background: var(--panel); border-radius: 8px; padding: 8px 14px 14px; }
+.social-preview :is(img, video) { display: block; width: auto; max-width: 100%; max-height: 340px; object-fit: contain; margin: 10px 0; }
+.social-caption { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 70ch; }
+.social-long-text { overflow-wrap: anywhere; }
+.social-validation { background: var(--warning-surface); color: var(--warning-ink); padding: 0 14px 8px; border-radius: 8px; }
+.social-validation li { margin-block: 8px; }
+.social-toolbar { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-block: 18px; }
+.social-toolbar label { display: grid; gap: 6px; }
+.social-toolbar input[type="search"] { width: min(320px, 100%); }
+.social-record-list { display: grid; border-top: 1px solid var(--line); }
+.social-record { display: grid; gap: 10px; padding: 16px 0; border-bottom: 1px solid var(--line); min-width: 0; }
+.social-record h2, .social-record h3 { font-size: 1.125rem; margin: 0; }
+.social-record p { margin: 0; }
+.social-record-meta { display: flex; gap: 6px 14px; flex-wrap: wrap; color: var(--muted); font-size: .9375rem; }
+.social-status { font-size: .875rem; font-weight: 700; color: var(--text); }
+.social-delivery-line { display: flex; flex-wrap: wrap; gap: 5px 12px; align-items: baseline; margin-top: 8px; }
+.social-delivery-line .social-status { font-weight: 600; }
+.social-section { margin-block: 28px; }
+.social-section > h2 { font-size: 1.125rem; margin-bottom: 12px; }
+.social-connection-row { display: grid; gap: 12px; border-bottom: 1px solid var(--line); padding-block: 16px; }
+.social-connection-row > div { min-width: 0; }
+.social-inline-form { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+.social-inline-form > .record-picker { flex: 1 1 220px; }
+.social-inline-form > button { flex: 0 0 auto; }
+.social-inline-form p[role="alert"] { width: 100%; }
+.social-diagnostics { overflow-wrap: anywhere; font-size: .9375rem; color: var(--muted); }
+.social-diagnostics dl { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
+.social-diagnostics dt { font-weight: 600; margin-top: 6px; }
+.social-diagnostics dd { margin: 0; }
+.social-members { list-style: none; padding: 0; }
+.social-members li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; }
+.social-review-form { display: grid; gap: 14px; max-width: 800px; }
+.social-revision-header { display: flex; flex-wrap: wrap; gap: 6px 20px; color: var(--muted); margin-bottom: 18px; }
+.social-post-destination { border-top: 1px solid var(--line); padding-block: 18px; }
+.social-post-destination h3 { margin: 0 0 10px; }
+.social-post-media { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.social-post-media :is(img, video) { width: 150px; height: 150px; object-fit: contain; background: var(--panel-2); border-radius: 6px; }
+.social-evidence-table { width: 100%; border-collapse: collapse; }
+.social-evidence-table :is(th, td) { text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); padding: 10px 12px 10px 0; }
+.social-evidence-table td { overflow-wrap: anywhere; }
+.social-audit { list-style: none; padding: 0; display: grid; gap: 12px; }
+.social-audit li { display: grid; gap: 4px; font-size: .9375rem; }
+.social-empty { padding-block: 24px; }
+.social-empty h2 { font-size: 1.125rem; }
+@media (min-width: 760px) {
+  .social-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .social-record { grid-template-columns: minmax(0, 1fr) minmax(180px, .35fr); gap: 16px; }
+  .social-connection-row { grid-template-columns: minmax(0, 1fr) minmax(300px, .8fr); gap: 24px; }
+  .social-diagnostics dl { grid-template-columns: 150px minmax(0, 1fr); gap: 8px; }
+  .social-diagnostics dt { margin: 0; }
+}
+@media (max-width: 759px) {
+  .social-evidence-table, .social-evidence-table tbody, .social-evidence-table tr, .social-evidence-table td { display: block; }
+  .social-evidence-table thead { display: none; }
+  .social-evidence-table tr { border-bottom: 1px solid var(--line); padding-block: 12px; }
+  .social-evidence-table td { border: 0; padding: 4px 0; }
+  .social-evidence-table td::before { content: attr(data-label); display: inline-block; min-width: 100px; font-weight: 600; }
+}

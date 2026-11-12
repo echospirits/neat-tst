@@ -8,6 +8,8 @@ Production Supplies is in the owner-authorized **0.10.0-dev TST-only** cycle; pr
 
 Start with [implementation progress](engineering/implementation-progress.md) and [feature inventory](product/feature-inventory.md). Existing canonical release and UI standards remain authoritative.
 
+Social Publishing is an owner-authorized, disabled-by-default TST pilot in the existing 0.10.0-dev cycle. See [setup and handoff](social-publishing.md), [provider capabilities](social-publishing-providers.md), [live-test runbook](social-publishing-live-tests.md) and [validation](releases/social-publishing-validation.md). Production activation and public tests remain separate.
+
 ## Authorized TST work
 
 **Tasting Management Phase 1** is an owner-authorized TST-only pilot exception on November 5, 2026, retaining version 0.7.2. It adds tasting proposals, separate approval/history milestones, assigned schedules, canonical Visit/photo completion and automatic same-day Agency retail sales observations. The optional `TASTING_MANAGEMENT` entitlement is dark by default with explicit Echo enrollment. See the [operator/import guide](tasting-management.md), [validation and pending delivery receipts](releases/tasting-management-validation.md), [checkpoint](../tasting-management-checkpoint.md) and [UNRELEASED](releases/UNRELEASED.md). No broader development cycle or production promotion is opened; current released-baseline records below remain preserved.

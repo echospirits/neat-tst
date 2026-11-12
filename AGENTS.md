@@ -1,5 +1,9 @@
 # Repository Agent Instructions
 
+## Owner-authorized TST pilot: Social Publishing
+
+On November 12, 2026 the owner requested the first tenant-scoped Social Publishing pilot within the existing 0.10.0-dev TST cycle. Implement real provider connection/discovery preparation, group-scoped drafting, immutable review, durable per-destination scheduling and explicit results. Preserve Production Supplies and unrelated TST work. Deliver only to neat-tst/tst; no production/main promotion. `SOCIAL_PUBLISHING` defaults off and requires explicit Echo/tester enrollment. All outbound tests default to simulation; public posts, collaborator invitations and modifications to existing social content require separate exact administrator authorization. See [setup](docs/social-publishing.md), [provider capability record](docs/social-publishing-providers.md), [live-test runbook](docs/social-publishing-live-tests.md) and [validation](docs/releases/social-publishing-validation.md). Earlier freezes remain historical outside this scope.
+
 ## Owner revision: simple Supplies status dashboard
 
 On November 12, 2026 the owner narrowed Production Supplies to a simple, read-only status dashboard for materials identified by Dx5 low-inventory alerts, with a future Ollie input seam. Show one card per material/location/replenishment cycle, automatically associate reliable order/shipment evidence, hide completed relevant deliveries, and permit only quick dismissal. Repeated usage alerts update one cycle and must not duplicate cards or revive a dismissed cycle. Inventory forecasting, lead times and need planning remain in Dx5/Ollie. Remove the tabs, history, manual entries, catalog and record editors from the user flow; preserve retained data and source provenance. Continue this scoped 0.10.0-dev work on neat-tst only. No production promotion, provider account, paid tracking or inventory/accounting write is authorized.
