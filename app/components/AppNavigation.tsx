@@ -91,6 +91,13 @@ function IntelligenceMenu({ enabledFeatures, isAdmin, isPlatformAdmin, pathname 
   return <NavGroupLinks group={{ label: 'Intelligence', items }} pathname={pathname} />;
 }
 
+function ProductionMenu({ enabledFeatures, isPlatformAdmin, isTaster = false, pathname }: { enabledFeatures: string[]; isPlatformAdmin: boolean; isTaster?: boolean; pathname: string }) {
+  const items = getNavigationItems('production', enabledFeatures, isPlatformAdmin)
+    .filter(item => !isTaster || item.key === 'production-supplies');
+  if (!items.length) return null;
+  return <NavGroupLinks group={{ label: 'Production', items }} pathname={pathname} />;
+}
+
 export function AppSidebarNavigation({ enabledFeatures, isAdmin, isPlatformAdmin, isTaster }: { enabledFeatures: string[]; isAdmin: boolean; isPlatformAdmin: boolean; isTaster: boolean }) {
   const pathname = usePathname();
   const workItems = getNavigationItems('work', enabledFeatures, isPlatformAdmin);
@@ -103,7 +110,7 @@ export function AppSidebarNavigation({ enabledFeatures, isAdmin, isPlatformAdmin
           <NavLink item={{ href: '/', key: 'home', label: 'My Schedule', section: 'work' }} pathname={pathname} />
           <NavLink item={{ href: '/tastings', key: 'tastings', label: 'Tastings', section: 'work' }} pathname={pathname} />
         </> : null}
-        {enabledFeatures.includes('PRODUCTION_SUPPLIES') ? <NavLink item={{ href: '/production-supplies', key: 'production-supplies', label: 'Production Supplies', section: 'work' }} pathname={pathname} /> : null}
+        <ProductionMenu enabledFeatures={enabledFeatures} isPlatformAdmin={isPlatformAdmin} isTaster pathname={pathname} />
         <Link aria-current={pathname === '/visits/new' ? 'page' : undefined} className="app-nav-link app-nav-primary" href="/visits/new">
           Log Visit
         </Link>
@@ -123,10 +130,11 @@ export function AppSidebarNavigation({ enabledFeatures, isAdmin, isPlatformAdmin
         Log Visit
       </Link>
 
-      <NavGroupLinks group={{ label: 'My Work', items: workItems.filter((item) => !['analytics', 'production-forecasting'].includes(item.key)) }} pathname={pathname} />
+      <NavGroupLinks group={{ label: 'My Work', items: workItems.filter((item) => item.key !== 'analytics') }} pathname={pathname} />
       <NavGroupLinks group={{ label: 'Accounts', items: accountItems }} pathname={pathname} />
+      <ProductionMenu enabledFeatures={enabledFeatures} isPlatformAdmin={isPlatformAdmin} pathname={pathname} />
       <IntelligenceMenu enabledFeatures={enabledFeatures} isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} pathname={pathname} />
-      <NavGroupLinks group={{ label: 'Insights', items: workItems.filter((item) => ['analytics', 'production-forecasting'].includes(item.key)) }} pathname={pathname} />
+      <NavGroupLinks group={{ label: 'Insights', items: workItems.filter((item) => item.key === 'analytics') }} pathname={pathname} />
       {!isAdmin && !isPlatformAdmin ? <NavLink item={{ href: '/admin/data-status', key: 'data-health', label: 'Data Status', section: 'utility' }} pathname={pathname} /> : null}
 
       {isAdmin || isPlatformAdmin ? <AdministrationMenu enabledFeatures={enabledFeatures} hasOrganizationAdminAccess={isAdmin} isPlatformAdmin={isPlatformAdmin} pathname={pathname} /> : null}
@@ -200,7 +208,7 @@ export function MobileTabbar({ enabledFeatures, isAdmin, isPlatformAdmin, isTast
   const moreItems = getMoreNavigationItems(isAdmin, enabledFeatures, isPlatformAdmin);
 
   if (isTaster) return <nav className="mobile-tabbar mobile-tabbar-taster" aria-label="Quick field actions" style={{ gridTemplateColumns: `repeat(${2 + (enabledFeatures.includes('TASTING_MANAGEMENT') ? 2 : 0) + (enabledFeatures.includes('PRODUCTION_SUPPLIES') ? 1 : 0)}, minmax(0, 1fr))` }}>
-    {enabledFeatures.includes('PRODUCTION_SUPPLIES') ? <NavLink item={{ href: '/production-supplies', key: 'production-supplies', label: 'Supplies', section: 'work' }} pathname={pathname} /> : null}
+    {enabledFeatures.includes('PRODUCTION_SUPPLIES') ? <NavLink item={{ href: '/production-supplies', key: 'production-supplies', label: 'Supplies', section: 'production' }} pathname={pathname} /> : null}
     {enabledFeatures.includes('TASTING_MANAGEMENT') ? <>
       <NavLink item={{ href: '/', key: 'home', label: 'Schedule', section: 'work' }} pathname={pathname} />
       <NavLink item={{ href: '/tastings', key: 'tastings', label: 'Tastings', section: 'work' }} pathname={pathname} />
@@ -218,8 +226,9 @@ export function MobileTabbar({ enabledFeatures, isAdmin, isPlatformAdmin, isTast
         <summary><NavigationIcon name="more" /><span>More</span></summary>
         <div className="mobile-more-menu">
           <Link className="app-nav-link mobile-more-visit" href="/visits/new" aria-current={pathname === '/visits/new' ? 'page' : undefined}><NavigationIcon name="plus" /><span>Log visit</span></Link>
+          <ProductionMenu enabledFeatures={enabledFeatures} isPlatformAdmin={isPlatformAdmin} pathname={pathname} />
           <IntelligenceMenu enabledFeatures={enabledFeatures} isAdmin={isAdmin} isPlatformAdmin={isPlatformAdmin} pathname={pathname} />
-          {moreItems.map((item) => (
+          {moreItems.filter(item => item.section !== 'production').map((item) => (
             <NavLink item={item} key={item.key} pathname={pathname} />
           ))}
         </div>
