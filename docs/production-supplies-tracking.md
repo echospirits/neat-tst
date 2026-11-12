@@ -46,8 +46,8 @@ Temporary failures retain the last valid estimate and expose a check error, fres
 
 ## Remaining activation steps
 
-1. Complete the approved replacement Google OAuth client setup and each real Production user's own read-only consent. The reused client is deleted; Neat currently has no autonomous mailbox connection. Karl/Nikhil have no matching existing TST accounts, including checks against addresses observed in a business thread. Do not create accounts without the separate authorization.
-2. Run the bounded autonomous historical import after consent. A one-time authorized connector snapshot already populated operational candidates; it does not substitute for ongoing mailbox authorization.
+1. Joe's approved replacement Google client and own read-only Gmail connection are active in TST. Karl/Nikhil have no matching existing TST accounts, including checks against addresses observed in a business thread; they need actual accounts and their own consent. Do not create accounts without separate authorization.
+2. Let the bounded autonomous historical import continue from its durable checkpoint. Initial live source extraction passes; the full historical scan is not complete. A separate one-time authorized connector snapshot already populated operational candidates.
 3. Supply an approved environment-specific EasyPost key and any required carrier credentials, confirm costs, then enable the matching mode.
 4. Configure the authenticated tracking webhook, then verify the real provider path through stored carrier observations to the dashboard. The supply background schedule is already activated and its GitHub-to-TST worker invocation verified. No ETA should be invented when the carrier provides none.
 5. Verify outage preservation, provider correction and actual partial receipt in the intended environment. Document unsupported carriers and obtain supplier/carrier integration access where needed.
