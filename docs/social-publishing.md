@@ -131,6 +131,7 @@ Use these **implemented data-handling facts** to prepare review material, withou
 - OAuth tokens are stored encrypted server-side, separately from user-visible destination metadata. The app records authorization owner, granted scopes, health and expiration information where returned.
 - Draft media is stored privately. Dispatch creates a signed URL for the specific immutable file where a provider needs URL access; publication can make the approved content visible on the selected external destination.
 - Login/account discovery does not publish. A specific administrator-approved revision and all live controls are required before automatic public publication.
+- Manual finishing creates a generic Worklist task assigned to the approving administrator, containing only a link to the protected Social post. Worklist's team-visible views and calendar exports receive no post title, brand/destination name, caption, reviewer note, finishing instructions or media details; the authorized Social route retains that content.
 - Disconnect blocks further queued sends but retains records and encrypted credential evidence. The pilot does not implement an automated retention/deletion-request system or promise remote deletion of already-published posts.
 
 The owner still needs to decide and document retention durations, the actual deletion-request process/contact and any credential/media cleanup policy, then publish approved public text before platform review. Those decisions are not inferred from the current storage implementation or supplied as legal commitments.
@@ -181,7 +182,7 @@ Media versions are private and immutable. Dispatch creates scoped, expiring medi
 
 Instagram, Google and other URL-fetch paths must be able to fetch the signed application media route without a Neat login or an interactive deployment-protection screen. During authorized media acceptance, test the exact dispatch URL from a signed-out request: a valid unexpired signature returns only that immutable file; an absent/invalid signature remains protected. If deployment protection intercepts the route, resolve the hosting/access configuration for the signed endpoint before a live post. Never put a deployment-wide protection bypass credential in provider URLs or make the whole Blob store public.
 
-For native-only finishing, use the ready-to-post manual task: download the reviewed media, copy the caption, follow the format-specific instructions and publish in the native app. Record completion explicitly, preferably with the post URL. This is **manually confirmed**, not API-verified, and does not create an editable Instagram native draft automatically.
+For native-only finishing, open the generic **Finish an approved social post** Worklist task and follow its link to the authorized Social record. Download the reviewed media, copy the caption, follow the format-specific instructions there and publish in the native app. Private post content is not copied into team-visible Worklist text or calendar exports. Record completion explicitly, preferably with the post URL. This is **manually confirmed**, not API-verified, and does not create an editable Instagram native draft automatically. Return-for-edits, cancellation and a revised post cancel an obsolete pending task; explicit completion closes the task.
 
 ## Rollout and handoff
 

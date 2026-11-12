@@ -45,7 +45,7 @@ Optional Instagram audio and collaborator invitation require separate exact auth
 
 ## Manual finishing
 
-Download the reviewed media, copy its exact platform caption and follow the native-app instructions. Record the completing user/time and post URL before marking **Manually confirmed**. Do not label it provider-verified. Do not promise a remote editable Instagram draft.
+Open **Finish an approved social post** in Worklist, then follow the protected Social link to download reviewed media, copy its exact platform caption and read the native-app instructions. The team-visible task and any calendar copy contain only generic text and the protected link. Record the completing user/time and post URL before marking **Manually confirmed**. Do not label it provider-verified. Do not promise a remote editable Instagram draft.
 
 ## Evidence record and stop condition
 

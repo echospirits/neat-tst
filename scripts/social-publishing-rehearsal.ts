@@ -108,6 +108,48 @@ async function main() {
     const makeDraft = async (title: string, extra: Record<string, unknown> = {}, dests = [destination.id]) => transaction(tx => service.saveSocialDraft(tx, contributor, { groupId: group.id, title, caption: 'Simulated photo; no provider write authorized.', note: 'Synthetic persisted rehearsal evidence.', proposedAt: new Date(Date.now() + 120_000).toISOString(), destinations: dests.map(destinationId => ({ destinationId, caption: 'Simulated photo; no provider write authorized.', format: 'IMAGE', mediaIds: [media.id] })), ...extra }));
     const submit = async (actor: Actor, postId: string) => { const post = await db.socialPost.findUniqueOrThrow({ where: { id: postId } }); await transaction(tx => service.submitSocialPost(tx, actor, { id: post.id, version: post.version })); };
     const approve = async (postId: string, action: 'APPROVE_NOW' | 'APPROVE_SCHEDULE' = 'APPROVE_NOW', actor: Actor = admin) => { const post = await db.socialPost.findUniqueOrThrow({ where: { id: postId } }); await transaction(tx => service.reviewSocialPost(tx, actor, { id: post.id, version: post.version, action })); };
+    if (process.argv.includes('--manual-worklist-privacy-only')) {
+      const { socialWorklistDetail, socialWorklistPostHref } = await import('../lib/socialPublishing/worklist');
+      const { buildWorklistCalendarInput } = await import('../lib/calendar/scheduling');
+      const caption = `PRIVATE_SOCIAL_CAPTION_${run}`;
+      const reviewerNote = `PRIVATE_REVIEWER_NOTE_${run}`;
+      const finishingNote = `PRIVATE_NATIVE_INSTRUCTIONS_${run}: add the reviewed native location tag.`;
+      const draft = await makeDraft(`PRIVATE_SOCIAL_TITLE_${run}`, {
+        caption, note: reviewerNote,
+        destinations: [{ destinationId: destination.id, caption, format: 'IMAGE', mediaIds: [media.id], options: { manualInstructions: finishingNote } }],
+      });
+      await approve(draft.id);
+      const delivery = await db.socialDelivery.findFirstOrThrow({ where: { postId: draft.id } });
+      assert.equal(delivery.mode, 'MANUAL'); assert.equal(delivery.status, 'MANUAL_READY'); assert.ok(delivery.worklistItemId);
+      const task = await db.worklistItem.findUniqueOrThrow({ where: { id: delivery.worklistItemId }, include: { assignedToUser: true, calendarEvents: { include: { connection: true } } } });
+      assert.equal(task.title, 'Finish an approved social post');
+      assert.equal(task.detail, socialWorklistDetail(draft.id));
+      assert.equal(socialWorklistPostHref(task.detail), `/social/${draft.id}`);
+      assert.equal(task.assignedToUserId, admin.userId); assert.equal(task.createdByUserId, admin.userId);
+      const privateValues = [draft.title, caption, reviewerNote, finishingNote, group.label, group.id, destination.displayName, destination.externalId, media.id, media.fileName, media.storageKey];
+      const worklistText = `${task.title}\n${task.detail}`;
+      for (const value of privateValues) assert.ok(!worklistText.includes(value), `Team Worklist must not contain protected social data: ${value === caption ? 'caption' : 'private field'}`);
+      const calendar = buildWorklistCalendarInput({ item: task });
+      for (const value of privateValues) assert.ok(!JSON.stringify(calendar).includes(value), 'Calendar export must not copy protected social content.');
+      assert.ok(calendar.description?.includes(`/social/${draft.id}`));
+      await assert.rejects(() => transaction(tx => service.assertSocialGroup(tx, unassigned, group.id)), /access/);
+      check('Persisted manual tasks and calendar exports contain only a generic title and exact protected Social link, with no private post, group, destination, caption, instructions or media data.');
+      await transaction(tx => service.confirmSocialManual(tx, admin, { deliveryId: delivery.id, postUrl: 'https://example.invalid/private-manual-fixture', note: 'Synthetic manual confirmation; no actual social post.' }));
+      assert.equal((await db.worklistItem.findUniqueOrThrow({ where: { id: task.id } })).status, 'COMPLETED');
+      check('The privacy-preserving task remains assigned to the approving administrator and completes through explicit manual confirmation.');
+      for (const action of ['RETURN', 'CANCEL', 'EDIT'] as const) {
+        const pendingPost = await makeDraft(`PRIVATE_PENDING_${action}_${run}`, { destinations: [{ destinationId: destination.id, caption, format: 'IMAGE', mediaIds: [media.id], options: { manualInstructions: finishingNote } }] });
+        await approve(pendingPost.id);
+        const pending = await db.socialDelivery.findFirstOrThrow({ where: { postId: pendingPost.id } });
+        const current = await db.socialPost.findUniqueOrThrow({ where: { id: pendingPost.id } });
+        if (action === 'EDIT') await makeDraft(`PRIVATE_REVISED_${run}`, { id: current.id, version: current.version });
+        else await transaction(tx => service.reviewSocialPost(tx, admin, { id: current.id, version: current.version, action }));
+        assert.equal((await db.worklistItem.findUniqueOrThrow({ where: { id: pending.worklistItemId! } })).status, 'CANCELLED');
+      }
+      check('Return, cancellation and revision edits still cancel pending manual Worklist tasks after removing private content.');
+      writeFileSync('output/social-publishing-manual-worklist-privacy.json', JSON.stringify({ synthetic: true, target: 'social-rehearsal', passed, livePublishing: false, providerRequests: 0, taskContainsProtectedContent: false, calendarContainsProtectedContent: false }, null, 2));
+      console.log(JSON.stringify({ checks: passed.length, regression: 'manual-worklist-privacy', livePublishing: false, taskContainsProtectedContent: false, calendarContainsProtectedContent: false })); return;
+    }
     const reapproveReturned = async () => {
       const returned = await makeDraft('Return and reapprove unchanged future revision', { proposedAt: new Date(Date.now() + 3_600_000).toISOString() }, [destination.id, destination2.id]);
       await approve(returned.id, 'APPROVE_SCHEDULE');

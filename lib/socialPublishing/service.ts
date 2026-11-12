@@ -22,6 +22,7 @@ import {
   parseTimeInputToMinutes,
 } from '../dateTime';
 import { tastingTimeValue } from '../tastings/time';
+import { socialWorklistDetail } from './worklist';
 export type SocialDb = Prisma.TransactionClient;
 export class SocialError extends Error {}
 const terminal = ['PUBLISHED', 'SIMULATED', 'MANUALLY_CONFIRMED'];
@@ -697,8 +698,8 @@ export async function reviewSocialPost(
       const task = await db.worklistItem.create({
         data: {
           organizationId: actor.organizationId,
-          title: `Publish ${p.title} to ${entry.displayName}`,
-          detail: `Ready for native completion: /social/${p.id}\n${entry.options?.manualInstructions ?? ''}\nApproved caption:\n${entry.caption}\nDownload the reviewed media from the post, finish in the native app, then record the public post link in Social Publishing.`,
+          title: 'Finish an approved social post',
+          detail: socialWorklistDetail(p.id),
           createdByUserId: actor.userId,
           assignedToUserId: actor.userId,
           submissionKey: `social-manual:${delivery.id}`,
