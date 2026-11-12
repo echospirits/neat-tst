@@ -4,6 +4,7 @@ import { encryptCalendarToken, decryptCalendarToken } from '../calendar/crypto';
 import { assertSocialActor, type SocialDb } from './service';
 import type { SocialActor } from './access';
 import { getSocialBaseUrl } from './config';
+import { getMetaLoginConfiguration } from './providers/oauth';
 import {
   getSocialProvider,
   buildOAuthAuthorizationUrl,
@@ -31,6 +32,7 @@ export async function startSocialOAuth(
   family: SocialOAuthFamily,
 ) {
   await assertSocialActor(db, actor, true);
+  if (family === 'meta') getMetaLoginConfiguration();
   const provider = socialOAuthProviders[family];
   const base = getSocialBaseUrl();
   const config = getOAuthConfiguration(provider, base);
@@ -70,6 +72,7 @@ export async function consumeSocialOAuthState(
   state: string,
 ) {
   await assertSocialActor(db, actor, true);
+  if (family === 'meta') getMetaLoginConfiguration();
   if (!/^[A-Za-z0-9_-]{43}$/.test(state))
     throw new Error('Authorization state invalid.');
   const stored = await db.socialOAuthState.findFirst({

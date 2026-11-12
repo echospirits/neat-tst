@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getSocialBaseUrl } from '../lib/socialPublishing/config';
-import { getOAuthConfiguration } from '../lib/socialPublishing/providers/oauth';
+import { buildOAuthAuthorizationUrl, getMetaLoginConfiguration, getOAuthConfiguration } from '../lib/socialPublishing/providers/oauth';
 import { createDispatchMediaUrl, verifyDispatchMediaSignature } from '../lib/socialPublishing/media';
 
 const canonical = 'https://neat-tst.vercel.app';
 const legacy = 'https://neat-tst-joe-1533s-projects.vercel.app';
 function configure(values: Record<string, string | undefined>) {
   const prior = { ...process.env };
-  for (const [key, value] of Object.entries(values)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+  for (const [key, value] of Object.entries({ SOCIAL_META_CONFIG_ID: undefined, SOCIAL_META_TOKEN_TYPE: undefined, ...values })) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
   return () => { for (const key of Object.keys(process.env)) if (!(key in prior)) delete process.env[key]; Object.assign(process.env, prior); };
 }
 
@@ -82,5 +82,68 @@ test('dispatch media URLs use the same Social-only origin and retain their singl
     assert.equal(verifyDispatchMediaSignature(media, url.searchParams.get('expires'), url.searchParams.get('signature'), now), true);
     assert.equal(verifyDispatchMediaSignature({ ...media, organizationId: 'different-tenant' }, url.searchParams.get('expires'), url.searchParams.get('signature'), now), false);
     assert.equal(process.env.APP_BASE_URL, legacy);
+  } finally { restore(); }
+});
+
+test('optional verified USER Meta configuration replaces scopes while retaining code, callback and independent OAuth state', () => {
+  const restore = configure({ SOCIAL_META_APP_ID: 'fixture-app', SOCIAL_META_APP_SECRET: 'fixture-secret', SOCIAL_META_CONFIG_ID: '123456789012345', SOCIAL_META_TOKEN_TYPE: 'USER', SOCIAL_BASE_URL: canonical });
+  try {
+    assert.deepEqual(getMetaLoginConfiguration(), { id: '123456789012345', tokenType: 'USER' });
+    for (const provider of ['FACEBOOK', 'INSTAGRAM'] as const) {
+      const settings = getOAuthConfiguration(provider, legacy);
+      assert.equal(settings.configured, true);
+      const url = new URL(buildOAuthAuthorizationUrl(provider, { state: 'independent-random-csrf-state', redirectUri: settings.callbackUrl }));
+      assert.equal(url.searchParams.get('config_id'), '123456789012345');
+      assert.equal(url.searchParams.get('scope'), null);
+      assert.equal(url.searchParams.get('response_type'), 'code');
+      assert.equal(url.searchParams.get('state'), 'independent-random-csrf-state');
+      assert.equal(url.searchParams.get('client_id'), 'fixture-app');
+      assert.equal(url.searchParams.get('redirect_uri'), `${canonical}/api/social/oauth/meta/callback`);
+    }
+  } finally { restore(); }
+});
+
+test('Meta configuration readiness exposes missing USER attestation and malformed numeric identity without hiding other providers', () => {
+  const restore = configure({ SOCIAL_META_APP_ID: 'fixture-app', SOCIAL_META_APP_SECRET: 'fixture-secret', SOCIAL_META_CONFIG_ID: '123456789012345', SOCIAL_BASE_URL: canonical, SOCIAL_GOOGLE_CLIENT_ID: 'fixture-google', SOCIAL_GOOGLE_CLIENT_SECRET: 'fixture-google-secret', SOCIAL_LINKEDIN_CLIENT_ID: 'fixture-linkedin', SOCIAL_LINKEDIN_CLIENT_SECRET: 'fixture-linkedin-secret' });
+  try {
+    for (const tokenType of ['', 'SYSTEM_USER', 'BISU', 'BEARER', 'UNKNOWN']) {
+      process.env.SOCIAL_META_TOKEN_TYPE = tokenType;
+      for (const provider of ['FACEBOOK', 'INSTAGRAM'] as const) {
+        const configuration = getOAuthConfiguration(provider);
+        assert.equal(configuration.configured, false);
+        assert.ok(configuration.missing.some(key => key.startsWith('SOCIAL_META_TOKEN_TYPE')));
+        assert.match(configuration.configurationError!, /Unknown and system-user configurations are unsupported/);
+        assert.throws(() => buildOAuthAuthorizationUrl(provider, { state: 'csrf-state', redirectUri: configuration.callbackUrl }), /User access token/);
+      }
+    }
+    process.env.SOCIAL_META_TOKEN_TYPE = 'USER';
+    for (const configId of ['not-numeric', '123&scope=extra', '1.2', '1'.repeat(101)]) {
+      process.env.SOCIAL_META_CONFIG_ID = configId;
+      const configuration = getOAuthConfiguration('FACEBOOK');
+      assert.equal(configuration.configured, false);
+      assert.ok(configuration.missing.some(key => key.startsWith('SOCIAL_META_CONFIG_ID')));
+      assert.match(configuration.configurationError!, /numeric ID/);
+    }
+    for (const provider of ['GOOGLE_BUSINESS', 'LINKEDIN'] as const) {
+      const configuration = getOAuthConfiguration(provider);
+      assert.equal(configuration.configured, true);
+      const url = new URL(buildOAuthAuthorizationUrl(provider, { state: 'provider-specific-state', redirectUri: configuration.callbackUrl }));
+      assert.equal(url.searchParams.get('config_id'), null);
+      assert.ok(url.searchParams.get('scope'));
+    }
+  } finally { restore(); }
+});
+
+test('blank Meta configuration preserves legacy scope-based login without requiring a new token-type setting', () => {
+  const restore = configure({ SOCIAL_META_APP_ID: 'fixture-app', SOCIAL_META_APP_SECRET: 'fixture-secret', SOCIAL_META_CONFIG_ID: '  ', SOCIAL_BASE_URL: canonical });
+  try {
+    assert.equal(getMetaLoginConfiguration(), null);
+    const configuration = getOAuthConfiguration('FACEBOOK');
+    assert.equal(configuration.configured, true);
+    const url = new URL(buildOAuthAuthorizationUrl('FACEBOOK', { state: 'legacy-state', redirectUri: configuration.callbackUrl }));
+    assert.equal(url.searchParams.get('config_id'), null);
+    assert.equal(url.searchParams.get('state'), 'legacy-state');
+    assert.match(url.searchParams.get('scope')!, /instagram_basic/);
+    assert.match(url.searchParams.get('scope')!, /pages_manage_posts/);
   } finally { restore(); }
 });

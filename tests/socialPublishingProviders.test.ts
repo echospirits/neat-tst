@@ -24,7 +24,7 @@ function context(provider: SocialDestination['provider'], post: PublishContent):
 }
 
 describe('Social provider fixture verification — never live evidence', () => {
-  afterEach(() => { mock.restoreAll(); delete process.env.SOCIAL_META_APP_ID; delete process.env.SOCIAL_META_APP_SECRET; });
+  afterEach(() => { mock.restoreAll(); delete process.env.SOCIAL_META_APP_ID; delete process.env.SOCIAL_META_APP_SECRET; delete process.env.SOCIAL_META_CONFIG_ID; delete process.env.SOCIAL_META_TOKEN_TYPE; });
 
   it('validates representative implemented organic formats without confusing LinkedIn multi-image with ads carousels', () => {
     const cases: [SocialDestination['provider'], PublishContent][] = [

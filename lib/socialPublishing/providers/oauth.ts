@@ -12,14 +12,31 @@ export const providerScopes: Record<SocialProvider, string[]> = {
   LINKEDIN: ['rw_organization_admin', 'w_organization_social', 'r_organization_social'],
 };
 const family = (provider: SocialProvider) => ['INSTAGRAM', 'FACEBOOK'].includes(provider) ? 'META' : provider === 'GOOGLE_BUSINESS' ? 'GOOGLE' : 'LINKEDIN';
+/** Configuration IDs select provider settings; they never replace OAuth state or prove token type. */
+export function getMetaLoginConfiguration(): { id: string; tokenType: 'USER' } | null {
+  const id = process.env.SOCIAL_META_CONFIG_ID?.trim();
+  if (!id) return null;
+  if (!/^[0-9]{1,100}$/.test(id)) throw new SocialProviderError('SOCIAL_META_CONFIG_ID must be the numeric ID of the matching Meta login configuration.', 'CONFIGURATION', 'meta_config_id_invalid');
+  if (process.env.SOCIAL_META_TOKEN_TYPE?.trim() !== 'USER') throw new SocialProviderError('Confirm the matching configuration uses User access token, then set SOCIAL_META_TOKEN_TYPE=USER. Unknown and system-user configurations are unsupported.', 'CONFIGURATION', 'meta_config_user_type_required');
+  return { id, tokenType: 'USER' };
+}
 export function getOAuthConfiguration(provider: SocialProvider, baseUrl?: string) {
   const prefix = `SOCIAL_${family(provider)}`;
   const keys = family(provider) === 'META' ? [`${prefix}_APP_ID`, `${prefix}_APP_SECRET`] : [`${prefix}_CLIENT_ID`, `${prefix}_CLIENT_SECRET`];
   const missing = keys.filter(key => !process.env[key]?.trim());
+  let configurationError: string | undefined;
+  if (family(provider) === 'META') {
+    try { getMetaLoginConfiguration(); }
+    catch (error) {
+      if (!(error instanceof SocialProviderError)) throw error;
+      configurationError = error.message;
+      missing.push(error.code === 'meta_config_id_invalid' ? 'SOCIAL_META_CONFIG_ID (numeric ID required)' : 'SOCIAL_META_TOKEN_TYPE (verified USER configuration required)');
+    }
+  }
   const apiVersion = family(provider) === 'META' ? META_GRAPH_VERSION : provider === 'LINKEDIN' ? LINKEDIN_VERSION : 'Account Management v1 / Business Information v1 / Local Posts v4';
   const accessStatus = process.env[`${prefix}_ACCESS_STATUS`] ?? 'PENDING';
   const route = family(provider) === 'META' ? 'meta' : provider === 'GOOGLE_BUSINESS' ? 'google' : 'linkedin';
-  return { configured: missing.length === 0, missing, callbackUrl: new URL(`/api/social/oauth/${route}/callback`, getSocialBaseUrl(baseUrl)).href, apiVersion, accessStatus };
+  return { configured: missing.length === 0, missing, configurationError, callbackUrl: new URL(`/api/social/oauth/${route}/callback`, getSocialBaseUrl(baseUrl)).href, apiVersion, accessStatus };
 }
 function client(provider: SocialProvider) {
   const prefix = `SOCIAL_${family(provider)}`;
@@ -29,14 +46,17 @@ function client(provider: SocialProvider) {
   return { clientId, clientSecret };
 }
 export function buildOAuthAuthorizationUrl(provider: SocialProvider, input: { state: string; redirectUri: string; codeChallenge?: string }): string {
+  const metaConfiguration = family(provider) === 'META' ? getMetaLoginConfiguration() : null;
   const { clientId } = client(provider);
   const scopes = family(provider) === 'META' ? [...new Set([...providerScopes.INSTAGRAM, ...providerScopes.FACEBOOK])] : providerScopes[provider];
   const params = new URLSearchParams({ client_id: clientId, redirect_uri: input.redirectUri, response_type: 'code', state: input.state, scope: scopes.join(provider === 'FACEBOOK' || provider === 'INSTAGRAM' ? ',' : ' ') });
+  if (metaConfiguration) { params.delete('scope'); params.set('config_id', metaConfiguration.id); }
   if (provider === 'GOOGLE_BUSINESS') { params.set('access_type', 'offline'); params.set('prompt', 'consent'); if (input.codeChallenge) { params.set('code_challenge', input.codeChallenge); params.set('code_challenge_method', 'S256'); } }
   const endpoint = provider === 'GOOGLE_BUSINESS' ? 'https://accounts.google.com/o/oauth2/v2/auth' : provider === 'LINKEDIN' ? 'https://www.linkedin.com/oauth/v2/authorization' : `https://www.facebook.com/${META_GRAPH_VERSION}/dialog/oauth`;
   return `${endpoint}?${params}`;
 }
 export async function exchangeOAuthCode(provider: SocialProvider, input: { code: string; redirectUri: string; codeVerifier?: string }): Promise<SocialCredentials> {
+  if (family(provider) === 'META') getMetaLoginConfiguration();
   const { clientId, clientSecret } = client(provider);
   const params = new URLSearchParams({ client_id: clientId, client_secret: clientSecret, code: input.code, redirect_uri: input.redirectUri, grant_type: 'authorization_code' });
   if (provider === 'GOOGLE_BUSINESS' && input.codeVerifier) params.set('code_verifier', input.codeVerifier);

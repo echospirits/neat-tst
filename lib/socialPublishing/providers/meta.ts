@@ -1,6 +1,6 @@
 import { SocialProviderError, type DiscoveredDestination, type ExternalIds, type PreparedMedia, type ProviderContext, type ProviderOutcome, type SocialCredentials, type SocialProviderAdapter } from '../types';
 import { checkpoint, jsonRequest, list, object, publishOperation, request, requiredString, string, uploadUrl } from './http';
-import { META_GRAPH_VERSION } from './oauth';
+import { getMetaLoginConfiguration, META_GRAPH_VERSION } from './oauth';
 import { validateContent } from './validation';
 
 const root = () => {
@@ -11,6 +11,7 @@ async function graph(credentials: SocialCredentials, path: string, values?: Reco
   return jsonRequest(`${root()}/${path}`, { headers: { authorization: `Bearer ${credentials.accessToken}`, ...(values ? { 'content-type': 'application/json' } : {}) }, ...(values ? { method: 'POST', body: JSON.stringify(values) } : {}) }, irreversible);
 }
 export async function discoverMeta(credentials: SocialCredentials, selectedProvider?: 'FACEBOOK' | 'INSTAGRAM'): Promise<DiscoveredDestination[]> {
+  const loginRoute = getMetaLoginConfiguration() ? 'FACEBOOK_LOGIN_FOR_BUSINESS_USER' : 'FACEBOOK_LOGIN';
   const destinations: DiscoveredDestination[] = [];
   let after = '';
   for (let page = 0; page < 50; page++) {
@@ -19,13 +20,13 @@ export async function discoverMeta(credentials: SocialCredentials, selectedProvi
     for (const item of list(result.data).map(object)) {
       const id = requiredString(item.id, 'a Page ID');
       const pageCredentials = { ...credentials, accessToken: requiredString(item.access_token, 'a Page access token') };
-      if (selectedProvider !== 'INSTAGRAM') destinations.push({ provider: 'FACEBOOK', externalId: id, displayName: string(item.name) || id, profileImageUrl: string(object(object(item.picture).data).url) || undefined, metadata: { pageId: id, tasks: list(item.tasks), loginRoute: 'FACEBOOK_LOGIN', apiVersion: META_GRAPH_VERSION }, credentials: pageCredentials });
+      if (selectedProvider !== 'INSTAGRAM') destinations.push({ provider: 'FACEBOOK', externalId: id, displayName: string(item.name) || id, profileImageUrl: string(object(object(item.picture).data).url) || undefined, metadata: { pageId: id, tasks: list(item.tasks), loginRoute, apiVersion: META_GRAPH_VERSION }, credentials: pageCredentials });
       const ig = object(item.instagram_business_account);
       if (selectedProvider !== 'FACEBOOK' && ig.id) {
         // Page linkage is discovered, never inferred from a brand label.
         let accountType = 'UNKNOWN';
         try { accountType = string((await graph(pageCredentials, `${encodeURIComponent(string(ig.id))}?fields=account_type`)).account_type) || 'UNKNOWN'; } catch (error) { if (!(error instanceof SocialProviderError) || error.kind !== 'CONTENT') throw error; }
-        destinations.push({ provider: 'INSTAGRAM', externalId: string(ig.id), displayName: string(ig.name) || string(ig.username) || string(ig.id), handle: string(ig.username) || undefined, profileImageUrl: string(ig.profile_picture_url) || undefined, metadata: { pageId: id, accountType, loginRoute: 'FACEBOOK_LOGIN', apiVersion: META_GRAPH_VERSION }, credentials: pageCredentials });
+        destinations.push({ provider: 'INSTAGRAM', externalId: string(ig.id), displayName: string(ig.name) || string(ig.username) || string(ig.id), handle: string(ig.username) || undefined, profileImageUrl: string(ig.profile_picture_url) || undefined, metadata: { pageId: id, accountType, loginRoute, apiVersion: META_GRAPH_VERSION }, credentials: pageCredentials });
       }
     }
     const paging = object(result.paging);

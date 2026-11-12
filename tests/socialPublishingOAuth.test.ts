@@ -7,8 +7,10 @@ import {
   socialOAuthFamily,
   completeSocialOAuth,
 } from '../lib/socialPublishing/oauth';
+import { exchangeOAuthCode } from '../lib/socialPublishing/providers/oauth';
 
-test('Social origin override preserves one-use OAuth state bound to tenant, admin, provider and exact login session', async () => {
+for (const configuredMeta of [false, true]) {
+test(`${configuredMeta ? 'USER-configured' : 'Legacy'} Meta code flow preserves original-session one-use OAuth state and the Social callback`, async () => {
   const prior = { ...process.env };
   Object.assign(process.env, {
     SOCIAL_PILOT_USER_IDS: 'admin',
@@ -17,6 +19,8 @@ test('Social origin override preserves one-use OAuth state bound to tenant, admi
     CALENDAR_TOKEN_ENCRYPTION_KEY: 'fixture-key-32-characters-not-a-secret',
     APP_BASE_URL: 'https://fixture.example.invalid',
     SOCIAL_BASE_URL: 'https://neat-tst.vercel.app',
+    SOCIAL_META_CONFIG_ID: configuredMeta ? '123456789012345' : '',
+    SOCIAL_META_TOKEN_TYPE: configuredMeta ? 'USER' : '',
   });
   let row: Record<string, unknown> | null = null;
   const db = {
@@ -54,6 +58,15 @@ test('Social origin override preserves one-use OAuth state bound to tenant, admi
     const url = new URL(await startSocialOAuth(db, actor, 'session-a', 'meta'));
     const state = url.searchParams.get('state')!;
     assert.equal(url.hostname, 'www.facebook.com');
+    assert.equal(url.searchParams.get('response_type'), 'code');
+    if (configuredMeta) {
+      assert.equal(url.searchParams.get('config_id'), '123456789012345');
+      assert.equal(url.searchParams.get('scope'), null);
+      assert.notEqual(state, '123456789012345');
+    } else {
+      assert.equal(url.searchParams.get('config_id'), null);
+      assert.match(url.searchParams.get('scope')!, /instagram_basic/);
+    }
     assert.equal(
       url.searchParams.get('redirect_uri'),
       'https://neat-tst.vercel.app/api/social/oauth/meta/callback',
@@ -122,6 +135,46 @@ test('Social origin override preserves one-use OAuth state bound to tenant, admi
     mock.restoreAll();
     for (const key of Object.keys(process.env))
       if (!(key in prior)) delete process.env[key];
+    Object.assign(process.env, prior);
+  }
+});
+}
+
+test('unknown/system-user Meta configuration fails before state creation, state consumption or provider requests', async () => {
+  const prior = { ...process.env };
+  Object.assign(process.env, {
+    SOCIAL_PILOT_USER_IDS: 'admin', SOCIAL_META_APP_ID: 'fixture-app', SOCIAL_META_APP_SECRET: 'fixture-secret',
+    CALENDAR_TOKEN_ENCRYPTION_KEY: 'fixture-key-32-characters-not-a-secret', SOCIAL_BASE_URL: 'https://neat-tst.vercel.app',
+  });
+  let created = 0, queried = 0, consumed = 0, requests = 0;
+  const db = {
+    user: { findFirst: async () => ({ id: 'admin', role: 'ADMIN' }) },
+    organization: { findFirst: async () => ({ id: 'org_echo_spirits', crmPreferences: {} }) },
+    organizationFeature: { findFirst: async () => ({ id: 'f' }) },
+    socialOAuthState: {
+      create: async () => { created++; }, findFirst: async () => { queried++; return null; },
+      deleteMany: async () => { consumed++; return { count: 0 }; },
+    },
+  } as unknown as Prisma.TransactionClient;
+  const actor = { organizationId: 'org_echo_spirits', userId: 'admin', role: 'ADMIN' as const };
+  mock.method(globalThis, 'fetch', async () => { requests++; throw new Error('Unexpected provider request.'); });
+  try {
+    const cases = [
+      { id: '123456789012345', type: '', error: /User access token/ },
+      { id: '123456789012345', type: 'SYSTEM_USER', error: /User access token/ },
+      { id: '123456789012345', type: 'BEARER', error: /User access token/ },
+      { id: 'not-numeric', type: 'USER', error: /numeric ID/ },
+    ];
+    for (const item of cases) {
+      process.env.SOCIAL_META_CONFIG_ID = item.id; process.env.SOCIAL_META_TOKEN_TYPE = item.type;
+      await assert.rejects(() => startSocialOAuth(db, actor, 'original-session', 'meta'), item.error);
+      await assert.rejects(() => consumeSocialOAuthState(db, actor, 'original-session', 'meta', 'a'.repeat(43)), item.error);
+      await assert.rejects(() => exchangeOAuthCode('FACEBOOK', { code: 'fixture-code', redirectUri: 'https://neat-tst.vercel.app/api/social/oauth/meta/callback' }), item.error);
+    }
+    assert.deepEqual({ created, queried, consumed, requests }, { created: 0, queried: 0, consumed: 0, requests: 0 });
+  } finally {
+    mock.restoreAll();
+    for (const key of Object.keys(process.env)) if (!(key in prior)) delete process.env[key];
     Object.assign(process.env, prior);
   }
 });
