@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { encryptCalendarToken, decryptCalendarToken } from '../calendar/crypto';
 import { assertSocialActor, type SocialDb } from './service';
 import type { SocialActor } from './access';
+import { getSocialBaseUrl } from './config';
 import {
   getSocialProvider,
   buildOAuthAuthorizationUrl,
@@ -31,8 +32,7 @@ export async function startSocialOAuth(
 ) {
   await assertSocialActor(db, actor, true);
   const provider = socialOAuthProviders[family];
-  const base = process.env.APP_BASE_URL;
-  if (!base) throw new Error('Configure APP_BASE_URL before connecting.');
+  const base = getSocialBaseUrl();
   const config = getOAuthConfiguration(provider, base);
   if (!config.configured)
     throw new Error(`Missing ${config.missing.join(', ')}.`);
@@ -98,7 +98,7 @@ export async function completeSocialOAuth(
   db: import('@prisma/client').PrismaClient,
 ) {
   const provider = socialOAuthProviders[family];
-  const base = process.env.APP_BASE_URL!;
+  const base = getSocialBaseUrl();
   const credentials = await exchangeOAuthCode(provider, {
     code,
     redirectUri: getOAuthConfiguration(provider, base).callbackUrl,

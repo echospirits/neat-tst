@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
-import type { Prisma } from '@prisma/client';
+import { test, mock } from 'node:test';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import {
   startSocialOAuth,
   consumeSocialOAuthState,
   socialOAuthFamily,
+  completeSocialOAuth,
 } from '../lib/socialPublishing/oauth';
 
-test('OAuth state is one-use and bound to tenant, admin, provider and exact login session', async () => {
+test('Social origin override preserves one-use OAuth state bound to tenant, admin, provider and exact login session', async () => {
   const prior = { ...process.env };
   Object.assign(process.env, {
     SOCIAL_PILOT_USER_IDS: 'admin',
@@ -15,6 +16,7 @@ test('OAuth state is one-use and bound to tenant, admin, provider and exact logi
     SOCIAL_META_APP_SECRET: 'fixture-secret-never-contacted',
     CALENDAR_TOKEN_ENCRYPTION_KEY: 'fixture-key-32-characters-not-a-secret',
     APP_BASE_URL: 'https://fixture.example.invalid',
+    SOCIAL_BASE_URL: 'https://neat-tst.vercel.app',
   });
   let row: Record<string, unknown> | null = null;
   const db = {
@@ -54,7 +56,7 @@ test('OAuth state is one-use and bound to tenant, admin, provider and exact logi
     assert.equal(url.hostname, 'www.facebook.com');
     assert.equal(
       url.searchParams.get('redirect_uri'),
-      'https://fixture.example.invalid/api/social/oauth/meta/callback',
+      'https://neat-tst.vercel.app/api/social/oauth/meta/callback',
     );
     await assert.rejects(
       () => consumeSocialOAuthState(db, actor, 'session-b', 'meta', state),
@@ -94,12 +96,30 @@ test('OAuth state is one-use and bound to tenant, admin, provider and exact logi
       state,
     );
     assert.equal(stored.userId, 'admin');
+    assert.equal(stored.sessionHash, 'session-a');
     await assert.rejects(
       () => consumeSocialOAuthState(db, actor, 'session-a', 'meta', state),
       /another session/,
     );
     assert.throws(() => socialOAuthFamily('__proto__'), /Unknown/);
+    const exchangeRedirects: string[] = [];
+    mock.method(globalThis, 'fetch', async (input: string | URL | Request, init?: RequestInit) => {
+      const target = String(input);
+      let body: unknown;
+      if (target.endsWith('/oauth/access_token')) {
+        const parameters = new URLSearchParams(String(init?.body));
+        if (parameters.has('code')) exchangeRedirects.push(parameters.get('redirect_uri')!);
+        body = { access_token: 'fixture-token-not-live', expires_in: 3600 };
+      } else if (target.includes('/me?fields=id')) body = { id: 'fixture-authorization-owner' };
+      else if (target.includes('/me/permissions') || target.includes('/me/accounts?')) body = { data: [] };
+      else throw new Error('Unexpected provider fixture request; live networking is blocked.');
+      return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } });
+    });
+    assert.deepEqual(await completeSocialOAuth(actor, 'meta', 'fixture-code', stored, db as unknown as PrismaClient), { discovered: 0, discoveryFailures: 0 });
+    assert.deepEqual(exchangeRedirects, ['https://neat-tst.vercel.app/api/social/oauth/meta/callback']);
+    assert.equal(process.env.APP_BASE_URL, 'https://fixture.example.invalid');
   } finally {
+    mock.restoreAll();
     for (const key of Object.keys(process.env))
       if (!(key in prior)) delete process.env[key];
     Object.assign(process.env, prior);

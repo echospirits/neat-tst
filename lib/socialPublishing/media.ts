@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { get } from '@vercel/blob';
 import { MAX_SOCIAL_MEDIA_BYTES } from './mediaProbe';
+import { getSocialBaseUrl } from './config';
 
 type PrivateMedia = { id: string; organizationId: string; storageKey: string; sha256: string };
 const MEDIA_URL_LIFETIME_SECONDS = 24 * 60 * 60;
@@ -20,10 +21,7 @@ function mediaSignature(media: Pick<PrivateMedia, 'id' | 'organizationId' | 'sha
 }
 /** Mint only near dispatch. Drafts never carry an expiring public file URL. */
 export function createDispatchMediaUrl(media: PrivateMedia, now = new Date()) {
-  const origin = process.env.APP_BASE_URL?.trim().replace(/\/+$/, '');
-  if (!origin) throw new Error('APP_BASE_URL is required for dispatch media URLs.');
-  const base = new URL(origin);
-  if (base.protocol !== 'https:' && !(['localhost', '127.0.0.1'].includes(base.hostname) && process.env.APP_ENV === 'development')) throw new Error('Dispatch media URLs require an HTTPS APP_BASE_URL.');
+  const base = getSocialBaseUrl();
   const expires = Math.floor(now.getTime() / 1000) + MEDIA_URL_LIFETIME_SECONDS;
   const url = new URL(`/api/social/media/${encodeURIComponent(media.id)}`, base);
   url.searchParams.set('expires', String(expires));

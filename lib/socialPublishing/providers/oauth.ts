@@ -1,6 +1,7 @@
 import type { SocialCredentials, SocialProvider } from '../types';
 import { SocialProviderError } from '../types';
 import { jsonRequest, list, object, requiredString, string } from './http';
+import { getSocialBaseUrl } from '../config';
 
 export const META_GRAPH_VERSION = process.env.SOCIAL_META_GRAPH_VERSION || 'v26.0';
 export const LINKEDIN_VERSION = process.env.SOCIAL_LINKEDIN_VERSION || '202609';
@@ -11,14 +12,14 @@ export const providerScopes: Record<SocialProvider, string[]> = {
   LINKEDIN: ['rw_organization_admin', 'w_organization_social', 'r_organization_social'],
 };
 const family = (provider: SocialProvider) => ['INSTAGRAM', 'FACEBOOK'].includes(provider) ? 'META' : provider === 'GOOGLE_BUSINESS' ? 'GOOGLE' : 'LINKEDIN';
-export function getOAuthConfiguration(provider: SocialProvider, baseUrl: string) {
+export function getOAuthConfiguration(provider: SocialProvider, baseUrl?: string) {
   const prefix = `SOCIAL_${family(provider)}`;
   const keys = family(provider) === 'META' ? [`${prefix}_APP_ID`, `${prefix}_APP_SECRET`] : [`${prefix}_CLIENT_ID`, `${prefix}_CLIENT_SECRET`];
   const missing = keys.filter(key => !process.env[key]?.trim());
   const apiVersion = family(provider) === 'META' ? META_GRAPH_VERSION : provider === 'LINKEDIN' ? LINKEDIN_VERSION : 'Account Management v1 / Business Information v1 / Local Posts v4';
   const accessStatus = process.env[`${prefix}_ACCESS_STATUS`] ?? 'PENDING';
   const route = family(provider) === 'META' ? 'meta' : provider === 'GOOGLE_BUSINESS' ? 'google' : 'linkedin';
-  return { configured: missing.length === 0, missing, callbackUrl: new URL(`/api/social/oauth/${route}/callback`, baseUrl).href, apiVersion, accessStatus };
+  return { configured: missing.length === 0, missing, callbackUrl: new URL(`/api/social/oauth/${route}/callback`, getSocialBaseUrl(baseUrl)).href, apiVersion, accessStatus };
 }
 function client(provider: SocialProvider) {
   const prefix = `SOCIAL_${family(provider)}`;

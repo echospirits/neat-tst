@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdminSession } from '../../../../../../lib/auth';
 import { prisma } from '../../../../../../lib/prisma';
+import { getSocialBaseUrl } from '../../../../../../lib/socialPublishing/config';
 import {
   completeSocialOAuth,
   consumeSocialOAuthState,
@@ -15,6 +16,9 @@ export async function GET(
 ) {
   const session = await requireAdminSession();
   const user = session.user;
+  let baseUrl: string;
+  try { baseUrl = getSocialBaseUrl(); }
+  catch { return NextResponse.json({ error: 'Social Publishing base URL is not configured correctly.' }, { status: 503 }); }
   const url = new URL(request.url);
   let status = 'authorization-failed';
   try {
@@ -55,7 +59,7 @@ export async function GET(
   return NextResponse.redirect(
     new URL(
       `/social?view=connections&status=${status}`,
-      process.env.APP_BASE_URL!,
+      baseUrl,
     ),
   );
 }

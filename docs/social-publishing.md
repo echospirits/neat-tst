@@ -90,7 +90,8 @@ Use `.env.example` as the key inventory. Configure secrets only in the selected 
 | Variable | Purpose / owner action |
 |---|---|
 | `APP_ENV`, `DATABASE_ENVIRONMENT`, `DATABASE_TARGET_ID`, `EXPECTED_DATABASE_HOST`, `DATABASE_URL` | Existing fail-closed environment/database identity. TST uses `APP_ENV=test`; verify `/api/health` identifies `neon-neat-tst` before tenant activation. |
-| `APP_BASE_URL` | Exact signed-in deployment origin, HTTPS for hosted OAuth. Use the same origin in the browser and registered callbacks. |
+| `APP_BASE_URL` | Existing application origin and Social fallback. Preserve its current value when Calendar or another integration depends on a legacy alias. |
+| `SOCIAL_BASE_URL` | Optional Social-only signed-in origin for OAuth callbacks/return redirects and dispatch media URLs. Takes precedence over `APP_BASE_URL`, normalizes to an origin, and requires HTTPS except loopback in local development. Invalid nonempty configuration blocks the operation rather than falling back. |
 | `SOCIAL_PILOT_USER_IDS` | Explicit tester User IDs, including administrators. Empty means no pilot users. |
 | `CALENDAR_TOKEN_ENCRYPTION_KEY` | Existing server-side token encryption facility; stable secret of at least 32 characters. Rotating it affects stored integration tokens. |
 | `SOCIAL_META_APP_ID`, `SOCIAL_META_APP_SECRET`, `SOCIAL_META_GRAPH_VERSION` | Neat-owned Meta application; pinned Graph version defaults to `v26.0`. |
@@ -107,13 +108,13 @@ Use `.env.example` as the key inventory. Configure secrets only in the selected 
 | `SOCIAL_LIVE_DESTINATION_IDS` | Explicit comma-separated Neat destination record IDs allowed for this live test. Handles/external IDs are insufficient. |
 | `SOCIAL_LIVE_NOT_BEFORE` | Valid ISO UTC authorization-window timestamp; live approval must be at or after it. |
 
-Derive callback URLs from the application's configured origin, not an arbitrary preview URL. For canonical TST register these exact URLs:
+Derive callback URLs from the configured Social origin: nonblank `SOCIAL_BASE_URL`, otherwise `APP_BASE_URL`. Sign in at that same origin before starting consent so the original Neat administrator session is available on return. A Social override does not change application/Calendar settings, legacy aliases, cookies or OAuth state/session binding. For canonical TST, set `SOCIAL_BASE_URL=https://neat-tst.vercel.app` and register these exact URLs:
 
 - Meta Facebook Login: `https://neat-tst.vercel.app/api/social/oauth/meta/callback`.
 - Google: `https://neat-tst.vercel.app/api/social/oauth/google/callback`.
 - LinkedIn: `https://neat-tst.vercel.app/api/social/oauth/linkedin/callback`.
 
-For another explicitly configured deployment replace only `https://neat-tst.vercel.app` with `APP_BASE_URL`'s exact origin. Register the full path with each developer application and keep it byte-for-byte consistent with the server's redirect URI. Administrators start consent through `/api/social/oauth/meta/start`, `/api/social/oauth/google/start` or `/api/social/oauth/linkedin/start`; Meta discovery returns Facebook and Instagram destinations independently.
+For another explicitly configured deployment replace only `https://neat-tst.vercel.app` with the selected Social origin. Register the full path with each developer application and keep it byte-for-byte consistent with the server's redirect URI. Administrators start consent through `/api/social/oauth/meta/start`, `/api/social/oauth/google/start` or `/api/social/oauth/linkedin/start`; Meta discovery returns Facebook and Instagram destinations independently. See the [Social-only origin validation record](releases/social-publishing-origin-validation.md) for the scoped compatibility change.
 
 Read-only inspection of the verified TST Vercel project's variable metadata found **no `SOCIAL_*` variables configured** on November 12, 2026. Existing `CRON_SECRET` and `CALENDAR_TOKEN_ENCRYPTION_KEY` are present; only key/type/target metadata was inspected. Existing Google Calendar/client and ordinary Blob configuration elsewhere in local worktrees is not Business Profile approval or evidence of social authorization. No social discovery or publication is claimed from those credentials.
 
