@@ -10,7 +10,8 @@ Prepared November 12, 2026. This is setup guidance, not evidence that an app, pe
 | Website origin | `https://neat-tst.vercel.app` |
 | Social-only server origin | `SOCIAL_BASE_URL=https://neat-tst.vercel.app`; preserve the shared `APP_BASE_URL` |
 | App domain, where requested | `neat-tst.vercel.app` |
-| Server app ID / app secret | Dedicated unpublished app `1934786264572681`; App settings → Basic. `SOCIAL_META_APP_ID` is configured in TST; owner supplies `SOCIAL_META_APP_SECRET` directly as a Vercel Secret |
+| Server app ID / app secret | Dedicated unpublished app `1934786264572681`; App ID configured in TST and owner-entered App Secret verified present as a sensitive Vercel Secret without reading its value |
+| Login configuration | Saved **Neat TST Page + Instagram**, `1757266013065799`; **General / User access token**, exactly the five scopes below. TST: `SOCIAL_META_CONFIG_ID=1757266013065799`, `SOCIAL_META_TOKEN_TYPE=USER` |
 | Graph version | `SOCIAL_META_GRAPH_VERSION=v26.0` |
 | Publishing/discovery permissions requested by Neat | `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `instagram_basic`, `instagram_content_publish` |
 | Neat setup view | `/social?view=connections` |
