@@ -4,7 +4,7 @@ Production Supplies uses a small EasyPost adapter for standalone **parcel** trac
 
 ## Selection and live-verification limits
 
-Provider selection is provisional. Read-only TST inspection on November 11, 2026 found zero Echo mailbox connections, so no authorized initial order scan or actual carrier inventory was available. No real shipment, carrier ETA, supplier portal or live webhook was verified. Tests use sanitized fixtures and injected HTTP responses; they are not a claim of sandbox or live provider acceptance.
+The initial app-connection audit found no Neat mailbox connections. A subsequent authorized one-time inspection through Joe's existing business Gmail connector found UPS parcels, GFS supplier delivery and unconfirmed freight arrangements. That actual mix grounds the supported UPS parcel path while preserving the supplier/freight gaps. A one-time public official UPS check returned Label Created with no ETA; the billed date and service level did not become an arrival estimate. This is a manual source observation, not EasyPost or continuous API acceptance. Adapter tests use sanitized fixtures and injected responses; no live EasyPost key, registration or webhook is claimed.
 
 The adapter explicitly accepts UPS, USPS, FedEx, DHLExpress, OnTrac, CanadaPost and RoyalMail parcel references. These strings appear in EasyPost's documented carrier list. Other carriers produce an actionable unsupported-carrier message and retain existing arrival evidence. Freight PRO, bill of lading and supplier order identifiers are stored as distinct types; this parcel adapter never submits them as tracking numbers. [Carrier strings and standalone-access restrictions](https://docs.easypost.com/docs/trackers).
 
@@ -46,8 +46,8 @@ Temporary failures retain the last valid estimate and expose a check error, fres
 
 ## Remaining activation steps
 
-1. Connect each real Production user's own authorized Gmail mailbox. TST currently has no connection, and Karl/Nikhil identities could not be unambiguously resolved from existing TST users. Do not create duplicate accounts or invented addresses.
-2. Run the bounded historical import and inspect actual shipping methods and references.
+1. Complete the approved replacement Google OAuth client setup and each real Production user's own read-only consent. The reused client is deleted; Neat currently has no autonomous mailbox connection. Karl/Nikhil have no matching existing TST accounts, including checks against addresses observed in a business thread. Do not create accounts without the separate authorization.
+2. Run the bounded autonomous historical import after consent. A one-time authorized connector snapshot already populated operational candidates; it does not substitute for ongoing mailbox authorization.
 3. Supply an approved environment-specific EasyPost key and any required carrier credentials, confirm costs, then enable the matching mode.
-4. Configure the authenticated webhook and background schedule, then verify one real external lookup from an authorized supplier shipment through stored carrier ETA to dashboard.
+4. Configure the authenticated tracking webhook, then verify the real provider path through stored carrier observations to the dashboard. The supply background schedule is already activated and its GitHub-to-TST worker invocation verified. No ETA should be invented when the carrier provides none.
 5. Verify outage preservation, provider correction and actual partial receipt in the intended environment. Document unsupported carriers and obtain supplier/carrier integration access where needed.

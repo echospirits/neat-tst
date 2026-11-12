@@ -2,6 +2,8 @@
 
 Production Supplies is a tenant pilot in **0.10.0-dev**, developed for TST. It combines open supply needs with orders, shipments, tracking observations and internal receipts. It does not purchase supplies, message suppliers, write accounting entries or change the inventory ledger.
 
+Echo is now explicitly activated on TST with Joe's Production membership and a verified background trigger. A one-time authorized business Gmail connector snapshot populated real operational candidates. Autonomous Neat Gmail sync remains blocked by Google's deleted OAuth client, and continuous carrier API tracking awaits approved credentials/fees. See [current validation and provider gates](releases/production-supplies-validation.md).
+
 ## Where to work
 
 - **Production Supplies** in My Work and mobile More opens `/production-supplies` for authorized users.
@@ -24,7 +26,7 @@ Removing a member pauses future ingestion without deleting existing shared order
 
 ## Email setup and processing
 
-1. Configure existing or dedicated Google OAuth credentials (`SUPPLY_GOOGLE_CLIENT_ID` / `SUPPLY_GOOGLE_CLIENT_SECRET`, falling back to the existing Google client). Enable the Gmail API and register the exact environment callback: `APP_BASE_URL/api/production-supplies/mail/google/callback`.
+1. Configure existing or dedicated Google OAuth credentials (`SUPPLY_GOOGLE_CLIENT_ID` / `SUPPLY_GOOGLE_CLIENT_SECRET`, falling back to the existing Google client). Enable the Gmail API and register the exact callback on the hostname where the mailbox owner signs in. `SUPPLY_GOOGLE_REDIRECT_URI` can override the `APP_BASE_URL` fallback without changing Calendar configuration; TST uses `https://neat-tst.vercel.app/api/production-supplies/mail/google/callback` so its existing session reaches the callback. HTTPS, the exact callback path and no credentials/query/fragment are required outside local development.
 2. Configure `SUPPLY_MAIL_TOKEN_ENCRYPTION_KEY` with at least 32 characters and matching `SUPPLY_MAIL_OAUTH_ENVIRONMENT` (or the existing `OAUTH_ENVIRONMENT` when no supply-specific value is set). New supply mailbox tokens use authenticated server-side encryption. Retained tokens using an unsupported retired format require owner reauthorization; calendar-only consent is never reused as Gmail permission.
 3. Reuse the existing server-side `OPENAI_API_KEY` and model configuration; `SUPPLY_EXTRACTION_MODEL` defaults to the model already used by Neat's research service. Set `SUPPLY_MAIL_INGESTION_ENABLED=true` only for the intended environment. No new key or subscription is provisioned by this feature.
 4. Each production person opens Settings and connects Gmail. Their session, single-use OAuth state, PKCE verifier and verified email bind the authorization to their own account.

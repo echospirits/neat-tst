@@ -276,6 +276,46 @@ export async function updateNeedDetails(actor: SupplyActor, raw: unknown, db: Pr
     await audit(tx, actor, 'NEED_DETAILS_REVIEWED', input, undefined, need.id); return result;
   });
 }
+
+type SupplyLineFact = NonNullable<z.infer<typeof supplyEvidenceInput>['evidence']>['lines'][number];
+/** Exact source identifiers and units only; a reviewed order association never implies a fuzzy item merge. */
+async function reconcileOrderLineEvidence(tx: Tx, actor: SupplyActor, order: { id: string; supplier: string; destination: string | null }, facts: SupplyLineFact[], observedAt: Date) {
+  const [items, rules, existingLines] = await Promise.all([
+    tx.supplyCatalogItem.findMany({ where: { organizationId: actor.organizationId }, include: { aliases: true } }),
+    tx.supplyClassificationRule.findMany({ where: { organizationId: actor.organizationId, active: true } }),
+    tx.supplyOrderLine.findMany({ where: { organizationId: actor.organizationId, orderId: order.id } }),
+  ]);
+  const occurrences = new Map<string, number>(), used = new Set<string>();
+  let review = false;
+  for (const fact of facts) {
+    const matches = items.filter(item => normalize(item.name) === normalize(fact.description) || item.aliases.some(alias => (!alias.supplier || normalize(alias.supplier) === normalize(order.supplier)) && (alias.sku ? normalize(alias.sku) === normalize(fact.sku) : normalize(alias.alias) === normalize(fact.description))));
+    const item = fact.catalogItemId ? await catalog(tx, actor, fact.catalogItemId) : matches.length === 1 ? matches[0] : null;
+    const baseKey = fingerprint(fact.sku ? `sku:${normalize(fact.sku)}` : `description:${normalize(fact.description)}`, normalize(fact.unit));
+    const occurrence = occurrences.get(baseKey) ?? 0; occurrences.set(baseKey, occurrence + 1);
+    const lineKey = `${baseKey}:${occurrence}`;
+    let existing = existingLines.find(line => line.lineKey === lineKey && !used.has(line.id));
+    // A manual row has a different internal key. Reuse it only for one exact SKU
+    // and unit match, never for a similar description or a shortened vendor code.
+    if (!existing && fact.sku) {
+      const exact = existingLines.filter(line => !used.has(line.id) && normalize(line.sku) === normalize(fact.sku) && normalize(line.unit) === normalize(fact.unit));
+      if (exact.length === 1) existing = exact[0];
+    }
+    if (existing) used.add(existing.id);
+    if (existing?.lastEvidenceAt && existing.lastEvidenceAt > observedAt) continue;
+    const classification = classifyLine({ supplier: order.supplier, sku: fact.sku, unit: fact.unit, packSize: fact.packSize, catalog: item, rules });
+    review ||= !existing?.manualClassification && classification.department === 'NEEDS_REVIEW';
+    const data = { description: fact.description, sku: fact.sku, quantity: fact.quantity, unit: fact.unit, packSize: fact.packSize, backorderedQuantity: fact.backorderedQuantity, lastEvidenceAt: observedAt,
+      ...(existing?.manualClassification ? {} : { catalogItemId: classification.catalogItemId ?? item?.id, department: classification.department, classificationSource: classification.source, classificationConfidence: classification.confidence, classificationExplanation: classification.explanation }) };
+    const update = existing ? Object.fromEntries(Object.entries(data).filter(([key]) => !existing.manualFields.includes(key))) : data;
+    const line = existing ? await tx.supplyOrderLine.update({ where: { organizationId_id: { organizationId: actor.organizationId, id: existing.id } }, data: update }) : await tx.supplyOrderLine.create({ data: { ...data, organizationId: actor.organizationId, orderId: order.id, lineKey } });
+    if (!existing) { existingLines.push(line); used.add(line.id); }
+    if (line.catalogItemId && ['PRODUCTION', 'SHARED'].includes(line.department) && order.destination) {
+      const needs = await tx.supplyNeed.findMany({ where: { organizationId: actor.organizationId, catalogItemId: line.catalogItemId, location: order.destination, resolvedAt: null } });
+      for (const need of needs) await tx.supplyNeedAllocation.upsert({ where: { organizationId_needId_lineId: { organizationId: actor.organizationId, needId: need.id, lineId: line.id } }, create: { organizationId: actor.organizationId, needId: need.id, lineId: line.id, explanation: 'Catalog material and destination match. Quantity coverage remains unknown until reviewed.' }, update: {} });
+    }
+  }
+  return { review };
+}
 export async function reviewSupplySource(actor: SupplyActor, raw: unknown, db: PrismaClient = prisma) {
   const input = z.object({ sourceId: z.string().min(1).max(120), decision: z.enum(['ATTACH', 'IGNORE']), orderId: z.string().max(120).optional() }).parse(raw);
   return mutate(actor, db, async tx => {
@@ -289,13 +329,20 @@ export async function reviewSupplySource(actor: SupplyActor, raw: unknown, db: P
     if (!order) throw new SupplyError('Choose the existing order this operational evidence belongs to.');
     const evidence = supplyEvidenceInput.shape.evidence.safeParse(source.extractedFacts);
     if (!evidence.success || !evidence.data || !['ORDER', 'SHIPMENT'].includes(evidence.data.kind)) throw new SupplyError('No validated order or shipment facts are available. Correct extraction or enter the order manually.');
+    const lineResult = await reconcileOrderLineEvidence(tx, actor, order, evidence.data.lines, source.messageDate);
+    const newer = !order.lastEvidenceAt || source.messageDate >= order.lastEvidenceAt;
+    const orderData: Prisma.SupplyOrderUpdateInput = {};
+    for (const key of ['orderedAt', 'invoiceDate', 'paymentDate', 'estimatedShipDate'] as const) if (evidence.data[key] && !order.manualFields.includes(key) && (newer || !order[key])) orderData[key] = new Date(evidence.data[key]!);
+    if (newer) orderData.lastEvidenceAt = source.messageDate;
+    orderData.reviewRequired = lineResult.review || Boolean(await tx.supplyOrderLine.count({ where: { organizationId: actor.organizationId, orderId: order.id, department: 'NEEDS_REVIEW', ignored: false } }));
+    await tx.supplyOrder.update({ where: { organizationId_id: { organizationId: actor.organizationId, id: order.id } }, data: orderData });
     for (const shipping of evidence.data.shipments) {
       const existing = await tx.supplyShipment.findFirst({ where: { organizationId: actor.organizationId, referenceType: shipping.referenceType, reference: shipping.reference, carrier: shipping.carrier || null } });
       if (existing && existing.orderId !== order.id) throw new SupplyError('This tracking reference belongs to another order. Review that relationship first.');
       if (!existing) await tx.supplyShipment.create({ data: { organizationId: actor.organizationId, orderId: order.id, referenceType: shipping.referenceType, reference: shipping.reference, carrier: shipping.carrier || null, destination: order.destination, status: shipping.status || 'UNKNOWN', statusEventAt: source.messageDate, nextCheckAt: new Date(), arrivalEstimates: shipping.eta ? { create: [{ ...shipping.eta, sourceId: source.id, sourceEventAt: source.messageDate }] } : undefined } });
     }
     await tx.supplyOrderSource.upsert({ where: { organizationId_orderId_sourceId: { organizationId: actor.organizationId, orderId: order.id, sourceId: source.id } }, create: { organizationId: actor.organizationId, orderId: order.id, sourceId: source.id }, update: {} });
-    await tx.supplySource.update({ where: { id: source.id }, data: { extractionStatus: 'COMPLETE', extractionError: null, nextExtractionAt: null } });
+    await tx.supplySource.update({ where: { id: source.id }, data: { extractionStatus: 'COMPLETE', extractionError: source.extractionError && /incomplete|unsupported/i.test(source.extractionError) ? source.extractionError : null, nextExtractionAt: null } });
     await audit(tx, actor, 'SOURCE_MANUALLY_ATTACHED', { sourceId: source.id, rawReferencePreserved: true }, order.id); return { id: source.id, orderId: order.id };
   });
 }
@@ -327,16 +374,12 @@ export async function ingestEvidence(actor: SupplyActor, raw: unknown, db: Prism
     if (!evidence || input.source.extractionStatus !== 'COMPLETE') return { sourceId: source.id, review: input.source.extractionStatus !== 'UNSUPPORTED' || Boolean(evidence) };
     if (evidence.kind === 'QUOTE' || evidence.kind === 'OTHER') return { sourceId: source.id, review: false };
     const observedAt = source.messageDate;
-    const items = await tx.supplyCatalogItem.findMany({ where: { organizationId: actor.organizationId }, include: { aliases: true } });
-    const rules = await tx.supplyClassificationRule.findMany({ where: { organizationId: actor.organizationId, active: true } });
-    const findItem = (description: string, supplier?: string | null, sku?: string | null) => {
-      const matches = items.filter(item => normalize(item.name) === normalize(description) || item.aliases.some(a => (!a.supplier || normalize(a.supplier) === normalize(supplier)) && (a.sku ? normalize(a.sku) === normalize(sku) : normalize(a.alias) === normalize(description))));
-      return matches.length === 1 ? matches[0] : null;
-    };
     if (evidence.kind === 'WARNING') {
       const warning = evidence.warning;
       if (!warning) { await tx.supplySource.update({ where: { id: source.id }, data: { extractionStatus: 'REVIEW', extractionError: 'Low-stock warning material or location could not be extracted.' } }); return { sourceId: source.id, review: true }; }
-      const item = findItem(warning.material);
+      const items = await tx.supplyCatalogItem.findMany({ where: { organizationId: actor.organizationId }, include: { aliases: true } });
+      const matches = items.filter(item => normalize(item.name) === normalize(warning.material) || item.aliases.some(alias => !alias.supplier && !alias.sku && normalize(alias.alias) === normalize(warning.material)));
+      const item = matches.length === 1 ? matches[0] : null;
       const activeKey = fingerprint(item?.id || normalize(warning.material), normalize(warning.location), normalize(warning.unit));
       const warningKey = fingerprint(input.source.contentHash, warning.material, warning.location, observedAt.toISOString());
       const occurrence = await tx.supplyWarningOccurrence.findUnique({ where: { organizationId_warningKey: { organizationId: actor.organizationId, warningKey } } });
@@ -382,26 +425,7 @@ export async function ingestEvidence(actor: SupplyActor, raw: unknown, db: Prism
       order = await tx.supplyOrder.update({ where: { organizationId_id: { organizationId: actor.organizationId, id: order.id } }, data });
     }
     await tx.supplyOrderSource.upsert({ where: { organizationId_orderId_sourceId: { organizationId: actor.organizationId, orderId: order.id, sourceId: source.id } }, create: { organizationId: actor.organizationId, orderId: order.id, sourceId: source.id }, update: {} });
-    let review = false;
-    const lineOccurrences = new Map<string, number>();
-    for (let index = 0; index < evidence.lines.length; index++) {
-      const line = evidence.lines[index], item = line.catalogItemId ? await catalog(tx, actor, line.catalogItemId) : findItem(line.description, supplier, line.sku);
-      const baseKey = fingerprint(line.sku ? `sku:${normalize(line.sku)}` : `description:${normalize(line.description)}`, normalize(line.unit));
-      const occurrenceIndex = lineOccurrences.get(baseKey) ?? 0;
-      lineOccurrences.set(baseKey, occurrenceIndex + 1);
-      const key = `${baseKey}:${occurrenceIndex}`;
-      const existing = await tx.supplyOrderLine.findUnique({ where: { organizationId_orderId_lineKey: { organizationId: actor.organizationId, orderId: order.id, lineKey: key } } });
-      const classification = classifyLine({ supplier: order.supplier, sku: line.sku, unit: line.unit, packSize: line.packSize, catalog: item, rules });
-      review ||= classification.department === 'NEEDS_REVIEW' && !existing?.manualClassification;
-      if (existing && (existing.lastEvidenceAt && existing.lastEvidenceAt > observedAt)) continue;
-      const data = { description: line.description, sku: line.sku, quantity: line.quantity, unit: line.unit, packSize: line.packSize, backorderedQuantity: line.backorderedQuantity, lastEvidenceAt: observedAt, ...(existing?.manualClassification ? {} : { catalogItemId: classification.catalogItemId ?? item?.id, department: classification.department, classificationSource: classification.source, classificationConfidence: classification.confidence, classificationExplanation: classification.explanation }) };
-      const updateData = existing ? Object.fromEntries(Object.entries(data).filter(([key]) => !existing.manualFields.includes(key))) : data;
-      const savedLine = existing ? await tx.supplyOrderLine.update({ where: { organizationId_id: { organizationId: actor.organizationId, id: existing.id } }, data: updateData }) : await tx.supplyOrderLine.create({ data: { ...data, organizationId: actor.organizationId, orderId: order.id, lineKey: key } });
-      if (savedLine.catalogItemId && ['PRODUCTION', 'SHARED'].includes(savedLine.department) && order.destination) {
-        const needs = await tx.supplyNeed.findMany({ where: { organizationId: actor.organizationId, catalogItemId: savedLine.catalogItemId, location: order.destination, resolvedAt: null } });
-        for (const need of needs) await tx.supplyNeedAllocation.upsert({ where: { organizationId_needId_lineId: { organizationId: actor.organizationId, needId: need.id, lineId: savedLine.id } }, create: { organizationId: actor.organizationId, needId: need.id, lineId: savedLine.id, explanation: 'Catalog material and destination match. Quantity coverage remains unknown until reviewed.' }, update: {} });
-      }
-    }
+    let review = (await reconcileOrderLineEvidence(tx, actor, order, evidence.lines, observedAt)).review;
     for (const shipping of evidence.shipments) {
       let shipment = await tx.supplyShipment.findFirst({ where: { organizationId: actor.organizationId, referenceType: shipping.referenceType, reference: shipping.reference, carrier: shipping.carrier || null } });
       if (shipment && shipment.orderId !== order.id) { review = true; continue; }

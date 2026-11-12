@@ -19,6 +19,17 @@ export function arrivalText(arrival: Arrival | undefined) {
 }
 export function arrivalSource(source: string) { return ({ APPOINTMENT: 'Delivery appointment', CARRIER: 'Carrier estimate', CARRIER_ESTIMATE: 'Carrier estimate', PREDICTION: 'Provider prediction', PROVIDER_PREDICTION: 'Provider prediction', SUPPLIER_PROMISE: 'Supplier promise', SUPPLIER: 'Supplier schedule', MANUAL: 'Manual expectation', MANUAL_EXPECTATION: 'Manual expectation' } as Record<string, string>)[source] ?? source.toLowerCase().replaceAll('_', ' '); }
 export function quantityText(value: unknown, unit?: string | null) { return value === null || value === undefined || value === '' ? 'Quantity unknown' : `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 4 })}${unit ? ` ${unit}` : ' · unit unknown'}`; }
+export function warningFactsText({ reportedQuantity, reportedThreshold, unit }: { reportedQuantity?: number | null; reportedThreshold?: number | null; unit?: string | null }) {
+  const known = (value: number | null | undefined): value is number => value !== null && value !== undefined && Number.isFinite(value);
+  const amount = (value: number) => `${value.toLocaleString('en-US', { maximumFractionDigits: 4 })}${unit?.trim() ? ` ${unit.trim()}` : ''}`;
+  const facts = [known(reportedQuantity) ? `reported ${amount(reportedQuantity)}` : null, known(reportedThreshold) ? `threshold ${amount(reportedThreshold)}` : null].filter(Boolean);
+  return facts.length ? `Last warning ${facts.join(' · ')}` : null;
+}
+export function warningSourceLabel(source: string) { return ({ DISTILLX5_EMAIL: 'Distillx5 email', OTHER_EMAIL: 'Email' } as Record<string, string>)[source] ?? source.toLowerCase().replaceAll('_', ' '); }
+export function ownedGmailSourceUrl(source: { provider: string; userId: string | null; messageId: string }, viewer: { id: string; email: string }) {
+  if (source.userId !== viewer.id || !['GOOGLE', 'GOOGLE_CONNECTOR'].includes(source.provider) || !source.messageId) return null;
+  return `https://mail.google.com/mail/?authuser=${encodeURIComponent(viewer.email)}#all/${encodeURIComponent(source.messageId)}`;
+}
 export function shortDate(value: string | Date | null | undefined) {
   if (!value) return 'Unknown';
   const source = value instanceof Date ? value.toISOString() : value;

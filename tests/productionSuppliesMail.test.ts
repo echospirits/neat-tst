@@ -1,12 +1,24 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { PrismaClient } from '@prisma/client';
-import { buildSupplyDiscoveryQuery, canReadSupplyMailbox, extractionRetry, flattenGmailParts, gmailJson, SupplyMailProviderError, syncSupplyMailbox } from '../lib/productionSupplies/mail';
+import { buildSupplyDiscoveryQuery, canReadSupplyMailbox, extractionRetry, flattenGmailParts, gmailJson, supplyOAuthRedirect, SupplyMailProviderError, syncSupplyMailbox } from '../lib/productionSupplies/mail';
 import { encryptSupplyToken } from '../lib/productionSupplies/mailCrypto';
 import { extractSupplyMessage, type ExtractedSupply } from '../lib/productionSupplies/extraction';
 import { ingestEvidence } from '../lib/productionSupplies/service';
 
 const emptyEvidence = (kind: ExtractedSupply['kind'] = 'OTHER'): ExtractedSupply => ({ kind, supplier: null, orderReference: null, orderStatus: null, orderedAt: null, invoiceDate: null, paymentDate: null, estimatedShipDate: null, destination: null, lines: [], shipments: [], warning: null, warningSource: null, explanation: 'No placed order evidence.' });
+
+test('supply OAuth can preserve the signed-in hostname without changing Calendar configuration', () => {
+  const callback = 'https://neat-tst.vercel.app/api/production-supplies/mail/google/callback';
+  const env = { APP_ENV: 'test', APP_BASE_URL: 'https://legacy-neat.example', SUPPLY_GOOGLE_REDIRECT_URI: callback, GOOGLE_REDIRECT_URI: 'https://legacy-neat.example/api/calendar/google/callback' };
+  assert.equal(supplyOAuthRedirect(env), callback);
+  assert.equal(env.GOOGLE_REDIRECT_URI, 'https://legacy-neat.example/api/calendar/google/callback');
+  assert.equal(supplyOAuthRedirect({ APP_ENV: 'development', APP_BASE_URL: 'http://localhost:3000/' }), 'http://localhost:3000/api/production-supplies/mail/google/callback');
+});
+test('supply OAuth rejects unsafe or incorrect callback configuration before contacting Google', () => {
+  for (const value of ['http://neat-tst.vercel.app/api/production-supplies/mail/google/callback', 'https://user:password@neat-tst.vercel.app/api/production-supplies/mail/google/callback', 'https://neat-tst.vercel.app/api/calendar/google/callback', 'https://neat-tst.vercel.app/api/production-supplies/mail/google/callback?redirect=elsewhere', 'https://neat-tst.vercel.app/api/production-supplies/mail/google/callback#fragment']) assert.throws(() => supplyOAuthRedirect({ APP_ENV: 'test', SUPPLY_GOOGLE_REDIRECT_URI: value }));
+  assert.throws(() => supplyOAuthRedirect({ APP_ENV: 'test' }));
+});
 
 test('Production membership is not mailbox consent and retired token formats are clearly unusable', () => {
   const base = { provider: 'GOOGLE', scope: 'https://www.googleapis.com/auth/gmail.readonly', enabled: true, accessTokenEncrypted: 'supply-v1.valid' };

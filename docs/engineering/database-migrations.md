@@ -1,6 +1,6 @@
 # Database migrations
 
-Production Supplies adds `20261112010000_production_supplies` with 19 normalized tables and composite tenant relations. The guarded `scripts/production-supplies-setup.ts` accepts only explicitly identified rehearsal/TST targets and a reviewed normalized-SQL checksum. Its isolated rehearsal passes 20 persisted scenarios. Shared-TST application/activation remains pending explicit hosted-change approval; no existing records or historical migration ledger entries are removed. See [validation](../releases/production-supplies-validation.md).
+Production Supplies adds `20261112010000_production_supplies` with 19 normalized tables and composite tenant relations. The guarded `scripts/production-supplies-setup.ts` accepts only explicitly identified rehearsal/TST targets and a reviewed normalized-SQL checksum. Its isolated rehearsal passes 20 persisted scenarios; seven additional owner-reviewed invoice checks pass. Shared-TST application and Echo activation completed after explicit owner approval, with matching migration checksum. No existing records or historical migration ledger entries are removed. See [validation](../releases/production-supplies-validation.md).
 
 Audit baseline: TST `5faee9df930bd76b5e56b669f58a57210527f7d5`, inspected 2026-10-10.
 

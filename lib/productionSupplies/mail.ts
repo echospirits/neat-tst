@@ -10,7 +10,15 @@ import { ingestEvidence } from './service';
 export const GMAIL_READ_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 const GMAIL_ROOT = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const DISCOVERY = '(order OR invoice OR shipment OR shipping OR tracking OR freight OR backorder OR delivery OR confirmation OR receipt OR "low stock" OR "low inventory" OR "reorder" OR "Distillx5" OR "Five x 5")';
-export const supplyOAuthRedirect = () => `${process.env.APP_BASE_URL?.replace(/\/+$/, '')}/api/production-supplies/mail/google/callback`;
+export function supplyOAuthRedirect(env: Record<string, string | undefined> = process.env) {
+  const callbackPath = '/api/production-supplies/mail/google/callback';
+  const value = env.SUPPLY_GOOGLE_REDIRECT_URI?.trim() || `${env.APP_BASE_URL?.replace(/\/+$/, '') || ''}${callbackPath}`;
+  let url: URL;
+  try { url = new URL(value); } catch { throw new Error('Supply Gmail callback is not configured.'); }
+  const localDevelopment = (env.APP_ENV || 'development') === 'development' && url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname);
+  if ((!localDevelopment && url.protocol !== 'https:') || url.username || url.password || url.pathname !== callbackPath || url.search || url.hash) throw new Error('Supply Gmail callback must use the exact HTTPS callback path without credentials, query or fragment.');
+  return url.toString();
+}
 const client = () => ({ id: process.env.SUPPLY_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID, secret: process.env.SUPPLY_GOOGLE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET });
 export function canReadSupplyMailbox(connection: Pick<MailboxConnection, 'provider' | 'scope' | 'enabled' | 'accessTokenEncrypted'>) {
   return connection.enabled && connection.provider.toLowerCase() === 'google' && connection.scope.split(/\s+/).some(s => [GMAIL_READ_SCOPE, 'https://www.googleapis.com/auth/gmail.modify', 'https://mail.google.com/'].includes(s)) && Boolean(connection.accessTokenEncrypted?.startsWith('supply-v1.'));
