@@ -5,6 +5,7 @@ import { buildSupplyDiscoveryQuery, canReadSupplyMailbox, extractionRetry, flatt
 import { encryptSupplyToken } from '../lib/productionSupplies/mailCrypto';
 import { extractSupplyMessage, type ExtractedSupply } from '../lib/productionSupplies/extraction';
 import { ingestEvidence } from '../lib/productionSupplies/service';
+import { isVerifiedDx5WarningSender } from '../lib/productionSupplies/mailProvenance';
 
 const emptyEvidence = (kind: ExtractedSupply['kind'] = 'OTHER'): ExtractedSupply => ({ kind, supplier: null, orderReference: null, orderStatus: null, orderedAt: null, invoiceDate: null, paymentDate: null, estimatedShipDate: null, destination: null, lines: [], shipments: [], warning: null, warningSource: null, explanation: 'No placed order evidence.' });
 
@@ -57,6 +58,28 @@ test('source failures retry independently twice, then become visible review work
   assert.equal(extractionRetry(1, now).nextExtractionAt?.getTime(), now.getTime() + 5 * 60_000);
   assert.equal(extractionRetry(2, now).nextExtractionAt?.getTime(), now.getTime() + 10 * 60_000);
   assert.deepEqual(extractionRetry(3, now), { extractionStatus: 'REVIEW', nextExtractionAt: null });
+});
+
+test('Dx5 provider provenance uses the actual From domain and topmost Gmail authentication result', () => {
+  const from = { name: 'From', value: 'DISTILL x 5 <no-reply@fx5.com>' };
+  // Actual provider mail has passed SPF on its envelope domain despite failed DKIM/DMARC.
+  const spf = { name: 'Authentication-Results', value: 'mx.google.com; dkim=fail header.i=@fx5solutions.com; spf=pass smtp.mailfrom="bounces@em4825.fx5solutions.com"; dmarc=fail header.from=fx5.com' };
+  assert.equal(isVerifiedDx5WarningSender([from, spf]), true);
+  assert.equal(isVerifiedDx5WarningSender([from, { name: 'Authentication-Results', value: 'mx.google.com; dkim=pass header.d=fx5.com' }]), true);
+  for (const headers of [
+    [from],
+    [from, { ...spf, value: 'mx.google.com; spf=fail smtp.mailfrom=bounces@fx5solutions.com' }],
+    [{ ...from, value: 'DISTILL x 5 <attacker@fx5.com.evil.invalid>' }, spf],
+    [{ ...from, value: 'DISTILL x 5 <attacker@unrelated.invalid>' }, spf],
+    [from, { ...spf, value: 'mx.google.com; spf=pass smtp.mailfrom=bounces@fx5solutions.com.evil.invalid' }],
+    [from, { ...spf, value: 'mx.google.com; spf=pass (domain of "smtp.mailfrom=bounces@fx5solutions.com spoof"@attacker.invalid) smtp.mailfrom=sender@attacker.invalid' }],
+    [from, { ...spf, value: 'mx.google.com; spf=pass smtp.mailfrom="sender@attacker.invalid smtp.mailfrom=bounces@fx5solutions.com"' }],
+    [from, { ...spf, value: 'mx.google.com; spf=pass (unclosed comment smtp.mailfrom=bounces@fx5solutions.com' }],
+    [from, { ...spf, value: 'mx.google.com; dkim=pass header.d=fx5solutions.com' }],
+    [from, { ...spf, value: 'attacker.invalid; spf=pass smtp.mailfrom=bounces@fx5solutions.com' }, spf],
+    [from, { ...spf, value: 'mx.google.com; spf=fail smtp.mailfrom=bounces@fx5solutions.com' }, spf],
+    [from, { ...from }, spf],
+  ]) assert.equal(isVerifiedDx5WarningSender(headers), false);
 });
 
 function mailboxFake() {
@@ -129,6 +152,17 @@ test('removing Production membership during extraction prevents publishing its m
   assert.equal(fake.sources.length, 0);
 });
 
+test('a forged body/provider claim cannot create Dx5 warning provenance during mailbox ingestion', async () => {
+  const fake = mailboxFake();
+  const provenance: unknown[] = [];
+  const result = await syncSupplyMailbox('tenant-one', 'user-one', fake.db, { fetchImpl: fake.fetchImpl,
+    extract: (async () => ({ ...emptyEvidence('WARNING'), warningSource: 'DISTILLX5_EMAIL', warning: { material: 'Raisins', location: 'Fixture facility', quantity: 2, threshold: 5, unit: 'lb' } })) as typeof extractSupplyMessage,
+    ingest: (async (_actor, input) => { provenance.push((input as { evidence?: ExtractedSupply }).evidence?.warningSource); return fake.ingest(_actor, input); }) as typeof ingestEvidence,
+  });
+  assert.equal(result.processed, 2);
+  assert.deepEqual(provenance, ['OTHER_EMAIL', 'OTHER_EMAIL']);
+});
+
 test('AI extraction treats prompt injection as data, disables storage and keeps invoice dates distinct', async () => {
   const evidence = { ...emptyEvidence('QUOTE'), invoiceDate: '2026-11-10', orderedAt: null };
   let body: Record<string, unknown> = {};
@@ -164,5 +198,25 @@ test('extraction carries cancellation and partial backorders without inventing t
     });
     assert.deepEqual(result, evidence);
     assert.equal(result.shipments.length, 0);
+  }
+});
+
+test('extraction keeps raw Dx5 material IDs separate from supplier descriptions and full-order delivery evidence', async () => {
+  const warning = { ...emptyEvidence('WARNING'), warningSource: 'DISTILLX5_EMAIL' as const,
+    warning: { material: 'Raisins', materialId: 'RAW-0042', location: 'Fixture facility', quantity: 2, threshold: 5, unit: 'lb' } };
+  const delivered = { ...emptyEvidence('SHIPMENT'), supplier: 'Fixture supplier', orderReference: 'ORDER-42', orderDeliveryComplete: true, orderDeliveredDate: '2026-11-10' };
+  for (const evidence of [warning, delivered]) {
+    const result = await extractSupplyMessage({ subject: 'Sanitized relevant supply evidence', text: 'Sanitized fixture only', messageDate: new Date(), timezone: 'America/New_York' }, {
+      env: { ...process.env, SUPPLY_MAIL_INGESTION_ENABLED: 'true', OPENAI_API_KEY: 'sanitized-key' },
+      fetchImpl: (async (_url, init) => {
+        const body = JSON.parse(init!.body as string);
+        assert.match(body.instructions, /A Dx5 materialId is not a supplier SKU/);
+        assert.match(body.instructions, /One parcel delivered.*insufficient/);
+        assert.match(body.instructions, /never the message received date/);
+        assert.equal(body.store, false);
+        return new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify(evidence) }] }] }));
+      }) as typeof fetch,
+    });
+    assert.deepEqual(result, evidence);
   }
 });

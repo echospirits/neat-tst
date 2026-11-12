@@ -6,8 +6,10 @@ import { productionMemberIds, readSupplySettings } from './config';
 import { decryptSupplyToken, encryptSupplyToken } from './mailCrypto';
 import { extractSupplyMessage } from './extraction';
 import { ingestEvidence } from './service';
+import { isVerifiedDx5WarningSender } from './mailProvenance';
+import { canReadSupplyMailbox, GMAIL_READ_SCOPE } from './mailAccess';
+export { canReadSupplyMailbox, GMAIL_READ_SCOPE } from './mailAccess';
 
-export const GMAIL_READ_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 const GMAIL_ROOT = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const DISCOVERY = '(order OR invoice OR shipment OR shipping OR tracking OR freight OR backorder OR delivery OR confirmation OR receipt OR "low stock" OR "low inventory" OR "reorder" OR "Distillx5" OR "Five x 5")';
 export function supplyOAuthRedirect(env: Record<string, string | undefined> = process.env) {
@@ -20,9 +22,6 @@ export function supplyOAuthRedirect(env: Record<string, string | undefined> = pr
   return url.toString();
 }
 const client = () => ({ id: process.env.SUPPLY_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID, secret: process.env.SUPPLY_GOOGLE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET });
-export function canReadSupplyMailbox(connection: Pick<MailboxConnection, 'provider' | 'scope' | 'enabled' | 'accessTokenEncrypted'>) {
-  return connection.enabled && connection.provider.toLowerCase() === 'google' && connection.scope.split(/\s+/).some(s => [GMAIL_READ_SCOPE, 'https://www.googleapis.com/auth/gmail.modify', 'https://mail.google.com/'].includes(s)) && Boolean(connection.accessTokenEncrypted?.startsWith('supply-v1.'));
-}
 export async function beginSupplyMailboxOAuth(organizationId: string, userId: string, db: PrismaClient = prisma) {
   if (process.env.SUPPLY_MAIL_INGESTION_ENABLED !== 'true' || (process.env.SUPPLY_MAIL_OAUTH_ENVIRONMENT || process.env.OAUTH_ENVIRONMENT) !== (process.env.APP_ENV || 'development')) throw new Error('Supply mailbox OAuth is not enabled for this environment.');
   const credentials = client();
@@ -188,7 +187,8 @@ export async function syncSupplyMailbox(organizationId: string, userId: string, 
             if (source.bytes.length > 8 * 1024 * 1024) { await ingest({ organizationId, userId }, { source: { ...sourceData, extractionStatus: 'UNSUPPORTED', extractionError: 'Attachment exceeds the 8 MiB extraction limit.' } }, db); continue; }
             sourceData.contentHash = createHash('sha256').update(new Uint8Array(source.bytes)).digest('hex');
           }
-          const evidence = await extract({ subject, text, messageDate, timezone: org.timezone, ...(source.bytes ? { attachment: { filename: source.filename!, mimeType: source.mimeType!, bytes: source.bytes } } : {}) });
+          let evidence = await extract({ subject, text, messageDate, timezone: org.timezone, ...(source.bytes ? { attachment: { filename: source.filename!, mimeType: source.mimeType!, bytes: source.bytes } } : {}) });
+          if (evidence.kind === 'WARNING') evidence = { ...evidence, warningSource: isVerifiedDx5WarningSender(message.payload.headers ?? []) ? 'DISTILLX5_EMAIL' : 'OTHER_EMAIL' };
           if (!await stillMonitored(organizationId, userId, db)) return { processed, skipped: true, reason: 'not-monitored' };
           await ingest({ organizationId, userId }, { source: { ...sourceData, subject: evidence.kind === 'OTHER' ? undefined : subject, extractionStatus: 'COMPLETE' }, evidence }, db);
           await db.supplySource.updateMany({ where: { organizationId, mailboxConnectionId: connection.id, messageId, attachmentKey: source.key }, data: { extractionAttemptCount: { increment: 1 }, lastExtractionAt: new Date(), nextExtractionAt: null } });

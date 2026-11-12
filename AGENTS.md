@@ -1,5 +1,9 @@
 # Repository Agent Instructions
 
+## Owner revision: simple Supplies status dashboard
+
+On November 12, 2026 the owner narrowed Production Supplies to a simple, read-only status dashboard for materials identified by Dx5 low-inventory alerts, with a future Ollie input seam. Show one card per material/location/replenishment cycle, automatically associate reliable order/shipment evidence, hide completed relevant deliveries, and permit only quick dismissal. Repeated usage alerts update one cycle and must not duplicate cards or revive a dismissed cycle. Inventory forecasting, lead times and need planning remain in Dx5/Ollie. Remove the tabs, history, manual entries, catalog and record editors from the user flow; preserve retained data and source provenance. Continue this scoped 0.10.0-dev work on neat-tst only. No production promotion, provider account, paid tracking or inventory/accounting write is authorized.
+
 ## Owner-authorized TST feature: Production Supplies
 
 On November 11, 2026 the owner requested end-to-end Production Supplies. This opens the scoped **0.10.0-dev** cycle from verified TST `0d9a17dd` / 0.9.2. Implement the tenant pilot, production team/mailbox monitoring, evidence-backed orders/needs, item classification, parcel tracking and internal receipt; preserve unrelated TST work and historical release records. Deliver only to `neat-tst/tst`. No production/main promotion, new paid subscription, automatic purchasing, outbound supplier messages, accounting entries or inventory-ledger writes are authorized. Missing live credentials do not block independent implementation and must be reported honestly. See [plan](docs/releases/0.10.0-plan.md), [guide](docs/production-supplies.md), [validation](docs/releases/production-supplies-validation.md) and [UNRELEASED](docs/releases/UNRELEASED.md). Earlier freeze statements below are historical for this scoped authorization.

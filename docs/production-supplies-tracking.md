@@ -1,5 +1,7 @@
 # Production Supplies tracking operations
 
+The November 12 owner revision limits operational tracking to **Dx5-alerted materials**. Known alerted materials remain eligible for later order/delivery evidence even after dismissal, so a fresh post-delivery alert can start another cycle. Unrelated purchases do not register trackers. The dashboard has no manual tracking editor, refresh button, receipt confirmation or history flow; only Dismiss. Retained domain records and provider observations are preserved.
+
 Production Supplies uses a small EasyPost adapter for standalone **parcel** tracking. It creates a tracker from a supplier's tracking number, reads its stored carrier observations, and accepts authenticated updates. It never buys a shipping label. EasyPost supports tracking labels purchased elsewhere and maintains those trackers in the background. Some carriers require additional carrier credentials; account access must be verified against a real authorized shipment. [Official tracker reference](https://docs.easypost.com/docs/trackers).
 
 ## Selection and live-verification limits
@@ -50,4 +52,4 @@ Temporary failures retain the last valid estimate and expose a check error, fres
 2. Let the bounded autonomous historical import continue from its durable checkpoint. Initial live source extraction passes; the full historical scan is not complete. A separate one-time authorized connector snapshot already populated operational candidates.
 3. Supply an approved environment-specific EasyPost key and any required carrier credentials, confirm costs, then enable the matching mode.
 4. Configure the authenticated tracking webhook, then verify the real provider path through stored carrier observations to the dashboard. The supply background schedule is already activated and its GitHub-to-TST worker invocation verified. No ETA should be invented when the carrier provides none.
-5. Verify outage preservation, provider correction and actual partial receipt in the intended environment. Document unsupported carriers and obtain supplier/carrier integration access where needed.
+5. Verify outage preservation, provider correction, partial/returned delivery and cycle closure in the intended environment. A complete relevant delivery hides the status card without an internal receipt or inventory transaction. Document unsupported carriers and obtain supplier/carrier integration access where needed.

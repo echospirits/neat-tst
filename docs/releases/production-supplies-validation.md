@@ -1,5 +1,27 @@
 # Production Supplies — TST validation and activation
 
+## Current revision: simple Supplies status
+
+The owner revised the product on November 12, 2026 to one status card per Dx5-alerted material/location and replenishment cycle. Dismiss is the only operational action. Tabs, history, manual entry, catalog and record editors are removed from the user flow; legacy order/catalog URLs return to the dashboard. Retained records and source evidence remain intact.
+
+The status projection groups repeated usage warnings, suppresses dismissed cycles, and removes only completed relevant replenishment deliveries. Late source messages, partial shipments, returns, destination conflicts and unknown contents cannot falsely prove fulfillment. Card removal does not write inventory, internal receipts or accounting. A new post-delivery alert can start another cycle. Dismissal is tenant-scoped, audited and independently requires management permission.
+
+Only recognized Dx5 warnings seed the watch list. Live Gmail provenance uses the verified provider sender and Google authentication results, with validated extraction; body-only references cannot identify a provider. Operational ingestion and carrier calls are scoped to watched materials. Retained validated facts allow bounded reconciliation when an order is discovered before its warning. Dismissed materials remain eligible for later delivery evidence. Ollie remains a future input seam.
+
+No migration, provider account, hosted credential change or paid tracking activation is part of this revision. The existing read-only Gmail connection and separately gated scheduler are retained. The original deployment, provider and broader-workspace verification below are historical; they do not claim the removed workflows remain in the current UI.
+
+Completed revision validation:
+
+- **1,384 tests / 76 suites**, all pass with no skips or cancellations; strict TypeScript and optimized production build pass. Logs are local ignored `output/supplies-status-final-*` artifacts.
+- **Eight persisted lifecycle checks** pass on the exact isolated `supplies-rehearsal` branch: repeated usage/unit variants, dismissed raw-ID enrichment, new post-delivery cycle/stale dismiss/old replay, tenant/viewer denial, partial/returned delivery, outage ETA retention, Dx5 source purity and no receipt/resolution writes. Thirteen focused status tests also cover date-only timing, date ranges, placement chronology and persisted test-mode exclusion.
+- Worker/mail/tracking/replay regressions pass, including authenticated provider provenance, forged header/body denial, more-than-one-window replay progress, durable cursor resume and original-owner authorization. These checks do not make live external requests.
+- **12 browser checks** pass at 390 × 844 and 1440 × 900 against isolated synthetic fixtures, with zero browser errors. They verify the card-only surface, pending/failure/successful persistent dismissal, viewer read-only access, retired entry-point redirects, empty state and no horizontal overflow. Shared theme transitions are settled before captures; measured dark Dismiss text contrast is **10.99:1**. Independent final five-image review finds no material defects.
+- Impeccable reports no blocking findings. One advisory retains the compact 17px card heading for inventory identifiers; the established Neat palette/components and explicit card brief remain authoritative. No additional visual polish followed the confirmation pass.
+
+UI fixture sessions, operational snapshots and rendered artifacts stay outside Git. Local acceptance processes are stopped. No live Gmail worker, carrier lookup, shared-TST data change or real dismissal was run as part of this revision's tests; the two already-authorized business alert messages were read only to verify provider sender/authentication metadata. Full historical backfill and live carrier API acceptance remain separate outstanding gates.
+
+## Earlier coordination-workspace evidence
+
 Production Supplies **0.10.0-dev** is enabled for Echo in TST following the owner's explicit November 12 activation approval. Final application `f425e365c8c54f6539b1ac8017a7bfd2bd6eb7d8` exactly matches local tested tree `8c6e15a2f9e9df369642e97d18a95253d5ccd2d7`. It adds complete reviewed-invoice reconciliation, visible warning quantities/thresholds, exact owner-only Gmail source links and a canonical-host supply OAuth callback. The initial application was `21440ab9c4453de9f40882d2af865fb4e58290e5`, tree `d18caecea761c2f41f5c13b07222369ed35ae141`. Production remains separately released 0.9.2; no main promotion or release tag is authorized.
 
 ## Completed implementation

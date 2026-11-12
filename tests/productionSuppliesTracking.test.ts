@@ -42,6 +42,14 @@ test('missing ETA is unknown and malformed provider responses cannot create oper
   assert.throws(() => parseEasyPostObservation(fixture({ updated_at: 'last Thursday' })), SupplyTrackingError);
 });
 
+test('actual delivery time requires a carrier delivery scan and never falls back to provider update time', () => {
+  assert.equal(parseEasyPostObservation(fixture({ status: 'delivered' })).deliveredAt, null);
+  assert.equal(parseEasyPostObservation(fixture({ status: 'delivered', tracking_details: [{ status: 'delivered', datetime: '2026-11-10T13:00:00' }] })).deliveredAt, null);
+  const value = parseEasyPostObservation(fixture({ status: 'delivered', tracking_details: [{ status: 'in_transit', datetime: now.toISOString() }, { status: 'delivered', datetime: '2026-11-10T13:00:00-05:00' }] }));
+  assert.equal(value.deliveredAt?.toISOString(), '2026-11-10T18:00:00.000Z');
+  assert.equal(value.providerEventAt.toISOString(), now.toISOString());
+});
+
 test('return-to-sender delivery is never successful facility delivery and delayed states can recover', () => {
   const returned = parseEasyPostObservation(fixture({ status: 'delivered', tracking_details: [{ status: 'return_to_sender', datetime: '2026-11-11T10:00:00Z' }] }));
   assert.equal(returned.status, 'RETURNED');
@@ -107,6 +115,7 @@ test('webhook HMAC v2 authenticates exact body, path and fresh timestamp', () =>
 });
 
 function fakeDb(initial: Record<string, unknown> = {}) {
+  let watched = true;
   const shipment = { id: 'shipment-one', organizationId: 'tenant-one', ...reference, orderId: 'order-one', status: 'IN_TRANSIT', statusEventAt: new Date('2026-11-11T10:00:00Z'), lastCheckedAt: null as Date | null, failureCount: 0,
     leaseId: null as string | null, leaseUntil: null, providerTrackingId: null, providerMode: null, returnedAt: null, deliveredAt: null, arrivalEstimates: [] as Record<string, unknown>[], ...initial };
   const observations: Record<string, unknown>[] = [];
@@ -116,6 +125,10 @@ function fakeDb(initial: Record<string, unknown> = {}) {
   const matches = (where: Record<string, unknown>) => where.organizationId === shipment.organizationId && where.id === shipment.id && (!where.leaseId || where.leaseId === shipment.leaseId);
   const db = {
     organizationFeature: { findFirst: async () => ({ id: 'entitlement' }) },
+    supplyNeed: { findMany: async () => watched ? [{ id: 'need-one', description: 'Fixture material', location: 'Location unknown', unit: 'ea', source: 'DISTILLX5_EMAIL', catalogItemId: 'catalog-one', latestWarningAt: now, resolvedAt: null, warnings: [], allocations: [], catalogItem: { id: 'catalog-one', name: 'Fixture material', confirmed: true, sharedUse: false, departments: ['PRODUCTION'], aliases: [], rules: [] } }] : [] },
+    supplyClassificationRule: { findMany: async () => [] },
+    supplyCatalogItem: { findMany: async () => [{ id: 'catalog-one', name: 'Fixture material', confirmed: true, sharedUse: false, departments: ['PRODUCTION'], aliases: [], rules: [] }] },
+    supplyOrder: { findFirst: async ({ where }: { where: { organizationId: string; id: string } }) => where.organizationId === shipment.organizationId && where.id === shipment.orderId ? { id: shipment.orderId, supplier: 'Fixture supplier', destination: null, ignored: false, lines: [{ description: 'Fixture material', catalogItemId: 'catalog-one', ignored: false, unit: 'ea', allocations: [{ needId: 'need-one' }] }] } : null },
     $executeRaw: async () => 1,
     supplyShipment: {
       findFirst: async ({ where }: { where: Record<string, unknown> }) => matches(where) ? shipment : null,
@@ -127,7 +140,7 @@ function fakeDb(initial: Record<string, unknown> = {}) {
     supplyArrivalEstimate: { updateMany: async () => { calls.push('supersede-carrier'); return { count: 1 }; }, create: async ({ data }: { data: Record<string, unknown> }) => { estimates.push(data); return data; } },
     supplyNotification: { upsert: async ({ create }: { create: Record<string, unknown> }) => { notifications.push(create); return create; } },
   };
-  return { db: { ...db, $transaction: async (fn: (tx: typeof db) => Promise<unknown>) => fn(db) } as unknown as PrismaClient, shipment, observations, estimates, notifications, calls };
+  return { db: { ...db, $transaction: async (fn: (tx: typeof db) => Promise<unknown>) => fn(db) } as unknown as PrismaClient, shipment, observations, estimates, notifications, calls, removeWatch: () => { watched = false; } };
 }
 
 test('new ETA persists alongside supplier promise; delivered never confirms receipt or resolves needs', async () => {
@@ -187,6 +200,26 @@ test('temporary outage leaves previous valid ETA/status and schedules bounded re
   assert.equal(fake.shipment.arrivalEstimates[0].startDate, '2026-11-14');
   assert.equal(fake.shipment.failureCount, 1);
   assert.equal(fake.shipment.leaseId, null);
+});
+
+test('unwatched retained shipment cannot register or query a provider and retains its existing evidence', async () => {
+  const fake = fakeDb({ arrivalEstimates: [{ source: 'CARRIER', startDate: '2026-11-14' }] });
+  fake.removeWatch();
+  const result = await refreshSupplyShipmentTracking('tenant-one', 'shipment-one', fake.db, { manual: true, now, env: testEnv, fetchImpl: (async () => { assert.fail('unwatched references never reach tracking registration'); }) as typeof fetch });
+  assert.equal(result.status, 'out_of_scope');
+  assert.equal(fake.shipment.arrivalEstimates.length, 1);
+  assert.equal(fake.calls.length, 0);
+});
+
+test('scope removal while provider request is in flight blocks observation, ETA and notification persistence', async () => {
+  const fake = fakeDb();
+  const result = await refreshSupplyShipmentTracking('tenant-one', 'shipment-one', fake.db, { manual: true, now, env: testEnv, fetchImpl: (async () => { fake.removeWatch(); return response(); }) as typeof fetch });
+  assert.equal(result.status, 'out_of_scope');
+  assert.equal(fake.shipment.status, 'IN_TRANSIT');
+  assert.equal(fake.shipment.leaseId, null);
+  assert.equal(fake.observations.length, 0);
+  assert.equal(fake.estimates.length, 0);
+  assert.equal(fake.notifications.length, 0);
 });
 
 test('webhook authenticates before database access and ignores unmapped tracker payload tenant claims', async () => {

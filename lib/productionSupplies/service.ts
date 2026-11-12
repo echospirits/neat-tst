@@ -3,7 +3,11 @@ import { z } from 'zod';
 import { prisma } from '../prisma';
 import { classifyLine, fingerprint, knownNumber, lineAvailableQuantity, normalize, sameUnit, validateAllocation } from './domain';
 import { hasSupplyAccess, productionMemberIds, readSupplySettings } from './config';
+import { normalizeSupplyLocation } from './statusDomain';
 import { catalogInput, classificationInput, expectationInput, ignoreInput, lineDetailsInput, orderDetailsInput, linkNeedInput, manualOrderInput, needInput, needDetailsInput, noteInput, ownerInput, receiptInput, resolveNeedInput, ruleInput, trackingInput, type SupplyActor } from './schemas';
+import { scopeSupplyEvidence } from './watch';
+import { canReadSupplyMailbox } from './mailAccess';
+import { replayWatchedSupplyEvidence, type ReplayOptions } from './replay';
 
 type Tx = Prisma.TransactionClient;
 export class SupplyError extends Error { constructor(message: string) { super(message); this.name = 'SupplyError'; } }
@@ -352,27 +356,28 @@ const factQuantity = z.number().finite().nonnegative().max(1e10).nullable().opti
 const arrivalFact = z.object({ source: z.enum(['SUPPLIER_PROMISE', 'CARRIER', 'PREDICTION', 'APPOINTMENT', 'MANUAL']), precision: z.enum(['DATE', 'DATE_RANGE', 'TIME_WINDOW', 'APPOINTMENT']), startDate: z.string().date(), endDate: z.string().date().nullable().optional(), timeStart: optionalFact, timeEnd: optionalFact, timezone: z.string().max(100).default('America/New_York') });
 export const supplyEvidenceInput = z.object({
   source: z.object({ mailboxConnectionId: optionalFact, provider: z.string().min(1).max(50), messageId: z.string().min(1).max(500), attachmentKey: z.string().max(500).default(''), messageDate: z.string().datetime({ offset: true }), contentHash: z.string().min(1).max(128), filename: optionalFact, mimeType: optionalFact, subject: optionalFact, historical: z.boolean().default(false), extractionStatus: z.enum(['COMPLETE', 'ERROR', 'UNSUPPORTED', 'REVIEW']), extractionError: z.string().max(1000).optional() }),
-  evidence: z.object({ kind: z.enum(['ORDER', 'SHIPMENT', 'WARNING', 'QUOTE', 'OTHER']), orderStatus: z.enum(['ORDERED','CANCELLED']).nullish(), warningSource: z.enum(['DISTILLX5_EMAIL','OTHER_EMAIL']).nullish(), supplier: optionalFact, orderReference: optionalFact, orderedAt: z.string().date().nullable().optional(), invoiceDate: z.string().date().nullable().optional(), paymentDate: z.string().date().nullable().optional(), estimatedShipDate: z.string().date().nullable().optional(), destination: optionalFact, lines: z.array(z.object({ description: z.string().trim().min(1).max(300), sku: optionalFact, quantity: factQuantity, unit: optionalFact, packSize: factQuantity, department: z.enum(['PRODUCTION', 'BAR', 'SHARED', 'OTHER', 'NEEDS_REVIEW']).optional(), catalogItemId: optionalFact, backorderedQuantity: factQuantity })).max(100).default([]), shipments: z.array(z.object({ referenceType: z.enum(['PARCEL', 'FREIGHT_PRO', 'BILL_OF_LADING', 'SUPPLIER_ORDER']), reference: z.string().min(1).max(300), carrier: optionalFact, status: z.enum(['UNKNOWN', 'LABEL_CREATED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PICKUP_REQUIRED', 'DELAYED', 'CANCELLED', 'RETURNED']).optional(), eta: arrivalFact.nullable().optional() })).max(30).default([]), warning: z.object({ material: z.string().trim().min(1).max(300), location: z.string().trim().min(1).max(300), quantity: factQuantity, threshold: factQuantity, unit: optionalFact }).nullable().optional() }).optional(),
+  evidence: z.object({ kind: z.enum(['ORDER', 'SHIPMENT', 'WARNING', 'QUOTE', 'OTHER']), orderStatus: z.enum(['ORDERED','CANCELLED']).nullish(), orderDeliveryComplete: z.boolean().nullish(), orderDeliveredDate: z.string().date().nullish(), warningSource: z.enum(['DISTILLX5_EMAIL','OTHER_EMAIL']).nullish(), supplier: optionalFact, orderReference: optionalFact, orderedAt: z.string().date().nullable().optional(), invoiceDate: z.string().date().nullable().optional(), paymentDate: z.string().date().nullable().optional(), estimatedShipDate: z.string().date().nullable().optional(), destination: optionalFact, lines: z.array(z.object({ description: z.string().trim().min(1).max(300), sku: optionalFact, quantity: factQuantity, unit: optionalFact, packSize: factQuantity, department: z.enum(['PRODUCTION', 'BAR', 'SHARED', 'OTHER', 'NEEDS_REVIEW']).optional(), catalogItemId: optionalFact, backorderedQuantity: factQuantity })).max(100).default([]), shipments: z.array(z.object({ referenceType: z.enum(['PARCEL', 'FREIGHT_PRO', 'BILL_OF_LADING', 'SUPPLIER_ORDER']), reference: z.string().min(1).max(300), carrier: optionalFact, status: z.enum(['UNKNOWN', 'LABEL_CREATED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PICKUP_REQUIRED', 'DELAYED', 'CANCELLED', 'RETURNED']).optional(), eta: arrivalFact.nullable().optional() })).max(30).default([]), warning: z.object({ material: z.string().trim().min(1).max(300), materialId: optionalFact, location: z.string().trim().min(1).max(300), quantity: factQuantity, threshold: factQuantity, unit: optionalFact }).nullable().optional() }).optional(),
 });
 export type SupplyEvidenceInput = z.input<typeof supplyEvidenceInput>;
 
 /** Trusted caller supplies an identity; email/attachment text is validated data only. */
-export async function ingestEvidence(actor: SupplyActor, raw: unknown, db: PrismaClient = prisma, options: { reconcile?: boolean } = {}): Promise<{ sourceId: string; orderId?: string; needId?: string; review: boolean }> {
+export async function ingestEvidence(actor: SupplyActor, raw: unknown, db: PrismaClient = prisma, options: { reconcile?: boolean } = {}): Promise<{ sourceId: string; orderId?: string; needId?: string; review: boolean; newWatchedMaterial?: boolean }> {
   const input = supplyEvidenceInput.parse(raw);
   const result = await db.$transaction(async tx => {
     const context = await assertSupplyActor(tx, actor, false);
     const manager = hasSupplyAccess(context.user, readSupplySettings(context.organization.crmPreferences), true);
     if (input.source.mailboxConnectionId) {
       const mailbox = await tx.mailboxConnection.findFirst({ where: { id: input.source.mailboxConnectionId, organizationId: actor.organizationId, userId: actor.userId, enabled: true } });
-      if (!mailbox || !productionMemberIds(context.organization.crmPreferences).includes(actor.userId) || !/(gmail\.readonly|gmail\.modify|mail\.read(?:\s|$)|https:\/\/mail\.google\.com)/i.test(mailbox.scope)) throw new SupplyError('An authorized Production mailbox with message-reading permission is required.');
+      if (!mailbox || !productionMemberIds(context.organization.crmPreferences).includes(actor.userId) || !canReadSupplyMailbox(mailbox)) throw new SupplyError('An authorized Production mailbox with message-reading permission is required.');
     } else if (!manager) throw new SupplyError('Manual evidence import requires management permission.');
     await lock(tx, actor.organizationId);
     const sourceData = { ...input.source, organizationId: actor.organizationId, userId: actor.userId, messageDate: new Date(input.source.messageDate), extractedFacts: input.evidence ? json(input.evidence) : Prisma.JsonNull };
     const previousSource = await tx.supplySource.findFirst({ where: { organizationId: actor.organizationId, mailboxConnectionId: input.source.mailboxConnectionId || null, messageId: input.source.messageId, attachmentKey: input.source.attachmentKey } });
     const source = previousSource ? await tx.supplySource.update({ where: { id: previousSource.id }, data: sourceData }) : await tx.supplySource.create({ data: sourceData });
-    const evidence = input.evidence;
-    if (!evidence || input.source.extractionStatus !== 'COMPLETE') return { sourceId: source.id, review: input.source.extractionStatus !== 'UNSUPPORTED' || Boolean(evidence) };
-    if (evidence.kind === 'QUOTE' || evidence.kind === 'OTHER') return { sourceId: source.id, review: false };
+    if (!input.evidence || input.source.extractionStatus !== 'COMPLETE') return { sourceId: source.id, review: input.source.extractionStatus !== 'UNSUPPORTED' || Boolean(input.evidence) };
+    // Keep the original validated source facts above; only scoped facts become operations.
+    const evidence = (await scopeSupplyEvidence(actor.organizationId, input.evidence, tx)).evidence;
+    if (!evidence) return { sourceId: source.id, review: false };
     const observedAt = source.messageDate;
     if (evidence.kind === 'WARNING') {
       const warning = evidence.warning;
@@ -380,24 +385,28 @@ export async function ingestEvidence(actor: SupplyActor, raw: unknown, db: Prism
       const items = await tx.supplyCatalogItem.findMany({ where: { organizationId: actor.organizationId }, include: { aliases: true } });
       const matches = items.filter(item => normalize(item.name) === normalize(warning.material) || item.aliases.some(alias => !alias.supplier && !alias.sku && normalize(alias.alias) === normalize(warning.material)));
       const item = matches.length === 1 ? matches[0] : null;
-      const activeKey = fingerprint(item?.id || normalize(warning.material), normalize(warning.location), normalize(warning.unit));
+      const activeKey = fingerprint(item?.id || normalize(warning.materialId || warning.material), normalizeSupplyLocation(warning.location));
       const warningKey = fingerprint(input.source.contentHash, warning.material, warning.location, observedAt.toISOString());
       const occurrence = await tx.supplyWarningOccurrence.findUnique({ where: { organizationId_warningKey: { organizationId: actor.organizationId, warningKey } } });
-      if (occurrence) return { sourceId: source.id, needId: occurrence.needId, review: false };
+      if (occurrence) {const priorFacts=previousSource?.extractedFacts as {kind?:string;warningSource?:string}|null;return { sourceId: source.id, needId: occurrence.needId, review: false, newWatchedMaterial:priorFacts?.kind!=='WARNING' || priorFacts.warningSource!=='DISTILLX5_EMAIL' };}
       let need = await tx.supplyNeed.findUnique({ where: { organizationId_activeKey: { organizationId: actor.organizationId, activeKey } } });
+      const identities:Prisma.SupplyNeedWhereInput[]=[{description:{equals:warning.material,mode:'insensitive'}},...(warning.materialId?[{description:{equals:warning.materialId,mode:Prisma.QueryMode.insensitive}}]:[]),...(item?[{catalogItemId:item.id}]:[])];
+      if(!need){const candidates=await tx.supplyNeed.findMany({where:{organizationId:actor.organizationId,resolvedAt:null,OR:identities},orderBy:[{createdAt:'asc'},{id:'asc'}],take:100});need=candidates.find(candidate=>normalizeSupplyLocation(candidate.location)===normalizeSupplyLocation(warning.location)) || null;}
       if (!need) {
         // Replayed warnings older than a resolution remain historical evidence.
-        need = await tx.supplyNeed.findFirst({ where: { organizationId: actor.organizationId, catalogItemId: item?.id || null, description: warning.material, location: warning.location, resolvedAt: { gte: observedAt } }, orderBy: { resolvedAt: 'asc' } });
+        const resolved=await tx.supplyNeed.findMany({ where: { organizationId: actor.organizationId,OR:identities,resolvedAt: { gte: observedAt } }, orderBy: { resolvedAt: 'asc' },take:100 });
+        need=resolved.find(candidate=>normalizeSupplyLocation(candidate.location)===normalizeSupplyLocation(warning.location)) || null;
       }
+      const wasWatched=need ? Boolean(await tx.supplyWarningOccurrence.count({where:{organizationId:actor.organizationId,needId:need.id,sourceId:{not:source.id},source:{AND:[{extractedFacts:{path:['kind'],equals:'WARNING'}},{extractedFacts:{path:['warningSource'],equals:'DISTILLX5_EMAIL'}}]}}})) : false;
       if (!need) need = await tx.supplyNeed.create({ data: { organizationId: actor.organizationId, dedupeKey: `warning:${warningKey}`, activeKey, description: warning.material, catalogItemId: item?.id, location: warning.location, unit: warning.unit, source: evidence.warningSource || 'OTHER_EMAIL', latestWarningAt: observedAt, reportedQuantity: warning.quantity, reportedThreshold: warning.threshold, reviewRequired: !item, ownerUserId: actor.userId } });
-      else if (!need.latestWarningAt || observedAt > need.latestWarningAt) need = await tx.supplyNeed.update({ where: { organizationId_id: { organizationId: actor.organizationId, id: need.id } }, data: { latestWarningAt: observedAt, reportedQuantity: warning.quantity, reportedThreshold: warning.threshold } });
+      else if (!need.latestWarningAt || observedAt > need.latestWarningAt) need = await tx.supplyNeed.update({ where: { organizationId_id: { organizationId: actor.organizationId, id: need.id } }, data: { latestWarningAt: observedAt, unit:warning.unit || null, reportedQuantity: warning.quantity, reportedThreshold: warning.threshold,source:'DISTILLX5_EMAIL' } });
       await tx.supplyWarningOccurrence.create({ data: { organizationId: actor.organizationId, needId: need.id, sourceId: source.id, warningKey, warningAt: observedAt, reportedQuantity: warning.quantity, reportedThreshold: warning.threshold } });
       if (item && !need.resolvedAt) {
         const lines = await tx.supplyOrderLine.findMany({ where: { organizationId: actor.organizationId, catalogItemId: item.id, ignored: false, department: { in: ['PRODUCTION', 'SHARED'] }, order: { ignored: false, status: { notIn: ['CANCELLED', 'RECEIVED'] }, destination: warning.location } }, take: 30 });
         for (const line of lines) await tx.supplyNeedAllocation.upsert({ where: { organizationId_needId_lineId: { organizationId: actor.organizationId, needId: need.id, lineId: line.id } }, create: { organizationId: actor.organizationId, needId: need.id, lineId: line.id, explanation: 'Catalog material and destination match. Replenishment quantity has not been confirmed.' }, update: {} });
       }
       await audit(tx, actor, 'WARNING_OBSERVED', { sourceId: source.id, warningAt: observedAt.toISOString(), historical: input.source.historical }, undefined, need.id);
-      return { sourceId: source.id, needId: need.id, review: need.reviewRequired };
+      return { sourceId: source.id, needId: need.id, review: need.reviewRequired,newWatchedMaterial:!wasWatched };
     }
     const supplier = evidence.supplier?.trim(), normalizedSupplier = normalize(supplier), reference = evidence.orderReference?.trim();
     let order = reference ? await tx.supplyOrder.findMany({ where: { organizationId: actor.organizationId, orderReference: reference, ...(supplier ? { normalizedSupplier } : {}) }, take: 5 }).then(candidates => {
@@ -411,7 +420,7 @@ export async function ingestEvidence(actor: SupplyActor, raw: unknown, db: Prism
       const orderIds = [...new Set(mapped.map(s => s.orderId))]; if (orderIds.length === 1) order = mapped[0].order;
     }
     if (!order && (!supplier || evidence.kind === 'SHIPMENT' || evidence.orderStatus === 'CANCELLED')) { await tx.supplySource.update({ where: { id: source.id }, data: { extractionStatus: 'REVIEW', extractionError: 'This notice could not be reliably matched to an order.' } }); return { sourceId: source.id, review: true }; }
-    if (order?.destination && evidence.destination && normalize(order.destination) !== normalize(evidence.destination)) { await tx.supplySource.update({ where: { id: source.id }, data: { extractionStatus: 'REVIEW', extractionError: 'Order reference matches but destinations conflict. Review the relationship.' } }); return { sourceId: source.id, review: true }; }
+    if (normalizeSupplyLocation(order?.destination) && normalizeSupplyLocation(evidence.destination) && normalizeSupplyLocation(order?.destination) !== normalizeSupplyLocation(evidence.destination)) { await tx.supplySource.update({ where: { id: source.id }, data: { extractionStatus: 'REVIEW', extractionError: 'Order reference matches but destinations conflict. Review the relationship.' } }); return { sourceId: source.id, review: true }; }
     if (!order && reference) {
       const ambiguous = await tx.supplyOrder.count({ where: { organizationId: actor.organizationId, normalizedSupplier, orderReference: reference } });
       if (ambiguous) { await tx.supplySource.update({ where: { id: source.id }, data: { extractionStatus: 'REVIEW', extractionError: 'Multiple or conflicting order references require review.' } }); return { sourceId: source.id, review: true }; }
@@ -444,19 +453,20 @@ export async function ingestEvidence(actor: SupplyActor, raw: unknown, db: Prism
     await audit(tx, actor, 'EVIDENCE_RECONCILED', { sourceId: source.id, historical: source.historical }, order.id);
     return { sourceId: source.id, orderId: order.id, review: Boolean(reviewCount) || review };
   }, { timeout: 45000 });
-  if (result.orderId && input.evidence?.kind === 'ORDER' && options.reconcile !== false) await reconcileUnmatchedSupplyEvidence(actor.organizationId, db);
+  if (options.reconcile !== false) {
+    // Reconciliation cannot turn a committed source into a failed mailbox extraction.
+    try {
+      if (result.newWatchedMaterial) await replayWatchedSupplyEvidence(actor.organizationId, db, ingestEvidence);
+      else if (result.orderId && input.evidence?.kind === 'ORDER') await reconcileUnmatchedSupplyEvidence(actor.organizationId, db);
+    } catch { /* Retained source facts remain available for later bounded reconciliation. */ }
+  }
   return result;
 }
 /** Newest-first backfill can discover a shipping notice before its confirmation. */
 export async function reconcileUnmatchedSupplyEvidence(organizationId: string, db: PrismaClient = prisma) {
-  const sources = await db.supplySource.findMany({ where: { organizationId, extractionStatus: 'REVIEW', extractedFacts: { path: ['kind'], equals: 'SHIPMENT' } }, orderBy: { messageDate: 'asc' }, take: 40 });
-  let linked = 0;
-  for (const source of sources) {
-    if (!source.userId) continue;
-    try {
-      const result = await ingestEvidence({ organizationId, userId: source.userId }, { source: { mailboxConnectionId: source.mailboxConnectionId, provider: source.provider, messageId: source.messageId, attachmentKey: source.attachmentKey, messageDate: source.messageDate.toISOString(), contentHash: source.contentHash, filename: source.filename, mimeType: source.mimeType, historical: source.historical, extractionStatus: 'COMPLETE' }, evidence: source.extractedFacts }, db, { reconcile: false });
-      if (result.orderId) linked++;
-    } catch { /* Revoked mailbox consent or membership leaves the retained evidence in Review. */ }
-  }
-  return { attempted: sources.length, linked };
+  return replayWatchedSupplyEvidence(organizationId, db, ingestEvidence, { force: true });
+}
+
+export async function reconcileWatchedSupplyEvidence(organizationId: string, db: PrismaClient = prisma, options: ReplayOptions = {}) {
+  return replayWatchedSupplyEvidence(organizationId, db, ingestEvidence, options);
 }

@@ -1,4 +1,23 @@
 .supplies-page, .supply-workspace { min-width: 0; }
+.supply-status-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.supply-status-card { display: flex; flex-direction: column; gap: 16px; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.supply-status-card p { margin: 0; overflow-wrap: anywhere; }
+.supply-status-identity h2 { margin: 0 0 4px; font-size: 1.0625rem; font-weight: 650; line-height: 1.4; overflow-wrap: anywhere; }
+.supply-status-identity p, .supply-status-source, .supply-status-footer > p { color: var(--muted); font-size: .8125rem; line-height: 1.5; }
+.supply-status-current { display: grid; gap: 6px; }
+.supply-status-label { font-size: 1rem; font-weight: 650; line-height: 1.4; }
+.supply-status-label-attention { color: var(--theme-warning-ink, var(--warning)); }
+.supply-status-arrival { font-size: 1rem; font-weight: 600; }
+.supply-status-detail, .supply-status-order { color: var(--muted); font-size: .875rem; line-height: 1.5; }
+.supply-status-footer { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; margin-top: auto; }
+.supply-status-footer form { margin: 0; min-width: 0; }
+.supply-status-footer button { min-height: 44px; }
+.supply-status-footer button.secondary { background: var(--panel-2); color: var(--text); border-color: var(--line-strong); }
+.supply-status-footer button.secondary:hover { background: var(--panel-3); color: var(--text); border-color: var(--accent); }
+.supply-status-footer button.secondary:disabled { background: var(--panel-2); color: var(--muted); border-color: var(--line); }
+.supply-status-coverage { margin: 0 0 16px; color: var(--theme-warning-ink, var(--warning)); font-size: .875rem; line-height: 1.5; }
+.supply-status-footnote { margin: 16px 0 0; color: var(--muted); font-size: .8125rem; line-height: 1.5; }
+@media (min-width: 760px) { .supply-status-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); } }
 .supply-tabs { display: flex; flex-wrap: wrap; gap: 4px 16px; border-bottom: 1px solid var(--line); margin: 0 0 12px; }
 .supply-tabs a { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--muted); padding: 8px 2px; border-bottom: 2px solid transparent; }
 .supply-tabs a[aria-current="page"] { color: var(--accent); border-color: var(--accent); font-weight: 650; }

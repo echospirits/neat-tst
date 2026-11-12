@@ -2,6 +2,7 @@ import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../prisma';
+import { getWatchedSupplyOrderScope, isWatchedSupplyOrder, isWatchedSupplyOrderRecord } from './watch';
 
 /** All requests go to this fixed official API. Email-supplied URLs are never fetched. */
 type TrackingEnvironment = Record<string, string | undefined>;
@@ -97,13 +98,13 @@ export function parseEasyPostObservation(value: unknown, options: { timezone?: s
   const startDate = estimateDate(tracker, timezone);
   const localTime = tracker.carrier_detail?.est_delivery_time_local;
   const timeStart = startDate && localTime && /^\d{2}:\d{2}(?::\d{2})?$/.test(localTime) && Number(localTime.slice(0, 2)) < 24 && Number(localTime.slice(3, 5)) < 60 ? localTime : null;
-  const deliveredScan = [...tracker.tracking_details ?? []].reverse().find(d => d.status === 'delivered' && d.datetime)?.datetime;
-  const deliveredTime = deliveredScan ? new Date(deliveredScan) : providerEventAt;
+  const deliveredTimes = (tracker.tracking_details ?? []).filter(detail => detail.status === 'delivered' && z.string().datetime({ offset: true }).safeParse(detail.datetime).success).map(detail => new Date(detail.datetime!)).sort((a, b) => b.getTime() - a.getTime());
+  const deliveredTime = deliveredTimes[0] ?? null;
   const normalized = { provider: 'EASYPOST' as const, providerTrackingId: tracker.id, providerMode: tracker.mode, trackingCode: tracker.tracking_code,
     carrier: tracker.carrier ?? null, providerEventAt, observedAt: options.observedAt ?? new Date(), status, returned,
     summary: returned && tracker.status === 'delivered' ? 'Carrier reports delivery after a return-to-sender event; facility receipt remains unconfirmed.'
       : `${tracker.mode === 'test' ? 'TEST DATA: ' : ''}${tracker.status.replace(/_/g, ' ')}${tracker.status_detail ? ` · ${tracker.status_detail.replace(/_/g, ' ')}` : ''}`,
-    deliveredAt: status === 'DELIVERED' ? Number.isFinite(deliveredTime.getTime()) ? deliveredTime : providerEventAt : null,
+    deliveredAt: status === 'DELIVERED' ? deliveredTime : null,
     estimate: startDate ? { source: 'CARRIER' as const, precision: timeStart ? 'TIME_WINDOW' as const : 'DATE' as const, startDate, endDate: null, timeStart, timeEnd: timeStart, timezone } : null };
   return { ...normalized, eventKey: options.eventKey ?? createHash('sha256').update(JSON.stringify({ ...normalized, observedAt: undefined })).digest('hex') };
 }
@@ -197,7 +198,7 @@ export function nextTrackingCheck(status: string, failureCount: number, now = ne
 
 type TrackingDb = PrismaClient;
 type TrackingOptions = { manual?: boolean; env?: TrackingEnvironment; fetchImpl?: typeof fetch; sleep?: (ms: number) => Promise<void>; now?: Date; timeoutMs?: number; maxAttempts?: number; budgetMs?: number; maxShipments?: number };
-export type TrackingRefreshResult = { status: 'updated' | 'busy' | 'rate_limited' | 'failed' | 'stale' | 'duplicate'; message?: string };
+export type TrackingRefreshResult = { status: 'updated' | 'busy' | 'rate_limited' | 'failed' | 'stale' | 'duplicate' | 'out_of_scope'; message?: string };
 
 async function assertTrackingTenant(organizationId: string, db: TrackingDb | Prisma.TransactionClient) {
   const enabled = await db.organizationFeature.findFirst({ where: { organizationId, featureKey: 'PRODUCTION_SUPPLIES', enabled: true, organization: { active: true, accountStatus: { notIn: ['SUSPENDED', 'CANCELLED'] } } }, select: { id: true } });
@@ -223,6 +224,10 @@ export async function persistSupplyTrackingObservation(organizationId: string, s
     const shipment = await tx.supplyShipment.findFirst({ where: { organizationId, id: shipmentId }, include: { arrivalEstimates: { where: { current: true }, orderBy: { sourceEventAt: 'desc' } }, order: { select: { sources: { where: { source: { historical: true } }, take: 1, select: { sourceId: true } } } } } });
     if (!shipment) throw new SupplyTrackingError('Shipment was not found.', 'not_found');
     if (options.leaseId && shipment.leaseId !== options.leaseId) return { status: 'busy', message: 'A newer worker owns this shipment refresh.' };
+    if (!await isWatchedSupplyOrder(organizationId, shipment.orderId, tx)) {
+      if (options.leaseId) await tx.supplyShipment.updateMany({ where: { organizationId, id: shipmentId, leaseId: options.leaseId }, data: { leaseId: null, leaseUntil: null } });
+      return { status: 'out_of_scope', message: 'Tracking is limited to orders for Dx5-alerted materials. Retained shipment evidence is unchanged.' };
+    }
     if (options.expectedReference && shipment.reference !== options.expectedReference) return { status: 'stale', message: 'Tracking reference changed while this lookup was running.' };
     if (shipment.providerMode && shipment.providerMode !== observation.providerMode) throw new SupplyTrackingError('Tracking credential modes cannot be mixed.', 'mode_mismatch');
     if (shipment.reference.replace(/ /g, '').toUpperCase() !== observation.trackingCode.replace(/ /g, '').toUpperCase()) throw new SupplyTrackingError('Tracking reference does not match this shipment.', 'reference_mismatch');
@@ -272,7 +277,7 @@ export async function persistSupplyTrackingObservation(organizationId: string, s
     }
     await tx.supplyShipment.updateMany({ where: { organizationId, id: shipmentId, ...(options.leaseId ? { leaseId: options.leaseId } : {}) }, data: {
       provider: observation.provider, providerTrackingId: observation.providerTrackingId, providerMode: observation.providerMode, status,
-      statusEventAt: observation.providerEventAt, deliveredAt: status === 'DELIVERED' ? observation.deliveredAt : shipment.deliveredAt,
+      statusEventAt: observation.providerEventAt, deliveredAt: status === 'DELIVERED' ? observation.deliveredAt ?? shipment.deliveredAt : shipment.deliveredAt,
       returnedAt: returned ? shipment.returnedAt ?? observation.providerEventAt : null,
       lastSuccessfulCheckAt: observation.observedAt, lastCheckedAt: observation.observedAt, nextCheckAt,
       checkError: null, failureCount: 0, ...(options.leaseId ? { leaseId: null, leaseUntil: null } : {}),
@@ -287,6 +292,7 @@ export async function refreshSupplyShipmentTracking(organizationId: string, ship
   const now = options.now ?? new Date();
   const shipment = await db.supplyShipment.findFirst({ where: { organizationId, id: shipmentId } });
   if (!shipment) throw new SupplyTrackingError('Shipment was not found.', 'not_found');
+  if (!await isWatchedSupplyOrder(organizationId, shipment.orderId, db)) return { status: 'out_of_scope', message: 'Tracking is limited to orders for Dx5-alerted materials.' };
   if (options.manual && shipment.lastCheckedAt && now.getTime() - shipment.lastCheckedAt.getTime() < MIN_REFRESH_MS) return { status: 'rate_limited', message: 'Tracking was checked recently. Please wait five minutes between manual refreshes.' };
   const leaseId = randomUUID();
   const claimed = await db.supplyShipment.updateMany({ where: { organizationId, id: shipmentId, AND: [
@@ -314,7 +320,10 @@ export async function refreshSupplyShipmentTracking(organizationId: string, ship
 export async function runDueSupplyTracking(organizationId: string, db: TrackingDb = prisma, options: TrackingOptions = {}) {
   await assertTrackingTenant(organizationId, db);
   const now = options.now ?? new Date();
-  const due = await db.supplyShipment.findMany({ where: { organizationId, nextCheckAt: { lte: now }, OR: [{ leaseUntil: null }, { leaseUntil: { lte: now } }] }, orderBy: [{ nextCheckAt: 'asc' }, { id: 'asc' }], take: Math.max(1, Math.min(10, options.maxShipments ?? 10)), select: { id: true } });
+  const scope = await getWatchedSupplyOrderScope(organizationId, db);
+  if (!scope.materials.length) return { attempted: 0, succeeded: 0, failed: 0 };
+  const candidates = await db.supplyShipment.findMany({ where: { organizationId, order: scope.orderWhere, nextCheckAt: { lte: now }, OR: [{ leaseUntil: null }, { leaseUntil: { lte: now } }] }, orderBy: [{ nextCheckAt: 'asc' }, { id: 'asc' }], take: 40, include: { order: { include: { lines: { where: { ignored: false }, include: { allocations: { select: { needId: true } } } } } } } });
+  const due = candidates.filter(shipment => isWatchedSupplyOrderRecord(shipment.order, scope.materials)).slice(0, Math.max(1, Math.min(10, options.maxShipments ?? 10)));
   const results: TrackingRefreshResult[] = [];
   const deadline = Date.now() + Math.max(1000, Math.min(180_000, options.budgetMs ?? 180_000));
   for (const shipment of due) {

@@ -1,6 +1,6 @@
 # Neat engineering and product documentation
 
-Production Supplies is in the owner-authorized **0.10.0-dev TST-only** cycle; production remains 0.9.2. See [operator guide](production-supplies.md) and [validation](releases/production-supplies-validation.md). Historical release statements below retain their original scope.
+Production Supplies is in the owner-authorized **0.10.0-dev TST-only** cycle; production remains 0.9.2. The November 12 revision narrows Supplies to a simple ordering/delivery status card for each Dx5-alerted material, with only Dismiss. Dx5/Ollie retain inventory forecasting. See [operator guide](production-supplies.md) and [validation](releases/production-supplies-validation.md). Historical release statements below retain their original scope.
 
 **0.9.2 is verified on TST and production; development remains frozen.** Manual forecast refresh now retrieves current warehouse stock and appends inventory history. Both real refreshes confirm 2802B GPT 37 / GRN 18, retaining all prior facts and protected sales/shared-inventory data. Exact CI, tests/typecheck/build, scoped migrations and affected UI evidence pass. Published [v0.9.2](https://github.com/echospirits/ohlq-field-crm/releases/tag/v0.9.2) is verified Latest at production application `0f890cc0063bfa94cec16874c2135a9767a8e37e`. See [notes](releases/0.9.2.md), [checklist](releases/0.9.2-checklist.md) and [validation](releases/0.9.2-validation.md) for exact receipts and UI evidence limits. Unrelated TST work remains excluded; earlier release statements below are historical.
 
