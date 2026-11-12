@@ -19,6 +19,7 @@ export const navigationItems: NavigationItem[] = [
   { key: 'home', href: '/', label: 'My Schedule', mobileLabel: 'Schedule', section: 'work', mobileOrder: 1 },
   { key: 'worklist', href: '/alerts', label: 'Worklist', mobileLabel: 'Work', section: 'work', mobileOrder: 2 },
   { key: 'tastings', href: '/tastings', label: 'Tastings', section: 'work', moreOrder: 0.5, featureKey: 'TASTING_MANAGEMENT' },
+  { key: 'production-supplies', href: '/production-supplies', label: 'Production Supplies', section: 'work', moreOrder: 0.6, featureKey: 'PRODUCTION_SUPPLIES' },
   { key: 'opportunities', href: '/opportunities', label: 'Restaurant Opportunities', section: 'intelligence', featureKey: 'WHOLESALE_OPPORTUNITIES' },
   { key: 'agency-intelligence', href: '/agency-focus', label: 'Retail Intelligence', section: 'intelligence', featureKey: 'AGENCY_INTELLIGENCE' },
   { key: 'visits', href: '/visits', label: 'Visit History', mobileLabel: 'Visits', section: 'work', mobileOrder: 4 },

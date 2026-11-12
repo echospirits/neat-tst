@@ -103,6 +103,7 @@ export function AppSidebarNavigation({ enabledFeatures, isAdmin, isPlatformAdmin
           <NavLink item={{ href: '/', key: 'home', label: 'My Schedule', section: 'work' }} pathname={pathname} />
           <NavLink item={{ href: '/tastings', key: 'tastings', label: 'Tastings', section: 'work' }} pathname={pathname} />
         </> : null}
+        {enabledFeatures.includes('PRODUCTION_SUPPLIES') ? <NavLink item={{ href: '/production-supplies', key: 'production-supplies', label: 'Production Supplies', section: 'work' }} pathname={pathname} /> : null}
         <Link aria-current={pathname === '/visits/new' ? 'page' : undefined} className="app-nav-link app-nav-primary" href="/visits/new">
           Log Visit
         </Link>
@@ -140,6 +141,7 @@ const getBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
 
   const home = { href: '/', label: 'Home' };
   const routeMap: Array<{ prefix: string; crumbs: BreadcrumbItem[] }> = [
+    { prefix: '/production-supplies', crumbs: [{ href: '/production-supplies', label: 'Production Supplies' }] },
     { prefix: '/analytics', crumbs: [{ href: '/analytics', label: 'Analytics' }] },
     { prefix: '/visits/new', crumbs: [{ href: '/visits/new', label: 'Log Visit' }] },
     { prefix: '/visits/confirmed', crumbs: [{ href: '/visits', label: 'Visits' }, { href: pathname, label: 'Confirmed' }] },
@@ -197,7 +199,8 @@ export function MobileTabbar({ enabledFeatures, isAdmin, isPlatformAdmin, isTast
   const pathname = usePathname();
   const moreItems = getMoreNavigationItems(isAdmin, enabledFeatures, isPlatformAdmin);
 
-  if (isTaster) return <nav className="mobile-tabbar mobile-tabbar-taster" aria-label="Quick field actions" style={enabledFeatures.includes('TASTING_MANAGEMENT') ? { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' } : undefined}>
+  if (isTaster) return <nav className="mobile-tabbar mobile-tabbar-taster" aria-label="Quick field actions" style={{ gridTemplateColumns: `repeat(${2 + (enabledFeatures.includes('TASTING_MANAGEMENT') ? 2 : 0) + (enabledFeatures.includes('PRODUCTION_SUPPLIES') ? 1 : 0)}, minmax(0, 1fr))` }}>
+    {enabledFeatures.includes('PRODUCTION_SUPPLIES') ? <NavLink item={{ href: '/production-supplies', key: 'production-supplies', label: 'Supplies', section: 'work' }} pathname={pathname} /> : null}
     {enabledFeatures.includes('TASTING_MANAGEMENT') ? <>
       <NavLink item={{ href: '/', key: 'home', label: 'Schedule', section: 'work' }} pathname={pathname} />
       <NavLink item={{ href: '/tastings', key: 'tastings', label: 'Tastings', section: 'work' }} pathname={pathname} />

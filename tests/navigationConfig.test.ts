@@ -11,7 +11,7 @@ import {
 test('desktop navigation keeps work and account areas intentionally grouped', () => {
   assert.deepEqual(
     getNavigationItems('work').map((item) => item.key),
-    ['home', 'worklist', 'tastings', 'visits', 'analytics', 'production-forecasting'],
+    ['home', 'worklist', 'tastings', 'production-supplies', 'visits', 'analytics', 'production-forecasting'],
   );
   assert.deepEqual(
     getNavigationItems('work').find((item) => item.key === 'home'),
@@ -33,6 +33,13 @@ test('the tasting pilot stays out of work and More navigation until enabled', ()
   assert.equal(getMoreNavigationItems(false, []).some(item => item.key === 'tastings'), false);
   assert.equal(getNavigationItems('work', ['TASTING_MANAGEMENT']).some(item => item.href === '/tastings'), true);
   assert.equal(getMoreNavigationItems(false, ['TASTING_MANAGEMENT']).some(item => item.href === '/tastings'), true);
+});
+
+test('Production Supplies requires its own entitlement in desktop and mobile More navigation', () => {
+  assert.equal(getNavigationItems('work', []).some(item => item.key === 'production-supplies'), false);
+  assert.equal(getMoreNavigationItems(false, ['PRODUCTION_FORECASTING']).some(item => item.key === 'production-supplies'), false);
+  assert.equal(getNavigationItems('work', ['PRODUCTION_SUPPLIES']).some(item => item.href === '/production-supplies'), true);
+  assert.equal(getMoreNavigationItems(false, ['PRODUCTION_SUPPLIES']).some(item => item.href === '/production-supplies'), true);
 });
 
 test('wholesale orders navigation is feature gated', () => {

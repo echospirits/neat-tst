@@ -1,5 +1,7 @@
 # Integration architecture
 
+Production Supplies (0.10.0-dev, TST only) uses a dedicated feature-scoped Gmail runtime over the retained mailbox entities, independent of Calendar consent and the retired Communications surface. Source metadata/evidence, per-person checkpoints/retries and operational records are tenant-scoped; unresolved raw source metadata is owner-only. EasyPost standalone parcel tracking uses fixed official API origins, authenticated webhooks, persistent source clocks and separate test/live credentials. Freight/supplier deliveries retain explicit automation limits. See [guide](../production-supplies.md) and [tracking evaluation](../production-supplies-tracking.md); live-provider verification is pending actual consent and account access.
+
 October 28 Echo-only TST transition: background consumers restrict processing to Echo without deleting stored outside connections or transferring ownership. OHLQ credential use, inventory/discovery and forecast sources reject foreign targets; calendar execution rechecks current Echo membership; mail/SMS consumers require Echo in addition to existing provider/pilot gates. No live provider activation, disconnection, message send or import was performed for this change. See [background jobs](background-jobs.md) and [transition validation](../releases/echo-only-transition-validation.md).
 
 Audit baseline: TST `5faee9df930bd76b5e56b669f58a57210527f7d5`, inspected 2026-10-10.

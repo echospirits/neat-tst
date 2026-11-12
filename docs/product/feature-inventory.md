@@ -1,5 +1,7 @@
 # CRM feature inventory
 
+November 11, 2026: **Production Supplies / 0.10.0-dev**, TST-only, adds the separately entitled shared supply needs/order/shipment/receipt workspace, existing-team production membership, dedicated read-only Gmail ingestion, item-level catalog/rules, reviewed reconciliation and EasyPost parcel tracking. See `lib/productionSupplies`, `app/production-supplies`, the additive migration, [operator guide](../production-supplies.md) and [validation](../releases/production-supplies-validation.md). Existing Communications remains retired. Hosted activation and live mailbox/carrier acceptance remain pending approval/credentials; synthetic acceptance is explicitly distinguished.
+
 > Current release update: Communications and its mailbox/SMS/contact-suggestion/communication-AI functionality are retired in released `0.4.0`. Existing contacts, history, manual interactions, briefing and Worklist/calendar remain. [Evidence](../releases/communications-retirement-validation.md). Earlier rollout notes below are historical.
 
 
