@@ -16,6 +16,7 @@ npm-debug.log*
 
 # generated automation artifacts
 output/
+.impeccable/review/
 
 # OS/editor
 .DS_Store
