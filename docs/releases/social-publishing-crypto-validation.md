@@ -1,0 +1,21 @@
+# Dedicated Social token encryption
+
+November 12, 2026. Scope: owner-authorized TST correction after hosted Social readiness identified `CALENDAR_TOKEN_ENCRYPTION_KEY` as missing/invalid for the existing trimmed 32-character minimum. Only its readiness status and sensitive-variable metadata were inspected; the existing value was not read, replaced or rotated. Calendar code/settings and retained Calendar ciphertext remain unchanged.
+
+## Compatibility and operator boundary
+
+- Optional `SOCIAL_TOKEN_ENCRYPTION_KEY` selects a dedicated Social key when nonblank after trimming. It must have at least 32 trimmed characters. A nonblank invalid override blocks readiness/new encryption rather than silently falling back. Readiness exposes only the selected variable name and configured boolean.
+- New dedicated Social ciphertext uses `s1.<iv>.<tag>.<ciphertext>`, AES-256-GCM with a SHA-256-derived key, random 12-byte IV and 16-byte authentication tag. Decryption validates the envelope and authenticates all encrypted content. `s1` always requires the dedicated Social key; it never tries Calendar.
+- With an absent/blank override, new Social writes still delegate to the existing unchanged Calendar facility (`v1`). Retained `v1` Social ciphertext always decrypts through that original facility/key, including after adding a valid or invalid Social override. No bulk rewrite or migration occurs.
+- All six Social encryption/decryption call sites use the Social helper: OAuth verifier creation/read, discovered credential persistence, worker credential read/refresh/write. The earlier scoped-transaction correction and all actor/state/session/delivery guards remain intact.
+- Keep both keys stable. Adding a Social override leaves old `v1` records dependent on the original Calendar key. New connections and normal credential refresh write the currently selected version. This release adds no key ring, automatic rotation or re-encryption tool. Changing/removing a key can invalidate stored tokens or an in-flight OAuth verifier; controlled reconnection/rotation requires separate planning.
+
+The owner manages generation and sensitive TST storage through the approved secret channel; no key is placed in source, tool output or this record. Dedicated Social activation does not require any Calendar configuration change and does not enable jobs/live publication.
+
+## Completed local validation
+
+`npm run test:focus -- tests/socialPublishingCrypto.test.ts tests/socialPublishingConfig.test.ts tests/socialPublishingOAuth.test.ts tests/socialPublishingOAuthFlow.test.ts tests/socialPublishingWorker.test.ts tests/socialPublishingOAuthDiagnostics.test.ts tests/socialPublishingProviders.test.ts tests/accountStateAccess.test.ts` passes **66 tests / 2 suites**, zero failures/skips. Strict `npm run typecheck` and `git diff --check` pass. Independent read-only security audit found no blocking issue.
+
+Fixtures verify dedicated encryption works with missing/short Calendar configuration; new encryptions use different IVs; tampered IV/tag/ciphertext, wrong keys and malformed envelopes fail; invalid nonblank Social configuration cannot fall back; legacy `v1` reads remain compatible. OAuth caller fixtures persist/read `s1` verifier and credentials with invalid Calendar configuration while retaining original-session/one-use guards. Worker fixtures read `s1` credentials and perform a synthetic LinkedIn refresh from retained `v1` to newly persisted `s1`. Provider requests are mocked; no actual provider/token/account or public content is touched.
+
+Completed full suite: **1,460 tests / 79 suites passed**, zero failures/skips; optimized build passed. Hosted deployment/readiness/consent acceptance remain separate release-owner steps. Successful local crypto and callback fixtures do not establish actual provider grants or discovered account identity. A dedicated random key is stored only as a sensitive TST server variable; its value is not read back. Server and tenant live-publishing controls remain unchanged.

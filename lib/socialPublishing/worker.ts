@@ -16,7 +16,7 @@ import {
   socialRetryDelay,
   type SocialSnapshot,
 } from './model';
-import { decryptCalendarToken, encryptCalendarToken } from '../calendar/crypto';
+import { decryptSocialToken, encryptSocialToken } from './crypto';
 import { getSocialProvider, refreshSocialCredentials } from './providers';
 import {
   SocialProviderError,
@@ -199,7 +199,7 @@ export async function processSocialDelivery(
             true,
           );
           const token = JSON.parse(
-            decryptCalendarToken(
+            decryptSocialToken(
               current.destination.credential.credentialsEncrypted,
             ),
           ) as SocialCredentials;
@@ -210,7 +210,7 @@ export async function processSocialDelivery(
           await tx.socialCredential.update({
             where: { id: current.destination.credentialId },
             data: {
-              credentialsEncrypted: encryptCalendarToken(
+              credentialsEncrypted: encryptSocialToken(
                 JSON.stringify(refreshed),
               ),
               expiresAt: refreshed.expiresAt
@@ -273,7 +273,7 @@ export async function processSocialDelivery(
     } else if (d.mode === 'LIVE') {
       const adapter = getSocialProvider(d.provider as SocialProvider);
       const credentials = JSON.parse(
-        decryptCalendarToken(d.destination.credential.credentialsEncrypted),
+        decryptSocialToken(d.destination.credential.credentialsEncrypted),
       ) as SocialCredentials;
       const destination = socialProviderDestination(d.destination);
       const content = socialContent(entry);

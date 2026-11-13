@@ -2,6 +2,7 @@ import type { SocialCredentials, SocialProvider } from '../types';
 import { SocialProviderError } from '../types';
 import { jsonRequest, list, object, requiredString, string } from './http';
 import { getSocialBaseUrl } from '../config';
+import { getSocialCryptoConfiguration } from '../crypto';
 
 export const META_GRAPH_VERSION = process.env.SOCIAL_META_GRAPH_VERSION || 'v26.0';
 export const LINKEDIN_VERSION = process.env.SOCIAL_LINKEDIN_VERSION || '202609';
@@ -24,7 +25,8 @@ export function getOAuthConfiguration(provider: SocialProvider, baseUrl?: string
   const prefix = `SOCIAL_${family(provider)}`;
   const keys = family(provider) === 'META' ? [`${prefix}_APP_ID`, `${prefix}_APP_SECRET`] : [`${prefix}_CLIENT_ID`, `${prefix}_CLIENT_SECRET`];
   const missing = keys.filter(key => !process.env[key]?.trim());
-  if ((process.env.CALENDAR_TOKEN_ENCRYPTION_KEY?.trim().length ?? 0) < 32) missing.push('CALENDAR_TOKEN_ENCRYPTION_KEY');
+  const crypto = getSocialCryptoConfiguration();
+  if (!crypto.configured) missing.push(crypto.keyName);
   let configurationError: string | undefined;
   if (family(provider) === 'META') {
     try { getMetaLoginConfiguration(); }

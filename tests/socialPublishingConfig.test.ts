@@ -8,7 +8,7 @@ const canonical = 'https://neat-tst.vercel.app';
 const legacy = 'https://neat-tst-joe-1533s-projects.vercel.app';
 function configure(values: Record<string, string | undefined>) {
   const prior = { ...process.env };
-  for (const [key, value] of Object.entries({ SOCIAL_META_CONFIG_ID: undefined, SOCIAL_META_TOKEN_TYPE: undefined, CALENDAR_TOKEN_ENCRYPTION_KEY: 'fixture-encryption-key-at-least-32-characters', ...values })) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+  for (const [key, value] of Object.entries({ SOCIAL_META_CONFIG_ID: undefined, SOCIAL_META_TOKEN_TYPE: undefined, SOCIAL_TOKEN_ENCRYPTION_KEY: undefined, CALENDAR_TOKEN_ENCRYPTION_KEY: 'fixture-encryption-key-at-least-32-characters', ...values })) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
   return () => { for (const key of Object.keys(process.env)) if (!(key in prior)) delete process.env[key]; Object.assign(process.env, prior); };
 }
 
@@ -164,5 +164,21 @@ test('OAuth readiness reports only the encryption key name and requires the exis
     process.env.CALENDAR_TOKEN_ENCRYPTION_KEY = '  ' + 'x'.repeat(32) + '  ';
     assert.equal(getOAuthConfiguration('FACEBOOK').configured, true);
     assert.equal(getOAuthConfiguration('GOOGLE_BUSINESS').missing.includes('CALENDAR_TOKEN_ENCRYPTION_KEY'), false);
+  } finally { restore(); }
+});
+
+test('OAuth readiness selects the Social key independently and reports only its name when an override is invalid', () => {
+  const restore = configure({ SOCIAL_BASE_URL: canonical, SOCIAL_META_APP_ID: 'fixture-app', SOCIAL_META_APP_SECRET: 'fixture-secret', CALENDAR_TOKEN_ENCRYPTION_KEY: 'short-calendar', SOCIAL_TOKEN_ENCRYPTION_KEY: 'fixture-social-key-at-least-32-characters' });
+  try {
+    assert.equal(getOAuthConfiguration('FACEBOOK').configured, true);
+    assert.deepEqual(getOAuthConfiguration('INSTAGRAM').missing, []);
+    process.env.CALENDAR_TOKEN_ENCRYPTION_KEY = 'fixture-calendar-key-at-least-32-characters';
+    process.env.SOCIAL_TOKEN_ENCRYPTION_KEY = '  short-social  ';
+    for (const provider of ['FACEBOOK', 'INSTAGRAM'] as const) {
+      const configuration = getOAuthConfiguration(provider);
+      assert.equal(configuration.configured, false);
+      assert.deepEqual(configuration.missing, ['SOCIAL_TOKEN_ENCRYPTION_KEY']);
+      assert.equal(JSON.stringify(configuration).includes('short-social'), false);
+    }
   } finally { restore(); }
 });

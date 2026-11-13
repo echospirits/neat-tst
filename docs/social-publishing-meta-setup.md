@@ -12,6 +12,7 @@ Prepared November 12, 2026. This is setup guidance, not evidence that an app, pe
 | App domain, where requested | `neat-tst.vercel.app` |
 | Server app ID / app secret | Dedicated unpublished app `1934786264572681`; App ID configured in TST and owner-entered App Secret verified present as a sensitive Vercel Secret without reading its value |
 | Login configuration | Saved **Neat TST Page + Instagram**, `1757266013065799`; **General / User access token**, exactly the five scopes below. TST: `SOCIAL_META_CONFIG_ID=1757266013065799`, `SOCIAL_META_TOKEN_TYPE=USER` |
+| Token encryption | Dedicated `SOCIAL_TOKEN_ENCRYPTION_KEY` generated securely as a sensitive TST variable; no owner credential entry needed. Calendar's existing key/data stay unchanged |
 | Graph version | `SOCIAL_META_GRAPH_VERSION=v26.0` |
 | Publishing/discovery permissions requested by Neat | `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `instagram_basic`, `instagram_content_publish` |
 | Neat setup view | `/social?view=connections` |

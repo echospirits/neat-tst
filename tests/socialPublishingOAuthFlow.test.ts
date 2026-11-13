@@ -66,7 +66,7 @@ function singleConnectionFixture() {
 
 function configure() {
   const prior = { ...process.env };
-  Object.assign(process.env, { SOCIAL_PILOT_USER_IDS: actor.userId, SOCIAL_META_APP_ID: 'fixture-app', SOCIAL_META_APP_SECRET: 'fixture-secret', SOCIAL_META_CONFIG_ID: '123456789', SOCIAL_META_TOKEN_TYPE: 'USER', CALENDAR_TOKEN_ENCRYPTION_KEY: 'fixture-key-at-least-32-characters', SOCIAL_BASE_URL: 'https://neat.example.test' });
+  Object.assign(process.env, { SOCIAL_PILOT_USER_IDS: actor.userId, SOCIAL_META_APP_ID: 'fixture-app', SOCIAL_META_APP_SECRET: 'fixture-secret', SOCIAL_META_CONFIG_ID: '123456789', SOCIAL_META_TOKEN_TYPE: 'USER', SOCIAL_TOKEN_ENCRYPTION_KEY: 'fixture-social-key-at-least-32-characters', CALENDAR_TOKEN_ENCRYPTION_KEY: 'short-calendar', SOCIAL_BASE_URL: 'https://neat.example.test' });
   return () => { for (const key of Object.keys(process.env)) if (!(key in prior)) delete process.env[key]; Object.assign(process.env, prior); mock.restoreAll(); };
 }
 
@@ -93,12 +93,14 @@ test('OAuth callers prime the real state-policy context before start, state cons
     const url = new URL(await startScopedSocialOAuth(actor, 'original-session', 'meta', fixture.dependencies));
     const state = url.searchParams.get('state')!;
     assert.equal(fixture.state()?.sessionHash, 'original-session');
+    assert.match(String(fixture.state()?.verifierEncrypted), /^s1\./);
     assert.equal(requests.length, 0);
     assert.deepEqual(fixture.events.slice(0, 5), ['base:organization', 'base:agency', 'base:wholesale', 'base:references', 'transaction:begin']);
     const outcome = await completeScopedSocialOAuth(actor, 'original-session', 'meta', { state, code: 'fixture-code', denied: false }, fixture.dependencies);
     assert.deepEqual(outcome, { discovered: 1, discoveryFailures: 0 });
     assert.equal(fixture.state(), null);
     assert.equal(fixture.credentials.length, 1);
+    assert.match(String(fixture.credentials[0].credentialsEncrypted), /^s1\./);
     assert.equal(fixture.destinations.length, 1);
     assert.equal(fixture.destinations[0].provider, 'FACEBOOK');
     assert.equal(fixture.credentials[0].authorizationOwnerId, 'fixture-authorization-owner');

@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { Prisma } from '@prisma/client';
-import { encryptCalendarToken, decryptCalendarToken } from '../calendar/crypto';
+import { encryptSocialToken, decryptSocialToken, getSocialCryptoConfiguration } from './crypto';
 import { assertSocialActor, type SocialDb } from './service';
 import type { SocialActor } from './access';
 import { getSocialBaseUrl } from './config';
@@ -37,9 +37,10 @@ export async function startSocialOAuth(
   const base = getSocialBaseUrl();
   const config = getOAuthConfiguration(provider, base);
   if (!config.configured) {
-    const encryptionMissing = config.missing.includes('CALENDAR_TOKEN_ENCRYPTION_KEY');
+    const crypto = getSocialCryptoConfiguration();
+    const encryptionMissing = config.missing.includes(crypto.keyName);
     throw new SocialProviderError(
-      encryptionMissing ? 'Configure CALENDAR_TOKEN_ENCRYPTION_KEY with at least 32 characters after trimming before connecting.' : `Missing ${config.missing.join(', ')}.`,
+      encryptionMissing ? `Configure ${crypto.keyName} with at least 32 characters after trimming before connecting.` : `Missing ${config.missing.join(', ')}.`,
       'CONFIGURATION',
       encryptionMissing ? 'oauth_encryption_key_invalid' : 'oauth_not_configured',
     );
@@ -53,7 +54,7 @@ export async function startSocialOAuth(
       userId: actor.userId,
       sessionHash,
       provider,
-      verifierEncrypted: encryptCalendarToken(verifier),
+      verifierEncrypted: encryptSocialToken(verifier),
       expiresAt: new Date(Date.now() + 600_000),
     },
   });
@@ -105,7 +106,7 @@ export async function completeSocialOAuth(
     code,
     redirectUri: getOAuthConfiguration(provider, base).callbackUrl,
     codeVerifier: state.verifierEncrypted
-      ? decryptCalendarToken(state.verifierEncrypted)
+      ? decryptSocialToken(state.verifierEncrypted)
       : undefined,
   });
   const providers: SocialProvider[] =
@@ -140,7 +141,7 @@ export async function completeSocialOAuth(
             organizationId: actor.organizationId,
             provider: destination.provider,
             authorizationOwnerId: token.ownerId ?? actor.userId,
-            credentialsEncrypted: encryptCalendarToken(JSON.stringify(token)),
+            credentialsEncrypted: encryptSocialToken(JSON.stringify(token)),
             scopes: token.scopes,
             expiresAt: token.expiresAt ? new Date(token.expiresAt) : null,
             health: 'CONNECTED_UNVERIFIED',

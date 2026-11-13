@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it, mock } from 'node:test';
 import type { PrismaClient } from '@prisma/client';
 import { encryptCalendarToken } from '../lib/calendar/crypto';
+import { encryptSocialToken, decryptSocialToken } from '../lib/socialPublishing/crypto';
 import { getSocialProvider } from '../lib/socialPublishing/providers';
 import { publishOperation } from '../lib/socialPublishing/providers/http';
 import { processSocialDelivery } from '../lib/socialPublishing/worker';
@@ -13,7 +14,7 @@ type Row = Record<string, unknown>;
 function fixture(mode: 'LIVE' | 'SIMULATED' = 'LIVE') {
   const now = new Date();
   const payload = { title: 'Fixture', caption: 'Reviewed fixture', note: '', proposedAt: now.toISOString(), destinations: [{ destinationId: 'destination', externalId: 'page-fixture', provider: 'FACEBOOK', displayName: 'Fixture Page', caption: 'Reviewed fixture', format: 'TEXT', mediaIds: [], media: [], options: {} }] };
-  const credential = { id: 'credential', health: 'CONNECTED', credentialsEncrypted: encryptCalendarToken(JSON.stringify({ accessToken: 'fixture-never-live', scopes: ['pages_manage_posts'] })), expiresAt: null, scopes: ['pages_manage_posts'] };
+  const credential = { id: 'credential', health: 'CONNECTED', credentialsEncrypted: encryptCalendarToken(JSON.stringify({ accessToken: 'fixture-never-live', scopes: ['pages_manage_posts'] })), expiresAt: null as Date | null, scopes: ['pages_manage_posts'] };
   const row = {
     id: 'delivery', organizationId: 'org_echo_spirits', postId: 'post', revisionId: 'revision', destinationId: 'destination', provider: 'FACEBOOK', externalId: 'page-fixture', mode, status: 'QUEUED',
     nextAttemptAt: new Date(now.getTime() - 1000), scheduledAt: new Date(now.getTime() - 1000), createdAt: now, leaseToken: null as string | null, leaseUntil: null as Date | null, attempts: 0, startedAt: null as Date | null, externalIds: {} as ExternalIds,
@@ -63,6 +64,7 @@ describe('Social durable worker boundaries — simulated persistence/provider fi
   const original = { ...process.env };
   beforeEach(() => {
     process.env.CALENDAR_TOKEN_ENCRYPTION_KEY = 'fixture-social-token-encryption-key-never-live';
+    delete process.env.SOCIAL_TOKEN_ENCRYPTION_KEY;
     process.env.SOCIAL_PILOT_USER_IDS = 'admin';
     process.env.SOCIAL_LIVE_PUBLISHING_ENABLED = 'true'; process.env.SOCIAL_LIVE_ENVIRONMENT = 'test'; process.env.APP_ENV = 'test';
     process.env.SOCIAL_LIVE_ORGANIZATION_ID = 'org_echo_spirits'; process.env.SOCIAL_LIVE_DESTINATION_IDS = 'destination'; process.env.SOCIAL_LIVE_NOT_BEFORE = new Date(Date.now() - 3600_000).toISOString();
@@ -97,6 +99,46 @@ describe('Social durable worker boundaries — simulated persistence/provider fi
     const results = await Promise.all([processSocialDelivery(f.db, f.row.id, f.now), processSocialDelivery(f.db, f.row.id, f.now)]);
     assert.equal(results.filter(result => result.claimed).length, 1); assert.equal(publish.mock.callCount(), 1); assert.equal(f.row.status, 'PUBLISHED');
     assert.equal((await processSocialDelivery(f.db, f.row.id, new Date())).claimed, false);
+  });
+
+  it('reads dedicated Social credentials when Calendar configuration is invalid', async () => {
+    const f = fixture();
+    process.env.SOCIAL_TOKEN_ENCRYPTION_KEY = 'fixture-dedicated-social-key-at-least-32-characters';
+    process.env.CALENDAR_TOKEN_ENCRYPTION_KEY = 'short-calendar';
+    f.row.destination.credential.credentialsEncrypted = encryptSocialToken(JSON.stringify({ accessToken: 'dedicated-fixture-token', scopes: ['pages_manage_posts'] }));
+    assert.match(f.row.destination.credential.credentialsEncrypted, /^s1\./);
+    const adapter = getSocialProvider('FACEBOOK');
+    mock.method(adapter, 'prepare', async (ctx: ProviderContext) => { assert.equal(ctx.credentials.accessToken, 'dedicated-fixture-token'); return { ids: ctx.ids, ready: true }; });
+    const publish = mock.method(adapter, 'publish', async (ctx: ProviderContext) => { await ctx.checkpoint({ publicationStarted: true }); await ctx.assertCanPublish(); return { status: 'PUBLISHED' as const, ids: { postId: 'fixture-post' }, confirmed: true }; });
+    assert.equal((await processSocialDelivery(f.db, f.row.id, f.now)).status, 'PUBLISHED');
+    assert.equal(publish.mock.callCount(), 1);
+    assert.equal(process.env.CALENDAR_TOKEN_ENCRYPTION_KEY, 'short-calendar');
+  });
+
+  it('refreshes retained v1 credentials and persists the new token with dedicated s1 encryption', async () => {
+    const f = fixture();
+    const externalId = 'urn:li:organization:123';
+    f.row.provider = f.row.destination.provider = f.row.revision.payload.destinations[0].provider = 'LINKEDIN';
+    f.row.externalId = f.row.destination.externalId = f.row.revision.payload.destinations[0].externalId = externalId;
+    f.row.revision.contentHash = socialHash(f.row.revision.payload);
+    f.row.destination.credential.expiresAt = new Date(Date.now() - 1000);
+    f.row.destination.credential.credentialsEncrypted = encryptCalendarToken(JSON.stringify({ accessToken: 'expired-fixture-token', refreshToken: 'fixture-refresh-token', scopes: ['w_organization_social'], expiresAt: new Date(Date.now() - 1000).toISOString() }));
+    process.env.SOCIAL_TOKEN_ENCRYPTION_KEY = 'fixture-dedicated-social-key-at-least-32-characters';
+    process.env.SOCIAL_LINKEDIN_CLIENT_ID = 'fixture-client'; process.env.SOCIAL_LINKEDIN_CLIENT_SECRET = 'fixture-client-secret';
+    let refreshes = 0;
+    mock.method(globalThis, 'fetch', async (input: string | URL | Request, init?: RequestInit) => {
+      assert.equal(String(input), 'https://www.linkedin.com/oauth/v2/accessToken');
+      assert.equal(new URLSearchParams(String(init?.body)).get('refresh_token'), 'fixture-refresh-token');
+      refreshes++;
+      return new Response(JSON.stringify({ access_token: 'refreshed-fixture-token', expires_in: 3600 }), { headers: { 'content-type': 'application/json' } });
+    });
+    const adapter = getSocialProvider('LINKEDIN');
+    mock.method(adapter, 'prepare', async (ctx: ProviderContext) => { assert.equal(ctx.credentials.accessToken, 'refreshed-fixture-token'); return { ids: ctx.ids, ready: true }; });
+    mock.method(adapter, 'publish', async (ctx: ProviderContext) => { await ctx.assertCanPublish(); return { status: 'PUBLISHED' as const, ids: { postId: 'fixture-post' }, confirmed: true }; });
+    assert.equal((await processSocialDelivery(f.db, f.row.id, f.now)).status, 'PUBLISHED');
+    assert.equal(refreshes, 1);
+    assert.match(f.row.destination.credential.credentialsEncrypted, /^s1\./);
+    assert.equal(JSON.parse(decryptSocialToken(f.row.destination.credential.credentialsEncrypted)).accessToken, 'refreshed-fixture-token');
   });
 
   it('rechecks current approval after preparation before the irreversible request', async () => {

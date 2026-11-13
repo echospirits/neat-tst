@@ -17,6 +17,7 @@ test(`${configuredMeta ? 'USER-configured' : 'Legacy'} Meta code flow preserves 
     SOCIAL_PILOT_USER_IDS: 'admin',
     SOCIAL_META_APP_ID: 'fixture-app-never-contacted',
     SOCIAL_META_APP_SECRET: 'fixture-secret-never-contacted',
+    SOCIAL_TOKEN_ENCRYPTION_KEY: '',
     CALENDAR_TOKEN_ENCRYPTION_KEY: 'fixture-key-32-characters-not-a-secret',
     APP_BASE_URL: 'https://fixture.example.invalid',
     SOCIAL_BASE_URL: 'https://neat-tst.vercel.app',
@@ -182,7 +183,7 @@ test('unknown/system-user Meta configuration fails before state creation, state 
 
 test('missing or whitespace-padded short encryption key fails before state writes with a typed setup code', async () => {
   const prior = { ...process.env };
-  Object.assign(process.env, { SOCIAL_PILOT_USER_IDS: 'admin', SOCIAL_META_APP_ID: 'fixture-app', SOCIAL_META_APP_SECRET: 'fixture-secret', SOCIAL_META_CONFIG_ID: '', SOCIAL_META_TOKEN_TYPE: '', SOCIAL_BASE_URL: 'https://neat-tst.vercel.app' });
+  Object.assign(process.env, { SOCIAL_PILOT_USER_IDS: 'admin', SOCIAL_META_APP_ID: 'fixture-app', SOCIAL_META_APP_SECRET: 'fixture-secret', SOCIAL_META_CONFIG_ID: '', SOCIAL_META_TOKEN_TYPE: '', SOCIAL_BASE_URL: 'https://neat-tst.vercel.app', SOCIAL_TOKEN_ENCRYPTION_KEY: '' });
   let writes = 0, requests = 0;
   const db = {
     user: { findFirst: async () => ({ id: 'admin', role: 'ADMIN' }) },
@@ -199,6 +200,11 @@ test('missing or whitespace-padded short encryption key fails before state write
       await assert.rejects(() => startSocialOAuth(db, actor, 'original-session', 'meta'), error => error instanceof SocialProviderError && error.kind === 'CONFIGURATION' && error.code === 'oauth_encryption_key_invalid');
     }
     assert.deepEqual({ writes, requests }, { writes: 0, requests: 0 });
+    process.env.CALENDAR_TOKEN_ENCRYPTION_KEY = 'valid-fixture-calendar-key-at-least-32-characters';
+    process.env.SOCIAL_TOKEN_ENCRYPTION_KEY = 'short-social';
+    await assert.rejects(() => startSocialOAuth(db, actor, 'original-session', 'meta'), error => error instanceof SocialProviderError && error.code === 'oauth_encryption_key_invalid' && error.message.includes('SOCIAL_TOKEN_ENCRYPTION_KEY'));
+    assert.equal(writes, 0);
+    delete process.env.SOCIAL_TOKEN_ENCRYPTION_KEY;
     process.env.CALENDAR_TOKEN_ENCRYPTION_KEY = '  ' + 'x'.repeat(32) + '  ';
     const target = new URL(await startSocialOAuth(db, actor, 'original-session', 'meta'));
     assert.equal(target.hostname, 'www.facebook.com');
