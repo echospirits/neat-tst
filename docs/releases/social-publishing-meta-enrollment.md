@@ -2,6 +2,24 @@
 
 November 12, 2026. Owner explicitly requested pilot enrollment for their existing TST account, Facebook/Instagram setup and live publishing kept off. This follow-up preserves `0.10.0-dev`, unrelated TST work and production/main.
 
+## Current connection setup complete
+
+Application `bf33fd88` is READY on TST, deployment `dpl_7rUVGXrXhMfxmzxX1ebSQJKcyMJU`, with runtime unchanged from tested diagnostic `4ef084f3125f`. The owner completed renewed consent. Actual safe logs confirm `business_management`, the original five permissions and default `public_profile` granted; Facebook discovery reports `FOUND 3` and Instagram `FOUND 3`, with no failures. The first Facebook/Instagram connection setup is complete; no further owner credential entry is needed for the simulated pilot.
+
+Guarded database readback confirms six encrypted credentials with `s1` prefixes, seven granted scopes, provider-reported expiration `2027-01-12T01:54:41.871Z`, and six enabled destinations using the USER login route. Every connection is `CONNECTED_UNVERIFIED`, with `verifiedAt=null`. No token or encrypted value was read back. The three Page/Instagram pairs match their `pageId` metadata:
+
+| Brand group | Facebook Page | Instagram account |
+| --- | --- | --- |
+| Echo Spirits Distilling Co. | `1787701294831439` | `17841404391820455` · `@echospirits` |
+| Echo Spirits on the Vine | `336455699921` | `17841401882280773` · `@echospiritsonthevine` |
+| The Bar at Echo Spirits | `103673289364087` | `17841458389403556` · `@thebaratechospirits` |
+
+All six group assignments were saved through Neat with success feedback. Final guarded database verification at **2026-11-13T02:42:28.358Z** confirms the six exact IDs in their correct groups, two destinations per brand; six enabled `CONNECTED_UNVERIFIED` destinations with `verifiedAt=null`; six `s1` credentials with the seven expected scopes; and zero OAuth states, posts or deliveries. Joe remains an active entitled Echo ADMIN; tenant live is false. Browser reload independently retained the six mappings, three Facebook/three Instagram totals, simulated mode and tenant pause. Safe receipt: ignored `output/social-meta-connected-final-db-readback.json`. Screenshot `output/tst-social-connected-paused.jpg` shows only the captured viewport, not a full-page record. Mobile was not rechecked in this docs-only turn; prior UI acceptance applies to the unchanged runtime.
+
+All three Instagram `accountType` values remain `UNKNOWN`; no Business-account/Story eligibility or publication verification is claimed. Both server and tenant live publishing remain off. The Meta app remains unpublished. Broader access requires owner-reviewed public privacy/deletion URLs and any applicable Meta review. Actual publishing acceptance requires a separately authorized live test. No public post is authorized or sent.
+
+Earlier pending-consent, five-permission and zero-destination sections below are preserved as historical checkpoints.
+
 ## Applied enrollment and configuration
 
 - Verified the exact shared TST database identity (`test`, `neon-neat-tst`) through the existing guarded configuration before writing.
@@ -55,7 +73,9 @@ At that preceding diagnostic checkpoint, owner approval for the additional permi
 
 Guarded read-only database verification at 2026-11-13 02:25 UTC confirms the test environment and expected TST host/target, Joe's active Echo ADMIN identity and Social entitlement, three groups, and zero memberships, credentials, destinations, posts, deliveries or OAuth states. Tenant live publishing is false. Safe receipt: ignored `output/social-meta-postrefresh-db-readback.json`.
 
-## Approved business permission configuration; consent pending
+<a id="approved-business-permission-configuration-consent-pending"></a>
+
+## Historical business permission configuration; consent handoff
 
 The owner explicitly approved adding only `business_management`. The permission was already Ready for testing in this app, so no separate app-permission Add action was needed. Edited and saved existing configuration `1757266013065799`; expanded readback confirms **General / User access token** and exactly six permissions: `business_management`, `instagram_basic`, `instagram_content_publish`, `pages_manage_posts`, `pages_read_engagement`, `pages_show_list`. No ads, messaging, comments or other permission was added. The configuration ID and TST Vercel variables remain unchanged.
 
