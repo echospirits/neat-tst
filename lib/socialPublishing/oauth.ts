@@ -5,6 +5,7 @@ import { assertSocialActor, type SocialDb } from './service';
 import type { SocialActor } from './access';
 import { getSocialBaseUrl } from './config';
 import { getMetaLoginConfiguration } from './providers/oauth';
+import { socialOAuthDiscoveryDiagnostic, socialOAuthGrantDiagnostic } from './oauthDiagnostics';
 import {
   getSocialProvider,
   buildOAuthAuthorizationUrl,
@@ -111,6 +112,9 @@ export async function completeSocialOAuth(
   });
   const providers: SocialProvider[] =
     family === 'meta' ? ['FACEBOOK', 'INSTAGRAM'] : [provider];
+  const grants = socialOAuthGrantDiagnostic(provider, credentials.scopes);
+  console.info(grants);
+  const discovery: ReturnType<typeof socialOAuthDiscoveryDiagnostic>[] = [];
   let discovered = 0;
   let discoveryFailures = 0;
   for (const key of providers) {
@@ -119,10 +123,16 @@ export async function completeSocialOAuth(
     >;
     try {
       destinations = await getSocialProvider(key).discover(credentials);
-    } catch {
+    } catch (error) {
+      const diagnostic = socialOAuthDiscoveryDiagnostic(key, { error });
+      discovery.push(diagnostic);
+      console.info(diagnostic);
       discoveryFailures++;
       continue;
     }
+    const diagnostic = socialOAuthDiscoveryDiagnostic(key, { count: destinations.length });
+    discovery.push(diagnostic);
+    console.info(diagnostic);
     for (const destination of destinations) {
       await db.$transaction(
         async (tx) => {
@@ -183,5 +193,5 @@ export async function completeSocialOAuth(
       discovered++;
     }
   }
-  return { discovered, discoveryFailures };
+  return { discovered, discoveryFailures, diagnostics: { grantedScopes: grants.grantedScopes, discovery } };
 }

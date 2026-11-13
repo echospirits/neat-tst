@@ -130,7 +130,10 @@ test(`${configuredMeta ? 'USER-configured' : 'Legacy'} Meta code flow preserves 
       else throw new Error('Unexpected provider fixture request; live networking is blocked.');
       return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } });
     });
-    assert.deepEqual(await completeSocialOAuth(actor, 'meta', 'fixture-code', stored, db as unknown as PrismaClient), { discovered: 0, discoveryFailures: 0 });
+    assert.deepEqual(await completeSocialOAuth(actor, 'meta', 'fixture-code', stored, db as unknown as PrismaClient), { discovered: 0, discoveryFailures: 0, diagnostics: { grantedScopes: [], discovery: [
+      { event: 'social_oauth_discovery', provider: 'FACEBOOK', stage: 'DISCOVERY', outcome: 'EMPTY', count: 0 },
+      { event: 'social_oauth_discovery', provider: 'INSTAGRAM', stage: 'DISCOVERY', outcome: 'EMPTY', count: 0 },
+    ] } });
     assert.deepEqual(exchangeRedirects, ['https://neat-tst.vercel.app/api/social/oauth/meta/callback']);
     assert.equal(process.env.APP_BASE_URL, 'https://fixture.example.invalid');
   } finally {

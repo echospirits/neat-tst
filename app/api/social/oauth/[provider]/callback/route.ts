@@ -4,6 +4,7 @@ import { prisma, runWithOrganizationStateAccess } from '../../../../../../lib/pr
 import { getSocialBaseUrl } from '../../../../../../lib/socialPublishing/config';
 import { socialOAuthFamily } from '../../../../../../lib/socialPublishing/oauth';
 import { completeScopedSocialOAuth } from '../../../../../../lib/socialPublishing/oauthFlow';
+import { socialOAuthCallbackDiagnostic } from '../../../../../../lib/socialPublishing/oauthDiagnostics';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -38,8 +39,8 @@ export async function GET(
         ? 'partially-connected'
         : 'connected'
       : 'access-review-required';
-  } catch {
-    /* OAuth responses and credentials are deliberately excluded from logs and redirects. */
+  } catch (error) {
+    console.error(socialOAuthCallbackDiagnostic(error));
   }
   return NextResponse.redirect(
     new URL(

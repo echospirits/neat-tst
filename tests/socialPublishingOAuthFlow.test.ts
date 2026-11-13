@@ -3,6 +3,8 @@ import { test, mock } from 'node:test';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { extendWithAccountStateAccess, withOrganizationStateAccess } from '../lib/accountStateAccess';
 import { completeScopedSocialOAuth, startScopedSocialOAuth } from '../lib/socialPublishing/oauthFlow';
+import { getSocialProvider } from '../lib/socialPublishing/providers';
+import { SocialProviderError } from '../lib/socialPublishing/types';
 
 type Args = Record<string, unknown>;
 type QueryOperation = (input: { model: string; operation: string; args: Args; query: (args: Args) => Promise<unknown> }) => Promise<unknown>;
@@ -97,7 +99,10 @@ test('OAuth callers prime the real state-policy context before start, state cons
     assert.equal(requests.length, 0);
     assert.deepEqual(fixture.events.slice(0, 5), ['base:organization', 'base:agency', 'base:wholesale', 'base:references', 'transaction:begin']);
     const outcome = await completeScopedSocialOAuth(actor, 'original-session', 'meta', { state, code: 'fixture-code', denied: false }, fixture.dependencies);
-    assert.deepEqual(outcome, { discovered: 1, discoveryFailures: 0 });
+    assert.deepEqual(outcome, { discovered: 1, discoveryFailures: 0, diagnostics: { grantedScopes: ['pages_show_list'], discovery: [
+      { event: 'social_oauth_discovery', provider: 'FACEBOOK', stage: 'DISCOVERY', outcome: 'FOUND', count: 1 },
+      { event: 'social_oauth_discovery', provider: 'INSTAGRAM', stage: 'DISCOVERY', outcome: 'EMPTY', count: 0 },
+    ] } });
     assert.equal(fixture.state(), null);
     assert.equal(fixture.credentials.length, 1);
     assert.match(String(fixture.credentials[0].credentialsEncrypted), /^s1\./);
@@ -126,5 +131,37 @@ test('scoped callback still rejects another session before provider requests and
     await assert.rejects(completeScopedSocialOAuth(actor, 'original-session', 'meta', { state, code: 'fixture-code', denied: false }, fixture.dependencies), /expired/);
     assert.equal(requests, 0);
     assert.equal(fixture.credentials.length, 0);
+  } finally { restore(); }
+});
+
+test('discovery diagnostics distinguish empty and failed providers without persisting an unmatched user token', async () => {
+  const restore = configure();
+  const fixture = singleConnectionFixture();
+  const logs: unknown[] = [];
+  mock.method(console, 'info', (value: unknown) => { logs.push(value); });
+  mock.method(globalThis, 'fetch', async (input: string | URL | Request) => {
+    const url = String(input);
+    const body = url.includes('/oauth/access_token') ? { access_token: 'PRIVATE_FIXTURE_USER_TOKEN', expires_in: 3600 }
+      : url.includes('/me/permissions') ? { data: [
+        { permission: 'pages_show_list', status: 'granted' },
+        { permission: 'pages_manage_posts', status: 'declined' },
+        { permission: 'PRIVATE_FIXTURE_SCOPE_TOKEN', status: 'granted' },
+      ] } : { id: 'PRIVATE_FIXTURE_OWNER_ID' };
+    return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } });
+  });
+  mock.method(getSocialProvider('FACEBOOK'), 'discover', async () => []);
+  mock.method(getSocialProvider('INSTAGRAM'), 'discover', async () => { throw new SocialProviderError('PRIVATE_FIXTURE_BODY_URL_TOKEN', 'AUTHORIZATION', 'http_400_provider_10'); });
+  try {
+    const url = new URL(await startScopedSocialOAuth(actor, 'original-session', 'meta', fixture.dependencies));
+    const result = await completeScopedSocialOAuth(actor, 'original-session', 'meta', { state: url.searchParams.get('state')!, code: 'fixture-code', denied: false }, fixture.dependencies);
+    assert.equal(result.discovered, 0); assert.equal(result.discoveryFailures, 1);
+    assert.deepEqual(result.diagnostics, { grantedScopes: ['pages_show_list'], discovery: [
+      { event: 'social_oauth_discovery', provider: 'FACEBOOK', stage: 'DISCOVERY', outcome: 'EMPTY', count: 0 },
+      { event: 'social_oauth_discovery', provider: 'INSTAGRAM', stage: 'DISCOVERY', outcome: 'FAILED', count: 0, code: 'http_400_provider_10' },
+    ] });
+    assert.deepEqual(logs, [{ event: 'social_oauth_grants', provider: 'FACEBOOK', stage: 'GRANTS', grantedScopes: ['pages_show_list'] }, ...result.diagnostics.discovery]);
+    assert.equal(JSON.stringify({ result, logs }).includes('PRIVATE_FIXTURE'), false);
+    assert.equal(fixture.credentials.length, 0); assert.equal(fixture.destinations.length, 0);
+    assert.equal(fixture.state(), null);
   } finally { restore(); }
 });

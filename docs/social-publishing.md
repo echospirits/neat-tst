@@ -15,6 +15,8 @@ The application separates tenant access, brand-group membership, provider author
 
 Connection states distinguish missing configuration, access/review pending, authorization needed, reconnection required, connected and connected/publishing unverified. Keep optional providers blocked independently rather than holding the whole pilot.
 
+If consent returns access-review-required with no destinations, inspect the safe server events `social_oauth_grants` and `social_oauth_discovery`: each provider is independently `EMPTY`, `FOUND` or `FAILED`, with a count and a bounded error code on failure. A separate `social_oauth_callback_failed` event covers callback failures. Permission names are filtered to a fixed allowlist; successful permission consent alone does not prove Page tasks or access to selected assets. Logs exclude tokens, state, provider response bodies, account/user IDs, exception messages and URLs. No unmatched user token is retained when discovery finds no destination. Use [the discovery validation/source record](releases/social-publishing-discovery-validation.md) before changing scopes; additional permissions require a separate owner decision.
+
 ### Explicit Echo enrollment
 
 There is no current administrator screen for changing `OrganizationFeature`. Use this tenant-scoped Prisma operator snippet after the two selected migrations are verified. Save it temporarily as ignored `tmp/social-pilot-enrollment.ts` in the tested checkout. It uses the same audited TST identity guard as the migration driver and reads only the explicit `.env.social.tst.local` file; it cannot target production.
