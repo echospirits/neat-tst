@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import { requireAdminSession } from '../../../../../../lib/auth';
-import { prisma } from '../../../../../../lib/prisma';
+import { prisma, runWithOrganizationStateAccess } from '../../../../../../lib/prisma';
 import { getSocialBaseUrl } from '../../../../../../lib/socialPublishing/config';
-import {
-  socialOAuthFamily,
-  startSocialOAuth,
-} from '../../../../../../lib/socialPublishing/oauth';
+import { socialOAuthStartDiagnostic } from '../../../../../../lib/socialPublishing/oauthDiagnostics';
+import { socialOAuthFamily } from '../../../../../../lib/socialPublishing/oauth';
+import { startScopedSocialOAuth } from '../../../../../../lib/socialPublishing/oauthFlow';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export async function GET(
@@ -20,20 +19,15 @@ export async function GET(
   try {
     if (!user.organizationId) throw new Error('Tenant required.');
     const family = socialOAuthFamily((await params).provider);
-    const target = await prisma.$transaction((tx) =>
-      startSocialOAuth(
-        tx,
-        {
-          organizationId: user.organizationId!,
-          userId: user.id,
-          role: user.role,
-        },
-        session.tokenHash,
-        family,
-      ),
+    const target = await startScopedSocialOAuth(
+      { organizationId: user.organizationId, userId: user.id, role: user.role },
+      session.tokenHash,
+      family,
+      { db: prisma, withScope: runWithOrganizationStateAccess },
     );
     return NextResponse.redirect(target);
-  } catch {
+  } catch (error) {
+    console.error(socialOAuthStartDiagnostic(error));
     return NextResponse.redirect(
       new URL(
         '/social?view=connections&status=configuration-required',

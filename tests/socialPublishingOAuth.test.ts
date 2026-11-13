@@ -8,6 +8,7 @@ import {
   completeSocialOAuth,
 } from '../lib/socialPublishing/oauth';
 import { exchangeOAuthCode } from '../lib/socialPublishing/providers/oauth';
+import { SocialProviderError } from '../lib/socialPublishing/types';
 
 for (const configuredMeta of [false, true]) {
 test(`${configuredMeta ? 'USER-configured' : 'Legacy'} Meta code flow preserves original-session one-use OAuth state and the Social callback`, async () => {
@@ -172,6 +173,37 @@ test('unknown/system-user Meta configuration fails before state creation, state 
       await assert.rejects(() => exchangeOAuthCode('FACEBOOK', { code: 'fixture-code', redirectUri: 'https://neat-tst.vercel.app/api/social/oauth/meta/callback' }), item.error);
     }
     assert.deepEqual({ created, queried, consumed, requests }, { created: 0, queried: 0, consumed: 0, requests: 0 });
+  } finally {
+    mock.restoreAll();
+    for (const key of Object.keys(process.env)) if (!(key in prior)) delete process.env[key];
+    Object.assign(process.env, prior);
+  }
+});
+
+test('missing or whitespace-padded short encryption key fails before state writes with a typed setup code', async () => {
+  const prior = { ...process.env };
+  Object.assign(process.env, { SOCIAL_PILOT_USER_IDS: 'admin', SOCIAL_META_APP_ID: 'fixture-app', SOCIAL_META_APP_SECRET: 'fixture-secret', SOCIAL_META_CONFIG_ID: '', SOCIAL_META_TOKEN_TYPE: '', SOCIAL_BASE_URL: 'https://neat-tst.vercel.app' });
+  let writes = 0, requests = 0;
+  const db = {
+    user: { findFirst: async () => ({ id: 'admin', role: 'ADMIN' }) },
+    organization: { findFirst: async () => ({ id: 'org_echo_spirits', crmPreferences: {} }) },
+    organizationFeature: { findFirst: async () => ({ id: 'f' }) },
+    socialOAuthState: { create: async () => { writes++; } },
+  } as unknown as Prisma.TransactionClient;
+  const actor = { organizationId: 'org_echo_spirits', userId: 'admin', role: 'ADMIN' as const };
+  mock.method(globalThis, 'fetch', async () => { requests++; throw new Error('Unexpected provider request.'); });
+  try {
+    for (const key of [undefined, '', ' '.repeat(40), ' '.repeat(32) + 'short' + ' '.repeat(32)]) {
+      if (key === undefined) delete process.env.CALENDAR_TOKEN_ENCRYPTION_KEY;
+      else process.env.CALENDAR_TOKEN_ENCRYPTION_KEY = key;
+      await assert.rejects(() => startSocialOAuth(db, actor, 'original-session', 'meta'), error => error instanceof SocialProviderError && error.kind === 'CONFIGURATION' && error.code === 'oauth_encryption_key_invalid');
+    }
+    assert.deepEqual({ writes, requests }, { writes: 0, requests: 0 });
+    process.env.CALENDAR_TOKEN_ENCRYPTION_KEY = '  ' + 'x'.repeat(32) + '  ';
+    const target = new URL(await startSocialOAuth(db, actor, 'original-session', 'meta'));
+    assert.equal(target.hostname, 'www.facebook.com');
+    assert.equal(writes, 1);
+    assert.equal(requests, 0);
   } finally {
     mock.restoreAll();
     for (const key of Object.keys(process.env)) if (!(key in prior)) delete process.env[key];

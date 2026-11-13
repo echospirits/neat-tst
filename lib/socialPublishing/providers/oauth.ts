@@ -24,6 +24,7 @@ export function getOAuthConfiguration(provider: SocialProvider, baseUrl?: string
   const prefix = `SOCIAL_${family(provider)}`;
   const keys = family(provider) === 'META' ? [`${prefix}_APP_ID`, `${prefix}_APP_SECRET`] : [`${prefix}_CLIENT_ID`, `${prefix}_CLIENT_SECRET`];
   const missing = keys.filter(key => !process.env[key]?.trim());
+  if ((process.env.CALENDAR_TOKEN_ENCRYPTION_KEY?.trim().length ?? 0) < 32) missing.push('CALENDAR_TOKEN_ENCRYPTION_KEY');
   let configurationError: string | undefined;
   if (family(provider) === 'META') {
     try { getMetaLoginConfiguration(); }

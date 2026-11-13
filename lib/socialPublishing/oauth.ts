@@ -11,7 +11,7 @@ import {
   exchangeOAuthCode,
   getOAuthConfiguration,
 } from './providers';
-import type { SocialProvider } from './types';
+import { SocialProviderError, type SocialProvider } from './types';
 export const socialOAuthProviders = {
   meta: 'FACEBOOK',
   google: 'GOOGLE_BUSINESS',
@@ -36,15 +36,14 @@ export async function startSocialOAuth(
   const provider = socialOAuthProviders[family];
   const base = getSocialBaseUrl();
   const config = getOAuthConfiguration(provider, base);
-  if (!config.configured)
-    throw new Error(`Missing ${config.missing.join(', ')}.`);
-  if (
-    !process.env.CALENDAR_TOKEN_ENCRYPTION_KEY ||
-    process.env.CALENDAR_TOKEN_ENCRYPTION_KEY.length < 32
-  )
-    throw new Error(
-      'Configure CALENDAR_TOKEN_ENCRYPTION_KEY before connecting.',
+  if (!config.configured) {
+    const encryptionMissing = config.missing.includes('CALENDAR_TOKEN_ENCRYPTION_KEY');
+    throw new SocialProviderError(
+      encryptionMissing ? 'Configure CALENDAR_TOKEN_ENCRYPTION_KEY with at least 32 characters after trimming before connecting.' : `Missing ${config.missing.join(', ')}.`,
+      'CONFIGURATION',
+      encryptionMissing ? 'oauth_encryption_key_invalid' : 'oauth_not_configured',
     );
+  }
   const state = randomBytes(32).toString('base64url');
   const verifier = randomBytes(48).toString('base64url');
   await db.socialOAuthState.create({

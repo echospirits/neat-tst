@@ -8,7 +8,7 @@ const canonical = 'https://neat-tst.vercel.app';
 const legacy = 'https://neat-tst-joe-1533s-projects.vercel.app';
 function configure(values: Record<string, string | undefined>) {
   const prior = { ...process.env };
-  for (const [key, value] of Object.entries({ SOCIAL_META_CONFIG_ID: undefined, SOCIAL_META_TOKEN_TYPE: undefined, ...values })) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+  for (const [key, value] of Object.entries({ SOCIAL_META_CONFIG_ID: undefined, SOCIAL_META_TOKEN_TYPE: undefined, CALENDAR_TOKEN_ENCRYPTION_KEY: 'fixture-encryption-key-at-least-32-characters', ...values })) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
   return () => { for (const key of Object.keys(process.env)) if (!(key in prior)) delete process.env[key]; Object.assign(process.env, prior); };
 }
 
@@ -145,5 +145,24 @@ test('blank Meta configuration preserves legacy scope-based login without requir
     assert.equal(url.searchParams.get('state'), 'legacy-state');
     assert.match(url.searchParams.get('scope')!, /instagram_basic/);
     assert.match(url.searchParams.get('scope')!, /pages_manage_posts/);
+  } finally { restore(); }
+});
+
+test('OAuth readiness reports only the encryption key name and requires the existing crypto facility’s trimmed minimum', () => {
+  const restore = configure({ SOCIAL_BASE_URL: canonical, SOCIAL_META_APP_ID: 'fixture-app', SOCIAL_META_APP_SECRET: 'fixture-secret', SOCIAL_GOOGLE_CLIENT_ID: 'fixture-google', SOCIAL_GOOGLE_CLIENT_SECRET: 'fixture-google-secret', SOCIAL_LINKEDIN_CLIENT_ID: 'fixture-linkedin', SOCIAL_LINKEDIN_CLIENT_SECRET: 'fixture-linkedin-secret' });
+  try {
+    for (const key of [undefined, '', ' '.repeat(40), ' '.repeat(32) + 'short-fixture-key' + ' '.repeat(32)]) {
+      if (key === undefined) delete process.env.CALENDAR_TOKEN_ENCRYPTION_KEY;
+      else process.env.CALENDAR_TOKEN_ENCRYPTION_KEY = key;
+      for (const provider of ['FACEBOOK', 'INSTAGRAM', 'GOOGLE_BUSINESS', 'LINKEDIN'] as const) {
+        const configuration = getOAuthConfiguration(provider);
+        assert.equal(configuration.configured, false);
+        assert.deepEqual(configuration.missing, ['CALENDAR_TOKEN_ENCRYPTION_KEY']);
+        assert.equal(JSON.stringify(configuration).includes('short-fixture-key'), false);
+      }
+    }
+    process.env.CALENDAR_TOKEN_ENCRYPTION_KEY = '  ' + 'x'.repeat(32) + '  ';
+    assert.equal(getOAuthConfiguration('FACEBOOK').configured, true);
+    assert.equal(getOAuthConfiguration('GOOGLE_BUSINESS').missing.includes('CALENDAR_TOKEN_ENCRYPTION_KEY'), false);
   } finally { restore(); }
 });

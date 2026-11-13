@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
 import { requireAdminSession } from '../../../../../../lib/auth';
-import { prisma } from '../../../../../../lib/prisma';
+import { prisma, runWithOrganizationStateAccess } from '../../../../../../lib/prisma';
 import { getSocialBaseUrl } from '../../../../../../lib/socialPublishing/config';
-import {
-  completeSocialOAuth,
-  consumeSocialOAuthState,
-  socialOAuthFamily,
-} from '../../../../../../lib/socialPublishing/oauth';
+import { socialOAuthFamily } from '../../../../../../lib/socialPublishing/oauth';
+import { completeScopedSocialOAuth } from '../../../../../../lib/socialPublishing/oauthFlow';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -29,24 +26,12 @@ export async function GET(
       userId: user.id,
       role: user.role,
     };
-    const state = await prisma.$transaction((tx) =>
-      consumeSocialOAuthState(
-        tx,
-        actor,
-        session.tokenHash,
-        family,
-        url.searchParams.get('state') ?? '',
-      ),
-    );
-    const code = url.searchParams.get('code');
-    if (url.searchParams.has('error') || !code)
-      throw new Error('Authorization not granted.');
-    const result = await completeSocialOAuth(
+    const result = await completeScopedSocialOAuth(
       actor,
+      session.tokenHash,
       family,
-      code,
-      state,
-      prisma,
+      { state: url.searchParams.get('state') ?? '', code: url.searchParams.get('code'), denied: url.searchParams.has('error') },
+      { db: prisma, withScope: runWithOrganizationStateAccess },
     );
     status = result.discovered
       ? result.discoveryFailures
