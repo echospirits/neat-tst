@@ -20,13 +20,19 @@ The owning [Graph API v17.0 User Accounts changelog](https://developers.facebook
 
 For Echo's business-linked Pages, setup therefore needs the original five Page/Instagram permissions **plus `business_management`**, and the actual business role. The owner-visible business access check confirms Joe has Full access to the owning Echo business. This identifies a concrete missing permission in the current five-scope grant, while successful discovery after a new grant remains unverified. It does not justify adding ads, messaging, comments or other permissions. Separate older Instagram field-specific requirements do not replace this owning `/me/accounts` condition.
 
-Primary pages were inspected read-only in the research session. No permission was added, no grant expanded and no token/account/provider configuration changed as part of the diagnostic code correction. At this documentation checkpoint, owner approval to add `business_management` is pending; it has not been added to the saved configuration or granted to Neat.
+Primary pages were inspected read-only in the research session. No permission was added, no grant expanded and no token/account/provider configuration changed as part of the diagnostic code correction. At its initial documentation checkpoint, owner approval to add `business_management` was pending. The separately authorized configuration change below supersedes that approval status; the actual new grant is still pending.
 
 ## Actual hosted diagnostic checkpoint
 
 Application `4ef084f3125f` is READY on TST (deployment ID prefix `dpl_72dq`), with connected `test` / `neon-neat-tst` health. After actual owner consent, safe grant evidence lists `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `instagram_basic`, `instagram_content_publish` and default `public_profile`. Independent Facebook and Instagram discovery each report `EMPTY`, count `0`, with no discovery API error reported. Business Integrations shows the intended three Pages and two Instagram identities selected, and Joe is an app Administrator. Those grants/selections do not include `business_management` and do not supersede Meta's business-role/permission condition.
 
-Current code pushes each valid Facebook Page row without a Neat task/group/eligibility filter; missing Page ID/token would report `FAILED`. The current parser also treats missing/non-array `data` as an empty list, so `EMPTY` establishes zero constructed destinations rather than independently proving the raw provider payload was exactly `data: []`. No further shape/debug-token request or runtime change was made during this docs-only correction. Additional permission approval, actual grant, rediscovery and identity mapping remain pending. Server and tenant live publishing stay off.
+Current code pushes each valid Facebook Page row without a Neat task/group/eligibility filter; missing Page ID/token would report `FAILED`. The current parser also treats missing/non-array `data` as an empty list, so `EMPTY` establishes zero constructed destinations rather than independently proving the raw provider payload was exactly `data: []`. No further shape/debug-token request or runtime change was made during this docs-only correction. This is the preceding five-permission result, before the approved configuration change below. Server and tenant live publishing stay off.
+
+## Owner-approved sixth permission; new grant pending
+
+The owner approved only `business_management`, which was already Ready for testing. Existing USER configuration `1757266013065799` was edited/saved and its expanded readback confirms **General / User access token** with exactly `business_management`, `instagram_basic`, `instagram_content_publish`, `pages_manage_posts`, `pages_read_engagement` and `pages_show_list`. No app-permission Add action, new configuration ID, Vercel variable, runtime change or broader permission was needed.
+
+TST documentation application `ccae6e31` is READY, deployment `dpl_3HiuoXtobDmWpKT6BZBZ82pSYKKt`; runtime remains the tested `4ef084f3125f` code. The new consent screen is open for owner handoff. There is no new `business_management` grant or discovery outcome evidenced yet. Actual consent/grant, rediscovery and identity/group mapping remain pending. Saved configuration and user-token grants are recorded as separate steps.
 
 ## Validation
 
