@@ -155,3 +155,15 @@ See the [operator and import guide](../tasting-management.md), [checkpoint](../.
 ## Retained TST history
 
 - [Complete historical TST development manifest](0.7.0-tst-development-manifest.md), including TST-only maintenance. This is preserved provenance, not new production scope or a new development cycle.
+
+## Production Supplies reliability hotfix — TST integration
+
+Owner-authorized November 12, 2026. This integrates the isolated Supplies hotfix into the existing 0.10.0-dev TST application while preserving concurrent Social Publishing, Tasting Management and the test-only GitHub scheduler guard.
+
+- Current-message and independent-document extraction suppress quoted history and decorative images, retain real invoice evidence, preserve verified bootstrap/manual decisions, and quarantine only unsupported automatic legacy purchases with audited recovery.
+- Stable MIME part identities survive rotating attachment download handles, preserve original source keys and first-observed handles, and allow bounded imports to finish without repeatedly extracting the same document. Failed extraction retains identity metadata without inventing operational facts.
+- Cards also admit authenticated Production-team replenishment requests with supplier confirmation. Exact supplier/order/material boundaries, unknown locations, raw units, payment holds and source-labeled promises remain explicit; unrelated mixed-invoice lines cannot become Production watches.
+- A tenant-owned durable Workflow supplies the 15-minute cadence and bounded catch-up. Authenticated native cron and GitHub Actions ensure/recover its persisted owner; they are watchdogs rather than the primary timer. Existing consent, entitlement and disable controls remain authoritative.
+- Final combined TST validation passes: 1,529 tests across 79 suites, 50 independent focused importer checks, strict typecheck and production build. TST READY/health and hosted sleep/resume remain pending; synthetic SQL and browser evidence are distinct from live provider verification. No migration, dependency upgrade, provider credential transfer, hosted activation change or production promotion is performed by this integration; local checks use the existing isolated development database environment.
+
+Shared hotfix records: [0.10.1 notes](0.10.1.md), [checklist](0.10.1-checklist.md) and [validation](0.10.1-validation.md). TST retains 0.10.0-dev and its separate integration/deployment receipts; the production release records do not substitute for TST acceptance.
