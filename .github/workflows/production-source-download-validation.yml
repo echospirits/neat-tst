@@ -26,7 +26,8 @@ jobs:
     if: github.repository == 'echospirits/neat-tst' && github.ref == 'refs/heads/tst'
     name: Download and validate sources without importing
     environment: test
-    runs-on: ubuntu-latest
+    # Playwright 1.60 Chromium dependencies do not support Ubuntu 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
       APP_ENV: test

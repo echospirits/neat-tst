@@ -1,5 +1,9 @@
 # Unreleased
 
+## OHLQ runner compatibility recovery — November 15, 2026
+
+Pin the five Playwright ingestion/verification workflows to Ubuntu 24.04 after Ubuntu 26.04 browser installation failures. Existing branch versions, job/environment guards, dependencies and application behavior remain unchanged. Verify TST before selective main promotion and recover missing report dates. [Scope and validation](ohlq-runner-compatibility-2026-11-15.md).
+
 ## Social Publishing pilot — 0.10.0-dev (TST only)
 
 Owner-authorized November 12, 2026. Starting TST `7cff2fdc`; the existing `0.10.0-dev` cycle, Production Supplies and other unrelated TST work remain preserved. No production/main promotion or public social write is authorized.

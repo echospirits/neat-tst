@@ -26,7 +26,8 @@ jobs:
       (github.repository == 'echospirits/neat-tst' && github.ref == 'refs/heads/tst') ||
       (github.repository == 'echospirits/ohlq-field-crm' && github.ref == 'refs/heads/main')
     environment: ${{ github.repository == 'echospirits/neat-tst' && 'test' || 'production' }}
-    runs-on: ubuntu-latest
+    # Playwright 1.60 Chromium dependencies do not support Ubuntu 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
       APP_ENV: ${{ github.repository == 'echospirits/neat-tst' && 'test' || 'production' }}
