@@ -64,7 +64,8 @@ jobs:
   sync:
     name: Download and import OHLQ reports
     environment: ${{ github.event_name == 'schedule' && (github.repository == 'echospirits/neat-tst' && 'test' || 'production') || inputs.deploymentEnvironment }}
-    runs-on: ubuntu-latest
+    # Playwright 1.60 Chromium dependencies do not support Ubuntu 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 240
 
     env:

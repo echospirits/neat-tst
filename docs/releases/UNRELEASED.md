@@ -1,5 +1,9 @@
 # Unreleased
 
+## OHLQ runner compatibility recovery — November 15, 2026
+
+Pin the four existing Playwright ingestion/verification workflows to Ubuntu 24.04 after Ubuntu 26.04 browser installation failures. Keep production version 0.10.1 and preserve all application/dependency/schema/configuration files and unrelated TST pilots. Verify TST before selective promotion and recover missing report dates. [Scope and validation](ohlq-runner-compatibility-2026-11-15.md).
+
 ## Current stable release
 
 No unreleased production application changes. Stable **0.10.1** selectively releases the authorized Production Supplies reliability hotfix at application `b75da7a2987d6bb95c71fde16b77cad5ae01d068`. Confirmed Production orders can open cards; material matching, decorative-image filtering, immutable attachment identity and durable 15-minute importing are corrected. The bounded audited production correction is committed, preserving source history, inventory, receipts and mailbox state. See [release notes](0.10.1.md), [validation](0.10.1-validation.md) and [checklist](0.10.1-checklist.md) for exact tested/deployed refs and runtime evidence.
