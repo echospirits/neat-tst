@@ -8,7 +8,7 @@ Production Supplies is in the owner-authorized **0.10.0-dev TST-only** cycle; pr
 
 Start with [implementation progress](engineering/implementation-progress.md) and [feature inventory](product/feature-inventory.md). Existing canonical release and UI standards remain authoritative.
 
-Social Publishing is an owner-authorized, disabled-by-default TST pilot in the existing 0.10.0-dev cycle. See [setup and handoff](social-publishing.md), [provider capabilities](social-publishing-providers.md), [live-test runbook](social-publishing-live-tests.md) and [validation](releases/social-publishing-validation.md). Production activation and public tests remain separate.
+Social Publishing was canceled by the owner on November 17, 2026. Its runtime and active setup guides are removed; see the [retirement receipt](releases/social-publishing-retirement.md) for validation and support-system cleanup status.
 
 ## Authorized TST work
 

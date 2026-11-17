@@ -4,10 +4,6 @@
   "regions": ["iad1"],
   "crons": [
     {
-      "path": "/api/cron/social-publishing",
-      "schedule": "19 14 * * *"
-    },
-    {
       "path": "/api/cron/production-forecasting",
       "schedule": "30 12 * * *"
     },

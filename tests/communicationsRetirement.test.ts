@@ -20,11 +20,12 @@ function load(path: string, mocks: Record<string, unknown>) {
   return exports;
 }
 
-test('Communications cannot return through old entitlements or mobile and desktop navigation', async () => {
+test('retired features cannot return through old entitlements or mobile and desktop navigation', async () => {
+  const retired = ['COMMUNICATIONS', 'SOCIAL_PUBLISHING'];
   for (const env of ['test', 'production', 'development']) {
     const organizations = load('lib/organizations.ts', {
       './prisma': { prisma: { organizationFeature: {
-        findMany: async () => [{ featureKey: 'CORE_CRM' }, { featureKey: 'COMMUNICATIONS' }],
+        findMany: async () => [{ featureKey: 'CORE_CRM' }, ...retired.map(featureKey => ({ featureKey }))],
         findFirst: async () => assert.fail('retired features must stop before entitlement lookup'),
       } } },
       './featureRegistry': { FEATURE_KEYS, getEnvironmentFeatureKeys, validateFeatureSelection },
@@ -33,18 +34,19 @@ test('Communications cannot return through old entitlements or mobile and deskto
     try {
       process.env.APP_ENV = env;
       const features = await organizations.getOrganizationFeatures('org_echo_spirits');
-      assert.equal(features.has('COMMUNICATIONS'), false);
+      for (const key of retired) assert.equal(features.has(key), false);
       assert.equal(features.has('CORE_CRM'), true);
-      assert.equal(await organizations.hasFeature('org_echo_spirits', 'COMMUNICATIONS'), false);
+      for (const key of retired) assert.equal(await organizations.hasFeature('org_echo_spirits', key), false);
     } finally {
       if (prior === undefined) delete process.env.APP_ENV; else process.env.APP_ENV = prior;
     }
   }
-  assert.deepEqual(validateFeatureSelection(['CORE_CRM', 'COMMUNICATIONS']).enabled, ['CORE_CRM']);
+  assert.deepEqual(validateFeatureSelection(['CORE_CRM', ...retired]).enabled, ['CORE_CRM']);
   for (const admin of [false, true]) for (const platform of [false, true]) {
-    const features = [...FEATURE_KEYS, 'COMMUNICATIONS'];
+    const features = [...FEATURE_KEYS, ...retired];
     const items = [...getNavigationItems('work', features, platform), ...getMoreNavigationItems(admin, features, platform)];
     assert.ok(items.every(item => item.href !== '/settings/communications'));
+    assert.ok(items.every(item => item.href !== '/social'));
     assert.ok(items.some(item => item.href === '/alerts'));
   }
 });
