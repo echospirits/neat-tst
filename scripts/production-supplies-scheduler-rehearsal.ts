@@ -51,16 +51,16 @@ async function main() {
     assert.equal(Date.parse(first.nextAt!), initial + scheduler.SUPPLY_POLL_MS);
     assert.equal((await state()).workUntil, null);
     await scheduler.runSupplySchedulerTick(await owner(), db, services); assert.equal(providerBatches, 1);
-    await pass('A persisted completed batch waits for its 15-minute boundary; duplicate step does not repeat work.');
+    await pass('A persisted completed batch waits for its six-hour boundary; duplicate step does not repeat work.');
 
     clock = Date.parse(first.nextAt!);
     const partial = await scheduler.runSupplySchedulerTick(await owner(), db, { ...services, jobs: (async () => { providerBatches++; return result(true); }) as typeof runSupplyJobs });
-    assert.equal(Date.parse(partial.nextAt!), clock + scheduler.SUPPLY_CATCHUP_MS);
+    assert.equal(Date.parse(partial.nextAt!), clock + scheduler.SUPPLY_POLL_MS);
     const regular = (await state()).nextRegularAt;
     clock = Date.parse(partial.nextAt!);
     const complete = await scheduler.runSupplySchedulerTick(await owner(), db, services);
-    assert.equal(complete.nextAt, regular);
-    await pass('One-minute catch-up persists separately from the unchanged regular poll boundary.');
+    assert.equal(Date.parse(complete.nextAt!), Date.parse(regular) + scheduler.SUPPLY_POLL_MS);
+    await pass('Checkpointed catch-up resumes at the next six-hour poll boundary.');
 
     clock = Date.parse(complete.nextAt!);
     const old = await owner();
@@ -74,11 +74,12 @@ async function main() {
     assert.equal((await scheduler.ensureSupplySchedulers(db, redeployed, organizationId)).schedulers[0]?.status, 'started');
     const successor = await owner(); assert.notEqual(successor.generation, old.generation);
     const waits = await scheduler.runSupplySchedulerTick(successor, db, { ...redeployed, jobs: (async () => { assert.fail('Overlapped the prior work lease.'); }) as typeof runSupplyJobs });
-    assert.equal(waits.nextAt, inFlight.workUntil);
+    assert.equal(Date.parse(waits.nextAt!), clock + scheduler.SUPPLY_POLL_MS);
+    assert.ok(Date.parse(waits.nextAt!) >= Date.parse(inFlight.workUntil!));
     release(); assert.equal((await running).continue, false); assert.equal((await state()).generation, successor.generation);
-    await pass('Deployment rotation fences an old completion and a successor waits for the in-flight database lease.');
+    await pass('Deployment rotation fences an old completion and a successor preserves the polling interval and in-flight lease.');
 
-    clock = Date.parse(inFlight.workUntil!);
+    clock = Date.parse(waits.nextAt!);
     await scheduler.runSupplySchedulerTick(successor, db, redeployed);
     const obsolete = await owner(); clock = Date.parse((await state()).leaseUntil) + 1;
     assert.equal((await scheduler.ensureSupplySchedulers(db, redeployed, organizationId)).schedulers[0]?.status, 'started');

@@ -1,14 +1,7 @@
 name: OHLQ Annual Sales Sync
 
 on:
-  schedule:
-    # Keep production at 6:47 AM Eastern and TST at 7:27 AM Eastern.
-    # The first step selects the repository and daylight/standard-time slot,
-    # preserving the separation between automated OHLQ browser logins.
-    - cron: "47 10 * * *"
-    - cron: "47 11 * * *"
-    - cron: "27 11 * * *"
-    - cron: "27 12 * * *"
+  # TST daily loads are disabled to reduce usage. Manual imports remain available.
   workflow_dispatch:
     inputs:
       reportDate:
@@ -63,6 +56,7 @@ concurrency:
 jobs:
   sync:
     name: Download and import OHLQ reports
+    if: github.event_name != 'schedule'
     environment: ${{ github.event_name == 'schedule' && (github.repository == 'echospirits/neat-tst' && 'test' || 'production') || inputs.deploymentEnvironment }}
     # Playwright 1.60 Chromium dependencies do not support Ubuntu 26.04.
     runs-on: ubuntu-24.04

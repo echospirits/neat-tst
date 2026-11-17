@@ -2,8 +2,8 @@ name: Ensure Production Supplies scheduler
 
 on:
   schedule:
-    # Recovery only. The durable Workflow sleep loop owns the 15-minute cadence.
-    - cron: "8,23,38,53 * * * *"
+    # Recovery only. The durable Workflow sleep loop checks four times daily.
+    - cron: "8 */6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -15,8 +15,9 @@ concurrency:
 
 jobs:
   refresh:
-    # Code delivery does not activate hosted integrations or production processing.
+    # TST processing is disabled by owner request, independently of saved variables.
     if: >-
+      false &&
       github.repository == 'echospirits/neat-tst' &&
       github.ref == 'refs/heads/tst' &&
       vars.PRODUCTION_SUPPLIES_SCHEDULE_ENABLED == 'true'

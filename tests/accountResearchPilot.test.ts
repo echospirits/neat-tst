@@ -165,12 +165,11 @@ it('scopes waterfall candidates to the selected tenant organization', async () =
   });
 });
 
-it('keeps manual tests Platform Admin protected and schedules a production-gated worker', () => {
+it('keeps manual tests Platform Admin protected while TST research scheduling is disabled', () => {
   const vercel = readFileSync('vercel.json', 'utf8');
   const actions = readFileSync('app/admin/account-research/actions.ts', 'utf8');
   const service = readFileSync('lib/accountResearchPilotService.ts', 'utf8');
-  assert.match(vercel, /\/api\/cron\/account-research/);
-  assert.match(vercel, /"schedule": "0 12 \* \* \*"/);
+  assert.doesNotMatch(vercel, /\/api\/cron\/account-research/);
   assert.match(actions, /requireEchoAdmin/);
   assert.match(actions, /startAccountResearchPilot/);
   assert.match(service, /take = ACCOUNT_RESEARCH_SUBMISSION_WAVE_SIZE/);

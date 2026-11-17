@@ -9,6 +9,14 @@ const step = (name: string) => {
   return body.split('\n      - name: ')[0];
 };
 
+test('TST daily loads have neither a native cron nor a GitHub schedule', () => {
+  const vercel = readFileSync(new URL('../vercel.json', import.meta.url), 'utf8');
+  assert.doesNotMatch(vercel, /\/api\/cron\/ohlq-annual-sales/);
+  assert.doesNotMatch(workflow, /^  schedule:/m);
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /if: github.event_name != 'schedule'/);
+});
+
 test('product discovery cannot block sales or inventory and remains a visible failure', () => {
   assert.match(step('Download and import current OHLQ Brand Master'), /--defer-product-discovery/);
   const discovery = step('Discover organization products after core imports');

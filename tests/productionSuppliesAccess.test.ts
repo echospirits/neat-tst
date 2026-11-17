@@ -34,3 +34,16 @@ test('bad or missing settings fail closed and backfill/polling bounds are enforc
   assert.equal(supplySettingsInput.safeParse({ historyDays: 366 }).success, false);
   assert.deepEqual(productionMemberIds({ productionSupplies: { productionTeamId: 'unknown' } }), []);
 });
+
+test('legacy polling settings retain access configuration and enforce a six-hour floor', () => {
+  const settings = readSupplySettings({ productionSupplies: { productionTeamId: 'production', viewerUserIds: ['viewer'], managerUserIds: ['manager'], historyDays: 120, pollMinutes: 15, includeSent: false } });
+  assert.equal(settings.pollMinutes, 360);
+  assert.equal(settings.productionTeamId, 'production');
+  assert.deepEqual(settings.viewerUserIds, ['viewer']);
+  assert.deepEqual(settings.managerUserIds, ['manager']);
+  assert.equal(settings.historyDays, 120);
+  assert.equal(settings.includeSent, false);
+  assert.equal(readSupplySettings(null).pollMinutes, 360);
+  assert.equal(supplySettingsInput.parse({ pollMinutes: 30 }).pollMinutes, 360);
+  assert.equal(readSupplySettings({ productionSupplies: { pollMinutes: 720 } }).pollMinutes, 720);
+});
