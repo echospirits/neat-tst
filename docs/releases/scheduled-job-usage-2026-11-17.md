@@ -1,6 +1,6 @@
 # Scheduled-job usage controls — November 17, 2026
 
-Owner-authorized operational changes to reduce Vercel usage. Production baseline: `1076b724`; TST baseline: `59a21824`. Production stays at 0.10.1; TST stays at 0.10.0-dev. This does not open a development cycle or promote unrelated TST features.
+Owner-authorized operational changes to reduce Vercel usage. Production baseline: `1076b724`; TST baseline: `59a21824`. Production is prepared as the scoped 0.10.2 hotfix candidate; TST stays at 0.10.0-dev. This does not open a development cycle or promote unrelated TST features.
 
 ## Requested state
 

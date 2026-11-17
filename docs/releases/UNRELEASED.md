@@ -2,7 +2,7 @@
 
 ## Scheduled-job usage controls — November 17, 2026
 
-Owner-authorized operational reduction: Supplies automatic checks and recovery watchdogs move to four per day in both repositories; TST Supplies is disabled. TST daily OHLQ triggers are removed and retail/wholesale account research is explicitly disabled. Six-hour retry/backfill waits preserve existing records and checkpoints. Versions and unrelated TST work are retained. [Scope, timing and validation](scheduled-job-usage-2026-11-17.md).
+Scoped production **0.10.2 hotfix candidate**, pending exact-candidate validation and promotion. Owner-authorized operational reduction: Supplies automatic checks and recovery watchdogs move to four per day in both repositories; TST Supplies is disabled. TST daily OHLQ triggers are removed and retail/wholesale account research is explicitly disabled. Six-hour retry/backfill waits preserve existing records and checkpoints. TST stays at 0.10.0-dev and unrelated TST work remains excluded. See [release notes](0.10.2.md), [checklist](0.10.2-checklist.md), [validation](0.10.2-validation.md) and [scope/timing](scheduled-job-usage-2026-11-17.md).
 
 ## OHLQ runner compatibility recovery — November 15, 2026
 
