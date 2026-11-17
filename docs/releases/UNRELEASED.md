@@ -2,7 +2,7 @@
 
 ## Scheduled-job usage controls — November 17, 2026
 
-Scoped production **0.10.2 hotfix candidate**, pending exact-candidate validation and promotion. Owner-authorized operational reduction: Supplies automatic checks and recovery watchdogs move to four per day in both repositories; TST Supplies is disabled. TST daily OHLQ triggers are removed and retail/wholesale account research is explicitly disabled. Six-hour retry/backfill waits preserve existing records and checkpoints. TST stays at 0.10.0-dev and unrelated TST work remains excluded. See [release notes](0.10.2.md), [checklist](0.10.2-checklist.md), [validation](0.10.2-validation.md) and [scope/timing](scheduled-job-usage-2026-11-17.md).
+Production **0.10.2 deployed**, application `7437cb7d`; TST companion `3227bed2` stays at 0.10.0-dev. Both are READY/healthy and all local/required CI checks pass. Supplies is configured for four automatic batches/watchdogs per day; TST Supplies, daily OHLQ schedules and retail/wholesale account research are disabled. Vercel Workflow quota currently returns `ThrottleError`: the new production timer is persisted but STARTING; old-run cancellation was rejected, so a completed handoff, executed six-hour cycle and provider freshness are not claimed. The annotated release tag exists locally and is not published remotely. Unrelated TST work remains excluded. See [release notes](0.10.2.md), [checklist](0.10.2-checklist.md), [validation](0.10.2-validation.md) and [scope/timing](scheduled-job-usage-2026-11-17.md).
 
 ## OHLQ runner compatibility recovery — November 15, 2026
 
@@ -10,7 +10,7 @@ Pin the four existing Playwright ingestion/verification workflows to Ubuntu 24.0
 
 ## Current stable release
 
-No unreleased production application changes. Stable **0.10.1** selectively releases the authorized Production Supplies reliability hotfix at application `b75da7a2987d6bb95c71fde16b77cad5ae01d068`. Confirmed Production orders can open cards; material matching, decorative-image filtering, immutable attachment identity and durable 15-minute importing are corrected. The bounded audited production correction is committed, preserving source history, inventory, receipts and mailbox state. See [release notes](0.10.1.md), [validation](0.10.1-validation.md) and [checklist](0.10.1-checklist.md) for exact tested/deployed refs and runtime evidence.
+Deployed **0.10.2** contains the scoped usage controls above; runtime acceptance is limited by Workflow quota and its remote tag is pending. Historical stable **0.10.1** selectively released the authorized Production Supplies reliability hotfix at application `b75da7a2987d6bb95c71fde16b77cad5ae01d068`. Confirmed Production orders can open cards; material matching, decorative-image filtering and immutable attachment identity were corrected. Its historical 15-minute cadence is superseded by 0.10.2's six-hour configuration. The bounded audited production correction is preserved with source history, inventory, receipts and mailbox state. See [historical release notes](0.10.1.md), [validation](0.10.1-validation.md) and [checklist](0.10.1-checklist.md).
 
 Historical **0.10.0** remains archived in [release notes](0.10.0.md), [checklist](0.10.0-checklist.md) and [validation](0.10.0-validation.md), with [v0.10.0](https://github.com/echospirits/ohlq-field-crm/releases/tag/v0.10.0) at verified application `3503020a33b9f20778d26b4ee51685875304b343`.
 
