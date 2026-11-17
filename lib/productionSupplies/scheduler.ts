@@ -3,12 +3,11 @@ import { Prisma, type PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { getAppEnvironment } from '../appEnvironment';
 import { prisma } from '../prisma';
-import { supplyJobsEnabled } from './config';
+import { SUPPLY_POLL_MINUTES, supplyJobsEnabled } from './config';
 import { runSupplyJobs } from './jobs';
 
 export const SUPPLY_SCHEDULER_STATE = 'SUPPLY_SCHEDULER_STATE';
-export const SUPPLY_POLL_MS = 15 * 60_000;
-export const SUPPLY_CATCHUP_MS = 60_000;
+export const SUPPLY_POLL_MS = SUPPLY_POLL_MINUTES * 60_000;
 export const SUPPLY_WORK_LEASE_MS = 330_000; // Longer than the platform's 300s step ceiling.
 const GRACE_MS = 5 * 60_000;
 const stateInput = z.object({
@@ -17,6 +16,7 @@ const stateInput = z.object({
   leaseUntil: z.string().datetime(), workUntil: z.string().datetime().nullable(),
   status: z.enum(['STARTING', 'RUNNING', 'SLEEPING', 'CONTROL_UNAVAILABLE', 'STOPPED']),
   completedBatches: z.number().int().nonnegative(), failedBatches: z.number().int().nonnegative(),
+  pollIntervalMs: z.number().int().positive().optional(),
   lastResult: z.object({ mailboxChecks: z.number(), mailboxErrors: z.number(), evidenceReplays: z.number(), replayErrors: z.number(), continuation: z.boolean(), backfillIncomplete: z.boolean(),earliestMailboxNextAt:z.string().datetime().nullable().optional() }).nullable(),
 });
 export type SupplySchedulerState = z.infer<typeof stateInput>;
@@ -35,7 +35,18 @@ const iso = (time: number) => new Date(time).toISOString();
 const fingerprint = (env: NodeJS.ProcessEnv) => env.VERCEL_DEPLOYMENT_ID || env.VERCEL_URL || `local:${getAppEnvironment(env)}`;
 const enabled = (env: NodeJS.ProcessEnv) => supplyJobsEnabled(env) && (env.VERCEL !== '1' || env.VERCEL_ENV === 'production' && getAppEnvironment(env) !== 'development');
 const owns = (state: SupplySchedulerState | null, owner: Owner) => state?.generation === owner.generation && state.runId === owner.runId && state.status !== 'STOPPED';
-const parse = (detail: unknown) => { const result = stateInput.safeParse(detail); return result.success ? result.data : null; };
+const parse = (detail: unknown): SupplySchedulerState | null => {
+  const result = stateInput.safeParse(detail);
+  if (!result.success) return null;
+  const state = result.data;
+  if (state.pollIntervalMs === SUPPLY_POLL_MS) return state;
+  // Upgrade old 15-minute anchors before either takeover or a replayed tick.
+  // Checkpoints and failure/backfill debt remain intact until the next slot.
+  const alreadyRan = state.completedBatches > 0 || state.failedBatches > 0 || state.status === 'RUNNING' || state.workUntil !== null;
+  const regular = Math.max(Date.parse(state.nextRegularAt), alreadyRan ? Date.parse(state.heartbeatAt) + SUPPLY_POLL_MS : Date.parse(state.nextDueAt));
+  const due = Math.max(regular, Date.parse(state.nextDueAt));
+  return { ...state, pollIntervalMs: SUPPLY_POLL_MS, nextRegularAt: iso(regular), nextDueAt: iso(due), leaseUntil: iso(Math.max(Date.parse(state.leaseUntil), due + GRACE_MS)) };
+};
 const json = (state: SupplySchedulerState) => state as unknown as Prisma.InputJsonValue;
 
 async function locked<T>(db: PrismaClient, organizationId: string, operation: (tx: Prisma.TransactionClient, state: SupplySchedulerState | null) => Promise<T>) {
@@ -73,18 +84,21 @@ async function ensureOne(organizationId: string, db: PrismaClient, services: Ser
     }
     const generation = randomUUID();
     // A replaced invocation may still be finishing provider work. Never overlap its lease.
-    const due = Math.max(now, state?.workUntil ? Date.parse(state.workUntil) : now);
+    // Its claimed batch also consumes the current polling slot even if its
+    // completion is fenced, so deployment recovery cannot repeat it early.
+    const regular = state?.status === 'RUNNING' ? Math.max(Date.parse(state.nextRegularAt), Date.parse(state.heartbeatAt) + SUPPLY_POLL_MS) : state ? Date.parse(state.nextRegularAt) : now;
+    const due = Math.max(now, regular, state ? Date.parse(state.nextDueAt) : now, state?.workUntil ? Date.parse(state.workUntil) : now);
     const runId = await (services.launch ?? launch)(organizationId, generation);
     await save(tx, organizationId, { version: 1, generation, runId, deployment,
-      heartbeatAt: iso(now), nextDueAt: iso(previous ? Math.max(due, Date.parse(state!.nextDueAt)) : due),
-      nextRegularAt: state?.nextRegularAt ?? iso(due), leaseUntil: iso(Math.max(due, previous ? Date.parse(state!.nextDueAt) : due) + GRACE_MS),
+      heartbeatAt: iso(now), nextDueAt: iso(due), pollIntervalMs: SUPPLY_POLL_MS,
+      nextRegularAt: iso(regular), leaseUntil: iso(due + GRACE_MS),
       workUntil: state?.workUntil && Date.parse(state.workUntil) > now ? state.workUntil : null,
       status: 'STARTING', completedBatches: state?.completedBatches ?? 0, failedBatches: state?.failedBatches ?? 0, lastResult: state?.lastResult ?? null });
     return { organizationId, status: 'started' as const, generation, runId, nextAt: iso(due) };
   });
 }
 
-/** Daily watchdogs and manual requests only ensure ownership; they never run provider work. */
+/** Watchdogs and manual requests only ensure ownership; they never run provider work. */
 export async function ensureSupplySchedulers(db: PrismaClient = prisma, services: Services = {}, organizationId?: string) {
   if (!enabled(services.env ?? process.env)) return { environmentDisabled: true as const, schedulers: [], errors: 0 };
   const organizations = await db.organization.findMany({ where: enrolled(organizationId), select: { id: true }, orderBy: { id: 'asc' }, take: 50 });
@@ -136,12 +150,16 @@ export async function runSupplySchedulerTick(owner: Owner, db: PrismaClient = pr
     const due = Math.max(Date.parse(checkpoint.nextDueAt), checkpoint.workUntil ? Date.parse(checkpoint.workUntil) : 0);
     if (due > now) return { wait: iso(due) };
     if (control === 'unavailable') {
-      checkpoint.nextDueAt = iso(now + GRACE_MS); checkpoint.leaseUntil = iso(now + 2 * GRACE_MS); checkpoint.status = 'CONTROL_UNAVAILABLE';
+      checkpoint.nextDueAt = iso(now + SUPPLY_POLL_MS); checkpoint.nextRegularAt = checkpoint.nextDueAt;
+      checkpoint.leaseUntil = iso(now + SUPPLY_POLL_MS + GRACE_MS); checkpoint.status = 'CONTROL_UNAVAILABLE';
       checkpoint.heartbeatAt = iso(now); checkpoint.failedBatches++; checkpoint.lastResult = null;
       await save(tx, owner.organizationId, checkpoint);
       return { wait: checkpoint.nextDueAt };
     }
     checkpoint.status = 'RUNNING'; checkpoint.heartbeatAt = iso(now); checkpoint.workUntil = iso(now + SUPPLY_WORK_LEASE_MS);
+    // Reserve the next slot before provider work. A crashed invocation can be
+    // replayed after its work lease expires without repeating this slot.
+    checkpoint.nextDueAt = iso(now + SUPPLY_POLL_MS);
     checkpoint.leaseUntil = iso(now + SUPPLY_WORK_LEASE_MS + GRACE_MS); checkpoint.deployment = fingerprint(env);
     await save(tx, owner.organizationId, checkpoint);
     return { claimed: true as const };
@@ -154,17 +172,15 @@ export async function runSupplySchedulerTick(owner: Owner, db: PrismaClient = pr
   return locked(db, owner.organizationId, async (tx, state) => {
     if (!owns(state, owner)) return { continue: false, reason: 'superseded' };
     const now = clock(), checkpoint = state!;
-    let regular = Date.parse(checkpoint.nextRegularAt);
-    if (regular <= now) regular += (Math.floor((now - regular) / SUPPLY_POLL_MS) + 1) * SUPPLY_POLL_MS;
+    // Count from completion so mailbox scans started during this batch are due
+    // by the next tick, rather than missing an earlier fixed anchor by seconds.
+    const regular = now + SUPPLY_POLL_MS;
     const failed = !result || result.mailboxErrors > 0 || result.replayErrors > 0;
-    const mailboxAt=result?.earliestMailboxNextAt?Date.parse(result.earliestMailboxNextAt):null;
-    const mailboxWake=mailboxAt!==null && Number.isFinite(mailboxAt)?mailboxAt>now?mailboxAt:now+SUPPLY_CATCHUP_MS:Infinity;
-    // Persisted mailbox due/backoff/lease is authoritative. Only work without a
-    // concrete future due time needs the generic one-minute continuation retry.
-    const catchup=result && !failed && (result.deferred || result.continuation && mailboxAt===null);
-    const next = Math.min(regular,mailboxWake,failed ? now + GRACE_MS : catchup ? now + SUPPLY_CATCHUP_MS : regular);
-    checkpoint.nextRegularAt = iso(regular); checkpoint.nextDueAt = iso(next); checkpoint.heartbeatAt = iso(now);
-    checkpoint.leaseUntil = iso(next + GRACE_MS); checkpoint.workUntil = null; checkpoint.status = 'SLEEPING';
+    // Partial pages, provider backoff and failures retain their own checkpoints.
+    // All automatic work resumes at the next six-hour slot rather than polling
+    // early for catch-up or retries; per-mailbox leases/backoff still apply.
+    checkpoint.nextRegularAt = iso(regular); checkpoint.nextDueAt = iso(regular); checkpoint.heartbeatAt = iso(now);
+    checkpoint.leaseUntil = iso(regular + GRACE_MS); checkpoint.workUntil = null; checkpoint.status = 'SLEEPING';
     checkpoint.completedBatches += result ? 1 : 0; checkpoint.failedBatches += failed ? 1 : 0;
     checkpoint.lastResult = result ? { mailboxChecks: result.mailboxChecks, mailboxErrors: result.mailboxErrors, evidenceReplays: result.evidenceReplays, replayErrors: result.replayErrors, continuation: result.continuation, backfillIncomplete: result.backfillIncomplete,earliestMailboxNextAt:result.earliestMailboxNextAt ?? null } : null;
     await save(tx, owner.organizationId, checkpoint);

@@ -2,8 +2,8 @@ name: Ensure Production Supplies scheduler
 
 on:
   schedule:
-    # Recovery only. The durable Workflow sleep loop owns the 15-minute cadence.
-    - cron: "8,23,38,53 * * * *"
+    # Recovery only. The durable Workflow sleep loop checks four times daily.
+    - cron: "8 */6 * * *"
   workflow_dispatch:
 
 permissions:

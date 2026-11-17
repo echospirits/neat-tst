@@ -1,5 +1,9 @@
 # Unreleased
 
+## Scheduled-job usage controls — November 17, 2026
+
+Owner-authorized operational reduction: Supplies automatic checks and recovery watchdogs move to four per day in both repositories; TST Supplies is disabled. TST daily OHLQ triggers are removed and retail/wholesale account research is explicitly disabled. Six-hour retry/backfill waits preserve existing records and checkpoints. Versions and unrelated TST work are retained. [Scope, timing and validation](scheduled-job-usage-2026-11-17.md).
+
 ## OHLQ runner compatibility recovery — November 15, 2026
 
 Pin the four existing Playwright ingestion/verification workflows to Ubuntu 24.04 after Ubuntu 26.04 browser installation failures. Keep production version 0.10.1 and preserve all application/dependency/schema/configuration files and unrelated TST pilots. Verify TST before selective promotion and recover missing report dates. [Scope and validation](ohlq-runner-compatibility-2026-11-15.md).

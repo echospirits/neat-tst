@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { readAccountConfiguration } from '../crm/accountConfiguration';
 import { isSideEffectEnabled, parseBooleanEnvironmentValue } from '../appEnvironment';
 
+export const SUPPLY_POLL_MINUTES = 6 * 60;
+
 // Explicit TST opt-in affects this feature only; it never enables unrelated jobs.
 export function supplyJobsEnabled(env: NodeJS.ProcessEnv = process.env) {
   return parseBooleanEnvironmentValue(env.SUPPLY_JOBS_ENABLED, 'SUPPLY_JOBS_ENABLED') ?? isSideEffectEnabled('cron', env);
@@ -12,7 +14,9 @@ export const supplySettingsInput = z.object({
   viewerUserIds: z.array(z.string().min(1).max(100)).max(100).default([]),
   managerUserIds: z.array(z.string().min(1).max(100)).max(100).default([]),
   historyDays: z.coerce.number().int().min(1).max(365).default(90),
-  pollMinutes: z.coerce.number().int().min(15).max(1440).default(15),
+  // Retain older saved settings and their access grants while enforcing the
+  // current minimum interval for every mailbox, without a database rewrite.
+  pollMinutes: z.coerce.number().int().min(15).max(1440).default(SUPPLY_POLL_MINUTES).transform(minutes => Math.max(SUPPLY_POLL_MINUTES, minutes)),
   includeSent: z.boolean().default(true),
 });
 export type SupplySettings = z.infer<typeof supplySettingsInput>;
