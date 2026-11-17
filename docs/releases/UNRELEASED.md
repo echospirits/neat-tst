@@ -2,7 +2,7 @@
 
 ## Scheduled-job usage controls — November 17, 2026
 
-Owner-authorized operational reduction: Supplies automatic checks and recovery watchdogs move to four per day in both repositories; TST Supplies is disabled. TST daily OHLQ triggers are removed and retail/wholesale account research is explicitly disabled. Six-hour retry/backfill waits preserve existing records and checkpoints. Versions and unrelated TST work are retained. [Scope, timing and validation](scheduled-job-usage-2026-11-17.md).
+Delivered TST application **`3227bed2`**, version **0.10.0-dev**, and selective production **0.10.2** application **`7437cb7d`** are READY/healthy. Full suites (TST 1,551/main 1,376), both typechecks/builds and required exact-candidate CI pass. TST daily OHLQ/Supplies/research cron triggers are removed; Supplies and retail/manual wholesale research flags read back false, and the automatic wholesale research disablement update succeeded. Supplies automatic timing is six hours in both repositories. Exhausted Vercel Workflow quota returns `ThrottleError`: the new production timer remains STARTING, old TST cancellation was rejected, and completed handoff/executed six-hour cadence/provider freshness are unverified. The local production tag is not remotely published. Versions and unrelated TST work are retained. [Exact scope, identities, timing and limitations](scheduled-job-usage-2026-11-17.md).
 
 ## OHLQ runner compatibility recovery — November 15, 2026
 
