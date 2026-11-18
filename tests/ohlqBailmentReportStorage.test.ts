@@ -120,6 +120,49 @@ test('scope and range provenance fail closed while ordinary corrections remain a
   assert.equal((await getCurrentOhlqBailmentReport('org-a', store.db))?.metadata.rowCount, 19);
 });
 
+test('failed native CSV captures persist structural diagnostics without source fields or row contents', async () => {
+  const store = database(); await captureOhlqBailmentReport(input('good'), store.db);
+  const complete = fixture([row({ Invoice_Number: 'PRIVATE-INVOICE-MARKER', Name: 'PRIVATE-PRODUCT-MARKER' })]);
+  const interiorBlank = Buffer.from(complete.toString('utf8') + '\r\n' + row().map(quote).join(',') + '\r\n');
+  assert.equal((await captureOhlqBailmentReport(input('interior-blank', interiorBlank, 1), store.db)).reason, 'incomplete-export');
+  const terminal = (await getOhlqBailmentReportStatus('org-a', store.db)).latestAttempt?.validation as Record<string, any>;
+  assert.equal(terminal.diagnostics.stage, 'row-shape');
+  assert.equal(terminal.diagnostics.parsedDataRecordCount, 3); assert.equal(terminal.diagnostics.expectedColumnCount, 21);
+  assert.equal(terminal.diagnostics.trailingEmptyRecordCount, 0); assert.equal(terminal.diagnostics.mismatchingRecordCount, 1);
+  assert.equal(terminal.diagnostics.firstMismatchingDataRecord, 2); assert.deepEqual(terminal.diagnostics.fieldCountGroups, [{ fieldCount: 1, recordCount: 1 }]);
+  assert.equal(terminal.diagnostics.byteCount, interiorBlank.length); assert.equal(terminal.diagnostics.expectedByteCount, interiorBlank.length);
+  assert.doesNotMatch(JSON.stringify(terminal), /PRIVATE-INVOICE-MARKER|PRIVATE-PRODUCT-MARKER/);
+  const unclosed = Buffer.from(BAILMENT_HEADERS.join(',') + '\r\n"PRIVATE-UNCLOSED-MARKER');
+  await captureOhlqBailmentReport(input('unclosed-quote', unclosed, 2), store.db);
+  const quoted = (await getOhlqBailmentReportStatus('org-a', store.db)).latestAttempt?.validation as Record<string, any>;
+  assert.equal(quoted.diagnostics.stage, 'csv-unclosed-quote'); assert.equal(quoted.diagnostics.completeRecordCount, 1);
+  assert.equal(quoted.diagnostics.openingQuoteCharacterOffset, BAILMENT_HEADERS.join(',').length + 2);
+  assert.equal(quoted.diagnostics.endCharacterOffset, unclosed.length); assert.doesNotMatch(JSON.stringify(quoted), /PRIVATE-UNCLOSED-MARKER/);
+  await captureOhlqBailmentReport({ ...input('size-mismatch', complete, 3), expectedSizeBytes: complete.length + 10 }, store.db);
+  const size = (await getOhlqBailmentReportStatus('org-a', store.db)).latestAttempt?.validation as Record<string, any>;
+  assert.equal(size.diagnostics.stage, 'buffer-size'); assert.equal(size.diagnostics.byteCount, complete.length); assert.equal(size.diagnostics.expectedByteCount, complete.length + 10);
+  assert.deepEqual((await getCurrentOhlqBailmentReport('org-a', store.db))?.csvBuffer, fixture(), 'diagnostics never promote malformed content');
+});
+
+test('native terminal empty physical records preserve original bytes and do not inflate financial data-row count', async () => {
+  const store = database();
+  const original = Buffer.from(fixture().toString('utf8') + '\r\n');
+  const parsed = validateNativeBailmentCsv(original, original.length);
+  assert.equal(parsed.rowCount, 3); assert.equal(parsed.trailingEmptyRecordCount, 1);
+  assert.equal((await captureOhlqBailmentReport(input('native-terminal-empty', original), store.db)).status, 'SUCCEEDED');
+  const saved = await getCurrentOhlqBailmentReport('org-a', store.db); assert.ok(saved);
+  assert.deepEqual(saved.csvBuffer, original); assert.equal(saved.metadata.rowCount, 3);
+  assert.equal((saved.metadata.validation as Record<string, any>).trailingEmptyRecordCount, 1);
+  assert.equal(validateNativeBailmentCsv(saved.csvBuffer).rows.reduce((total, values) => total + cents(values[19]), 0n), 11342n);
+  const blankDataRow = BAILMENT_HEADERS.map(() => '');
+  const withBlankValues = Buffer.from(fixture([row(), blankDataRow]).toString('utf8') + '\r\n');
+  assert.equal(validateNativeBailmentCsv(withBlankValues).rowCount, 2, 'a complete row of blank source fields is retained');
+  const shortTerminal = Buffer.from(fixture().toString('utf8') + 'short,row\r\n\r\n');
+  assert.throws(() => validateNativeBailmentCsv(shortTerminal), /incomplete-export/);
+  const quotedEmptyTerminal = Buffer.from(fixture().toString('utf8') + '""\r\n\r\n');
+  assert.throws(() => validateNativeBailmentCsv(quotedEmptyTerminal), /incomplete-export/, 'a quoted empty field is a short source record, not a physical blank line');
+});
+
 test('out-of-order requests cannot replace the newer successful snapshot, including deterministic equal-time ordering', async () => {
   const store = database(), newerBytes = fixture([row({ Date_Paid: '11/18/2026' })]);
   await captureOhlqBailmentReport(input('newer', newerBytes, 10), store.db);

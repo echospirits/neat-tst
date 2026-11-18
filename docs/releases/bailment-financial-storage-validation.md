@@ -26,4 +26,14 @@ Owner-authorized scope: durable native OHLQ Bailment PO and Invoice capture, val
 
 Deployment and signed-in/manual-provider acceptance evidence will be appended after delivery.
 
+## First deployed acceptance and native format correction
+
+Application `d69370755e1b75b9f014fd65af160647bf6e47c6`, exact uploaded tree `b015b5f27c46ae8c05019fcf329fc007d460b6ec`, deployed READY as `dpl_2w7PHXBAERCfNBspyR5pEuouQM4E`. Canonical health confirms test / neon-neat-tst / connected. Delivery used the connected GitHub service after the local credential helper stalled; uploaded and fetched tree hashes match the tested local tree. Unauthenticated CSV requests return 401 and private/no-store headers.
+
+Signed-in Admin acceptance initially showed the correct no-saved-report state. A controlled existing forecast refresh, request `cmwm9i8q80001l7083nh402qm` / [run 44333323025](https://github.com/echospirits/neat-tst/actions/runs/44333323025), downloaded the native report but financial validation rejected its terminal blank line. Both forecast imports completed (6,273 Bailment forecasting rows and 64 DC rows) and the forecast saved; the request correctly reports PARTIAL with only BAILMENT_FINANCIAL_CAPTURE failed and zero financial captures. No invalid report was published.
+
+Read-only structural inspection of twelve existing native local downloads found the same terminal empty physical record in every file, valid 21-column data rows and no low-level parser errors. No private values were logged or copied into fixtures, and these older files were never saved as financial snapshots. The narrow compatibility fix counts only data rows while retaining all original bytes, rejects interior blank/short/quoted-empty records, and adds sanitized structural failure diagnostics. Synthetic regression tests cover the native line ending and exact totals. Full-page mobile acceptance also identified pre-existing table-driven horizontal page overflow; a page-scoped grid track correction retains table-local scrolling.
+
+The completed correction passes **1,510 tests / 77 suites**, strict typecheck and optimized build. All seven isolated PostgreSQL groups pass again with the native terminal blank line included, preserving exact bytes, three data rows and 113.42 total; temporary synthetic records are cleaned up. A second controlled live run will verify the corrected capture path after deployment.
+
 See [storage/retention, retrieval, limitations and rollback](../engineering/ohlq-bailment-financial-storage.md).

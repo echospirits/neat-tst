@@ -37,21 +37,27 @@ const day = (value: Date | null) => value?.toISOString().slice(0, 10) ?? null;
 function validDay(value: string | null): value is string {
   return !!value && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
 }
+type ValidationDiagnostics = {
+  stage: 'buffer-empty' | 'buffer-size' | 'utf8-decode' | 'non-csv-response' | 'csv-quote' | 'csv-unclosed-quote' | 'header-schema' | 'empty-data' | 'row-shape' | 'history-continuity' | 'provenance' | 'scope';
+  [key: string]: Prisma.InputJsonValue | null;
+};
 class InvalidExport extends Error {
-  constructor(readonly reason: BailmentFailureReason) { super(reason); }
+  constructor(readonly reason: BailmentFailureReason, readonly diagnostics: ValidationDiagnostics) { super(reason); }
 }
 
 /** Strict CSV syntax only: no eligibility, quantity, status or financial filters.
  * Array rows keep duplicate-looking lines; original bytes are never serialized. */
 export function validateNativeBailmentCsv(csvBuffer: Buffer, expectedSizeBytes?: number) {
-  if (!csvBuffer.length) throw new InvalidExport('empty-export');
-  if (csvBuffer.length > BAILMENT_MAX_BYTES || (expectedSizeBytes !== undefined && expectedSizeBytes !== csvBuffer.length)) throw new InvalidExport('incomplete-export');
+  const bufferDiagnostics = { byteCount: csvBuffer.length, expectedByteCount: expectedSizeBytes ?? null, maximumByteCount: BAILMENT_MAX_BYTES };
+  if (!csvBuffer.length) throw new InvalidExport('empty-export', { stage: 'buffer-empty', ...bufferDiagnostics });
+  if (csvBuffer.length > BAILMENT_MAX_BYTES || (expectedSizeBytes !== undefined && expectedSizeBytes !== csvBuffer.length)) throw new InvalidExport('incomplete-export', { stage: 'buffer-size', ...bufferDiagnostics });
   let csv: string;
   try { csv = new TextDecoder('utf-8', { fatal: true }).decode(new Uint8Array(csvBuffer)); }
-  catch { throw new InvalidExport('invalid-csv'); }
-  if (/^\s*</.test(csv) || csv.includes('\u0000')) throw new InvalidExport('invalid-csv');
+  catch { throw new InvalidExport('invalid-csv', { stage: 'utf8-decode', ...bufferDiagnostics }); }
+  if (/^\s*</.test(csv) || csv.includes('\u0000')) throw new InvalidExport('invalid-csv', { stage: 'non-csv-response', ...bufferDiagnostics });
   const rows: string[][] = [];
-  let row: string[] = [], field = '', quoted = false, closed = false, started = false;
+  const emptyPhysicalRecords: boolean[] = [];
+  let row: string[] = [], field = '', quoted = false, closed = false, started = false, openingQuoteOffset = -1;
   for (let index = 0; index < csv.length; index++) {
     const c = csv[index];
     if (quoted) {
@@ -60,25 +66,41 @@ export function validateNativeBailmentCsv(csvBuffer: Buffer, expectedSizeBytes?:
       continue;
     }
     if (c === '"') {
-      if (started || closed) throw new InvalidExport('invalid-csv');
-      quoted = true; started = true;
+      if (started || closed) throw new InvalidExport('invalid-csv', { stage: 'csv-quote', ...bufferDiagnostics, characterOffset: index, completeRecordCount: rows.length });
+      quoted = true; started = true; openingQuoteOffset = index;
     } else if (c === ',') {
       row.push(field); field = ''; started = false; closed = false;
     } else if (c === '\r' || c === '\n') {
       if (c === '\r' && csv[index + 1] === '\n') index++;
+      emptyPhysicalRecords.push(row.length === 0 && !started && !closed && field.length === 0);
       row.push(field); rows.push(row); row = []; field = ''; started = false; closed = false;
     } else {
-      if (closed) throw new InvalidExport('invalid-csv');
+      if (closed) throw new InvalidExport('invalid-csv', { stage: 'csv-quote', ...bufferDiagnostics, characterOffset: index, completeRecordCount: rows.length });
       field += c; started = true;
     }
   }
-  if (quoted) throw new InvalidExport('incomplete-export');
-  if (row.length || started || closed || field.length) { row.push(field); rows.push(row); }
+  if (quoted) throw new InvalidExport('incomplete-export', { stage: 'csv-unclosed-quote', ...bufferDiagnostics, openingQuoteCharacterOffset: openingQuoteOffset, endCharacterOffset: csv.length, completeRecordCount: rows.length });
+  if (row.length || started || closed || field.length) { row.push(field); rows.push(row); emptyPhysicalRecords.push(false); }
   const headers = rows.shift();
-  if (!headers || headers.length !== BAILMENT_HEADERS.length || headers.some((header, index) => header !== BAILMENT_HEADERS[index])) throw new InvalidExport('schema-change');
-  if (!rows.length || rows.every(value => value.every(field => !field.trim()))) throw new InvalidExport('empty-export');
-  if (rows.some(value => value.length !== headers.length)) throw new InvalidExport('incomplete-export');
-  return { rows, rowCount: rows.length, byteCount: csvBuffer.length, contentHash: hash(csvBuffer), schemaVersion: BAILMENT_SCHEMA_VERSION };
+  emptyPhysicalRecords.shift();
+  if (!headers || headers.length !== BAILMENT_HEADERS.length || headers.some((header, index) => header !== BAILMENT_HEADERS[index])) throw new InvalidExport('schema-change', { stage: 'header-schema', ...bufferDiagnostics, expectedColumnCount: BAILMENT_HEADERS.length, observedColumnCount: headers?.length ?? 0 });
+  let trailingEmptyRecordCount = 0;
+  for (let index = rows.length - 1; index >= 0 && emptyPhysicalRecords[index]; index--) trailingEmptyRecordCount++;
+  const parsedDataRecordCount = rows.length;
+  // Native Power BI CSVs include a terminal empty physical record. It has no
+  // columns or source fields, unlike a 21-column row with blank values. Count
+  // only data records, while storing and returning every original byte. Empty
+  // records inside the report and malformed short records still fail below.
+  if (trailingEmptyRecordCount) rows.splice(rows.length - trailingEmptyRecordCount, trailingEmptyRecordCount);
+  const rowDiagnostics = { ...bufferDiagnostics, parsedDataRecordCount, expectedColumnCount: headers.length, trailingEmptyRecordCount, endsWithLineBreak: /[\r\n]$/.test(csv) };
+  if (!rows.length || rows.every(value => value.every(field => !field.trim()))) throw new InvalidExport('empty-export', { stage: 'empty-data', ...rowDiagnostics });
+  const mismatches = rows.filter(value => value.length !== headers.length);
+  if (mismatches.length) {
+    const shapes = new Map<number, number>();
+    for (const value of mismatches) shapes.set(value.length, (shapes.get(value.length) ?? 0) + 1);
+    throw new InvalidExport('incomplete-export', { stage: 'row-shape', ...rowDiagnostics, mismatchingRecordCount: mismatches.length, firstMismatchingDataRecord: rows.findIndex(value => value.length !== headers.length) + 1, fieldCountGroups: [...shapes].slice(0, 32).map(([fieldCount, recordCount]) => ({ fieldCount, recordCount })), omittedFieldCountGroups: Math.max(0, shapes.size - 32) });
+  }
+  return { rows, rowCount: rows.length, byteCount: csvBuffer.length, contentHash: hash(csvBuffer), schemaVersion: BAILMENT_SCHEMA_VERSION, trailingEmptyRecordCount };
 }
 
 export function validateBailmentContinuity(currentRows: string[][], previousRows: string[][]) {
@@ -97,7 +119,7 @@ export function validateBailmentContinuity(currentRows: string[][], previousRows
   // be proven incomplete by these checks and remains an explicit limitation.
   const oldestMonthLost = priorMonths.length >= 2 && !incomingMonths.has(priorMonths[0]);
   const lostMonths = priorMonths.filter(value => !incomingMonths.has(value)).length;
-  if (oldestMonthLost || (priorMonths.length >= 2 && lostMonths >= priorMonths.length * 0.5)) throw new InvalidExport('incomplete-export');
+  if (oldestMonthLost || (priorMonths.length >= 2 && lostMonths >= priorMonths.length * 0.5)) throw new InvalidExport('incomplete-export', { stage: 'history-continuity', priorRowCount: previousRows.length, incomingRowCount: currentRows.length, priorMonthCount: priorMonths.length, lostMonthCount: lostMonths, oldestMonthLost });
 }
 
 function serialize(row: OhlqBailmentReportRetrieval) {
@@ -145,11 +167,12 @@ async function persist(input: BailmentRequest, payload: { csvBuffer: Buffer; exp
     }
     let reason = failureReason, parsed: ReturnType<typeof validateNativeBailmentCsv> | null = null;
     let continuity = 'not-evaluated';
+    let diagnostics: ValidationDiagnostics | null = null;
     if (payload) {
       try {
-        if (!payload.exportCompleted || !checked.acquiredAt || checked.acquiredAt < checked.requestedAt) throw new InvalidExport('provenance');
+        if (!payload.exportCompleted || !checked.acquiredAt || checked.acquiredAt < checked.requestedAt) throw new InvalidExport('provenance', { stage: 'provenance' });
         const configured = ohioSourceConfiguration(organization.settings);
-        if (checked.reportIdentity !== BAILMENT_REPORT_ID || checked.timezone !== organization.timezone || !validDay(checked.requestedFrom) || !validDay(checked.requestedTo) || checked.requestedFrom > checked.requestedTo || checked.requestedFrom !== configured.historyStart || checked.requestedTo !== formatDateInputValue(checked.requestedAt, checked.timezone) || checked.requestedTo > formatDateInputValue(checked.acquiredAt, checked.timezone)) throw new InvalidExport('scope-mismatch');
+        if (checked.reportIdentity !== BAILMENT_REPORT_ID || checked.timezone !== organization.timezone || !validDay(checked.requestedFrom) || !validDay(checked.requestedTo) || checked.requestedFrom > checked.requestedTo || checked.requestedFrom !== configured.historyStart || checked.requestedTo !== formatDateInputValue(checked.requestedAt, checked.timezone) || checked.requestedTo > formatDateInputValue(checked.acquiredAt, checked.timezone)) throw new InvalidExport('scope-mismatch', { stage: 'scope' });
         parsed = validateNativeBailmentCsv(payload.csvBuffer, payload.expectedSizeBytes);
         continuity = 'initial';
         if (state) {
@@ -164,10 +187,10 @@ async function persist(input: BailmentRequest, payload: { csvBuffer: Buffer; exp
         }
       } catch (error) {
         if (!(error instanceof InvalidExport)) throw error;
-        reason = error.reason; parsed = null;
+        reason = error.reason; diagnostics = error.diagnostics; parsed = null;
       }
     }
-    const validation = parsed ? { schemaVersion: parsed.schemaVersion, headers: [...BAILMENT_HEADERS], columnCount: BAILMENT_HEADERS.length, byteCount: parsed.byteCount, structure: 'valid', nativeExport: 'download-completed', continuity, upstreamCompleteness: 'not-independently-verifiable' } : { schemaVersion: BAILMENT_SCHEMA_VERSION, result: 'rejected', reason, parameterScopeEvidence: payload ? 'download-returned' : 'configured-not-confirmed' };
+    const validation = parsed ? { schemaVersion: parsed.schemaVersion, headers: [...BAILMENT_HEADERS], columnCount: BAILMENT_HEADERS.length, byteCount: parsed.byteCount, trailingEmptyRecordCount: parsed.trailingEmptyRecordCount, structure: 'valid', nativeExport: 'download-completed', continuity, upstreamCompleteness: 'not-independently-verifiable' } : { schemaVersion: BAILMENT_SCHEMA_VERSION, result: 'rejected', reason, parameterScopeEvidence: payload ? 'download-returned' : 'configured-not-confirmed', diagnostics };
     const run = await tx.ohlqBailmentReportRetrieval.create({ data: {
       ...checked, acquiredAt: checked.acquiredAt ?? null, requestedFrom: validDay(checked.requestedFrom) ? new Date(checked.requestedFrom) : null, requestedTo: validDay(checked.requestedTo) ? new Date(checked.requestedTo) : null,
       parameterScope: checked.parameterScope, status: parsed ? 'SUCCEEDED' : 'FAILED', reason, contentHash, rowCount: parsed?.rowCount ?? null,

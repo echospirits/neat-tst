@@ -1,4 +1,5 @@
 .admin-workspace { display: grid; gap: 16px; min-width: 0; }
+.admin-workspace.data-status-workspace { grid-template-columns: minmax(0, 1fr); }
 .admin-workspace > .page-header { margin-bottom: 0; }
 .admin-workspace .table-scroll { max-width: 100%; overflow-x: auto; }
 .admin-workspace .comparison-table { width: 100%; border-collapse: collapse; font-size: .875rem; }

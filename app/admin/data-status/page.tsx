@@ -400,7 +400,7 @@ export default async function DataStatusPage({
     });
 
   return (
-    <div className="admin-workspace">
+    <div className="admin-workspace data-status-workspace">
       <PageHeader
         title="Data Status"
       />
