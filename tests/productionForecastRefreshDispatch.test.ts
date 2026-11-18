@@ -91,8 +91,8 @@ test('runner rejects forged context before any application database or provider 
 
 test('runner receipts expose only safe terminal state, replay and numeric counts', () => {
   const context = forecastRefreshRunnerContext(runnerEnvironment());
-  const receipt = forecastRefreshRunnerReceipt(context, { status: 'PARTIAL', replayed: false, importedSources: 1, capturedFinancialReports: 1, failedSources: 1, reason: 'PRIVATE_PROVIDER_TEXT', token: 'PRIVATE_TOKEN', products: 'PRIVATE_RAW_ROWS' });
-  assert.deepEqual(receipt, { requestId, environment: 'test', status: 'PARTIAL', replayed: false, importedSources: 1, capturedFinancialReports: 1, failedSources: 1 });
+  const receipt = forecastRefreshRunnerReceipt(context, { status: 'PARTIAL', replayed: false, importedSources: 1, failedSources: 1, reason: 'PRIVATE_PROVIDER_TEXT', token: 'PRIVATE_TOKEN', products: 'PRIVATE_RAW_ROWS' });
+  assert.deepEqual(receipt, { requestId, environment: 'test', status: 'PARTIAL', replayed: false, importedSources: 1, failedSources: 1 });
   assert.doesNotMatch(JSON.stringify(receipt), /PRIVATE/);
   assert.equal(forecastRefreshRunnerReceipt(context, { status: 'PRIVATE_FAILURE' }).status, 'FAILED');
 });

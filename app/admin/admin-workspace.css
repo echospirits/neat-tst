@@ -1,5 +1,4 @@
 .admin-workspace { display: grid; gap: 16px; min-width: 0; }
-.admin-workspace.data-status-workspace { grid-template-columns: minmax(0, 1fr); }
 .admin-workspace > .page-header { margin-bottom: 0; }
 .admin-workspace .table-scroll { max-width: 100%; overflow-x: auto; }
 .admin-workspace .comparison-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
@@ -35,13 +34,6 @@
 .admin-workspace .strategy-edit-list > details { border-bottom: 1px solid var(--line); }
 .admin-workspace .strategy-edit-list .form-grid { margin-block: 12px; }
 .admin-workspace .integration-summary dd { overflow-wrap: anywhere; }
-.admin-workspace .bailment-report-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px 20px; margin: 12px 0; }
-.admin-workspace .bailment-report-facts div { min-width: 0; }
-.admin-workspace .bailment-report-facts dt { color: var(--muted); font-size: .8125rem; }
-.admin-workspace .bailment-report-facts dd { margin: 4px 0 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
-.admin-workspace .bailment-report-status .btn { min-height: 44px; }
-.admin-workspace .bailment-report-note, .admin-workspace .bailment-report-attempt { font-size: .8125rem; margin: 8px 0 0; }
-.admin-workspace .bailment-report-reason { display: block; margin-top: 4px; overflow-wrap: anywhere; }
 @media (max-width: 700px) {
   .admin-workspace .activity-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .admin-workspace .activity-history-table { min-width: 0; }

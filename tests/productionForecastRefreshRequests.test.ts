@@ -171,32 +171,6 @@ test('a delivery-only operational failure names the full group without claiming 
   assert.doesNotMatch(state.job!.message, /outbound case history|distribution-center guidance|PRIVATE|OpenDock/);
 });
 
-test('financial capture failure reports partial after forecasting succeeds and keeps only safe outcome fields', async () => {
-  const f = fixture(); await f.enqueue();
-  const result = await f.run({ sources: async options => {
-    assert.equal(options?.retrievalId, f.rows[0].id, 'persistence identity follows the owned durable refresh request');
-    options?.onResult?.({ configuredOrganizations: 1, importedSources: 2, refreshedForecasts: 1, capturedFinancialReports: 0, failedSources: ['BAILMENT_FINANCIAL_CAPTURE'] });
-    throw new Error('PRIVATE financial persistence SQL');
-  } });
-  assert.equal(result.status, 'PARTIAL'); assert.equal(result.importedSources, 2); assert.equal(result.failedSources, 1); assert.equal(result.capturedFinancialReports, 0);
-  const state = await getForecastRefreshState(organizationId, f.client, now, f.services);
-  assert.match(state.job!.message, /saved financial report could not be refreshed/);
-  assert.match(state.job!.message, /Completed imports were retained/);
-  assert.doesNotMatch(JSON.stringify(f.rows), /PRIVATE financial/);
-});
-
-test('a saved financial report alone makes a failed forecasting refresh partial and describes the retained source', async () => {
-  const f = fixture(); await f.enqueue();
-  const result = await f.run({ sources: async options => {
-    options?.onResult?.({ configuredOrganizations: 1, importedSources: 0, refreshedForecasts: 0, capturedFinancialReports: 1, failedSources: ['BAILMENT_PO_INVOICE', 'DISTRIBUTION_CENTER', 'FORECAST'] });
-    throw new Error('PRIVATE forecasting failure');
-  } });
-  assert.equal(result.status, 'PARTIAL'); assert.equal(result.importedSources, 0); assert.equal(result.capturedFinancialReports, 1);
-  const state = await getForecastRefreshState(organizationId, f.client, now, f.services);
-  assert.match(state.job!.message, /native financial report was saved/);
-  assert.equal((f.rows[0].result as { capturedFinancialReports: number }).capturedFinancialReports, 1);
-});
-
 test('revoked administrator or feature access is rechecked before a worker starts', async () => {
   for (const revoke of ['user', 'feature']) {
     const f = fixture(); await f.enqueue(); if (revoke === 'user') f.revokeUser(); else f.revokeFeature();

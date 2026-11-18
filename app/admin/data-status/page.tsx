@@ -25,8 +25,6 @@ import { getLatestManualOhlqReportDate } from '../../../lib/ohlqManualImport';
 import { prisma } from '../../../lib/prisma';
 import { requireOrganizationContext } from '../../../lib/organizations';
 import { PageHeader, SectionHeading } from '../../components/PageChrome';
-import { BailmentReportStatus } from './BailmentReportStatus';
-import { getOhlqBailmentReportStatus } from '../../../lib/ohlqBailmentReportStorage';
 
 export const metadata = buildPageMetadata('Data Status');
 
@@ -239,8 +237,7 @@ export default async function DataStatusPage({
 }) {
   const session = await requireUserSession({ allowTaster: true });
   const canRefresh = isAdminRole(session.user.role);
-  const { organizationId, isSupportView } = await requireOrganizationContext(session.user);
-  const canViewFinancialReport = canRefresh && !isSupportView && session.user.organizationId === organizationId;
+  const { organizationId } = await requireOrganizationContext(session.user);
 
   const params = (await searchParams) ?? {};
   const dates = getReportDateRange();
@@ -265,7 +262,6 @@ export default async function DataStatusPage({
     latestBrandMasterRun,
     latestBrandMasterSuccess,
     tenantInventoryStatusRows,
-    bailmentReportState,
   ] = await Promise.all([
     prisma.ohlqAnnualSalesRow.groupBy({
       by: ['reportDate'],
@@ -320,10 +316,6 @@ export default async function DataStatusPage({
       orderBy: { lastSuccessfulAt: 'desc' },
     }),
     prisma.ohlqTenantInventoryImportStatus.findMany({ where: { organizationId, reportDate: { gte: startDate, lte: endDate } }, orderBy: { reportDate: 'asc' } }),
-    canViewFinancialReport
-      ? getOhlqBailmentReportStatus(organizationId).then((status) => ({ status, unavailable: false }))
-        .catch(() => ({ status: null, unavailable: true }))
-      : Promise.resolve(null),
   ]);
 
   const allStatusRows = [
@@ -400,12 +392,11 @@ export default async function DataStatusPage({
     });
 
   return (
-    <div className="admin-workspace data-status-workspace">
+    <div className="admin-workspace">
       <PageHeader
         title="Data Status"
       />
       {brandMasterStatusMessage(params) ? <p className="toast-notice page-status">{brandMasterStatusMessage(params)}</p> : null}
-      {canViewFinancialReport && bailmentReportState ? <BailmentReportStatus {...bailmentReportState} /> : null}
       <section className="workspace-section" aria-label="Data source summary">
         <SectionHeading title="Source overview" />
         <div className="table-scroll" role="region" aria-label="Data source rows and successful imports" tabIndex={0}><table className="comparison-table admin-source-table"><thead><tr><th scope="col">Source</th><th scope="col" className="numeric">Loaded rows</th><th scope="col">Latest successful import</th><th scope="col">Status / latest changes</th></tr></thead><tbody>

@@ -1,5 +1,15 @@
 # Bailment financial source — TST validation
 
+> **Withdrawn November 18, 2026:** the owner asked to back out this feature because it is not needed. Financial capture, retrieval/status UI and endpoint, and dedicated tooling/tests are removed; forecasting/downloader/job behavior returns to baseline `44db99f0`. Existing automatic TST schedules stay disabled. The already-applied migration, three dormant Prisma models and previously saved report remain intact; this application rollback performs no database deletion. The implementation/acceptance sections below are historical, not a description of an available feature. The active internal publisher service described below has also been removed.
+
+## Rollback
+
+Rollback starts from verified TST `3088f72611597208cfa2e9ec97a70aa3f17e8395` and reverses only this feature's three commits. Current source/runtime/UI files match their pre-feature baseline. Applied migration history and schema are preserved for compatibility and the saved financial source is not deleted. Production/main, credentials, external provider accounts and hosted scheduling/settings are unchanged. No active forecast refresh request was found before rollback.
+
+The rollback passes **54 focused forecasting/authorization/provider-control checks**, the complete **1,480 tests / 77 suites**, strict typecheck and optimized build. Generated Next route types were refreshed after removing the route. Exact Git comparisons establish that `app/`, `lib/`, `scripts/`, `tests/`, workflows, Vercel configuration and package/lockfile match `44db99f0`; the Prisma schema and applied SQL remain byte-identical to `3088f726`. There are no remaining financial capture callers or API/status controls. Read-only preservation checks record one saved payload, two retrieval records, the current reference and applied migration; no new provider run or database mutation is part of rollback. Post-deployment acceptance checks the removed endpoint for 404, canonical TST health and the unchanged saved-data fingerprint. Retained TST financial schema must be excluded from future production promotion unless separately authorized.
+
+## Historical implementation receipt
+
 Owner-authorized scope: durable native OHLQ Bailment PO and Invoice capture, validation, metadata/status and private Admin retrieval. Production promotion, Google Sheets publishing, monthly sales retention, Google authorization and dashboard changes are excluded.
 
 ## Verified starting state
@@ -46,4 +56,4 @@ The completed correction passes **1,510 tests / 77 suites**, strict typecheck an
 - Unauthenticated deployed requests return **401**, `text/plain`, and **private/no-store** caching; server tests additionally cover Sales/Taster, Support View, caller-supplied/cross-organization identity and own Admin/Platform Admin scope. No real user roles, passwords or permissions were changed for testing.
 - Normal TST implementation, migration, documentation and acceptance are complete. Production promotion and production migration remain a distinct release task, including fresh target-specific rehearsal and review of existing migration-ledger drift. No additional credentials or configuration are required for this TST phase. Google Sheets publishing/authorization, monthly sales retention and dashboard changes remain later work; their server-side input seam is `getCurrentOhlqBailmentReport`.
 
-See [storage/retention, retrieval, limitations and rollback](../engineering/ohlq-bailment-financial-storage.md).
+See [storage/retention, retrieval, limitations and rollback](https://github.com/echospirits/neat-tst/blob/3088f72611597208cfa2e9ec97a70aa3f17e8395/docs/engineering/ohlq-bailment-financial-storage.md).
