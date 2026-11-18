@@ -83,7 +83,7 @@ test('scheduled Echo sources fail independently, skip outside credentials, refre
   assert.ok(called.includes('import:org_echo_spirits:DISTRIBUTION_CENTER')); assert.ok(called.includes('refresh:org_echo_spirits')); assert.ok(!called.some(call => call.includes('outside')));
   assert.equal(failures.length, 1); assert.doesNotMatch(JSON.stringify([messages, failures]), /never-log|private-provider-payload/);
   assert.deepEqual(stages, ['BAILMENT', 'GUIDANCE', 'FORECAST']);
-  assert.deepEqual(outcome, { configuredOrganizations: 1, importedSources: 1, refreshedForecasts: 1, failedSources: ['BAILMENT_PO_INVOICE'] }, 'a failed source still reports persisted independent progress before rejecting');
+  assert.deepEqual(outcome, { configuredOrganizations: 1, importedSources: 1, refreshedForecasts: 1, capturedFinancialReports: 0, failedSources: ['BAILMENT_FINANCIAL_CAPTURE', 'BAILMENT_PO_INVOICE'] }, 'a failed source still reports persisted independent progress before rejecting');
   assert.match(JSON.stringify(query), /PRODUCTION_FORECASTING/); assert.match(JSON.stringify(query), /SUSPENDED/); assert.match(JSON.stringify(query), /ohlqCredentials/);
 });
 test('automation reuses isolated OHLQ job, permits focused dispatch and keeps private exports out of artifacts', () => {

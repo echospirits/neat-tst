@@ -162,6 +162,16 @@ export type OhlqAnnualSalesDownloadResult = {
   reportDate: string;
   runDate: string;
   sizeBytes: number;
+  /** Actual report and selected parameters from the completed native export.
+   * reportDate alone is a locally requested date, not upstream completeness. */
+  nativeExport?: {
+    reportIdentity: string;
+    parameterScope: { parameter: 'Vendor' | 'Brand'; values: 'all' | string[] };
+    requestedFrom: string;
+    requestedTo: string;
+    acquiredAt: string;
+    exportCompleted: true;
+  };
 };
 
 export type OhlqAnnualSalesDownloadOptions = {
@@ -883,6 +893,7 @@ async function selectReportParameter(frame: Frame, parameter: OhlqPowerBiReportC
 
   if (parameter.values === 'all') {
     if ((await selectAll.getAttribute('aria-checked')) !== 'true') await selectAll.click();
+    await selectAll.and(frame.locator('[aria-checked="true"]')).waitFor({ state: 'visible', timeout: 30_000 });
   } else {
     if ((await selectAll.getAttribute('aria-checked')) !== 'false') {
       await selectAll.click();
@@ -1208,6 +1219,14 @@ async function downloadOhlqPowerBiReportFromPage(
 
   const sizeBytes = fs.statSync(outputPath).size;
   const csvBuffer = returnBuffer ? fs.readFileSync(outputPath) : undefined;
+  const nativeExport: NonNullable<OhlqAnnualSalesDownloadResult['nativeExport']> = {
+    reportIdentity: report.reportId,
+    parameterScope: { parameter: parameter.name, values: parameter.values },
+    requestedFrom: runtime.fromDate.iso,
+    requestedTo: reportDate.iso,
+    acquiredAt: new Date().toISOString(),
+    exportCompleted: true,
+  };
 
   logger.log(`Downloaded CSV: ${outputPath}`);
 
@@ -1218,6 +1237,7 @@ async function downloadOhlqPowerBiReportFromPage(
     reportDate: report.dateRange ? reportDate.iso : runDateIso,
     runDate: runDateIso,
     sizeBytes,
+    nativeExport,
   } satisfies OhlqAnnualSalesDownloadResult;
 }
 

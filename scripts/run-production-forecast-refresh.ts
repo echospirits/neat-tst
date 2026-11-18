@@ -23,7 +23,7 @@ export function forecastRefreshRunnerReceipt(context: ForecastRefreshRunnerConte
   const row = result && typeof result === 'object' ? result as Record<string, unknown> : {};
   const statuses = ['QUEUED', 'RUNNING', 'SUCCEEDED', 'PARTIAL', 'FAILED', 'TIMED_OUT'];
   const status = typeof row.status === 'string' && statuses.includes(row.status) ? row.status : 'FAILED';
-  const counts = Object.fromEntries(['importedSources', 'products', 'failedSources', 'inventoryObserved', 'demandObserved', 'unavailableInventory', 'unavailableDemand', 'warnings'].flatMap(key => typeof row[key] === 'number' && Number.isFinite(row[key]) && row[key] >= 0 ? [[key, row[key]]] : []));
+  const counts = Object.fromEntries(['importedSources', 'capturedFinancialReports', 'products', 'failedSources', 'inventoryObserved', 'demandObserved', 'unavailableInventory', 'unavailableDemand', 'warnings'].flatMap(key => typeof row[key] === 'number' && Number.isFinite(row[key]) && row[key] >= 0 ? [[key, row[key]]] : []));
   return { requestId: context.requestId, environment: context.environment, status, ...(typeof row.replayed === 'boolean' ? { replayed: row.replayed } : {}), ...counts };
 }
 

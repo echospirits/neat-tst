@@ -1,5 +1,9 @@
 # Repository Agent Instructions
 
+## Owner-authorized TST scope: native Bailment financial storage
+
+On November 18, 2026 the owner authorized durable capture, validation, metadata/status and private Admin retrieval of the complete native OHLQ Bailment PO and Invoice CSV, independent of forecasting. Work from actual `neat-tst/tst`, preserve unrelated work and the existing `0.10.0-dev` cycle, and complete normal TST delivery with an additive migration. Keep disabled automatic TST schedules disabled; reuse the existing single download. Production promotion, Google Sheets publishing/authorization, monthly sales retention and dashboard changes remain separate. See [storage guide](docs/engineering/ohlq-bailment-financial-storage.md) and [validation](docs/releases/bailment-financial-storage-validation.md). This scoped owner authorization overrides historical freeze statements only for this feature.
+
 ## Owner-authorized Social Publishing retirement
 
 On November 17, 2026 the owner canceled Social Publishing and requested complete removal from neat-tst and its dedicated support systems. Remove its runtime, UI, feature flag, jobs, dedicated tests and active setup guides; preserve applied migration history and append the guarded inverse migration. Preserve shared Supplies/Workflow/Blob/Calendar infrastructure, all unrelated later TST work, existing versions and historical release refs. Production/main is unchanged. The concise [retirement receipt](docs/releases/social-publishing-retirement.md) records implementation, validation and external cleanup evidence; earlier pilot authorization is superseded.

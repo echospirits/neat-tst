@@ -549,6 +549,9 @@ model Organization {
   a3aStoreIdentifiers     OrganizationA3aStoreIdentifier[]
   products                OrganizationProduct[]
   productionSourceImports ProductionSourceImport[]
+  bailmentReportPayloads OhlqBailmentReportPayload[]
+  bailmentReportRetrievals OhlqBailmentReportRetrieval[]
+  bailmentReportState OhlqBailmentReportState?
   productionDemand        ProductionDemandObservation[]
   productionGuidance      ProductionGuidanceObservation[]
   productionForecastRuns  ProductionForecastRun[]
@@ -3182,6 +3185,60 @@ model ContactSuggestionReview {
 
 // Append-only complete source slices. Separate availability and receipt dates
 // preserve source chronology for historical rolling-origin evaluation.
+model OhlqBailmentReportPayload {
+  id String @id @default(cuid())
+  organizationId String
+  contentHash String
+  csvBytes Bytes
+  rowCount Int
+  byteCount Int
+  schemaVersion String
+  validation Json
+  createdAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  currentFor OhlqBailmentReportState[] @relation("BailmentCurrentPayload")
+  previousFor OhlqBailmentReportState[] @relation("BailmentPreviousPayload")
+
+  @@unique([organizationId, contentHash])
+  @@unique([organizationId, id])
+}
+
+// Lightweight run history deliberately retains hashes even after payload pruning.
+model OhlqBailmentReportRetrieval {
+  organizationId String
+  retrievalId String
+  requestedAt DateTime
+  acquiredAt DateTime?
+  completedAt DateTime @default(now())
+  requestedFrom DateTime? @db.Date
+  requestedTo DateTime? @db.Date
+  timezone String
+  reportIdentity String
+  parameterScope Json
+  status String
+  reason String?
+  contentHash String?
+  rowCount Int?
+  validation Json
+  requestFingerprint String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  currentFor OhlqBailmentReportState[] @relation("BailmentCurrentRetrieval")
+
+  @@id([organizationId, retrievalId])
+  @@index([organizationId, requestedAt, retrievalId], map: "bailment_retrieval_org_requested_idx")
+}
+
+model OhlqBailmentReportState {
+  organizationId String @id
+  currentRetrievalId String
+  currentPayloadId String
+  previousPayloadId String?
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  currentRetrieval OhlqBailmentReportRetrieval @relation("BailmentCurrentRetrieval", fields: [organizationId, currentRetrievalId], references: [organizationId, retrievalId], onDelete: Restrict, map: "bailment_state_current_retrieval_fkey")
+  currentPayload OhlqBailmentReportPayload @relation("BailmentCurrentPayload", fields: [organizationId, currentPayloadId], references: [organizationId, id], onDelete: Restrict, map: "bailment_state_current_payload_fkey")
+  previousPayload OhlqBailmentReportPayload? @relation("BailmentPreviousPayload", fields: [organizationId, previousPayloadId], references: [organizationId, id], onDelete: Restrict, map: "bailment_state_previous_payload_fkey")
+}
+
 model ProductionSourceImport {
   id             String @id @default(cuid())
   organizationId String

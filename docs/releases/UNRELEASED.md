@@ -1,5 +1,11 @@
 # Unreleased
 
+## Native Bailment financial source — November 18, 2026 (TST only)
+
+Owner-authorized durable storage of the complete native OHLQ **Bailment PO and Invoice** CSV, captured from the existing download before forecasting filters. Exact bytes and SHA-256, actual history-start-through-today scope, retrieval clocks and validation outcomes are retained independently of forecasting. Identical content updates freshness without another large payload; ordered transactional publication and bounded current/previous-distinct retention preserve the last good report. Additive migration `20261118010000_bailment_financial_reports`; no historical forecast reconstruction, new dependency, provider account, scheduler or hosted-setting change.
+
+Own-organization administrators can view status and download the saved CSV in **Admin → Data Status**; Sales/Taster and Support View are denied. Capture and forecast failures are isolated and reported separately. Existing disabled TST schedules remain disabled. Google Sheets publishing, Google authorization, monthly sales retention, dashboard changes and production promotion are later work. Existing `0.10.0-dev` cycle and unrelated TST changes remain preserved. [Design and retrieval service](../engineering/ohlq-bailment-financial-storage.md), [actual validation/delivery evidence](bailment-financial-storage-validation.md).
+
 ## Scheduled-job usage controls — November 17, 2026
 
 Delivered TST application **`3227bed2`**, version **0.10.0-dev**, and selective production **0.10.2** application **`7437cb7d`** are READY/healthy. Full suites (TST 1,551/main 1,376), both typechecks/builds and required exact-candidate CI pass. TST daily OHLQ/Supplies/research cron triggers are removed; Supplies and retail/manual wholesale research flags read back false, and the automatic wholesale research disablement update succeeded. Supplies automatic timing is six hours in both repositories. Exhausted Vercel Workflow quota returns `ThrottleError`: the new production timer remains STARTING, old TST cancellation was rejected, and completed handoff/executed six-hour cadence/provider freshness are unverified. The local production tag is not remotely published. Versions and unrelated TST work are retained. [Exact scope, identities, timing and limitations](scheduled-job-usage-2026-11-17.md).
