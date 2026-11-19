@@ -1,5 +1,9 @@
 # Unreleased
 
+## OHLQ notifications after recovery — November 19, 2026
+
+Owner-authorized hotfix, retaining main **0.10.2** and TST **0.10.0-dev**. Group the daily report dates into one load, retry temporary setup/download/database transport failures within safe read or fixed-value status boundaries, and require a separate read-only persisted-data verification job. A failed attempt with independently verified current data is a warning; missing, incomplete or unverifiable required data still fails after bounded checks. Preserve typed optional lookup/stale-publication warnings, the paused TST daily schedules, and existing focused maintenance behavior. No schema/dependency/version, hosted secret, notification preference or UI changes. See [scope and validation](ohlq-outcome-notifications-2026-11-19.md).
+
 ## Scheduled-job usage controls — November 17, 2026
 
 Production **0.10.2 deployed**, application `7437cb7d`; TST companion `3227bed2` stays at 0.10.0-dev. Both are READY/healthy and all local/required CI checks pass. Supplies is configured for four automatic batches/watchdogs per day; TST Supplies, daily OHLQ schedules and retail/wholesale account research are disabled. Vercel Workflow quota currently returns `ThrottleError`: the new production timer is persisted but STARTING; old-run cancellation was rejected, so a completed handoff, executed six-hour cycle and provider freshness are not claimed. The annotated release tag exists locally and is not published remotely. Unrelated TST work remains excluded. See [release notes](0.10.2.md), [checklist](0.10.2-checklist.md), [validation](0.10.2-validation.md) and [scope/timing](scheduled-job-usage-2026-11-17.md).

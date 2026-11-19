@@ -16,7 +16,7 @@ const bash = process.platform === 'win32'
 function step(name: string) {
   const body = workflow.split(`      - name: ${name}\n`)[1];
   assert.ok(body, `Missing workflow step: ${name}`);
-  return body.split('\n      - name: ')[0];
+  return body.split(/\n(?:      - name: |  [A-Za-z0-9_-]+:\n)/)[0];
 }
 
 function script(name: string) {
@@ -46,7 +46,12 @@ function harness(run: (execute: (name: string, env: Record<string, string>) => R
   const log = path.join(dir, 'npm-args').replace(/\\/g, '/');
   try {
     run((name, env) => spawnSync(bash, ['--noprofile', '--norc', '-e', '-o', 'pipefail', '-c',
-      'npm() { printf "%s\\0" "$@" >> "$NPM_CALL_LOG"; }\n' + script(name)], {
+      [
+        'date() { if [[ "$*" == "+%Y-%m-%d" ]]; then printf "%s\\n" "$OHLQ_TEST_TODAY"; else command date "$@"; fi; }',
+        'npm() { printf "%s\\0" "$@" >> "$NPM_CALL_LOG"; for arg in "$@"; do if [[ -n "${NPM_FAIL_DATE:-}" && "$arg" == "$NPM_FAIL_DATE" ]]; then return 1; fi; done; }',
+        'node() { [[ "$1" == "scripts/retry-ohlq-command.cjs" && "$2" == "--" && "$3" == "npm" ]] || return 88; shift 2; "$@"; }',
+        script(name),
+      ].join('\n')], {
       cwd: dir,
       encoding: 'utf8',
       timeout: 10_000,
@@ -59,6 +64,7 @@ function harness(run: (execute: (name: string, env: Record<string, string>) => R
         TMP: process.env.TMP,
         GITHUB_OUTPUT: output,
         NPM_CALL_LOG: log,
+        OHLQ_TEST_TODAY: '2026-11-19',
         ...env,
       },
     }), dir);
@@ -102,7 +108,7 @@ test('date and count injection payloads are rejected as literal data without exe
     '2026-10-07\n$(touch injection-marker)',
     '2026-10-07\npurchase_state_only=true',
   ];
-  for (const input of ['reportDate', 'days', 'fromDate', 'toDate']) {
+  for (const input of ['reportDate', 'reportDates', 'days', 'fromDate', 'toDate']) {
     for (const payload of payloads) assertRejected(inputEnvironment({ [input]: payload }));
   }
 });
@@ -124,16 +130,28 @@ test('dates, bounded decimal counts, range pairing and booleans validate before 
   assertRejected({ ...inputEnvironment({}, 'schedule'), OHLQ_CRON_REFRESH_DAYS: '$(touch injection-marker)' });
 });
 
-test('valid single-date, recent-days, purchase-state and scheduled modes retain their exact npm arguments', () => {
+const importArguments = (dates: string[]) => dates.flatMap((date) => ['run', 'backfill:ohlq-annual-sales', '--', '--date', date, '--import-only']);
+const priorDates = (count: number) => Array.from({ length: count }, (_, index) => {
+  const date = new Date('2026-11-19T12:00:00Z');
+  date.setUTCDate(date.getUTCDate() - (count - index));
+  return date.toISOString().slice(0, 10);
+});
+const validationOutputs = (dir: string) => Object.fromEntries(readFileSync(path.join(dir, 'github-output'), 'utf8').trimEnd().split('\n').map((line) => {
+  const equals = line.indexOf('=');
+  return [`steps.import_inputs.outputs.${line.slice(0, equals)}`, line.slice(equals + 1)];
+}));
+
+test('valid dates are frozen and each sales date reaches the importer with exact npm arguments', () => {
   const cases: { inputs: Record<string, string>; event?: string; cronDays?: string; args: string[] }[] = [
-    { inputs: {}, args: ['run', 'backfill:ohlq-annual-sales', '--', '--days', '1', '--import-only'] },
-    { inputs: { days: '30' }, args: ['run', 'backfill:ohlq-annual-sales', '--', '--days', '30', '--import-only'] },
-    { inputs: { reportDate: '2024-02-29' }, args: ['run', 'backfill:ohlq-annual-sales', '--', '--date', '2024-02-29', '--import-only'] },
+    { inputs: {}, args: importArguments(priorDates(1)) },
+    { inputs: { days: '30' }, args: importArguments(priorDates(30)) },
+    { inputs: { reportDate: '2024-02-29' }, args: importArguments(['2024-02-29']) },
+    { inputs: { reportDates: '2026-11-18,2026-11-17' }, args: importArguments(['2026-11-17', '2026-11-18']) },
     { inputs: { purchaseStateOnly: 'true', reportDate: '2026-10-07' }, args: ['run', 'seed:ohlq-wholesale-purchase-state', '--', '--date', '2026-10-07'] },
     { inputs: { purchaseStateOnly: 'true', fromDate: '2026-10-01', toDate: '2026-10-07' }, args: ['run', 'seed:ohlq-wholesale-purchase-state', '--', '--from', '2026-10-01', '--to', '2026-10-07'] },
     { inputs: { purchaseStateOnly: 'true', days: '120' }, args: ['run', 'seed:ohlq-wholesale-purchase-state', '--', '--days', '120'] },
-    { inputs: {}, event: 'schedule', args: ['run', 'backfill:ohlq-annual-sales', '--', '--days', '2', '--import-only'] },
-    { inputs: {}, event: 'schedule', cronDays: '3', args: ['run', 'backfill:ohlq-annual-sales', '--', '--days', '3', '--import-only'] },
+    { inputs: {}, event: 'schedule', args: importArguments(priorDates(2)) },
+    { inputs: {}, event: 'schedule', cronDays: '3', args: importArguments(priorDates(3)) },
   ];
   for (const item of cases) {
     harness((execute, dir) => {
@@ -142,16 +160,44 @@ test('valid single-date, recent-days, purchase-state and scheduled modes retain 
       const validation = execute(validationStep, env);
       assert.ifError(validation.error);
       assert.equal(validation.status, 0, String(validation.stderr));
-      const outputs = Object.fromEntries(readFileSync(path.join(dir, 'github-output'), 'utf8').trimEnd().split('\n').map((line) => {
-        const equals = line.indexOf('=');
-        return [`steps.import_inputs.outputs.${line.slice(0, equals)}`, line.slice(equals + 1)];
-      }));
+      const outputs = validationOutputs(dir);
       const sales = execute(salesStep, environment(salesStep, outputs));
       assert.ifError(sales.error);
       assert.equal(sales.status, 0, String(sales.stderr));
       assert.deepEqual(readFileSync(path.join(dir, 'npm-args'), 'utf8').split('\0').slice(0, -1), item.args);
     });
   }
+});
+
+test('date batches reject invalid entries, ambiguous modes and more than thirty dates before setup', () => {
+  for (const reportDates of ['2026-11-18,', ',2026-11-18', '2026-11-18, 2026-11-17', '2026-11-18,2026-02-30', '2026-11-18,2026-11-18', Array.from({ length: 31 }, (_, index) => `2026-10-${String(index + 1).padStart(2, '0')}`).join(',')]) {
+    assertRejected(inputEnvironment({ reportDates }));
+  }
+  const conflicts: Record<string, string>[] = [{ reportDate: '2026-11-18' }, { days: '2' }, { purchaseStateOnly: 'true' }, { productionSourcesOnly: 'true' }];
+  for (const conflict of conflicts) {
+    assertRejected(inputEnvironment({ reportDates: '2026-11-17', ...conflict }));
+  }
+});
+
+test('an unresolved older date does not block the newer date and the batch remains failed', () => {
+  harness((execute, dir) => {
+    const validation = execute(validationStep, inputEnvironment({ reportDates: '2026-11-18,2026-11-17' }));
+    assert.equal(validation.status, 0, String(validation.stderr));
+    const sales = execute(salesStep, { ...environment(salesStep, validationOutputs(dir)), NPM_FAIL_DATE: '2026-11-17' });
+    assert.equal(sales.status, 1, String(sales.stderr));
+    assert.deepEqual(readFileSync(path.join(dir, 'npm-args'), 'utf8').split('\0').slice(0, -1), importArguments(['2026-11-17', '2026-11-18']));
+  });
+});
+
+test('a later clock date cannot change the frozen dates passed to recovery', () => {
+  harness((execute, dir) => {
+    assert.equal(execute(validationStep, inputEnvironment({}, 'schedule')).status, 0);
+    const outputs = validationOutputs(dir);
+    assert.equal(outputs['steps.import_inputs.outputs.observation_date'], '2026-11-19');
+    const sales = execute(salesStep, { ...environment(salesStep, outputs), OHLQ_TEST_TODAY: '2026-11-20' });
+    assert.equal(sales.status, 0, String(sales.stderr));
+    assert.deepEqual(readFileSync(path.join(dir, 'npm-args'), 'utf8').split('\0').slice(0, -1), importArguments(['2026-11-17', '2026-11-18']));
+  });
 });
 
 test('tenant repair preserves valid organization arguments and rejects shell syntax before npm', () => {

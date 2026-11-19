@@ -24,6 +24,7 @@ import {
 import { getTenantConfig } from './tenantConfig';
 import { reconcileAccountSalesStatusAfterImport } from './accountSalesStatus';
 import { markWholesaleAssessmentSourceFailure } from './wholesaleAssessmentService';
+import { retryOhlqSourceRead } from './ohlqSourceReadRetry';
 
 type Logger = Pick<Console, 'error' | 'log'>;
 
@@ -93,13 +94,13 @@ export async function runOhlqAnnualSalesWorkflow(options: OhlqAnnualSalesWorkflo
       annualSalesSummary: annualSalesDownload,
       annualSalesSummaryByWholesale: wholesaleDownload,
     } =
-      await downloadOhlqSharedSalesReports({
+      await retryOhlqSourceRead(() => downloadOhlqSharedSalesReports({
         ...defaultDownloadOptions(),
         ...options.downloadOptions,
         logger,
         reportDate,
         returnBuffer: true,
-      });
+      }));
 
     if (!annualSalesDownload.csvBuffer) {
       throw new Error('Annual Sales Summary CSV download completed, but no CSV buffer was returned for import.');

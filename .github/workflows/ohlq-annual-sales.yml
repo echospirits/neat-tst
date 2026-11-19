@@ -15,6 +15,10 @@ on:
         description: "Optional single report date to refresh, formatted YYYY-MM-DD."
         required: false
         type: string
+      reportDates:
+        description: "Optional frozen batch of report dates, comma-separated YYYY-MM-DD values."
+        required: false
+        type: string
       days:
         default: "1"
         description: "Number of recent complete report dates to run when reportDate is blank."
@@ -67,6 +71,17 @@ jobs:
     # Playwright 1.60 Chromium dependencies do not support Ubuntu 26.04.
     runs-on: ubuntu-24.04
     timeout-minutes: 240
+    # The required verification job decides the normal load's final outcome.
+    # Focused maintenance commands retain their existing strict failure behavior.
+    continue-on-error: ${{ github.event_name == 'schedule' || (inputs.purchaseStateOnly != true && inputs.productionSourcesOnly != true && inputs.repairTenantCredentials != true) }}
+    outputs:
+      should_run: ${{ steps.schedule_window.outputs.should_run }}
+      report_dates: ${{ steps.import_inputs.outputs.report_dates }}
+      observation_date: ${{ steps.import_inputs.outputs.observation_date }}
+      inputs_valid: ${{ steps.import_inputs.outcome }}
+      attempt_status: ${{ job.status }}
+      sales_status: ${{ steps.sales_import.outcome }}
+      discovery_status: ${{ steps.product_discovery.outcome }}
 
     env:
       APP_ENV: ${{ github.event_name == 'schedule' && (github.repository == 'echospirits/neat-tst' && 'test' || 'production') || inputs.deploymentEnvironment }}
@@ -148,6 +163,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           report_date: ${{ github.event.inputs.reportDate || '' }}
+          report_dates: ${{ github.event.inputs.reportDates || '' }}
           days: ${{ github.event.inputs.days || '' }}
           from_date: ${{ github.event.inputs.fromDate || '' }}
           to_date: ${{ github.event.inputs.toDate || '' }}
@@ -199,8 +215,40 @@ jobs:
             fi
           fi
 
+          # Freeze dates before setup/imports. Retries and the independent verifier
+          # must never silently move to another day across Eastern midnight.
+          observation_date="$(TZ=America/New_York date '+%Y-%m-%d')"
+          if [[ -n "$report_dates" ]]; then
+            if [[ -n "$report_date" || "$days" != "1" || "$purchase_state_only" == "true" || "$production_sources_only" == "true" ]] ||
+               [[ ! "$report_dates" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}(,[0-9]{4}-[0-9]{2}-[0-9]{2})*$ ]]; then
+              echo 'reportDates must be an unambiguous normal-load date batch.' >&2
+              exit 1
+            fi
+            IFS=',' read -ra dates <<< "$report_dates"
+            if (( ${#dates[@]} > 30 )); then echo 'At most 30 report dates are allowed.' >&2; exit 1; fi
+            for value in "${dates[@]}"; do
+              if [[ "$(date -d "$value" '+%Y-%m-%d' 2>/dev/null)" != "$value" ]]; then
+                echo 'reportDates contains an invalid date.' >&2; exit 1
+              fi
+            done
+            mapfile -t sorted_dates < <(printf '%s\n' "${dates[@]}" | sort -u)
+            if (( ${#sorted_dates[@]} != ${#dates[@]} )); then
+              echo 'reportDates must not contain duplicate dates.' >&2; exit 1
+            fi
+            report_dates="$(printf '%s\n' "${sorted_dates[@]}" | paste -sd, -)"
+          elif [[ -n "$report_date" ]]; then
+            report_dates="$report_date"
+          elif [[ "$purchase_state_only" != "true" ]]; then
+            dates=()
+            for ((offset=days; offset>=1; offset--)); do
+              dates+=("$(date -u -d "$observation_date $offset days ago" '+%Y-%m-%d')")
+            done
+            report_dates="$(IFS=,; echo "${dates[*]}")"
+          fi
+
           printf 'report_date=%s\ndays=%s\nfrom_date=%s\nto_date=%s\npurchase_state_only=%s\n' \
             "$report_date" "$days" "$from_date" "$to_date" "$purchase_state_only" >> "$GITHUB_OUTPUT"
+          printf 'report_dates=%s\nobservation_date=%s\n' "$report_dates" "$observation_date" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
         if: steps.schedule_window.outputs.should_run == 'true'
@@ -211,11 +259,11 @@ jobs:
 
       - name: Install dependencies
         if: steps.schedule_window.outputs.should_run == 'true'
-        run: npm ci
+        run: node scripts/retry-ohlq-command.cjs -- npm ci
 
       - name: Install Playwright Chromium
         if: steps.schedule_window.outputs.should_run == 'true'
-        run: npx playwright install --with-deps chromium
+        run: node scripts/retry-ohlq-command.cjs -- npx playwright install --with-deps chromium
 
       - name: Validate required secrets
         id: required_secrets
@@ -267,10 +315,11 @@ jobs:
         id: sales_import
         if: ${{ !cancelled() && steps.required_secrets.outcome == 'success' && steps.credential_repair.outcome != 'failure' && steps.schedule_window.outputs.should_run == 'true' && (github.event_name == 'schedule' || inputs.productionSourcesOnly != true) }}
         # Multi-day recovery needs a larger budget than the daily import.
-        timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && inputs.reportDate == '' && inputs.days != '1' && 120 || 40 }}
+        timeout-minutes: ${{ (github.event_name == 'schedule' || inputs.reportDates != '' || (inputs.reportDate == '' && inputs.days != '1')) && 120 || 40 }}
         shell: bash
         env:
           report_date: ${{ steps.import_inputs.outputs.report_date }}
+          report_dates: ${{ steps.import_inputs.outputs.report_dates }}
           days: ${{ steps.import_inputs.outputs.days }}
           from_date: ${{ steps.import_inputs.outputs.from_date }}
           to_date: ${{ steps.import_inputs.outputs.to_date }}
@@ -284,10 +333,15 @@ jobs:
             else
               npm run seed:ohlq-wholesale-purchase-state -- --days "$days"
             fi
-          elif [[ -n "$report_date" ]]; then
-            npm run backfill:ohlq-annual-sales -- --date "$report_date" --import-only
           else
-            npm run backfill:ohlq-annual-sales -- --days "$days" --import-only
+            failed=0
+            IFS=',' read -ra dates <<< "$report_dates"
+            for report_date in "${dates[@]}"; do
+              if ! npm run backfill:ohlq-annual-sales -- --date "$report_date" --import-only; then
+                failed=1
+              fi
+            done
+            exit "$failed"
           fi
 
       - name: Download and import tenant OHLQ inventory
@@ -351,3 +405,41 @@ jobs:
         env:
           SKIP_REASON: ${{ steps.schedule_window.outputs.reason }}
         run: echo "$SKIP_REASON"
+
+  verify:
+    name: Verify required data after recovery
+    needs: sync
+    # Empty outputs mean setup/manifest failure and MUST reach a failing verifier.
+    # Only an explicit inactive schedule or a focused maintenance mode skips it.
+    if: ${{ !cancelled() && needs.sync.outputs.should_run != 'false' && (github.event_name == 'schedule' || (inputs.purchaseStateOnly != true && inputs.productionSourcesOnly != true && inputs.repairTenantCredentials != true)) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: ${{ github.event_name == 'schedule' && (github.repository == 'echospirits/neat-tst' && 'test' || 'production') || inputs.deploymentEnvironment }}
+    env:
+      APP_ENV: ${{ github.event_name == 'schedule' && (github.repository == 'echospirits/neat-tst' && 'test' || 'production') || inputs.deploymentEnvironment }}
+      DATABASE_ENVIRONMENT: ${{ github.event_name == 'schedule' && (github.repository == 'echospirits/neat-tst' && 'test' || 'production') || inputs.deploymentEnvironment }}
+      DATABASE_TARGET_ID: ${{ vars.DATABASE_TARGET_ID }}
+      EXPECTED_DATABASE_HOST: ${{ vars.EXPECTED_DATABASE_HOST }}
+      PRODUCTION_BASE_URL: ${{ vars.PRODUCTION_BASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      OHLQ_IMPORT_ENABLED: "false"
+      EMAIL_SEND_ENABLED: "false"
+      CRON_JOBS_ENABLED: "false"
+      OHLQ_REPORT_DATES: ${{ needs.sync.outputs.report_dates }}
+      OHLQ_OBSERVATION_DATE: ${{ needs.sync.outputs.observation_date }}
+      OHLQ_INPUTS_VALID: ${{ needs.sync.outputs.inputs_valid }}
+      OHLQ_ATTEMPT_STATUS: ${{ needs.sync.outputs.attempt_status }}
+      OHLQ_SALES_STAGE_STATUS: ${{ needs.sync.outputs.sales_status }}
+      OHLQ_DISCOVERY_STAGE_STATUS: ${{ needs.sync.outputs.discovery_status }}
+    steps:
+      - name: Check out verification code
+        uses: actions/checkout@v4
+      - name: Set up verification Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install verification dependencies
+        run: node scripts/retry-ohlq-command.cjs -- npm ci
+      - name: Check persisted load completeness
+        run: npx tsx scripts/verify-ohlq-load.ts

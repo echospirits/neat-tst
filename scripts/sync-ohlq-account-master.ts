@@ -8,6 +8,7 @@ import { loadLocalEnvironmentFile } from '../lib/environmentFile';
 import { downloadOhlqAccountMaster, getOhlqAccountMasterDate } from '../lib/ohlqAnnualSalesReport';
 import { recordOhlqReportRunErrored, recordOhlqReportRunStarted } from '../lib/ohlqDataStatus';
 import { prisma } from '../lib/prisma';
+import { retryOhlqSourceRead } from '../lib/ohlqSourceReadRetry';
 
 const getArgValue = (name: string) => {
   const index = process.argv.indexOf(name);
@@ -52,11 +53,11 @@ async function main() {
   const reportDate = getOhlqAccountMasterDate();
   if (apply) await recordOhlqReportRunStarted({ reportDate, source: OhlqReportDataSource.ACCOUNT_MASTER });
   try {
-    const download = await downloadOhlqAccountMaster({
+    const download = await retryOhlqSourceRead(() => downloadOhlqAccountMaster({
       headless: true,
       returnBuffer: false,
       useServerlessChromium: false,
-    });
+    }));
     console.log(JSON.stringify({ accountMasterDownload: download }, null, 2));
     await runImporter(download.outputPath, environment, apply);
   } catch (error) {

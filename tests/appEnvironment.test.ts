@@ -137,8 +137,8 @@ test('master syncs record an observable run before starting the browser download
   const brandMasterSync = readFileSync('scripts/sync-ohlq-brand-master.ts', 'utf8');
 
   for (const script of [accountMasterSync, brandMasterSync]) {
-    const startedAt = script.indexOf('recordOhlqReportRunStarted');
-    const downloadedAt = script.indexOf('await downloadOhlq');
+    const startedAt = script.indexOf('await recordOhlqReportRunStarted(');
+    const downloadedAt = script.indexOf('await retryOhlqSourceRead(() => downloadOhlq');
     assert.ok(startedAt >= 0 && downloadedAt > startedAt);
     assert.match(script, /recordOhlqReportRunErrored/);
   }
