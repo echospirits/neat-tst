@@ -4,7 +4,7 @@
 
 The owner requested direct database-backed reporting for the existing Board KPIs dashboard and authorized implementation in TST. This work remains in **0.10.0-dev**, starting from `echospirits/neat-tst` branch `tst`, commit `07213320628f4e787a6c24d276eee52124f1f53f`. That baseline withdrew the earlier CSV archive feature. Before delivery, the implementation was integrated with `005fb034e1fac52065e3939fd318afd9d7741478`, preserving its OHLQ source-read retries and verified outcome-notification behavior. The new runtime extends the existing native download with typed reporting rows; it does not restore the canceled button, endpoint or archive writer.
 
-**Implementation, integrated local validation, isolated database rehearsal, shared-TST database application and restricted reporting-login authentication are complete. Dashboard connection, native-runner acceptance and hosted application delivery are pending.** This record must be updated with actual receipts before claiming those remaining steps completed.
+**Implementation, integrated local validation, isolated database rehearsal, shared-TST database application, restricted reporting-login authentication and hosted TST application delivery are complete. Fresh native source downloads also passed hosted validation with zero database writes. Dashboard connection and native-runner reporting publication remain pending.** This record must be updated with actual receipts before claiming those remaining steps completed.
 
 Production/main and the original dashboard are outside this TST delivery. Automatic TST schedules remain disabled. A direct Looker query or cache refresh does not itself fetch a new OHLQ report. Production promotion and the daily operating schedule remain distinct work.
 
@@ -42,7 +42,7 @@ The integrated build used `NODE_ENV=production` and inert `APP_ENV=development`,
 
 ## Real retained source
 
-The original saved TST report was read through the approved Neon integration and parsed locally with the new runtime parser. These facts describe that existing acquisition, not a new November 19 download.
+The original saved TST report was read through the approved Neon integration and parsed locally with the new runtime parser. These facts describe the retained November 18 acquisition used to seed the reporting view. The later November 19 download-only validation is recorded separately under hosted acceptance and did not replace this snapshot.
 
 | Source evidence | Value |
 | --- | --- |
@@ -87,16 +87,35 @@ The reporting role has superuser, database creation, role creation, inheritance,
 
 The separate [Board KPIs — Neon TST report](https://datastudio.google.com/u/1/reporting/26f0eedc-a60c-4e1e-beba-cae307583f58/edit) is saved. Its direct database connection is still pending. The original [Board KPIs report](https://datastudio.google.com/u/1/reporting/6fd5e80b-5a35-4c0d-826a-9b74c466f5fd?s=rw8HxkyJHL8) remains unchanged.
 
+The runtime was published to `echospirits/neat-tst/tst` as [commit `00c6e9c5a99136147489838a0b724466ad8e3b7d`](https://github.com/echospirits/neat-tst/commit/00c6e9c5a99136147489838a0b724466ad8e3b7d), with tree `a90c434b618571a1b35188235c63048650399e55` and parent `005fb034e1fac52065e3939fd318afd9d7741478`. The GitHub tree matched the reviewed local index exactly. This runtime SHA remains the acceptance target even when a later documentation checkpoint records the results.
+
+| Hosted receipt | Observed result |
+| --- | --- |
+| Exact-commit Actions | [Run `44605137359`](https://github.com/echospirits/neat-tst/actions/runs/44605137359), job `135846689213`, completed successfully on the exact runtime SHA. The job completed November 19, 2026 at `20:08:04Z`; the run was marked complete at `20:08:05Z`. |
+| Source-download validation | Both sources validated for report date `2026-11-19`: Bailment returned 6,290 parser rows and Distribution Center returned 64 parser rows. The final receipt reports two sources, zero failed sources, environment `test`, database target `neon-neat-tst` and **zero database writes**. These are download-validator counts, not the 6,202 retained reporting-view rows. |
+| Hosted regression checks | Five report-control tests passed on Node 22.23.4; zero failures, skips, cancellations or todos; 2,081.873233 ms. |
+| Vercel identity | Project `neat-tst`, ID `prj_fNOruLSh6BQNVXAThXYJEjBw2HYA`; deployment `dpl_BPj76bSvJ5sD1qPoJh5t3kusjZWw`. Metadata confirms repository `echospirits/neat-tst`, branch `tst` and exact runtime commit. |
+| Vercel readiness | READY at `2026-11-19T20:07:53.915Z`; the GitHub Vercel status reports success at `20:07:54Z`. |
+| Exact deployment health | [Exact deployment `/api/health`](https://neat-ft9uw2h6o-joe-1533s-projects.vercel.app/api/health) returned HTTP 200. |
+| Canonical TST health | [Canonical `/api/health`](https://neat-tst.vercel.app/api/health) returned HTTP 200 after the canonical alias was assigned to the exact deployment. Both health responses were verified by `2026-11-19T20:08:37.658Z` and report `ok=true`, `database=connected`, `databaseTarget=neon-neat-tst`, `environment=test`. |
+| Deployment runtime logs | The deployment-scoped error/fatal query for the preceding 15 minutes returned no matching groups. This is a bounded log observation, not a claim that every application path was exercised. |
+
+The source-validation workflow ran automatically for the push with `OHLQ_IMPORT_ENABLED=false`; no manual source job was dispatched for this acceptance. It downloads, validates and discards the sources without importing or refreshing forecasts. The successful fresh download therefore does not establish runtime publication into the reporting tables, and the reporting view still carries the reconciled November 18 acquisition until a publisher run is accepted. The workflow logged a non-failing deprecation warning for the checkout/setup-node actions being forced from Node 20 onto Node 24; its application command used Node 22.23.4.
+
+The Looker connection remains incomplete. A JDBC `verify-full` attempt using default Java trust returned Looker's generic dataset-configuration error; that result does not identify a specific TLS or database failure. The documented Basic connection with SSL was then prepared with client authentication unchecked, but the ISRG Root X1 CA certificate file still needs to be uploaded. Browser origin/security checks blocked the direct certificate download, and a follow-up through the official Neon guide timed out. No Looker connection or report-source replacement was completed.
+
+The one-time native publisher acceptance was also not dispatched: the GitHub Actions workflow UI required sign-in. The inspected existing focused TST source run remains available once GitHub sign-in is restored, without enabling schedules. The current stored reporting evidence remains **6,202 rows acquired November 18**; the **6,290 parser rows** from November 19's successful download-only check were not published or stored by that check.
+
 | Delivery gate | Status |
 | --- | --- |
-| TST application commit and pushed tree | Pending. |
-| Exact candidate hosted checks | Pending. |
-| Vercel deployment READY and canonical test/database health | Pending. |
-| Real native runner publishes typed reporting data | Pending. |
+| TST application commit and pushed tree | Passed: runtime commit `00c6e9c5a99136147489838a0b724466ad8e3b7d`, exact reviewed tree `a90c434b618571a1b35188235c63048650399e55`, published to TST. |
+| Exact candidate hosted checks | Passed: exact-commit source-download validation and five report-control tests in Actions run `44605137359`. |
+| Vercel deployment READY and canonical test/database health | Passed: exact deployment and canonical alias both return HTTP 200 with the expected connected TST database identity. |
+| Real native runner publishes typed reporting data | Pending: no manual refresh was dispatched because the GitHub Actions UI required sign-in. |
 | Dedicated login authenticates and reads the Echo view | Passed on actual `looker_echo_bailment_tst` authentication: expected current user and 6,202 view rows. |
 | Private table reads and data changes denied to reporting login | Passed: actual private `Organization` query denied with SQLSTATE `42501`; effective audit finds no writable relations, and the actual login reports read-only transactions and no reporting write privilege. |
-| Encrypted Looker PostgreSQL connection | Pending. |
-| Test report Bailment source replacement, calculations and total reconciliation | Pending. |
+| Encrypted Looker PostgreSQL connection | Pending: Basic + SSL requires the ISRG Root X1 CA certificate upload after the unsuccessful connection attempt described above. |
+| Test report Bailment source replacement, calculations and total reconciliation | Pending: no source replacement occurred. |
 | Source acquisition time visible and accurately dated | Pending. |
 
 The acceptance target is the existing Bailment charts in the copied report reading the restricted Neon view. Other spreadsheet-backed datasets remain in place. Preserve existing invoice-date versus payment-date meaning and distinguish invoice lines from distinct invoices. Record any calculated-field or connector-type changes explicitly.

@@ -62,6 +62,8 @@ The official connector guidance is [Neon: connect Looker Studio](https://neon.co
 
 ## Delivery evidence
 
+Runtime commit [`00c6e9c5a99136147489838a0b724466ad8e3b7d`](https://github.com/echospirits/neat-tst/commit/00c6e9c5a99136147489838a0b724466ad8e3b7d) is deployed and READY in the `neat-tst` Vercel project. Its exact deployment and canonical `neat-tst.vercel.app` health endpoints both return HTTP 200 with `ok=true`, `database=connected`, `databaseTarget=neon-neat-tst` and `environment=test`. [Actions run `44605137359`](https://github.com/echospirits/neat-tst/actions/runs/44605137359) passed fresh Bailment and Distribution Center downloads for November 19 and five report-control checks. The download validator explicitly recorded **zero database writes**; its newer source validation does not update the November 18 reporting snapshot or establish runtime publisher acceptance. The native reporting publisher and direct Looker connection remain separate outstanding gates.
+
 Before claiming completion, record the migration rehearsal and shared-TST checksum, real-source reconciliation, actual reporting-login privileges, relevant tests/typecheck/build, TST commit and deployment health, and the test report connection with source refresh time. An applied migration alone does not demonstrate that Google connected successfully. A test report reading a retained CSV does not demonstrate a new scheduled download. Production release and replacement of the live dashboard remain distinct from this TST implementation.
 
 See the [current TST validation record](../releases/bailment-direct-reporting-validation.md) for exact identities, completed checks and outstanding delivery gates.
