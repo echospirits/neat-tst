@@ -1,0 +1,53 @@
+name: Alert contract validation - recovered
+on:
+  push:
+    tags: [codex-ohlq-outcome-contract-20261119]
+permissions:
+  contents: read
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    continue-on-error: ${{ github.event_name == 'schedule' || (inputs.purchaseStateOnly != true && inputs.productionSourcesOnly != true && inputs.repairTenantCredentials != true) }}
+    outputs:
+      should_run: ${{ steps.schedule_window.outputs.should_run }}
+      report_dates: ${{ steps.import_inputs.outputs.report_dates }}
+      observation_date: ${{ steps.import_inputs.outputs.observation_date }}
+      inputs_valid: ${{ steps.import_inputs.outcome }}
+      attempt_status: ${{ job.status }}
+      sales_status: ${{ steps.sales_import.outcome }}
+      discovery_status: ${{ steps.product_discovery.outcome }}
+    steps:
+      - id: schedule_window
+        run: echo 'should_run=true' >> "$GITHUB_OUTPUT"
+      - id: import_inputs
+        run: |
+          echo 'report_dates=2026-11-17,2026-11-18' >> "$GITHUB_OUTPUT"
+          echo 'observation_date=2026-11-19' >> "$GITHUB_OUTPUT"
+      - name: Simulate exhausted setup retries (no external calls)
+        run: exit 1
+      - id: sales_import
+        run: exit 99
+      - id: product_discovery
+        run: exit 99
+  verify:
+    needs: sync
+    if: ${{ !cancelled() && needs.sync.outputs.should_run != 'false' && (github.event_name == 'schedule' || (inputs.purchaseStateOnly != true && inputs.productionSourcesOnly != true && inputs.repairTenantCredentials != true)) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    env:
+      INPUTS_VALID: ${{ needs.sync.outputs.inputs_valid }}
+      REPORT_DATES: ${{ needs.sync.outputs.report_dates }}
+      OBSERVATION_DATE: ${{ needs.sync.outputs.observation_date }}
+      SALES_STATUS: ${{ needs.sync.outputs.sales_status }}
+      DISCOVERY_STATUS: ${{ needs.sync.outputs.discovery_status }}
+    steps:
+      - name: Verify contract using isolated evidence
+        shell: bash
+        run: |
+          test "$INPUTS_VALID" = 'success'
+          test "$REPORT_DATES" = '2026-11-17,2026-11-18'
+          test "$OBSERVATION_DATE" = '2026-11-19'
+          test "$SALES_STATUS" = 'skipped'
+          test "$DISCOVERY_STATUS" = 'skipped'
+          exit 0
