@@ -6,7 +6,7 @@ const workflow = readFileSync(new URL('../.github/workflows/ohlq-annual-sales.ym
 const step = (name: string) => {
   const body = workflow.split(`      - name: ${name}\n`)[1];
   assert.ok(body, `Missing workflow step: ${name}`);
-  return body.split('\n      - name: ')[0];
+  return body.split(/\n(?:      - name: |  [A-Za-z0-9_-]+:\n)/)[0];
 };
 
 test('TST daily loads have neither a native cron nor a GitHub schedule', () => {
@@ -15,6 +15,8 @@ test('TST daily loads have neither a native cron nor a GitHub schedule', () => {
   assert.doesNotMatch(workflow, /^  schedule:/m);
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /if: github.event_name != 'schedule'/);
+  const verifyJob = workflow.split('\n  verify:\n')[1];
+  assert.match(verifyJob, /if:.*github.event_name != 'schedule'/);
 });
 
 test('product discovery cannot block sales or inventory and remains a visible failure', () => {
@@ -27,11 +29,35 @@ test('product discovery cannot block sales or inventory and remains a visible fa
   assert.ok(workflow.indexOf('- name: Discover organization products after core imports') < workflow.indexOf('- name: Refresh post-import intelligence and retention'));
 });
 
-test('both sales dispatch paths defer statewide intelligence until after inventory', () => {
+test('all frozen sales dates defer statewide intelligence until after inventory', () => {
   const sales = step('Run OHLQ annual sales import');
   assert.match(sales, /--date "\$report_date" --import-only/);
-  assert.match(sales, /--days "\$days" --import-only/);
+  assert.match(sales, /for report_date in "\$\{dates\[@\]\}"/);
+  assert.doesNotMatch(sales, /retry-ohlq-command/);
+  assert.match(sales, /npm run backfill:ohlq-annual-sales/);
+  assert.doesNotMatch(sales, /--days "\$days" --import-only/);
   assert.ok(workflow.indexOf('- name: Download and import tenant OHLQ inventory') < workflow.indexOf('- name: Refresh post-import intelligence and retention'));
+});
+
+test('normal loads finish at an independent mandatory persisted-data verifier', () => {
+  const syncJob = workflow.split('\n  sync:\n')[1].split('\n  verify:\n')[0];
+  const verifyJob = workflow.split('\n  verify:\n')[1];
+  assert.ok(verifyJob);
+  assert.match(syncJob, /continue-on-error:/);
+  assert.match(syncJob, /inputs.purchaseStateOnly != true.*inputs.productionSourcesOnly != true.*inputs.repairTenantCredentials != true/);
+  assert.match(verifyJob, /needs: sync/);
+  assert.match(verifyJob, /!cancelled\(\).*needs.sync.outputs.should_run != 'false'/);
+  assert.match(verifyJob, /OHLQ_REPORT_DATES: \$\{\{ needs.sync.outputs.report_dates \}\}/);
+  assert.match(verifyJob, /OHLQ_OBSERVATION_DATE: \$\{\{ needs.sync.outputs.observation_date \}\}/);
+  assert.match(verifyJob, /OHLQ_INPUTS_VALID: \$\{\{ needs.sync.outputs.inputs_valid \}\}/);
+  assert.match(verifyJob, /OHLQ_ATTEMPT_STATUS: \$\{\{ needs.sync.outputs.attempt_status \}\}/);
+  assert.match(verifyJob, /OHLQ_IMPORT_ENABLED: "false"/);
+  assert.match(verifyJob, /EMAIL_SEND_ENABLED: "false"/);
+  assert.match(verifyJob, /runs-on: ubuntu-24\.04/);
+  assert.match(verifyJob, /timeout-minutes: 15/);
+  assert.match(verifyJob, /npx tsx scripts\/verify-ohlq-load\.ts/);
+  assert.doesNotMatch(verifyJob, /continue-on-error/);
+  assert.doesNotMatch(verifyJob, /secrets\.OHLQ_/);
 });
 
 test('a failed sales import permits inventory recovery but cannot refresh intelligence from incomplete sales', () => {

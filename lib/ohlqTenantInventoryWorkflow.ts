@@ -9,6 +9,7 @@ import { getOrganizationOhlqCredentials } from './ohlqTenantCredentials';
 import { completeTenantInventoryRun, errorTenantInventoryRun, startTenantInventoryRun } from './ohlqTenantInventoryStatus';
 import { prisma } from './prisma';
 import { ECHO_ORGANIZATION_ID } from './echoAccess';
+import { retryOhlqSourceRead } from './ohlqSourceReadRetry';
 
 type Logger = Pick<Console, 'error' | 'log'>;
 const defaultServices = {
@@ -67,7 +68,7 @@ export async function runOhlqTenantInventoryWorkflow({
       await startTenantInventoryRun(organization.id, reportDate, db);
       const credentials = await retryDatabaseRead(() => services.credentials(organization.id, db));
       if (!credentials) throw new Error('Tenant OHLQ credentials are no longer configured.');
-      const download = await services.download({
+      const download = await retryOhlqSourceRead(() => services.download({
         debugDir: path.join(os.tmpdir(), 'ohlq-playwright', organization.id),
         downloadDir: path.join(os.tmpdir(), 'ohlq-downloads', organization.id),
         headless: true,
@@ -75,7 +76,7 @@ export async function runOhlqTenantInventoryWorkflow({
         reportDate,
         returnBuffer: true,
         useServerlessChromium: process.env.VERCEL === '1',
-      });
+      }));
       if (!download.csvBuffer) throw new Error('Inventory download completed without a CSV buffer.');
       const result = await services.importCsv({ csv: download.csvBuffer, db, organizationId: organization.id, reportDate: download.reportDate });
       importedRows += result.importedRows;

@@ -1,5 +1,9 @@
 # Unreleased
 
+## OHLQ notifications after recovery — November 19, 2026
+
+Owner-authorized hotfix, retaining main **0.10.2** and TST **0.10.0-dev**. Group the daily report dates into one load, retry temporary setup/download/database transport failures within safe read or fixed-value status boundaries, and require a separate read-only persisted-data verification job. A failed attempt with independently verified current data is a warning; missing, incomplete or unverifiable required data still fails after bounded checks. Preserve typed optional lookup/stale-publication warnings, the paused TST daily schedules, and existing focused maintenance behavior. No schema/dependency/version, hosted secret, notification preference or UI changes. See [scope and validation](ohlq-outcome-notifications-2026-11-19.md).
+
 ## Native Bailment financial storage withdrawn — November 18, 2026
 
 The owner canceled this feature as unnecessary. Restore the existing OHLQ forecasting download/import and job reporting to their pre-feature behavior; remove the financial capture service, Admin status/download control, CSV endpoint and feature-only tests/operator tooling. The prior capture, native-format compatibility change and associated Data Status layout change are backed out. Unrelated TST work, package version, dependencies, hosted settings and disabled automatic schedules remain unchanged; no production promotion is included.

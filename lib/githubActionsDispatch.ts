@@ -1,4 +1,5 @@
 import { getAppEnvironment } from './appEnvironment';
+import { normalizeOhlqLoadDates } from './ohlqLoadDates';
 
 export type GithubWorkflowDispatchResult = {
   ref: string;
@@ -38,9 +39,16 @@ export function getGithubActionsDispatchConfig() {
   };
 }
 
-export async function dispatchOhlqAnnualSalesWorkflow({ reportDate }: { reportDate: string }) {
+export async function dispatchOhlqAnnualSalesWorkflow(
+  input: { reportDate: string; reportDates?: never } | { reportDates: string[]; reportDate?: never },
+) {
   const config = getGithubActionsDispatchConfig();
   if (!config) return null;
+  if (input.reportDate !== undefined && input.reportDates !== undefined) throw new Error('Choose one report date selector.');
+  const dates = normalizeOhlqLoadDates(input.reportDates ?? [input.reportDate!]);
+  const dateInputs = input.reportDates
+    ? { reportDate: '', reportDates: dates.join(',') }
+    : { reportDate: dates[0] };
 
   const response = await fetch(
     `https://api.github.com/repos/${config.repository}/actions/workflows/${encodeURIComponent(
@@ -51,7 +59,7 @@ export async function dispatchOhlqAnnualSalesWorkflow({ reportDate }: { reportDa
         inputs: {
           days: '1',
           deploymentEnvironment: config.deploymentEnvironment,
-          reportDate,
+          ...dateInputs,
         },
         ref: config.ref,
       }),

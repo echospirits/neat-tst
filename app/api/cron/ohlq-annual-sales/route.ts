@@ -62,19 +62,18 @@ export async function GET(request: Request) {
     console.log(`OHLQ annual sales cron selected report date(s): ${reportDates.join(', ')}.`);
 
     if (dispatchConfig) {
-      const queuedRuns = [];
-      for (const reportDate of reportDates) {
-        console.log(`OHLQ annual sales cron queued GitHub Actions workflow for report date ${reportDate}.`);
-        const result = await dispatchOhlqAnnualSalesWorkflow({ reportDate });
-        queuedRuns.push({ reportDate, result });
-      }
+      // One logical load owns the frozen dates, recovery and final data-health result.
+      // Separate dated workflows could each notify before the other had recovered.
+      const result = await dispatchOhlqAnnualSalesWorkflow({ reportDates });
+      if (!result) throw new Error('GitHub Actions dispatch became unavailable before the batch was queued.');
+      console.log(`OHLQ annual sales cron queued one GitHub Actions batch for ${reportDates.join(', ')}.`);
 
       return NextResponse.json({
         ok: true,
         queued: true,
         reportDates,
-        runCount: queuedRuns.length,
-        runs: queuedRuns,
+        runCount: 1,
+        runs: [{ reportDates, result }],
       });
     }
 

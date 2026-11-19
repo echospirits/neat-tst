@@ -13,6 +13,7 @@ import {
   recordOhlqReportRunStarted,
 } from '../lib/ohlqDataStatus';
 import { prisma } from '../lib/prisma';
+import { retryOhlqSourceRead } from '../lib/ohlqSourceReadRetry';
 
 const getArgValue = (name: string) => {
   const index = process.argv.indexOf(name);
@@ -37,11 +38,11 @@ async function main() {
   const reportDate = getOhlqBrandMasterDate();
   if (apply) await recordOhlqReportRunStarted({ reportDate, source: OhlqReportDataSource.BRAND_MASTER });
   try {
-    const download = await downloadOhlqBrandMaster({
+    const download = await retryOhlqSourceRead(() => downloadOhlqBrandMaster({
       headless: true,
       returnBuffer: false,
       useServerlessChromium: false,
-    });
+    }));
     const csv = fs.readFileSync(download.outputPath);
 
     if (!apply) {

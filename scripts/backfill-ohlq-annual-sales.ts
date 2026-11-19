@@ -7,52 +7,14 @@ import { runAgencyMarketIntelligenceAfterImport } from '../lib/agencyMarketIntel
 import { pruneOhlqAnnualSalesRows } from '../lib/ohlqAnnualSalesRetention';
 import { toOhlqDateOnlyUtc } from '../lib/ohlqDataStatus';
 import { getOhlqReportStorageDirectories } from '../lib/ohlqReportStorage';
-
-const easternTimeZone = 'America/New_York';
+import { resolveOhlqBackfillDates } from '../lib/ohlqLoadDates';
 
 const getArgValue = (name: string) => {
   const index = process.argv.indexOf(name);
   if (index < 0) return null;
-  return process.argv[index + 1] ?? null;
-};
-
-const formatIsoDate = (date: Date) => date.toISOString().slice(0, 10);
-
-const todayInEastern = () => {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    day: '2-digit',
-    month: '2-digit',
-    timeZone: easternTimeZone,
-    year: 'numeric',
-  }).formatToParts(new Date());
-
-  const value = (type: Intl.DateTimeFormatPartTypes) => {
-    const part = parts.find((item) => item.type === type)?.value;
-    if (!part) throw new Error(`Unable to resolve Eastern date part: ${type}`);
-    return Number(part);
-  };
-
-  return {
-    day: value('day'),
-    month: value('month'),
-    year: value('year'),
-  };
-};
-
-const getLastCompleteReportDates = (days: number) => {
-  const today = todayInEastern();
-
-  return Array.from({ length: days }, (_, index) => {
-    const offset = days - index;
-    return formatIsoDate(new Date(Date.UTC(today.year, today.month - 1, today.day - offset, 12)));
-  });
-};
-
-const assertIsoDate = (value: string) => {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    throw new Error(`Expected YYYY-MM-DD date, received: ${value}`);
-  }
-
+  const value = process.argv[index + 1];
+  if (!value || value.startsWith('--')) throw new Error(`${name} requires a value.`);
+  if (process.argv.lastIndexOf(name) !== index) throw new Error(`${name} may only be provided once.`);
   return value;
 };
 
@@ -60,10 +22,12 @@ async function main() {
   loadLocalEnvironmentFile('.env.local');
   loadLocalEnvironmentFile('.env');
 
-  const explicitDate = getArgValue('--date');
-  const days = Number(getArgValue('--days') ?? '7');
-  if (!Number.isInteger(days) || days < 1 || days > 30) throw new Error('--days must be between 1 and 30.');
-  const dates = explicitDate ? [assertIsoDate(explicitDate)] : getLastCompleteReportDates(days);
+  const explicitDates = getArgValue('--dates');
+  const dates = resolveOhlqBackfillDates({
+    date: getArgValue('--date'),
+    dates: explicitDates,
+    days: getArgValue('--days'),
+  });
   const importOnly = process.argv.includes('--import-only');
   const intelligenceOnly = process.argv.includes('--intelligence-only');
   if (importOnly && intelligenceOnly) throw new Error('Choose either --import-only or --intelligence-only.');
@@ -82,30 +46,42 @@ async function main() {
     return;
   }
 
+  const failures: Array<{ reportDate: string; error: unknown }> = [];
   for (const reportDate of dates) {
     console.log(`Starting OHLQ annual sales backfill for ${reportDate}.`);
-    const result = await runOhlqAnnualSalesWorkflow({
-      downloadOptions: {
-        ...getOhlqReportStorageDirectories(),
-        headless: true,
-        useServerlessChromium: false,
-      },
-      reportDate,
-      deferIntelligence: importOnly,
-    });
-
-    console.log(
-      JSON.stringify(
-        {
-          annualSalesSummary: result.reports.annualSalesSummary,
-          annualSalesSummaryByWholesale: result.reports.annualSalesSummaryByWholesale,
-          durationMs: result.durationMs,
-          ok: result.ok,
+    try {
+      const result = await runOhlqAnnualSalesWorkflow({
+        downloadOptions: {
+          ...getOhlqReportStorageDirectories(),
+          headless: true,
+          useServerlessChromium: false,
         },
-        null,
-        2,
-      ),
-    );
+        reportDate,
+        deferIntelligence: importOnly,
+      });
+
+      console.log(
+        JSON.stringify(
+          {
+            annualSalesSummary: result.reports.annualSalesSummary,
+            annualSalesSummaryByWholesale: result.reports.annualSalesSummaryByWholesale,
+            durationMs: result.durationMs,
+            ok: result.ok,
+          },
+          null,
+          2,
+        ),
+      );
+    } catch (error) {
+      if (!importOnly || explicitDates == null) throw error;
+      // Explicit import-only dates are independent. A missing older report must
+      // not prevent the newest requested report from being attempted.
+      failures.push({ reportDate, error });
+      console.error(`OHLQ annual sales import failed for ${reportDate}; continuing the remaining requested dates.`);
+    }
+  }
+  if (failures.length) {
+    throw new AggregateError(failures.map(({ error }) => error), `Failed OHLQ report date(s): ${failures.map(({ reportDate }) => reportDate).join(', ')}.`);
   }
   if (importOnly && process.env.GITHUB_OUTPUT) {
     appendFileSync(process.env.GITHUB_OUTPUT, `report_date=${dates.at(-1)}\n`);

@@ -13,6 +13,7 @@ import { ohioSourceConfiguration } from './sourceConfiguration';
 import { refreshProductionForecast } from './service';
 import { syncOperationalSignals } from './operationalSignals/workflow';
 import type { ForecastRefreshStage } from './refreshState';
+import { retryOhlqSourceRead } from '../ohlqSourceReadRetry';
 
 const defaults = { credentials: getOrganizationOhlqCredentials, bailment: downloadOhlqBailmentInvoices, dc: downloadOhlqPartnerDc, importCsv: importProductionSource, refresh: refreshProductionForecast, operations: syncOperationalSignals };
 type ProductionSourceServices = Omit<typeof defaults, 'operations'> & { operations?: (options: Parameters<typeof syncOperationalSignals>[0]) => Promise<{ failed: number }> };
@@ -41,7 +42,9 @@ export async function syncProductionSources({ db = prisma, services = defaults, 
         if (source === 'BAILMENT_PO_INVOICE' && (!config.historyStart || !config.directInvoices || config.historyStart > end)) throw new Error('Complete history start and direct invoice policy must be configured.');
         const downloadOptions = { headless: true, returnBuffer: true, partnerCredentials: credentials, reportDate: today, debugDir: path.join(os.tmpdir(), 'ohlq-private', organization.id, 'playwright'), downloadDir: path.join(os.tmpdir(), 'ohlq-private', organization.id, 'downloads'), logger: { log: () => undefined, error: () => undefined }, useServerlessChromium: process.env.VERCEL === '1' };
         phase = 'download';
-        const download = source === 'BAILMENT_PO_INVOICE' ? await services.bailment({ ...downloadOptions, fromDate: config.historyStart! }) : await services.dc(downloadOptions);
+        const download = await retryOhlqSourceRead(() => source === 'BAILMENT_PO_INVOICE'
+          ? services.bailment({ ...downloadOptions, fromDate: config.historyStart! })
+          : services.dc(downloadOptions));
         phase = 'validation';
         if (!download.csvBuffer || download.reportDate !== today) throw new Error('A current complete source export is required.');
         if (source === 'BAILMENT_PO_INVOICE') options.nativeHistory = { fullPortfolio: true, directInvoices: config.directInvoices! };
