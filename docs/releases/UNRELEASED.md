@@ -1,8 +1,17 @@
 # Unreleased
 
+## Direct Bailment reporting — November 19, 2026 (TST)
+
+The owner requested a direct Neon connection for the Board KPIs dashboard. The implementation is prepared within the existing **0.10.0-dev** TST cycle: the native Bailment PO and Invoice download publishes typed invoice lines before forecasting applies exclusions or date clipping. Reporting and forecasting retain their completed work independently, and reporting failures appear in the existing refresh result. The additive reporting tables preserve all 21 native fields and original cell values; an Echo-only view supplies the existing field names and source retrieval/range metadata for Looker Studio.
+
+The canceled CSV archive runtime and download button remain retired. Its retained report is used only for the guarded one-time seed. No additional Neat control, provider download, dependency, scheduler activation or production promotion is included. Existing disabled TST schedules, package version, unrelated pilot work and the live dashboard remain unchanged.
+
+Integrated validation against TST `005fb034` passes **1,567 tests / 78 suites**, strict typecheck, Prisma generation and the optimized build, preserving the subsequent OHLQ retry/notification work. The reviewed migration and guarded seed have committed on the isolated rehearsal and shared TST. All **6,202 rows**, **130,242 typed cells**, original values, 86 monthly totals and source metadata reconcile exactly with the retained November 18 acquisition. The dedicated reporting login authenticates and reads the Echo view, rejects a private-table query, and has no other public relation read or relation write privileges. A separate Looker test report is saved; native-runner acceptance, direct Looker connection and hosted TST application delivery remain pending. [Implementation guide](../engineering/bailment-reporting.md) and [current validation](bailment-direct-reporting-validation.md) distinguish these gates.
+
 ## OHLQ notifications after recovery — November 19, 2026
 
 Delivered to main **0.10.2** (`393ea583`) and TST **0.10.0-dev** (`6c64e4e9`) under the owner's hotfix authorization, with both versions retained. Group the daily report dates into one load, retry temporary setup/download/database transport failures within safe read or fixed-value status boundaries, and require a separate read-only persisted-data verification job. A failed attempt with independently verified current data is a warning; missing, incomplete or unverifiable required data still fails after bounded checks. Both deployments are READY/healthy; full suites, strict typechecks/builds, exact Node 22 CI, outcome fixtures and real loads pass. Production verification passed all 17 checks and TST all 21, with zero issues or warnings. Preserve typed optional lookup/stale-publication warnings, the paused TST daily schedules, and existing focused maintenance behavior. No schema/dependency/version, hosted secret, notification preference or UI changes. See [scope and validation](ohlq-outcome-notifications-2026-11-19.md).
+
 
 ## Native Bailment financial storage withdrawn — November 18, 2026
 
