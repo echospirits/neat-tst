@@ -36,6 +36,73 @@
     "dateRange": "All available source dates",
     "nativeComparison": false,
     "source": "public.echo_item_sales_reporting",
-    "statusSource": "public.echo_item_sales_reporting_status"
+    "statusSource": "public.echo_item_sales_reporting_status",
+    "savedFilter": {
+      "name": "Neon bottle exclusions",
+      "conjunction": "AND",
+      "clauses": [
+        { "action": "Exclude", "field": "Brand", "operator": "Equal", "value": "3150B" },
+        { "action": "Exclude", "field": "Brand", "operator": "Equal", "value": "3750B" }
+      ],
+      "chartCount": 4,
+      "valid": true,
+      "emptyClause": false
+    },
+    "chartSpecificMetrics": {
+      "Retail bottles": { "formula": "SUM(Retail_Bottles_Sold)", "aggregation": "Auto" },
+      "Wholesale bottles": { "formula": "SUM(Wholesale_Bottles_Sold)", "aggregation": "Auto" },
+      "Total bottles": { "formula": "Retail_Bottles_Sold+Wholesale_Bottles_Sold", "aggregation": "Sum" }
+    },
+    "agencyDisplayLabels": {
+      "Agency_Name": { "label": "Agency", "type": "Text" },
+      "Agency_Id": { "label": "Agency ID", "type": "Text" }
+    }
+  },
+  "statusFields": {
+    "Bottle data status": {
+      "id": "calc_7mhdqznh9d",
+      "formula": "CASE Coverage_Status WHEN \"AWAITING_CERTIFIED_HISTORY\" THEN \"History pending\" WHEN \"PRIOR_YEAR_HISTORY_INCOMPLETE\" THEN \"Prior year pending\" WHEN \"PARTIAL_HISTORY\" THEN CONCAT(\"Through \", FORMAT_DATETIME(\"%b %Y\", Reporting_Month), \" (partial)\") WHEN \"READY\" THEN CONCAT(\"Through \", FORMAT_DATETIME(\"%b %Y\", Reporting_Month)) ELSE \"Check history status\" END"
+    }
+  },
+  "preview": {
+    "reportId": "450b366c-ea69-4d8e-a6d9-f113d11ea513",
+    "reportUrl": "https://datastudio.google.com/u/1/reporting/450b366c-ea69-4d8e-a6d9-f113d11ea513",
+    "databaseEnvironment": "test",
+    "mainSource": {
+      "name": "Neon TST - Bottle Sales",
+      "reportDataSourceId": "ds58",
+      "reusableSourceId": "c39e0d9b-fab7-45c1-bf80-81e468b562c5",
+      "fieldCount": 23,
+      "chartCount": 4
+    },
+    "statusSource": {
+      "name": "Neon TST - Bottle Sales Status",
+      "reportDataSourceId": "ds59",
+      "fieldCount": 13,
+      "chartCount": 4
+    },
+    "preservedSources": {
+      "originalItemSales": { "reportDataSourceId": "ds28", "chartCount": 0 },
+      "productionBailment": { "reportDataSourceId": "ds54", "chartCount": 15, "bindingChanged": false },
+      "otherSourcesUnchanged": true
+    },
+    "verifiedStatusPages": ["Monthly Bottle Sales", "Product Performance", "Agency Performance", "Channel Trends"],
+    "observedStatus": "History pending",
+    "connectionAndBindings": "VERIFIED",
+    "finalViewerAndVisualQa": "PASSED_AFTER_FULL_REPORT_RELOAD_IN_VIEW_MODE",
+    "visualQa": {
+      "pagesInspected": 4,
+      "statusLegible": true,
+      "overlapObserved": false,
+      "systemErrorsOrMissingFields": false,
+      "tableOutput": "No data",
+      "channelOutput": "Valid empty Vega plot with Retail / Wholesale / Total bottles legend",
+      "deliverablePage": "Product Performance",
+      "proofFile": "/workspace/scratch/172dd72fea7b/echo-item-sales-validation/neon-bottle-preview.jpg",
+      "proofBytes": 47674
+    },
+    "historyReconciliation": "PENDING",
+    "receiptWriterImplementedByThisChange": false,
+    "productionReportingMigrationReleased": false
   }
 }

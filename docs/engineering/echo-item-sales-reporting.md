@@ -38,6 +38,30 @@ The following two A3A fallback mappings were independently verified against the 
 
 All Echo brands and signed/zero quantities remain in this view. Preserve the existing dashboard exclusions for `3150B` and `3750B` and its existing product-label CASE separately; reporting does not discard those underlying facts.
 
+The six existing Looker calculations and their live field IDs are captured in [the Looker field contract](echo-item-sales-looker-fields.json). Preserve these exact Product and matched-YTD definitions and their identifiers when rebinding the copied report; chart-specific metrics using old raw source IDs require their own verified remapping.
+
+### TST preview wiring
+
+The separate [bottle-sales preview](https://datastudio.google.com/u/1/reporting/450b366c-ea69-4d8e-a6d9-f113d11ea513) now connects to the TST reporting views through two reusable restricted SSL sources. Saved source inventory shows **Neon TST - Bottle Sales (`ds58`) on four sales charts**, **Neon TST - Bottle Sales Status (`ds59`) on four status scorecards**, and the original Item Sales source (`ds28`) on **zero charts**. The existing production Bailment source (`ds54`) remains on **15 charts**, with other source bindings unchanged. Main/status sources contain **23/13 fields**, including Record Count.
+
+The valid shared **Neon bottle exclusions** filter is attached to the four sales charts. Its two saved clauses are **Exclude Brand Equal 3150B AND Exclude Brand Equal 3750B**; there is no empty third clause. Monthly and Channel chart-specific metrics reference `SUM(Retail_Bottles_Sold)`, `SUM(Wholesale_Bottles_Sold)`, and the row expression `Retail_Bottles_Sold+Wholesale_Bottles_Sold` aggregated with **Sum**. The monthly total label is **Total bottles**. These chart-specific remappings do not change the six captured source-calculation definitions.
+
+Each bottle-sales page has a status scorecard using **Bottle data status**, field ID `calc_7mhdqznh9d`, from the separate status source. Its saved formula is:
+
+```text
+CASE Coverage_Status
+  WHEN "AWAITING_CERTIFIED_HISTORY" THEN "History pending"
+  WHEN "PRIOR_YEAR_HISTORY_INCOMPLETE" THEN "Prior year pending"
+  WHEN "PARTIAL_HISTORY" THEN CONCAT("Through ", FORMAT_DATETIME("%b %Y", Reporting_Month), " (partial)")
+  WHEN "READY" THEN CONCAT("Through ", FORMAT_DATETIME("%b %Y", Reporting_Month))
+  ELSE "Check history status"
+END
+```
+
+**History pending** is verified on Monthly Bottle Sales, Product Performance, Agency Performance and Channel Trends after an intentional full-report reload in View mode. The three tables show valid **No data** output without System Error or missing-field errors; Channel renders a valid empty Vega plot with its Retail/Wholesale/Total bottles legend. Final screenshot-based visual QA passes on all four pages, with legible status and no overlap. Agency display labels are **Agency** and **Agency ID**, while underlying identifiers remain Text and totals/filters stay unchanged. See the [validation record](../releases/echo-item-sales-reporting-validation.md); this empty-state acceptance does not establish historical reconciliation.
+
+The preview reads **TST**, so the separately running production backfill cannot populate it. This change implements **no coverage-receipt writer**, and the new reporting migration is **not released to production**. The separately owned Codex ingestion task must integrate validated, atomic receipts for backfill, zero-sale days and future daily loads. Production reporting migration, receipt integration, history reconciliation and dashboard cutover require their own recorded sequence.
+
 `public.echo_item_sales_reporting_status` provides one row even when no sales are publishable, provided Echo is active, not suspended/cancelled and Ohio-enabled. It contains:
 
 - `History_Start`, `Latest_Closed_Month`, `Expected_Days`, `Certified_Days` and `First_Uncertified_Date`.
