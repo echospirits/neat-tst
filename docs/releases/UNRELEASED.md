@@ -1,5 +1,13 @@
 # Unreleased
 
+## Bailment daily-load readiness — November 20, 2026 (TST)
+
+The normal daily persisted-data verification now requires a complete current native Bailment reporting snapshot for the existing enrolled source-worker scope. It checks the dashboard view's latest request, configured history through the frozen observation date, native report/schema/all-selection provenance, organization timezone and persisted line count. Fresh forecasting data cannot hide missing, stale or incomplete dashboard data. Reporting verification remains independent of forecasting inputs and invoice policy; unchanged-content refreshes and downloads completing after midnight retain their original request-date semantics.
+
+This read-only correction preserves last-good reporting, existing warning policy, disabled TST schedules, unrelated pilot work and version **0.10.0-dev**. No schema, dependency, provider, credential or UI change is included.
+
+Validation: **30 focused readiness/verification tests** and strict TypeScript checking pass on Node 22. Regression coverage includes missing/stale reporting with fresh forecasts, full persisted rows, current-snapshot ordering, frozen-date midnight boundaries, independent forecast failures and excluded organizations. This validation does not claim another provider download or database write.
+
 ## Direct Bailment reporting — November 19, 2026 (TST)
 
 The owner requested a direct Neon connection for the Board KPIs dashboard. Runtime **`00c6e9c5a99136147489838a0b724466ad8e3b7d`** is delivered within the existing **0.10.0-dev** TST cycle: the native Bailment PO and Invoice download publishes typed invoice lines before forecasting applies exclusions or date clipping. Reporting and forecasting retain their completed work independently, and reporting failures appear in the existing refresh result. The additive reporting tables preserve all 21 native fields and original cell values; an Echo-only view supplies the existing field names and source retrieval/range metadata for Looker Studio.
