@@ -1,5 +1,9 @@
 # Repository Agent Instructions
 
+## Echo Item Sales reporting adapter: TST database verified
+
+The November 20, 2026 dashboard-connection work remains within the existing **0.10.0-dev** TST cycle. Its additive Echo daily-evidence table and reporting/status views passed exact-final isolated PostgreSQL 17.12 rehearsal, then shared-TST PostgreSQL 18.7 migration/checksum and actual restricted-login verification. Existing TST sales are unchanged and the empty report truthfully awaits certified history. Local Node 24 validation and the reusable Looker TST source connection pass; preview attachment/chart rebinding remain pending. The separately owned Codex task handles ingestion/backfill. Preserve that boundary, unrelated pilots, existing versions and production state; do not certify historical completeness from existing raw rows or infer dashboard delivery from source-connection acceptance. See the [reporting contract](docs/engineering/echo-item-sales-reporting.md), [validation record](docs/releases/echo-item-sales-reporting-validation.md) and [UNRELEASED](docs/releases/UNRELEASED.md) for the exact scope and evidence.
+
 ## Owner-authorized Social Publishing retirement
 
 On November 17, 2026 the owner canceled Social Publishing and requested complete removal from neat-tst and its dedicated support systems. Remove its runtime, UI, feature flag, jobs, dedicated tests and active setup guides; preserve applied migration history and append the guarded inverse migration. Preserve shared Supplies/Workflow/Blob/Calendar infrastructure, all unrelated later TST work, existing versions and historical release refs. Production/main is unchanged. The concise [retirement receipt](docs/releases/social-publishing-retirement.md) records implementation, validation and external cleanup evidence; earlier pilot authorization is superseded.
