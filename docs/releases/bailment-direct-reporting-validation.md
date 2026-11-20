@@ -4,7 +4,7 @@
 
 The owner requested direct database-backed reporting for the existing Board KPIs dashboard and authorized implementation in TST. This work remains in **0.10.0-dev**, starting from `echospirits/neat-tst` branch `tst`, commit `07213320628f4e787a6c24d276eee52124f1f53f`. That baseline withdrew the earlier CSV archive feature. Before delivery, the implementation was integrated with `005fb034e1fac52065e3939fd318afd9d7741478`, preserving its OHLQ source-read retries and verified outcome-notification behavior. The new runtime extends the existing native download with typed reporting rows; it does not restore the canceled button, endpoint or archive writer.
 
-**Implementation, integrated local validation, isolated database rehearsal, shared-TST database application, restricted reporting-login authentication and hosted TST application delivery are complete. Fresh native source downloads also passed hosted validation with zero database writes. Dashboard connection and native-runner reporting publication remain pending.** This record must be updated with actual receipts before claiming those remaining steps completed.
+**Implementation, integrated local validation, isolated database rehearsal, shared-TST database application, restricted reporting-login authentication, hosted TST application delivery and copied-dashboard acceptance are complete. All 11 original Bailment charts use Neon, source acquisition time is visible, all seven checked financial date windows reconcile, and all seven report pages passed final viewer checks on November 20. Fresh native source downloads also passed hosted validation with zero database writes. Real native-runner reporting publication remains pending.** This record must be updated with an actual publisher receipt before claiming that remaining step completed.
 
 Production/main and the original dashboard are outside this TST delivery. Automatic TST schedules remain disabled. A direct Looker query or cache refresh does not itself fetch a new OHLQ report. Production promotion and the daily operating schedule remain distinct work.
 
@@ -85,7 +85,7 @@ The reporting role has superuser, database creation, role creation, inheritance,
 
 ## Dashboard and hosted acceptance
 
-The separate [Board KPIs — Neon TST report](https://datastudio.google.com/u/1/reporting/26f0eedc-a60c-4e1e-beba-cae307583f58/edit) is saved. Its direct database connection is still pending. The original [Board KPIs report](https://datastudio.google.com/u/1/reporting/6fd5e80b-5a35-4c0d-826a-9b74c466f5fd?s=rw8HxkyJHL8) remains unchanged.
+The separate [Board KPIs — Neon TST report](https://datastudio.google.com/u/1/reporting/26f0eedc-a60c-4e1e-beba-cae307583f58/edit) is saved with the embedded PostgreSQL source `Neon TST - Bailment` (`ds55`) connected to `public.echo_bailment_reporting`. The earlier Manage added data sources receipt showed it as Working with 13 charts: all 11 original Bailment charts and two new source-timestamp cards. Final viewer acceptance is recorded separately below. The original [Board KPIs report](https://datastudio.google.com/u/1/reporting/6fd5e80b-5a35-4c0d-826a-9b74c466f5fd?s=rw8HxkyJHL8) remains unchanged.
 
 The runtime was published to `echospirits/neat-tst/tst` as [commit `00c6e9c5a99136147489838a0b724466ad8e3b7d`](https://github.com/echospirits/neat-tst/commit/00c6e9c5a99136147489838a0b724466ad8e3b7d), with tree `a90c434b618571a1b35188235c63048650399e55` and parent `005fb034e1fac52065e3939fd318afd9d7741478`. The GitHub tree matched the reviewed local index exactly. This runtime SHA remains the acceptance target even when a later documentation checkpoint records the results.
 
@@ -102,9 +102,33 @@ The runtime was published to `echospirits/neat-tst/tst` as [commit `00c6e9c5a991
 
 The source-validation workflow ran automatically for the push with `OHLQ_IMPORT_ENABLED=false`; no manual source job was dispatched for this acceptance. It downloads, validates and discards the sources without importing or refreshing forecasts. The successful fresh download therefore does not establish runtime publication into the reporting tables, and the reporting view still carries the reconciled November 18 acquisition until a publisher run is accepted. The workflow logged a non-failing deprecation warning for the checkout/setup-node actions being forced from Node 20 onto Node 24; its application command used Node 22.23.4.
 
-The Looker connection remains incomplete. A JDBC `verify-full` attempt using default Java trust returned Looker's generic dataset-configuration error; that result does not identify a specific TLS or database failure. The documented Basic connection with SSL was then prepared with client authentication unchecked, but the ISRG Root X1 CA certificate file still needs to be uploaded. Browser origin/security checks blocked the direct certificate download, and a follow-up through the official Neon guide timed out. No Looker connection or report-source replacement was completed.
+The Basic PostgreSQL connection was saved successfully after the ISRG Root X1 certificate upload, with SSL enabled and client authentication disabled. Looker accepted the connection and reports the embedded source as Working. Data freshness is set to one hour. The source preserves the existing `Month` calculation, `FORMAT_DATETIME("%Y-%m", Invoice_Date)`, using field ID `calc_f8fr82wf1d`. Identifiers remain text, and date and numeric fields retain their intended types.
 
-The one-time native publisher acceptance was also not dispatched: the GitHub Actions workflow UI required sign-in. The inspected existing focused TST source run remains available once GitHub sign-in is restored, without enabling schedules. The current stored reporting evidence remains **6,202 rows acquired November 18**; the **6,290 parser rows** from November 19's successful download-only check were not published or stored by that check.
+All four original Bailment charts on Core Revenue and all seven on Sales Stats now use `ds55`. Each financial metric was rebound to currency-formatted `SUM(Total)` with `Invoice_Date` as its date-range field; these existing financial charts use invoice dates, not `Date_Paid`. The quarter target remains unchanged. The three relative six-week cards retain Monday-based ranges with start/end week offsets of 6/1, 12/7 and 58/53.
+
+The original Bailment spreadsheet physically omitted brands `3150B` and `3750B`. The native reporting view intentionally retains the complete source. The copied report's default source is `ds55`, and it has no report-wide filter. The original `Exclusions` editor was verified against `Brand` in `Dashboard Data - Item Sales`, with saved values `3150B`, `3750B` and its original third blank-value clause. It remains a spreadsheet filter. The separate `Neon Bailment - brand exclusions` filter is bound to Neon `Brand` with the same exclusion rules.
+
+Core Revenue applies the Neon filter directly to the month-to-date and quarter cards and through the year-to-date and last-month card groups. Sales Stats has an explicit Neon page source and the Neon page filter. Its quarter card has the old chart-level `Exclusions` removed and **Inherit filters** checked. These bindings preserve the original exclusion rules without rebinding the shared spreadsheet filter to Neon; the quarter date ranges and target remain unchanged.
+
+Final private reconciliation on November 20 used the actual reporting role and passed all seven date windows: month-to-date, year-to-date, October, quarter-to-date and the three relative six-week periods. The four Core Revenue and seven Sales Stats financial cards displayed the expected results after the filter correction. Relative-date comparisons were evaluated on November 20; they can advance with the calendar while the source acquisition time remains November 18. Financial amounts, percentages and target values are omitted from this public record.
+
+The earlier source-inventory receipt showed the original reusable Bailment source `ds0` with zero charts in the copy; that source was not modified. The unused task-created duplicate `ds54` was removed through Looker's reversible remove action. The other spreadsheet source chart counts were unchanged: `ds28=6`, `ds36=2`, `ds37=1`, `ds7=2`, `ds9=1` and `ds48=2`. This inventory was not reread during the November 20 viewer checks.
+
+Core Revenue and Sales Stats each have a new dynamic dimension card labeled **Bailment source retrieved (Eastern)**. Both read native `Report_Retrieved_At`, formatted as `MMM d, yyyy h:mm a`, and show **November 18, 2026, 10:30 a.m.** This is the actual retained source acquisition, displayed to the minute. The one-hour Looker cache freshness does not fetch a new OHLQ report.
+
+All seven report pages loaded in viewer mode on November 20 without invalid-filter or System Error messages:
+
+| Viewer page | Final observation |
+| --- | --- |
+| Core Revenue | Four original financial cards and the source-timestamp card displayed correctly. |
+| Sales Stats | Seven original financial cards and the source-timestamp card displayed correctly. |
+| Monthly Bottle Sales | Table rendered with 22 rows. |
+| Product Performance | Table rendered; 25 products reported, through October. |
+| Agency Performance | Table rendered; 140 total agency entries reported, through October. |
+| Channel Trends | Chart rendered. |
+| Venue Trends | Both charts rendered. |
+
+The one-time native publisher acceptance was not dispatched: the GitHub Actions browser session was still signed out on November 20. The inspected existing focused TST source run remains available once GitHub sign-in is restored, without enabling schedules. The current stored reporting evidence remains **6,202 rows acquired November 18**; the **6,290 parser rows** from November 19's successful download-only check were not published or stored by that check.
 
 | Delivery gate | Status |
 | --- | --- |
@@ -114,11 +138,13 @@ The one-time native publisher acceptance was also not dispatched: the GitHub Act
 | Real native runner publishes typed reporting data | Pending: no manual refresh was dispatched because the GitHub Actions UI required sign-in. |
 | Dedicated login authenticates and reads the Echo view | Passed on actual `looker_echo_bailment_tst` authentication: expected current user and 6,202 view rows. |
 | Private table reads and data changes denied to reporting login | Passed: actual private `Organization` query denied with SQLSTATE `42501`; effective audit finds no writable relations, and the actual login reports read-only transactions and no reporting write privilege. |
-| Encrypted Looker PostgreSQL connection | Pending: Basic + SSL requires the ISRG Root X1 CA certificate upload after the unsuccessful connection attempt described above. |
-| Test report Bailment source replacement, calculations and total reconciliation | Pending: no source replacement occurred. |
-| Source acquisition time visible and accurately dated | Pending. |
+| Encrypted Looker PostgreSQL connection | Passed: saved Basic PostgreSQL + SSL connection; ISRG Root X1 accepted; embedded source `Neon TST - Bailment` (`ds55`) reports Working. |
+| Test report Bailment source replacement and calculations | Passed: all 11 original charts now use `ds55`; Month, invoice-date semantics and relative periods are preserved. |
+| Filter scope and financial-card reconciliation | Passed November 20: separate spreadsheet and Neon filters, no report-wide filter, direct/group scope on Core Revenue and explicit page scope with quarter inheritance on Sales Stats; actual-role reconciliation passed all seven checked date windows. |
+| Source acquisition time visible and accurately dated | Passed: two dynamic cards show the native November 18 acquisition time in Eastern time; one-hour Looker freshness is configured separately. |
+| Final copied-report visual checks | Passed November 20: all seven pages loaded in viewer mode without invalid-filter or System Error messages; the 11 Bailment financial cards, both source-time cards and the remaining spreadsheet charts rendered. |
 
-The acceptance target is the existing Bailment charts in the copied report reading the restricted Neon view. Other spreadsheet-backed datasets remain in place. Preserve existing invoice-date versus payment-date meaning and distinguish invoice lines from distinct invoices. Record any calculated-field or connector-type changes explicitly.
+The accepted source mappings affect only the copied report's Bailment charts. Other spreadsheet-backed datasets remain in place. The reporting view still contains invoice lines, so a row count must not be labeled as distinct invoices, orders or agencies. Future financial cards must state whether they use invoice date or payment date.
 
 ## Rollback and release boundary
 
