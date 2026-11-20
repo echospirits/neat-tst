@@ -1,5 +1,17 @@
 # Unreleased
 
+## Permanent Echo bottle-sales retention — November 20, 2026 (TST)
+
+The owner chose permanent retention for Echo Spirits sales while preserving the statewide 30-day operational window. Both existing daily raw sales tables now exempt only exact vendor `Z90399001` from age-based cleanup. All Echo products, signed returns and zero quantities are retained; same-date source correction still replaces that date atomically. The shared cutoff validates direct/environment inputs and dates before constructing either deletion, and both normal/post-import logs describe the separate policies.
+
+The existing **0.10.0-dev** TST cycle, disabled schedules, source importers, statewide completeness checks, recent-sales windows, tenant/product scope, migrations and dependencies are preserved. No additional archive table, UI, provider download, historical backfill, dashboard cutover or production promotion is included. Older Echo-only dates remain incomplete for consumers requiring the full statewide source receipt.
+
+Technical scope: `lib/ohlqAnnualSalesRetention.ts`, retention logging in `lib/ohlqAnnualSalesWorkflow.ts` and `scripts/backfill-ohlq-annual-sales.ts`, focused retention/import/recent-sales/wholesale-coverage tests, and the [retention guide](../engineering/echo-sales-retention.md).
+
+Pre-publication validation on Node **22.23.5**: 13 focused retention/backfill/date tests and 32 affected import/recent-sales/coverage tests pass (overlapping scopes are not added to the full count). The full run passes **1,578 tests**; five unchanged browser fixtures cannot launch in the local environment. Their test and two directly tested modules are byte-identical to the previously passing [hosted run 44605137359](https://github.com/echospirits/neat-tst/actions/runs/44605137359); this is prior evidence, not a fresh full-suite pass. Strict typecheck, Prisma generation, optimized Webpack build and diff checks pass. The default local Turbopack build rejects the external dependency symlink; no build configuration is changed.
+
+A separate synthetic database on an expiring TST child branch passes PostgreSQL **18.7** SQL predicate, exact-vendor, boundary, replay, next-day expiration and transaction-rollback assertions. The Prisma service is covered by the stateful tests; a direct live Prisma integration attempt could not reach the database over TCP and is not claimed as passed. No shared-TST or production data was pruned, and no provider load ran. Independent scope/correctness review passes; delivery is limited to TST under the existing release process.
+
 ## Bailment daily-load readiness — November 20, 2026 (TST)
 
 The normal daily persisted-data verification now requires a complete current native Bailment reporting snapshot for the existing enrolled source-worker scope. It checks the dashboard view's latest request, configured history through the frozen observation date, native report/schema/all-selection provenance, organization timezone and persisted line count. Fresh forecasting data cannot hide missing, stale or incomplete dashboard data. Reporting verification remains independent of forecasting inputs and invoice policy; unchanged-content refreshes and downloads completing after midnight retain their original request-date semantics.
