@@ -1,5 +1,11 @@
 # Unreleased
 
+## Production Supplies email freshness — November 21, 2026
+
+Each scheduled Supplies batch checks recent replies on watched orders before processing older mail. The six-hour schedule, two-mailbox batch limit, provider consent and saved catch-up cursors are preserved. Supplies shows an email coverage warning when a connected mailbox is overdue or has yet to complete its first recent check.
+
+Authenticated supplier replies can match the same purchase across authorized mailboxes through stable message references. A verified payment receipt clears a payment hold and leaves an unshipped order **Awaiting shipment**. Supplier promises to send a bill of lading stay distinct from an actual shipment or arrival. Retained email evidence is refreshed through a bounded, audited path. TST automatic processing remains paused.
+
 ## Echo Item Sales reporting adapter — November 20, 2026 (TST preview verified; history pending)
 
 Prepare a direct Neon source for the existing four bottle-sales dashboard pages. An additive Echo daily-evidence table and fixed-Echo reporting/status views preserve the ten Item Sales fields, signed monthly quantities, current dimension labels and verified A3A fallbacks. Daily row counts, signed totals and deterministic fingerprints must match explicit source receipts; missing/changed days block the monthly cutoff. The report emits no sales rows until contiguous certified history from January 2025 supports a matched current/prior-year comparison. The receipt table can retain earlier dates without extending the dashboard horizon.
