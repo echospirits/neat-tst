@@ -1,5 +1,9 @@
 # Unreleased
 
+## Retail Inventory restriction labels
+
+Retail Intelligence, the retail account’s Product opportunities, and Current Inventory show **Restricted** when OHLQ reports restricted coverage for the store and product, including rows supplied with a numeric minimum of zero. On-hand counts stay visible. A reported zero for other coverage groups still displays as a minimum of zero.
+
 ## Automatic restaurant research recovery — November 23, 2026
 
 Carry forward the production worker fix within **0.10.0-dev**. Each research step uses Echo Spirits’ configured account states. The worker can continue other jobs while an OpenAI response remains pending, retains response IDs for reconciliation, and stops after the selected pilot settles. TST research schedules and provider activation settings stay disabled.
