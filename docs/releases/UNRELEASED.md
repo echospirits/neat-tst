@@ -4,9 +4,9 @@
 
 Carry forward the production worker fix within **0.10.0-dev**. Each research step uses Echo Spirits’ configured account states. The worker can continue other jobs while an OpenAI response remains pending, retains response IDs for reconciliation, and stops after the selected pilot settles. TST research schedules and provider activation settings stay disabled.
 
-## Dead Inventory 90-day sales — November 23, 2026
+## Retail Intelligence 90-day sales — November 23, 2026
 
-The Dead inventory filter in Retail Intelligence shows **Sales · 7 / 30 / 90d**. The 90-day figure sums retained Echo counter and wholesale bottles, including returns, through the latest complete sales report on or before each recommendation’s inventory snapshot date. Incomplete coverage is labeled in the row, and a confirmed zero requires coverage for the full window. This is a read-only display change using existing sales and coverage records.
+Every Retail Intelligence recommendation filter and the Product opportunities table on retail account pages show **Sales · 7 / 30 / 90d**. The 90-day figure sums retained Echo counter and wholesale bottles, including returns, through the latest complete sales report on or before each recommendation’s inventory snapshot date. Each row labels partial or unavailable history, and a confirmed zero requires coverage for the full window. This is a read-only display change using existing sales and coverage records.
 
 ## Production Supplies email freshness — November 21, 2026
 
