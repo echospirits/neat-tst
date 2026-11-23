@@ -1,5 +1,11 @@
 # Unreleased
 
+## First-pass restaurant research location matching
+
+The research prompt and shared location validator recognize a public street number inside an Ohio permit’s inclusive range or on its explicit house-number list. Ohio city abbreviations and verified alternate locality names can match within the same ZIP. Research still requires an exact venue verdict, cited location evidence, the same state and ZIP, and an equivalent full street with any unit required by the permit. Saved permit addresses and prior research history are preserved.
+
+The read-only replay recognized 18 city-only declines, six licensed ranges, and one explicit number list. It flagged 81 previously approved responses for review because street, unit, number or ZIP details were incomplete or conflicted. The replay used saved results and did not submit new research.
+
 ## Retail Inventory restriction labels
 
 Retail Intelligence, the retail account’s Product opportunities, and Current Inventory show **Restricted** when OHLQ reports restricted coverage for the store and product, including rows supplied with a numeric minimum of zero. On-hand counts stay visible. A reported zero for other coverage groups still displays as a minimum of zero.
