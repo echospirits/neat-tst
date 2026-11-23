@@ -1,5 +1,9 @@
 # Unreleased
 
+## Dead Inventory 90-day sales — November 23, 2026
+
+The Dead inventory filter in Retail Intelligence shows **Sales · 7 / 30 / 90d**. The 90-day figure sums retained Echo counter and wholesale bottles, including returns, through the latest complete sales report on or before each recommendation’s inventory snapshot date. Incomplete coverage is labeled in the row, and a confirmed zero requires coverage for the full window. This is a read-only display change using existing sales and coverage records.
+
 ## Production Supplies email freshness — November 21, 2026
 
 Each scheduled Supplies batch checks recent replies on watched orders before processing older mail. The six-hour schedule, two-mailbox batch limit, provider consent and saved catch-up cursors are preserved. Supplies shows an email coverage warning when a connected mailbox is overdue or has yet to complete its first recent check.
