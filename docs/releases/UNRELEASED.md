@@ -1,5 +1,9 @@
 # Unreleased
 
+## My Schedule dashboard panels — November 23, 2026
+
+Explore opportunities and Team activity and performance are always expanded in My Schedule. Both headings are static, and their contents are available as soon as the dashboard loads.
+
 ## First-pass restaurant research location matching
 
 The research prompt and shared location validator recognize a public street number inside an Ohio permit’s inclusive range or on its explicit house-number list. Ohio city abbreviations and verified alternate locality names can match within the same ZIP. Research still requires an exact venue verdict, cited location evidence, the same state and ZIP, and an equivalent full street with any unit required by the permit. Saved permit addresses and prior research history are preserved.
