@@ -1,5 +1,11 @@
 # Unreleased
 
+## Restaurant Opportunities product eligibility
+
+Echo Settings now shows **Include product** and **Exclude product** in Restaurant product strategy. Existing priority-zero settings are honored as exclusions, and a product can be included again in the same editor. Verified style still informs comparability. Settings changes that affect scoring mark assessments for refresh.
+
+Delisted and A3A DIST-only products are omitted from the strategy editor and from Restaurant Opportunities scoring and its Intelligence purchase timeline. Manual exclusions apply in the selected market. Raw purchase history and existing pursuits remain available. This correction uses the existing product settings and assessment refresh path without a database migration.
+
 ## My Schedule order — November 23, 2026
 
 Route planning now follows the personal schedule and assigned tastings. Search and unassigned work come before Explore opportunities and Team activity and performance. The organization-wide events list follows both insight sections.
