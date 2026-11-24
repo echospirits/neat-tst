@@ -1,5 +1,9 @@
 # Unreleased
 
+## Faster Log Visit — November 23, 2026
+
+New sales visits require notes and at least one outcome. Outcomes and sales status stay visible, with No change selected by default. The voice note option and retail shortcut were removed. Optional photo proof starts with one chooser and adds another after each selection, with support for more than three photos.
+
 ## Restaurant Opportunities product eligibility
 
 Echo Settings now shows **Include product** and **Exclude product** in Restaurant product strategy. Existing priority-zero settings are honored as exclusions, and a product can be included again in the same editor. Verified style still informs comparability. Settings changes that affect scoring mark assessments for refresh.

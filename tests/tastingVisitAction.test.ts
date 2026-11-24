@@ -84,5 +84,8 @@ test('canonical forms carry tasting identity/snapshot, prefill the actual Agency
   assert.match(page, /agencyId: tasting.agencyId/);
   assert.match(taster, /useState\(initialAgency\?\.id/);
   for (const form of [taster, general]) { assert.match(form, /name="tastingId"/); assert.match(form, /name="tastingFingerprint"/); }
-  assert.match(general, /required=\{Boolean\(initialValues\?\.tastingId\) && slot === 1\}/);
+  const tastingPhotoSection = general.match(/<summary>Tasting photo \(required\)<\/summary>([\s\S]*?)<\/details>/)?.[1];
+  assert.ok(tastingPhotoSection);
+  assert.equal(tastingPhotoSection.match(/name="photoFile"/g)?.length, 1);
+  assert.match(tastingPhotoSection, /<input[^>]*name="photoFile"[^>]*required[^>]*\/>/);
 });
