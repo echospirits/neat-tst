@@ -1,5 +1,9 @@
 # Unreleased
 
+## Log Visit actions at the end of the form — November 24, 2026
+
+Cancel and Save visit appear after the last field in Log Visit. Scroll to the end to save after reviewing the visit details and any photo proof.
+
 ## Faster Log Visit — November 23, 2026
 
 New sales visits require notes and at least one outcome. Outcomes and sales status stay visible, with No change selected by default. The voice note option and retail shortcut were removed. Optional photo proof starts with one chooser and adds another after each selection, with support for more than three photos.
