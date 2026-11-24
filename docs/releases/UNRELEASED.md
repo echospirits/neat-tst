@@ -4,6 +4,12 @@
 
 Route planning now follows the personal schedule and assigned tastings. Search and unassigned work come before Explore opportunities and Team activity and performance. The organization-wide events list follows both insight sections.
 
+## Echo sales account access — November 23, 2026
+
+Echo Settings no longer has an Account states switch. Echo salespeople can browse and work with Retail and Restaurant accounts across states, subject to their existing permissions. Restaurant creation and Log Visit accept any valid U.S. state. Sales Analytics shows Echo products across markets and identifies where source coverage is unavailable. Addresses and geographic filters are still available. Scheduled restaurant research, Ohio reporting and other data integrations retain their existing market rules.
+
+All 1,626 tests passed, including Echo session access, cross-state Restaurant creation, account validation and organization-scoped nearby visit history. Matched browser fixtures at 390 × 844 and 1440 × 900 verified the removed settings control, retained Ohio Vendor ID disclosure and feedback, and 51 address choices in both Restaurant creation forms with Ohio as the default. Both layouts fit without horizontal scrolling. The browser checks used synthetic data.
+
 ## OHLQ daily load fallback — November 23, 2026
 
 Production keeps the Vercel morning load and one GitHub fallback at 9:47 a.m. Eastern. The automatic runs share a lock and check required sales, inventory and downstream data before installing the browser or importing. Complete saved data skips another full load. A confirmed gap permits recovery and the existing final verifier checks the result. An unavailable database check retries and never authorizes another import by itself. Manual imports remain available. TST's disabled schedules and both application versions are preserved.

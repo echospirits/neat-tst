@@ -198,7 +198,7 @@ export async function createVisit(formData: FormData) {
 
 async function createVisitWithDiagnostics(formData: FormData, diagnostics: VisitDiagnostics) {
   const user = await requireUser({ allowTaster: true });
-  const { organizationId, organization } = await requireOrganizationContext(user);
+  const { organizationId } = await requireOrganizationContext(user);
   diagnostics.mark('validation', { userId: user.id, organizationId });
   const isTaster = user.role === UserRole.TASTER;
   const interactionType = String(formData.get('interactionType') ?? 'PHYSICAL_VISIT');
@@ -305,23 +305,22 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
     ? collectedPhotos.map((photo) => ({ ...photo, type: PhotoType.OTHER, caption: null }))
     : collectedPhotos;
 
-  if (locationType === 'agency' && !agencyId) {
-    redirectVisitWithStatus(formOrigin, 'invalid-agency', locationType);
+  if (locationType === 'agency') {
+    if (!agencyId) return redirectVisitWithStatus(formOrigin, 'invalid-agency', locationType, tastingId);
+    const agency = await prisma.agency.findUnique({ where: { id: agencyId }, select: { id: true } });
+    const legacyAgency = !agency && !isTaster
+      ? await prisma.agency.findUnique({ where: { agencyId }, select: { id: true } })
+      : null;
+    if (!agency && !legacyAgency) redirectVisitWithStatus(formOrigin, 'invalid-agency', locationType, tastingId);
   }
 
-  if (
-    isTaster &&
-    agencyId &&
-    !(await prisma.agency.findUnique({
-      where: { id: agencyId },
-      select: { id: true },
-    }))
-  ) {
-    redirectVisitWithStatus(formOrigin, 'invalid-agency', locationType);
-  }
-
-  if (locationType === 'wholesale' && !selectedWholesaleAccountId && !newWholesaleName && !newWholesaleLicenseeId) {
-    redirectVisitWithStatus(formOrigin, 'invalid-wholesale', locationType);
+  if (locationType === 'wholesale') {
+    if (!selectedWholesaleAccountId && !newWholesaleName && !newWholesaleLicenseeId) {
+      redirectVisitWithStatus(formOrigin, 'invalid-wholesale', locationType);
+    }
+    if (selectedWholesaleAccountId && !(await prisma.wholesaleAccount.findUnique({ where: { id: selectedWholesaleAccountId }, select: { id: true } }))) {
+      redirectVisitWithStatus(formOrigin, 'invalid-wholesale', locationType);
+    }
   }
 
   const [salesOpportunity, agencyProductIntelligence, originatingWorklistItem] = await Promise.all([
@@ -392,11 +391,10 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
 
     if (locationType === 'wholesale' && !wholesaleAccountId && (newWholesaleLicenseeId || newWholesaleName)) {
       const state = normalizeUsState(String(formData.get('newWholesaleState') ?? 'OH'));
-      if (!state) redirectVisitWithStatus(formOrigin, 'invalid-state', locationType);
-      if (!organization.enabledStates.includes(state!)) redirectVisitWithStatus(formOrigin, 'state-not-enabled', locationType);
+      if (!state) return redirectVisitWithStatus(formOrigin, 'invalid-state', locationType);
       const licenseeId = stateScopedLicenseeIds([
         normalizeWholesaleLicenseeId(newWholesaleLicenseeId) ?? toManualLicenseeId(newWholesaleName ?? 'Restaurant account'),
-      ], state!)[0];
+      ], state)[0];
       const name = newWholesaleName ?? `Restaurant ${licenseeId}`;
       const existingAccount = newWholesaleLicenseeId
         ? await tx.wholesaleAccount.findFirst({

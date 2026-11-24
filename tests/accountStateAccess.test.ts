@@ -1,20 +1,26 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readFileSync } from 'node:fs';
-import { Prisma } from '@prisma/client';
-import { parseEnabledStates } from '../lib/stateOptions';
+import { Prisma, type PrismaClient } from '@prisma/client';
 import { assertStateWrite, combineWhere, modelStateWhere, scopeReadArgs, stateWhere, type StateScope } from '../lib/accountStatePolicy';
-import { extendWithAccountStateAccess, withAccountStateScope } from '../lib/accountStateAccess';
+import { extendWithAccountStateAccess, loadStateScope, withAccountStateScope } from '../lib/accountStateAccess';
+import { ECHO_ORGANIZATION_ID } from '../lib/echoAccess';
 
 const ohio: StateScope = { states: ['OH'], agencyIds: ['oh-retail'], agencyNumbers: ['100'], restaurantIds: ['oh-restaurant'] };
 const florida: StateScope = { states: ['FL'], agencyIds: ['fl-retail'], agencyNumbers: ['ABC-FL-003'], restaurantIds: ['fl-restaurant'] };
 
-test('state choices require a supported nonempty set, deduplicate and stay independent of plan', () => {
-  assert.deepEqual(parseEnabledStates(['OH', 'FL', 'OH']), ['FL', 'OH']);
-  for (const values of [[], ['XX'], ['oh'], ['OH', 'Florida'], [null]]) assert.throws(() => parseEnabledStates(values));
-  const source = readFileSync('app/admin/organization/data-actions.ts', 'utf8');
-  assert.ok(source.includes('saveEchoStates'));
-  assert.ok(!source.includes('saveFeatures'));
+test('Echo sales workflows skip state filtering while configured-state jobs retain their coverage', async () => {
+  const directoryReads: unknown[] = [];
+  const db = {
+    organization: { findUnique: async () => ({ active: true, accountStatus: 'ACTIVE', enabledStates: ['OH'] }) },
+    agency: { findMany: async ({ where }: { where: unknown }) => { directoryReads.push(where); return []; } },
+    wholesaleAccount: { findMany: async ({ where }: { where: unknown }) => { directoryReads.push(where); return []; } },
+    $queryRawUnsafe: async () => [],
+  } as unknown as PrismaClient;
+  assert.equal(await loadStateScope(db, ECHO_ORGANIZATION_ID), null);
+  assert.deepEqual(directoryReads, []);
+  const scope = await loadStateScope(db, ECHO_ORGANIZATION_ID, { restrictToConfiguredStates: true });
+  assert.deepEqual(scope?.states, ['OH']);
+  assert.deepEqual(directoryReads, [stateWhere(['OH']), stateWhere(['OH'])]);
 });
 
 test('legacy blank Ohio state remains Ohio, while a Florida-only tenant cannot match blank or Ohio rows', () => {
