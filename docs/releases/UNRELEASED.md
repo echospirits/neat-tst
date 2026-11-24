@@ -1,5 +1,9 @@
 # Unreleased
 
+## Wholesale account purchase prices — November 24, 2026
+
+Recent OHLQ Purchases shows the latest imported OHLQ wholesale price per bottle for each exact item code in both the tracked and all-products lists. Purchases without a usable Brand Master price show **Unavailable**. Prices may differ from what the account paid.
+
 ## Default Log Visit outcome — November 24, 2026
 
 No action needed appears first and starts selected on new sales visits. Selecting another outcome replaces that default. Choosing to save a next step uses Follow-up needed in place of No action needed.
