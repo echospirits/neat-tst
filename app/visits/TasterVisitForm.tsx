@@ -8,10 +8,10 @@ import type { NearbyAccount } from '../../lib/location/nearbyAccounts';
 import { useCurrentLocation } from '../components/useCurrentLocation';
 import type { VisitFormAgencyOption } from './LogVisitForm';
 import { VisitSubmitButton } from './VisitSubmitButton';
-import { useVisitPhotoFormAction } from './clientPhotoUpload';
+import { useVisitPhotoFormAction, type VisitPhotoFormAction } from './clientPhotoUpload';
 
 type TasterVisitFormProps = {
-  action: (formData: FormData) => void | Promise<void>;
+  action: VisitPhotoFormAction;
   agencies: VisitFormAgencyOption[];
   initialAgency?: VisitFormAgencyOption | null;
   tastingContext?: { id: string; fingerprint: string; scheduleLabel: string } | null;
@@ -55,7 +55,7 @@ export function TasterVisitForm({ action, agencies, initialAgency, tastingContex
   const [isContextLoading, setIsContextLoading] = useState(false);
   const [contextError, setContextError] = useState<string | null>(null);
   const { location: currentLocation, requestLocation, status: locationStatus } = useCurrentLocation();
-  const { formAction, photoUploadError } = useVisitPhotoFormAction(action);
+  const { handleSubmit, pending, photoUploadError } = useVisitPhotoFormAction(action, !tastingContext);
   const searchText = normalize(agencySearch);
 
   useEffect(() => {
@@ -176,12 +176,11 @@ export function TasterVisitForm({ action, agencies, initialAgency, tastingContex
   };
 
   return (
-    <form action={formAction} className="visit-form field-visit-form taster-visit-form">
+    <form method="post" onSubmit={handleSubmit} className="visit-form field-visit-form taster-visit-form">
       <input name="locationType" readOnly type="hidden" value="agency" />
       <input name="agencyId" readOnly type="hidden" value={agencyId} />
       <input name="submissionKey" readOnly type="hidden" value={submissionKey} />
       {tastingContext ? <><input name="tastingId" readOnly type="hidden" value={tastingContext.id} /><input name="tastingFingerprint" readOnly type="hidden" value={tastingContext.fingerprint} /><p className="action-context-summary"><strong>Tasting</strong> · {tastingContext.scheduleLabel}</p></> : null}
-      {photoUploadError ? <p className="toast-notice page-status" role="alert">{photoUploadError}</p> : null}
 
       <fieldset className="visit-step visit-account-step">
         <legend>1. Choose the retail account</legend>
@@ -325,8 +324,9 @@ export function TasterVisitForm({ action, agencies, initialAgency, tastingContex
       </fieldset>
 
       <div className="visit-submit-bar">
+        {photoUploadError ? <p className="visit-submit-error danger-text" role="alert">{photoUploadError}</p> : null}
         {tastingContext ? <a className="btn secondary" href={`/tastings/${tastingContext.id}`}>Cancel</a> : null}
-        <VisitSubmitButton disabled={!selectedAgency || !submissionKey} label={tastingContext ? 'Log tasting visit' : 'Log retail visit'} />
+        <VisitSubmitButton disabled={!selectedAgency || !submissionKey} pending={pending} label={tastingContext ? 'Log tasting visit' : 'Log retail visit'} />
       </div>
     </form>
   );

@@ -19,10 +19,12 @@ import { hasFeature, requireOrganizationContext } from '../../lib/organizations'
 import { getWholesaleAddressProtectionForEdit } from '../../lib/wholesaleAddressProtection';
 import { parseTimeInputToMinutes } from '../../lib/dateTime';
 import { syncWorklistItemCalendar } from '../../lib/calendar/worklistSync';
+import { scheduleWorklistSync } from '../../lib/calendar/scheduleWorklistSync';
 import { parseSalesStatus, setAccountSalesStatus, VISIT_SALES_STATUS_OPTIONS } from '../../lib/accountSalesStatus';
 import { setAccountTargeting } from '../../lib/accountTargeting';
 import { scheduleTargetedAgencyResearch } from '../../lib/scheduleTargetedAgencyResearch';
 import { createVisitDiagnostics, type VisitDiagnostics } from '../../lib/visitDiagnostics';
+import { isSampledVisitTimingId } from '../../lib/visitTiming';
 import { getSelectedVoiceFollowUps } from '../../lib/voiceVisitNoteShared';
 import { completeTastingFromVisit, requireTastingExecutionContext, tastingScheduleFingerprint } from '../../lib/tastings/execution';
 import { refreshTastingSales } from '../../lib/tastings/sales';
@@ -118,12 +120,14 @@ const redirectToVisitConfirmation = (
   visitId: string,
   formOrigin: FormOrigin,
   status = 'success',
+  timingId?: string,
 ): never => {
   const params = new URLSearchParams({
     visitId,
     origin: formOrigin,
     status,
   });
+  if (timingId) params.set('timing', timingId);
 
   redirect(`/visits/confirmed?${params.toString()}`);
 };
@@ -185,10 +189,12 @@ function collectPhotos(formData: FormData, formOrigin: FormOrigin, locationType:
 }
 
 export async function createVisit(formData: FormData) {
-  const diagnostics = createVisitDiagnostics('create');
+  const timingValue = formData.get('visitTimingId');
+  const timingId = typeof timingValue === 'string' && isSampledVisitTimingId(timingValue) ? timingValue : undefined;
+  const diagnostics = createVisitDiagnostics('create', timingId);
   diagnostics.mark('authentication');
   try {
-    return await createVisitWithDiagnostics(formData, diagnostics);
+    return await createVisitWithDiagnostics(formData, diagnostics, timingId);
   } catch (error) {
     unstable_rethrow(error);
     diagnostics.failure(error);
@@ -196,7 +202,7 @@ export async function createVisit(formData: FormData) {
   }
 }
 
-async function createVisitWithDiagnostics(formData: FormData, diagnostics: VisitDiagnostics) {
+async function createVisitWithDiagnostics(formData: FormData, diagnostics: VisitDiagnostics, timingId?: string) {
   const user = await requireUser({ allowTaster: true });
   const { organizationId } = await requireOrganizationContext(user);
   diagnostics.mark('validation', { userId: user.id, organizationId });
@@ -281,6 +287,34 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
     const href = requested?.startsWith('/') && !requested.startsWith('//') && !requested.includes('\\') ? requested : formOrigin === 'worklist' ? '/alerts' : account.agencyId ? `/agencies/${account.agencyId}` : `/wholesale/${account.wholesaleAccountId}`;
     redirect(`${href.split('#')[0]}${href.includes('?') ? '&' : '?'}interaction=saved#activity`);
   };
+  const returnToSavedVisit = async (existingVisit: { id: string; tastingEventId: string | null }) => {
+    if (isTaster || existingVisit.tastingEventId) {
+      const savedEvidence = await prisma.loggedVisit.findFirst({
+        where: {
+          id: existingVisit.id,
+          organizationId,
+          createdByUserId: user.id,
+          photos: { some: {} },
+        },
+        select: { id: true },
+      });
+      if (!savedEvidence) {
+        diagnostics.mark('duplicate_submission_photo_pending', { visitId: existingVisit.id, committed: true });
+        return { status: 'required-photo-pending' } as const;
+      }
+    }
+    diagnostics.mark('duplicate_submission', { visitId: existingVisit.id, committed: true });
+    if (tastingId && existingVisit.tastingEventId === tastingId) {
+      const completed = await prisma.tastingEvent.findFirst({
+        where: { id: tastingId, organizationId }, select: { completedVisitId: true },
+      });
+      if (completed?.completedVisitId === existingVisit.id) {
+        redirect(`/tastings/${encodeURIComponent(tastingId)}?notice=visit-completed`);
+      }
+      redirectToVisitConfirmation(existingVisit.id, formOrigin, 'tasting-needs-review', timingId);
+    }
+    return redirectToVisitConfirmation(existingVisit.id, formOrigin, 'success', timingId);
+  };
   if (!physicalVisit && submissionKey) {
     const existing = await prisma.accountActivity.findUnique({ where: { organizationId_sourceKey: { organizationId, sourceKey: activitySourceKey } } });
     if (existing) returnToInteraction(existing);
@@ -291,13 +325,7 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
       select: { createdByUserId: true, id: true, tastingEventId: true },
     });
     if (existingVisit?.createdByUserId === user.id) {
-      diagnostics.mark('duplicate_submission', { visitId: existingVisit.id, committed: true });
-      if (tastingId && existingVisit.tastingEventId === tastingId) {
-        const completed = await prisma.tastingEvent.findFirst({ where: { id: tastingId, organizationId }, select: { completedVisitId: true } });
-        if (completed?.completedVisitId === existingVisit.id) redirect(`/tastings/${encodeURIComponent(tastingId)}?notice=visit-completed`);
-        redirectToVisitConfirmation(existingVisit.id, formOrigin, 'tasting-needs-review');
-      }
-      redirectToVisitConfirmation(existingVisit.id, formOrigin);
+      return returnToSavedVisit(existingVisit);
     }
   }
 
@@ -381,7 +409,7 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
   }
 
   diagnostics.mark('transaction', { locationType });
-  const visit = await prisma.$transaction(async (tx) => {
+  const { visit, createdTaskIds, replayedVisit } = await prisma.$transaction(async (tx) => {
     if (tasting) {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`tasting:${organizationId}`}, 0))`;
       await requireTastingExecutionContext(tx, { organizationId, userId: user.id }, tasting.id, { agencyId, fingerprint: tastingScheduleFingerprint(tasting) });
@@ -394,7 +422,11 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
         : await tx.accountActivity.findUnique({ where: { organizationId_sourceKey: { organizationId, sourceKey: activitySourceKey } } });
       if (replay) {
         if (replay.createdByUserId !== user.id) throw new Error('Submission belongs to another user.');
-        return { id: replay.id, agencyId: replay.agencyId, wholesaleAccountId: replay.wholesaleAccountId };
+        return {
+          visit: { id: replay.id, agencyId: replay.agencyId, wholesaleAccountId: replay.wholesaleAccountId },
+          createdTaskIds: [],
+          replayedVisit: { tastingEventId: 'tastingEventId' in replay ? replay.tastingEventId : null },
+        };
       }
     }
     let wholesaleAccountId = selectedWholesaleAccountId;
@@ -619,8 +651,9 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
         .filter(Boolean)
         .join('\n') || null;
 
+    const createdTaskIds: string[] = [];
     if (shouldCreateVisitTask(requestedFollowUpMode)) {
-      await tx.worklistItem.create({
+      const task = await tx.worklistItem.create({
         data: {
           organizationId,
           title: nextStep ? `Follow up: ${nextStep.slice(0, 120)}` : physicalVisit ? 'Follow up on visit' : 'Follow up on conversation',
@@ -638,11 +671,13 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
           createdBy: actorName,
           createdByUserId: user.id,
         },
+        select: { id: true },
       });
+      createdTaskIds.push(task.id);
     }
 
     for (const voiceFollowUp of selectedVoiceFollowUps) {
-      await tx.worklistItem.create({
+      const task = await tx.worklistItem.create({
         data: {
           organizationId,
           title: voiceFollowUp.title,
@@ -668,7 +703,9 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
           createdBy: actorName,
           createdByUserId: user.id,
         },
+        select: { id: true },
       });
+      createdTaskIds.push(task.id);
     }
 
     if (worklistItemId && physicalVisit) {
@@ -713,8 +750,13 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
       });
     }
 
-    return loggedVisit;
+    return { visit: loggedVisit, createdTaskIds, replayedVisit: null };
   });
+
+  if (replayedVisit) {
+    if (!physicalVisit) returnToInteraction(visit);
+    return returnToSavedVisit({ id: visit.id, ...replayedVisit });
+  }
 
   diagnostics.mark('committed', { visitId: visit.id, committed: true });
   if (requestedTargeting && locationType === 'agency' && agencyId) {
@@ -818,7 +860,7 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
         userId: user.id,
         visitId: visit.id,
       });
-      redirectToVisitConfirmation(visit.id, formOrigin, 'photo-upload-failed');
+      redirectToVisitConfirmation(visit.id, formOrigin, 'photo-upload-failed', timingId);
     }
   }
 
@@ -836,27 +878,8 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
     for (const path of ['/tastings', `/tastings/${tasting.id}`, `/agencies/${tasting.agencyId}`]) revalidatePath(path);
   }
 
-  await diagnostics.bestEffort('calendar_sync', async () => {
-    const calendarItems = await prisma.worklistItem.findMany({
-      where: {
-        organizationId,
-        OR: [
-          { loggedVisitId: visit.id },
-          ...(worklistItemId ? [{ id: worklistItemId }] : []),
-          ...(requestedWorklistCompletionIds.length > 0
-            ? [{
-                id: { in: requestedWorklistCompletionIds },
-                assignedToUserId: user.id,
-                completedByUserId: user.id,
-                loggedVisitId: visit.id,
-              }]
-            : []),
-        ],
-      },
-      select: { id: true },
-    });
-    for (const item of calendarItems) await syncWorklistItemCalendar(item.id);
-  });
+  const calendarTaskIds = worklistItemId ? [...createdTaskIds, worklistItemId] : createdTaskIds;
+  calendarTaskIds.forEach(scheduleWorklistSync);
   // Full opportunity recalculation runs after OHLQ imports. It loads statewide
   // sales history and must never run inside an interactive visit request.
   diagnostics.mark('revalidation');
@@ -876,9 +899,9 @@ async function createVisitWithDiagnostics(formData: FormData, diagnostics: Visit
     revalidatePath(`/wholesale/${visit.wholesaleAccountId}`);
   }
   diagnostics.mark('confirmation');
-  if (tasting && tastingNeedsReview) redirectToVisitConfirmation(visit.id, formOrigin, 'tasting-needs-review');
+  if (tasting && tastingNeedsReview) redirectToVisitConfirmation(visit.id, formOrigin, 'tasting-needs-review', timingId);
   if (tasting) redirect(`/tastings/${tasting.id}?notice=visit-completed`);
-  redirectToVisitConfirmation(visit.id, formOrigin);
+  redirectToVisitConfirmation(visit.id, formOrigin, 'success', timingId);
 }
 
 export async function updateVisit(visitId: string, formData: FormData) {

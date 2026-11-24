@@ -10,6 +10,12 @@ Echo Settings now shows **Include product** and **Exclude product** in Restauran
 
 Delisted and A3A DIST-only products are omitted from the strategy editor and from Restaurant Opportunities scoring and its Intelligence purchase timeline. Manual exclusions apply in the selected market. Raw purchase history and existing pursuits remain available. This correction uses the existing product settings and assessment refresh path without a database migration.
 
+## Field workflow performance
+
+Log Visit opens with a small set of account suggestions or the account already supplied by the entry point. It loads contact choices for the selected account and gives immediate search feedback with a retry for failed lookups. My Schedule has a direct mobile Log Visit action. The visit confirmation and My Schedule show their primary content while related work and organization summaries load. Visit history reads display fields and loads gallery images when opened.
+
+Sampled visit timing records use random correlation IDs and fixed phase, duration, and outcome fields. See the [field performance validation](field-performance-validation.md) for environment checks, measurements and the Vercel log queries. No database migration is required.
+
 ## My Schedule order — November 23, 2026
 
 Route planning now follows the personal schedule and assigned tastings. Search and unassigned work come before Explore opportunities and Team activity and performance. The organization-wide events list follows both insight sections.

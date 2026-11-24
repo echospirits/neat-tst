@@ -1,5 +1,7 @@
 'use client';
 
+import type { VisitPhotoFormAction } from '../visits/clientPhotoUpload';
+
 import { SubmitButton } from '../components/SubmitButton';
 import { NavigationIcon } from '../components/NavigationIcon';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
@@ -52,7 +54,7 @@ export type WorklistActionsProps = {
   contacts: VisitFormContactOption[];
   tags: VisitFormTagOption[];
   salesStatusOptions?: Array<{ label: string; value: string }>;
-  createVisitAction: (formData: FormData) => void | Promise<void>;
+  createVisitAction: VisitPhotoFormAction;
   updateStatusAction: (formData: FormData) => Promise<ActionResult>;
   updateItemAction: (formData: FormData) => Promise<ActionResult>;
   currentUserId: string;
