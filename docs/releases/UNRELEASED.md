@@ -1,5 +1,9 @@
 # Unreleased
 
+## Default Log Visit outcome — November 24, 2026
+
+No action needed appears first and starts selected on new sales visits. Selecting another outcome replaces that default. Choosing to save a next step uses Follow-up needed in place of No action needed.
+
 ## Log Visit actions at the end of the form — November 24, 2026
 
 Cancel and Save visit appear after the last field in Log Visit. Scroll to the end to save after reviewing the visit details and any photo proof.
