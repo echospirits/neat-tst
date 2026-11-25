@@ -1,5 +1,9 @@
 # Unreleased
 
+## Account search by address — November 25, 2026
+
+Find Retail and Restaurant accounts by street address, city, county, state, ZIP, or a combination of address details. This works in Account Search, both account directories, and account pickers for Log Visit and scheduling. No migration is required.
+
 ## Supplies freight and recent email — November 25, 2026
 
 Recent watched-order replies and freight notices have a separate 15-minute production check. Older email retains its six-hour cadence. Authenticated vendor messages and their matching bills of lading enrich one shipment. Ward lookup requires approved API access for the configured tenant. TST automatic processing stays paused.
