@@ -1,5 +1,9 @@
 # Unreleased
 
+## Supplies freight and recent email — November 25, 2026
+
+Recent watched-order replies and freight notices have a separate 15-minute production check. Older email retains its six-hour cadence. Authenticated vendor messages and their matching bills of lading enrich one shipment. Ward lookup requires approved API access for the configured tenant. TST automatic processing stays paused.
+
 ## OHLQ search from wholesale purchases — November 24, 2026
 
 Item codes in Tracked products and All purchases open OHLQ search results for the exact code in a new tab.
